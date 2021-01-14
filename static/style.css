@@ -1,0 +1,78 @@
+.pagetitle {
+    color: #4a86e8;
+    text-align: left;
+    margin-left: 5px;
+    margin-top: 5px;
+}
+
+.header {
+	text-align: left;
+     margin-left: 5px;
+     margin-top: 5px;
+}
+
+h1 {
+  font-weight: 300;
+  text-align: left;
+}
+
+h2 {
+  font-weight: 100;
+  text-align: left;
+}
+
+h4 {
+  text-align: left;
+  color: #9d9a9a;
+}
+
+body {
+  font-family: "helvetica", sans-serif;
+  text-align: left;
+  margin-top: 100px;
+  margin-bottom: 100px;
+  margin-right: 50px;
+  margin-left: 50px;
+}
+
+input, textarea {
+  width: 200px;
+  font-size: 12px;
+  padding: 3px;
+}
+
+textarea {
+  vertical-align: top;
+  align-content: left;
+  height: 50px;
+  width: 700px;
+}
+
+.move-left {
+    width: auto;
+    box-shadow: none;
+  }
+  
+link {
+    color: blue;
+    text-decoration: none;
+}
+
+a:visited{
+  color:blue;
+}
+
+/* Customize the label (the container) */
+.container {
+  display: block;
+  position: relative;
+  padding-left: 35px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  font-size: 22px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+

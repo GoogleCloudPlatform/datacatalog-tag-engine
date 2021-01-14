@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+  <head>
+    <title>Tag Engine</title>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+  </head>  
+    <body>
+	   <div class="pagetitle">
+	   <h1>Tag Engine</h1>
+        </div>
+	   <div class="header">
+	   <h2>Create Dynamic Tag using {{ template_id }}</h2>
+	   <span style="color:#9d9a9a;">
+		   <h5>To include a field in your tag, click on the checkbox next to the field and enter a query expression for the field in the text box. The result of the query expression must satisfy the type requirements of the field. For example, if the field is of type string, the query expression must return a string type.
+		    <br><br>Mandatory template fields are marked by <span style="color:red;">*</span> and are already checked for you.
+		    </h5>
+	  </span>
+	   </div>
+         <form method="post" action="/process_dynamic_tag">
+		    <table>
+			   {% for dict_field in fields %}
+		        <tr>
+		          <td>
+				{% if dict_field['is_required'] == True %}
+                    <input type="checkbox" class="form-control move-left" name="selected" value="{{ dict_field['field_id'] }}" checked>
+				{% else: %}
+                    <input type="checkbox" class="form-control move-left" name="selected" value="{{ dict_field['field_id'] }}">
+				{% endif %}
+				</td>
+				<td>
+				{% if dict_field['is_required'] == True %}
+				<span style="color:red;">*</span>
+				{% else: %}
+				&nbsp;
+				{% endif %}
+				{{ dict_field['field_id'] }} (type {{ dict_field['field_type'] }}):
+				</td>
+				<td>
+				<input type="text" value="select {exp} from $$ [where {exp}]" name="{{ dict_field['field_id'] }}" style="width: 330px;padding: 3px;">
+				</td>
+			   </tr>
+			   {% endfor %}
+			   </table>
+		    <p>&nbsp;</p>
+			   <h2>Choose Rules</h2>
+		 	   <span style="color:#9d9a9a;">
+		 		   <h5>Specify URIs for resources to include in or exclude from your dynamic tag. Wildcards are allowed. <br><br>
+					  Supported URIs for BigQuery resources: <br>
+					  bigquery/project/{project_id}/dataset/{dataset}/* <br>
+				       bigquery/project/{project_id}/dataset/{dataset}/{table} <br>
+				       bigquery/project/{project_id}/dataset/{dataset}/{table}/{column} </h5>
+				</span>
+			    <table>
+			     <tr>
+			    <td>Included URIs:&nbsp;&nbsp;
+			    				<textarea name="included_uris" style="align-content:left; overflow:auto;">
+bigquery/project/{{ project_id }}/dataset/{dataset}/*, bigquery/project/{{ project_id }}/dataset/{dataset}/{table}*, bigquery/project/{{ project_id }}/dataset/{dataset}/{table}/{column}
+			    				</textarea></td>
+			     </tr>
+			     <tr><td>&nbsp;</td></tr>
+ 				<tr>
+ 			    <td>Excluded URIs:&nbsp;
+			    		          <textarea name="excluded_uris" style="align-content:left; overflow:auto;">
+bigquery/project/{{ project_id }}/dataset/{dataset}/*, bigquery/project/{{ project_id }}/dataset/{dataset}/{table}*, bigquery/project/{{ project_id }}/dataset/{dataset}/{table}/{column}
+			    		          </textarea>
+			    </td>
+ 		         </tr>		        
+			     <tr><td>&nbsp;</td></tr>
+				<tr>	
+			    <td>Refresh frequency: <input type="text" value="24" name="refresh_frequency" style="width: 30px;padding: 3px;"> hours.</td>
+		         </tr>
+		        </table>
+	         <p>&nbsp;</p>
+		        <table>
+		        <tr>
+			   <td><input type="submit" value="Submit Tag Config" name="action">
+			       <input type="submit" value="Cancel Changes" name="action">
+			   </td>
+		        </tr>
+			   </table>
+			   <input type="hidden" name ="template_id" value="{{ template_id }}">
+			   <input type="hidden" name ="project_id" value="{{ project_id }}">
+			   <input type="hidden" name ="region" value="{{ region }}">
+
+			   {% for dict_field in fields %}
+			   	<input type="hidden" name="{{ dict_field['field_id'] }}_type" value="{{ dict_field['field_type'] }}">
+			    {% endfor %}	
+
+         </form>
+    </body>
+</html>

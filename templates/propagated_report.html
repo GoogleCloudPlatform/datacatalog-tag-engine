@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+  <head>
+    <title>Tag Engine</title>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+  </head>  
+    <body>
+    		{% if settings == 1 %}
+    	 	<table><tr><td>
+    		 &nbsp;<span style="color:green;">Settings Saved!</span>
+        	</td></tr></table><p>
+    		 {% endif %}
+	   
+	   <div class="pagetitle">
+	   <h1>Tag Engine</h1>
+        </div>
+	   <div class="header">
+	   <h2>Propagated Tags Report for {{ project_ids }}</h2>
+	   
+	   <form method="post" action="/propagated_report">
+	    <h5>  
+	   {% if last_run != 'Never' %}   
+		  Last run: {{ last_run }} UTC&nbsp;&nbsp;<input type="submit" value="Run Now" name="view" style="width: 100px;padding: 3px;"> 
+	   {% else %}
+	       Last run: {{ last_run }}&nbsp;&nbsp;<input type="submit" value="Run Now" name="view" style="width: 100px;padding: 3px;">
+	   {% endif %}	
+	     </h5>   
+        </form>
+	   </div>
+		    <table cellspacing="0" cellpadding="0">
+			   {% if last_run != 'Never' %} 
+			         <tr style="background-color:#f1eeee">
+				    <td style="text-align:left"><span style="font-weight:bold;">&nbsp;Source Table(s)</span></td>
+				    <td style="text-align:left"><span style="font-weight:bold">&nbsp;&nbsp;Target View</span></td>
+				    <td style="text-align:left"><span style="font-weight:bold">&nbsp;&nbsp;Tag Template</span></td>
+				    <td style="text-align:left"><span style="font-weight:bold">&nbsp;&nbsp;Tag Status</span></td>
+				    <td style="text-align:left"><span style="font-weight:bold">&nbsp;&nbsp;Tag Details&nbsp;</span></td>
+			         </tr>
+			   {% endif %} 
+			   
+			   {% for record in report_data: %}
+			   {% set source_res = record['source_res'] %}
+			   {% set view_res = record['view_res'] %}
+			   {% set template_id = record['template_id'] %}
+			   {% set template_uuid = record['template_uuid'] %}
+			   {% set view_tag_uuid = record['view_tag_uuid'] %}
+		        <tr>
+				
+				{% if record['config_status'] == 'NONE' %}
+				     <td style="background-color:#ffffff;text-align:left;">&nbsp;{{ source_res }}
+				{% else %}
+				  {% if record['config_status'] == 'PROPAGATED' %}
+				     <td style="background-color:#d9f6cf;text-align:left;">&nbsp;{{ source_res }}
+				  {% elif record['config_status'] == 'PROPAGATED AND FORKED' or record['config_status'] == 'CONFLICT AND FORKED' %}
+				     <td style="background-color:#f2ead1;text-align:left;">&nbsp;{{ source_res }}
+				  {% elif record['config_status'] == 'CONFLICT' %}
+				     <td style="background-color:#f98989;text-align:left;">&nbsp;{{ source_res }}
+				  {% endif %}
+				{% endif %}
+				</td>
+				{% if record['config_status'] == 'NONE' %}
+				    <td style="background-color:#ffffff;text-align:left">&nbsp;&nbsp;{{ view_res }}&nbsp;&nbsp;
+		          {% else %}
+				  {% if record['config_status'] == 'PROPAGATED' %} 
+				     <td style="background-color:#d9f6cf;text-align:left">&nbsp;&nbsp;{{ view_res }}&nbsp;&nbsp;
+				  {% elif record['config_status'] == 'PROPAGATED AND FORKED' or record['config_status'] == 'CONFLICT AND FORKED' %}
+				     <td style="background-color:#f2ead1;text-align:left">&nbsp;&nbsp;{{ view_res }}&nbsp;&nbsp;
+				  {% elif record['config_status'] == 'CONFLICT' %}
+				     <td style="background-color:#f98989;text-align:left">&nbsp;&nbsp;{{ view_res }}&nbsp;&nbsp;
+				  {% endif %}
+				{% endif %}
+				</td>
+				{% if record['config_status'] == 'NONE' %}
+				    <td style="background-color:#ffffff;text-align:left">&nbsp;&nbsp;None&nbsp;&nbsp;
+				{% else %}
+			        {% if record['config_status'] == 'PROPAGATED' %} 
+				      <td style="background-color:#d9f6cf;text-align:left">&nbsp;&nbsp;{{ template_id }}&nbsp;&nbsp;
+				   {% elif record['config_status'] == 'PROPAGATED AND FORKED' or record['config_status'] == 'CONFLICT AND FORKED' %}
+				      <td style="background-color:#f2ead1;text-align:left">&nbsp;&nbsp;{{ template_id }}&nbsp;&nbsp;
+				   {% elif record['config_status'] == 'CONFLICT' %}
+				      <td style="background-color:#f98989;text-align:left">&nbsp;&nbsp;{{ template_id }}&nbsp;&nbsp;
+				   {% endif %}
+			     {% endif %}
+				</td>
+				{% if record['config_status'] == 'PROPAGATED' %}
+			       <td style="background-color:#d9f6cf;text-align:left">&nbsp;&nbsp;Propagated&nbsp;&nbsp;
+			     {% elif record['config_status'] == 'PROPAGATED AND FORKED' %}
+			       <td style="background-color:#f2ead1;text-align:left">&nbsp;&nbsp;Propagated and Forked&nbsp;&nbsp;  
+			     {% elif record['config_status'] == 'CONFLICT AND FORKED' %}
+			       <td style="background-color:#f2ead1;text-align:left">&nbsp;&nbsp;Conflict Resolved and Forked&nbsp;&nbsp;
+			     {% elif record['config_status'] == 'CONFLICT' %}
+			   	  <td style="background-color:#f98989;text-align:left">&nbsp;&nbsp;Tag Conflict&nbsp;&nbsp; 
+			     {% elif record['config_status'] == 'NONE' %}
+				  <td style="background-color:#ffffff;text-align:left">&nbsp;&nbsp;Source Untagged&nbsp;&nbsp;	  
+				{% endif %}
+			     </td>
+				{% if record['config_status'] == 'NONE' %}
+				   <td style="background-color:##ffffff;;text-align:left">&nbsp;&nbsp;
+				{% else: %}
+				    {% if record['config_status'] == 'PROPAGATED' %}
+				       <td style="background-color:#d9f6cf;text-align:left">
+				    {% elif record['config_status'] == 'PROPAGATED AND FORKED' or record['config_status'] == 'CONFLICT AND FORKED' %}
+				       <td style="background-color:#f2ead1;text-align:left">
+				    {% elif record['config_status'] == 'CONFLICT' %}
+					  <td style="background-color:#f98989;text-align:left">
+					{% endif %}
+				    <form method="post" action="/propagated_details">
+				    &nbsp;&nbsp;<input type="submit" value="View and Edit" name="view" style="width: 120px;padding: 3px;">
+	 			    <input type="hidden" name="template_uuid" value="{{ template_uuid }}">
+				    <input type="hidden" name="view_tag_uuid" value="{{ view_tag_uuid }}">
+				    <input type="hidden" name="source_res" value="{{ source_res }}">
+				    <input type="hidden" name="view_res" value="{{ view_res }}">
+			         </form>
+			     {% endif %}
+				</td>
+			   </tr>
+			   {% endfor %}
+		    </table>
+         <p>&nbsp;</p>
+	    <p>&nbsp;<a href="{{ url_for('propagated_settings', saved=0) }}">Propagated Settings</a>&nbsp;&nbsp;<a href="/">Homepage</a></p>
+    </body>
+</html>

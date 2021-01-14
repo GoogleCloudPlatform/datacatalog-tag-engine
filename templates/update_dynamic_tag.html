@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+  <head>
+    <title>Tag Engine</title>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+  </head>  
+    <body>
+	   <div class="pagetitle">
+	   <h1>Tag Engine</h1>
+        </div>
+	   <div class="header">
+	   <h2>Update Dynamic Tag using {{ template_id }}</h2>
+ 	   <span style="color:#9d9a9a;">
+ 		   <h5>Make changes to your tag config. A checked field indicates it is part of the tag config. You can add new fields and/or remove existing ones from the tag config. You can also edit the included, excluded URIs, and refresh frequency. When you are done, click Save Changes. <br><br>
+ 		   Mandatory template fields are marked by <span style="color:red;">*</span>. 
+ 		   </h5>
+ 	  </span>
+	   </div>
+         <form method="post" action="/process_update_dynamic_tag">
+		    <table>
+			   {% for field in fields %}
+		        <tr>
+		          <td>   
+				   {% set ns = namespace(found=false) %}
+				   
+				   {% for current_field in tag_config['fields']  %}
+				      {% if current_field['field_id'] == field['field_id'] %}
+					      
+						 {% set ns.found = true %}
+                              
+						 <input type="checkbox" class="form-control move-left" name="selected" value="{{ field['field_id'] }}" checked>
+					 {% endif %}
+				    {% endfor %}
+				    
+				    {% if ns.found == false %}
+				       <input type="checkbox" class="form-control move-left" name="selected" value="{{ field['field_id'] }}">
+				    {% endif %}
+				    
+				    
+				</td>
+				<td>
+				{% if field['is_required'] == True %}
+				<span style="color:red;">*</span>
+				{% else: %}
+				&nbsp;
+				{% endif %}
+				{{ field['field_id'] }} (type {{ field['field_type'] }}):
+				</td>
+				<td>
+				
+		        {% set ns = namespace(found=false) %}
+		      
+			   {% for current_field in tag_config['fields'] %}
+			   
+			      {% if current_field['field_id'] == field['field_id'] %}
+		           {% set ns.found = true %}
+				   
+				       <input type="text" value="{{ current_field['query_expression'] }}" name="{{ field['field_id'] }}" style="width: 330px;padding: 3px;">	
+
+ 					 {% endif %}
+ 				    {% endfor %}
+			    
+			   {% if ns.found == false %}
+	                <input type="text" value="" name="{{ field['field_id'] }}" style="width: 330px;padding: 3px;">
+			   {% endif %}
+				
+				</td>
+			   </tr>
+			   {% endfor %}
+			   </table>
+		    <p>&nbsp;</p>
+			   <h2>Choose Rules</h2>
+		 	   <span style="color:#9d9a9a;">
+		 		   <h5>Specify URIs for resources to include in or exclude from your dynamic tag. Wildcards are allowed. <br><br>
+					  Supported URIs for BigQuery resources: <br>
+					  bigquery/project/{project_id}/dataset/{dataset}/* <br>
+				       bigquery/project/{project_id}/dataset/{dataset}/{table} <br>
+				       bigquery/project/{project_id}/dataset/{dataset}/{table}/{column} </h5>
+				</span>
+			    <table>
+			     <tr>
+			    <td>Included URIs:&nbsp;&nbsp;
+			    	   <textarea name="included_uris" style="align-content:left; overflow:auto;">{{ tag_config['included_uris'] }}
+			    	   </textarea></td>
+			     </tr>
+			     <tr><td>&nbsp;</td></tr>
+ 				<tr>
+ 			    <td>Excluded URIs:&nbsp;
+			    	   <textarea name="excluded_uris" style="align-content:left; overflow:auto;">{{ tag_config['excluded_uris'] }}
+			    	   </textarea>
+			    </td>
+ 		         </tr>		        
+			     <tr><td>&nbsp;</td></tr>
+				<tr>	
+			    <td>Refresh frequency: <input type="text" value="{{ tag_config['refresh_frequency'] }}" name="refresh_frequency" style="width: 30px;padding: 3px;"> hours.</td>
+		         </tr>
+		        </table>
+	         <p>&nbsp;</p>
+		        <table>
+		        <tr>
+			   <td><input type="submit" value="Save Changes" name="action">&nbsp;<input type="submit" value="Cancel Changes" name="action"></td>
+			   </table>
+			   <input type="hidden" name="template_id" value="{{ template_id }}">
+			   <input type="hidden" name="project_id" value="{{ project_id }}">
+			   <input type="hidden" name="region" value="{{ region }}">
+			   <input type="hidden" name="tag_uuid" value="{{ tag_config['tag_uuid'] }}">
+			   
+			   {% for field in fields %}
+			   	<input type="hidden" name="{{ field['field_id'] }}_type" value="{{ field['field_type'] }}">
+			   {% endfor %}
+
+         </form>
+    </body>
+</html>

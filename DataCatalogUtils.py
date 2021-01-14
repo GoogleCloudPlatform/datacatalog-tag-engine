@@ -1,0 +1,429 @@
+# Copyright 2020 Google, LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import requests
+from google.cloud.datacatalog_v1 import DataCatalogClient
+from google.cloud.datacatalog_v1.types import Tag
+from google.cloud import bigquery
+import Resources as res
+import TagEngineUtils as te
+import constants
+
+class DataCatalogUtils:
+    
+    def __init__(self, template_id, project_id, region):
+        self.template_id = template_id
+        self.project_id = project_id
+        self.region = region
+        
+        self.client = DataCatalogClient()
+        self.template_path = DataCatalogClient.tag_template_path(project_id, region, template_id)
+    
+    def get_template(self):
+        
+        fields = []
+        
+        TagTemplate = self.client.get_tag_template(self.template_path)
+        
+        for field_id, field_value in TagTemplate.fields.items():
+            
+            # TO DO: extract mandatory attribute from template
+            
+            field_id = str(field_id)
+            display_name = field_value.display_name
+            is_required = field_value.is_required
+            
+            FieldType = field_value.type
+            
+            #print("field_id: " + str(field_id))
+            #print("display_name: " + display_name)
+            #print("primitive_type: " + str(FieldType.primitive_type))
+            #print("is_required: " + str(is_required))
+            
+            enum_values = []
+            
+            field_type = None
+             
+            if FieldType.primitive_type == 1:
+                field_type = "double"
+            if FieldType.primitive_type == 2:
+                field_type = "string"
+            if FieldType.primitive_type == 3:
+                field_type = "bool"
+            if FieldType.primitive_type == 4:
+                field_type = "datetime"
+            if FieldType.primitive_type == 0:
+                field_type = "enum"   
+                     
+                index = 0
+                enum_values_long = str(FieldType).split(":") 
+                for long_value in enum_values_long:
+                    if index > 0:
+                        enum_value = long_value.split('"')[1]
+                        #print("enum value: " + enum_value)
+                        enum_values.append(enum_value)
+                    index = index + 1
+            
+            # populate dict
+            field = {}
+            field['field_id'] = field_id
+            field['display_name'] = display_name
+            field['field_type'] = field_type
+            field['is_required'] = is_required
+            
+            if field_type == "enum":
+                field['enum_values'] = enum_values
+
+            fields.append(field)
+                          
+        return fields
+    
+        
+    def create_update_static_propagated_tag(self, config_status, source_res, view_res, columns, fields, source_tag_uuid, view_tag_uuid, template_uuid):
+        
+        store = te.TagEngineUtils()        
+        bigquery_resource = '//bigquery.googleapis.com/projects/' + view_res
+        print("bigquery_resource: " + bigquery_resource)
+            
+        entry = self.client.lookup_entry(linked_resource=bigquery_resource)
+        
+        creation_status = constants.SUCCESS
+            
+        try:    
+            
+            if len(columns) == 0:
+                columns.append("")
+            
+            for column in columns:
+            
+                tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
+                print('tag_exists: ' + str(tag_exists))
+            
+                tag = Tag()
+                tag.template = self.template_path
+            
+                for field in fields:
+                    field_id = field['field_id']
+                    field_type = field['field_type']
+                    field_value = field['field_value']
+            
+                    if field_type == "bool":
+                        tag.fields[field_id].bool_value = bool(field_value)
+                    if field_type == "string":
+                        tag.fields[field_id].string_value = field_value
+                    if field_type == "double":
+                        tag.fields[field_id].double_value = int(field_value)
+                    if field_type == "enum":
+                        tag.fields[field_id].enum_value.display_name = field_value
+                    if field_type == "datetime":
+                        split_datetime = field_value.split(" ")
+                        datetime_value = split_datetime[0] + "T" + split_datetime[1] + "Z"
+                        print("datetime_value: " + datetime_value)
+                        tag.fields[field_id].timestamp_value.FromJsonString(datetime_value)
+            
+                if column != "":
+                    tag.column = column
+                    print('tag.column == ' + column)   
+            
+                if tag_exists == True:
+                    tag.name = tag_id
+                    response = self.client.update_tag(tag=tag)
+                    store.write_propagated_log_entry(config_status, constants.TAG_UPDATED, constants.BQ_RES, source_res, view_res, column, "STATIC", source_tag_uuid, view_tag_uuid, tag_id, template_uuid)
+                else:
+                    response = self.client.create_tag(parent=entry.name, tag=tag)
+                    tag_id = response.name
+                    store.write_propagated_log_entry(config_status, constants.TAG_CREATED, constants.BQ_RES, source_res, view_res, column, "STATIC", source_tag_uuid, view_tag_uuid, tag_id, template_uuid)
+            
+                print("response: " + str(response))
+        
+        except ValueError:
+            print("ValueError: create_static_tags failed due to invalid parameters.")
+            creation_status = constants.ERROR
+            
+        return creation_status
+         
+    
+    def create_update_dynamic_propagated_tag(self, config_status, source_res, view_res, columns, fields, source_tag_uuid, view_tag_uuid, template_uuid):
+        
+        store = te.TagEngineUtils()
+        bq_client = bigquery.Client()        
+        bigquery_resource = '//bigquery.googleapis.com/projects/' + view_res
+        entry = self.client.lookup_entry(linked_resource=bigquery_resource)
+        
+        creation_status = constants.SUCCESS
+        
+        try:    
+                
+            if len(columns) == 0:
+                columns.append("")
+            
+            for column in columns:
+            
+                tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
+                print('tag_exists == ' + str(tag_exists))
+    
+                tag = Tag()
+                tag.template = self.template_path
+    
+                for field in fields:
+                    field_id = field['field_id']
+                    field_type = field['field_type']
+                    query_expression = field['query_expression']
+    
+                    # run query in BQ
+                    qualified_table = view_res.replace('/project/', '.').replace('/datasets/', '.').replace('/tables/', '.')
+                    query_str = query_expression.replace('$$', qualified_table)
+                    #print('query_str: ' + query_str)
+                    rows = bq_client.query(query_str).result()
+    
+                    for row in rows: 
+                        #print("query result: " + str(row[0]))
+                        field_value = row[0]
+                    
+                    if field_type == "bool":
+                        tag.fields[field_id].bool_value = bool(field_value)
+                    if field_type == "string":
+                        tag.fields[field_id].string_value = field_value
+                    if field_type == "double":
+                        tag.fields[field_id].double_value = int(field_value)
+                    if field_type == "enum":
+                        tag.fields[field_id].enum_value.display_name = field_value
+                    if field_type == "datetime":
+                        timestamp_value = field_value.isoformat()
+                        reformatted_timestamp = timestamp_value[0:19] + timestamp_value[26:32] + "Z"
+                        print("reformatted_timestamp: " + reformatted_timestamp)
+                        tag.fields[field_id].timestamp_value.FromJsonString(reformatted_timestamp)
+    
+                if column != "":
+                    tag.column = column
+                    print('tag.column == ' + column)             
+    
+                if tag_exists == True:
+                    print('tag exists')
+                    tag.name = tag_id
+                    response = self.client.update_tag(tag=tag)
+                    store.write_propagated_log_entry(config_status, constants.TAG_UPDATED, constants.BQ_RES, source_res, view_res, column, "DYNAMIC", source_tag_uuid, view_tag_uuid, tag_id, template_uuid)
+                else:
+                    print('tag doesn''t exists')
+                    response = self.client.create_tag(parent=entry.name, tag=tag)
+                    tag_id = response.name
+                    store.write_propagated_log_entry(config_status, constants.TAG_CREATED, constants.BQ_RES, source_res, view_res, column, "DYNAMIC", source_tag_uuid, view_tag_uuid, tag_id, template_uuid)
+        
+            #print("response: " + str(response))
+
+        except ValueError:
+            print("ValueError: create_dynamic_tags failed due to invalid parameters.")
+            creation_status = constants.ERROR
+
+        return creation_status
+    
+    
+    def check_if_exists(self, parent, column):
+        
+        print('enter check_if_exists')
+        print('input parent: ' + parent)
+        print('input column: ' + column)
+        
+        tag_exists = False
+        tag_id = ""
+        
+        tag_list = self.client.list_tags(parent)
+        
+        for tag_instance in tag_list:
+            print('tag name: ' + str(tag_instance.name))
+            tagged_column = tag_instance.column
+            
+            print('found tagged column: ' + tagged_column)
+            
+            tagged_template = tag_instance.template.split('/')[5]
+             
+            if column == "":
+                # looking for table tags
+                if tagged_template == self.template_id and tagged_column == "":
+                    print('Table tag exists.')
+                    tag_exists = True
+                    tag_id = tag_instance.name
+                    print('tag_id: ' + tag_id)
+                    break
+            else:
+                # looking for column tags
+                if column == tagged_column and tagged_template == self.template_id:
+                    print('Column tag exists.')
+                    tag_exists = True
+                    tag_id = tag_instance.name
+                    print('tag_id: ' + tag_id)
+                    break
+           
+        return tag_exists, tag_id
+    
+    
+    def create_update_static_tags(self, fields, included_uris, excluded_uris, tag_uuid, template_uuid):
+        
+        store = te.TagEngineUtils()        
+        rs = res.Resources(self.project_id)
+        resources = rs.get_resources(included_uris, excluded_uris)
+        print("resources: " + str(resources))
+        
+        creation_status = constants.SUCCESS
+        
+        for resource in resources:
+            
+            column = ""
+            
+            if "/column/" in resource:
+                # we have a column tag
+                split_resource = resource.split("/column/")
+                resource = split_resource[0]
+                column = split_resource[1]
+            
+            bigquery_resource = '//bigquery.googleapis.com/projects/' + resource
+            print("bigquery_resource: " + bigquery_resource)
+            
+            entry = self.client.lookup_entry(linked_resource=bigquery_resource)
+            
+            try:    
+                
+                tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
+                
+                tag = Tag()
+                tag.template = self.template_path
+                
+                for field in fields:
+                    field_id = field['field_id']
+                    field_type = field['field_type']
+                    field_value = field['field_value']
+                
+                    if field_type == "bool":
+                        tag.fields[field_id].bool_value = bool(field_value)
+                    if field_type == "string":
+                        tag.fields[field_id].string_value = field_value
+                    if field_type == "double":
+                        tag.fields[field_id].double_value = int(field_value)
+                    if field_type == "enum":
+                        tag.fields[field_id].enum_value.display_name = field_value
+                    if field_type == "datetime":
+                        split_datetime = field_value.split(" ")
+                        datetime_value = split_datetime[0] + "T" + split_datetime[1] + "Z"
+                        tag.fields[field_id].timestamp_value.FromJsonString(datetime_value)
+                
+                if column != "":
+                    tag.column = column
+                    print('tag.column == ' + column)   
+                
+                if tag_exists == True:
+                    tag.name = tag_id
+                    response = self.client.update_tag(tag=tag)
+                    store.write_log_entry(constants.TAG_UPDATED, constants.BQ_RES, resource, column, "STATIC", tag_uuid, tag_id, template_uuid)
+                else:
+                    response = self.client.create_tag(parent=entry.name, tag=tag)
+                    tag_id = response.name
+                    store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, resource, column, "STATIC", tag_uuid, tag_id, template_uuid)
+                
+                print("response: " + str(response))
+            
+            except ValueError:
+                print("ValueError: create_static_tags failed due to invalid parameters.")
+                creation_status = constants.ERROR
+            
+        return creation_status
+
+    def create_update_dynamic_tags(self, fields, included_uris, excluded_uris, tag_uuid, template_uuid):
+        
+        store = te.TagEngineUtils()
+        bq_client = bigquery.Client()
+                
+        rs = res.Resources(self.project_id)
+        resource_list = rs.get_resources(included_uris, excluded_uris)
+        
+        creation_status = constants.SUCCESS
+
+        for resource in resource_list:
+            
+            column = ""
+            if "/column/" in resource:
+                # we have a column tag
+                split_resource = resource.split("/column/")
+                resource = split_resource[0]
+                column = split_resource[1]
+                
+            bigquery_resource = '//bigquery.googleapis.com/projects/' + resource
+            entry = self.client.lookup_entry(linked_resource=bigquery_resource)
+            
+            try:    
+                
+                tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
+                #print("tag_exists on column " + column + " == " + str(tag_exists))
+                
+                # create new tag
+                tag = Tag()
+                tag.template = self.template_path
+                
+                for field in fields:
+                    field_id = field['field_id']
+                    field_type = field['field_type']
+                    query_expression = field['query_expression']
+                
+                    # run query in BQ
+                    qualified_table = resource.replace('/project/', '.').replace('/datasets/', '.').replace('/tables/', '.')
+                    query_str = query_expression.replace('$$', qualified_table)
+                    #print('query_str: ' + query_str)
+                    rows = bq_client.query(query_str).result()
+                
+                    for row in rows: 
+                        #print("query result: " + str(row[0]))
+                        field_value = row[0]
+                                
+                    if field_type == "bool":
+                        tag.fields[field_id].bool_value = bool(field_value)
+                    if field_type == "string":
+                        tag.fields[field_id].string_value = field_value
+                    if field_type == "double":
+                        tag.fields[field_id].double_value = int(field_value)
+                    if field_type == "enum":
+                        tag.fields[field_id].enum_value.display_name = field_value
+                    if field_type == "datetime":
+                        # timestamp value must be in this format: 2020-12-02T16:34:14Z
+                        timestamp_value = field_value.isoformat()
+                        
+                        if len(timestamp_value) == 10:
+                            reformatted_timestamp = timestamp_value + 'T12:00:00Z'
+                        else:
+                            reformatted_timestamp = timestamp_value[0:19] + timestamp_value[26:32] + "Z"
+                        
+                        tag.fields[field_id].timestamp_value.FromJsonString(reformatted_timestamp)
+                
+                if column != "":
+                    tag.column = column
+                    #print('tag.column == ' + column) 
+                
+                if tag_exists == True:
+                    tag.name = tag_id
+                    response = self.client.update_tag(tag=tag)
+                    store.write_log_entry(constants.TAG_UPDATED, constants.BQ_RES, resource, column, "DYNAMIC", tag_uuid, tag_id, template_uuid)
+                else:
+                    response = self.client.create_tag(parent=entry.name, tag=tag)
+                    tag_id = response.name
+                    store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, resource, column, "DYNAMIC", tag_uuid, tag_id, template_uuid)
+                    
+                #print("response: " + str(response))
+            
+            except ValueError:
+                print("ValueError: create_dynamic_tags failed due to invalid parameters.")
+                creation_status = constants.ERROR
+            
+        return creation_status
+
+if __name__ == '__main__':
+    dcu = DataCatalogUtils(template_id='dg_template', project_id='tag-engine-283315', region='us');
+    dcu.get_template()

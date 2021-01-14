@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+  <head>
+    <title>Tag Engine</title>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+  </head>  
+    <body>
+	    {% if settings == 1 %}
+	    <table><tr><td>
+	    &nbsp;<span style="color:green;">Settings Saved!</span>
+         </td></tr></table><p>
+	    {% endif %}
+	    
+	   <div class="pagetitle">
+	   <h1>Tag Engine</h1>
+        </div>
+	   <div class="header">
+	   <h2>Propagated Tags Settings</h2>
+	   </div>
+	   <span style="color:#9d9a9a;">
+		   <h5>&nbsp;&nbsp;Tag Engine can copy tags from BigQuery tables to views as long as those views reference tagged tables. This is called tag propagation. 
+			   <br>&nbsp;&nbsp;If you want Tag Engine to propagate your tags, fill out the fields below. You must set at least one source project and at least one destination project. 
+			   <br>&nbsp;&nbsp;You may optionally specify the frequency with which the tag propagate job should run. The default frequency is every 24 hours.  
+		        <br><br>&nbsp;&nbsp;Mandatory settings are marked by <span style="color:red;">*</span>
+		   </h5>
+	   </span> 
+         <form method="post" action="/set_propagated">
+		    <table>
+			   <tr>
+		          <td><span style="color:red;">*</span> Source Project Ids:</td>
+		          <td>&nbsp;<input type="text" name="source_project_ids" value="{{ source_project_ids }}" style="width: 400px;padding: 3px;"></td>
+			   </tr>
+		        <tr>
+		          <td><span style="color:red;">*</span> Destination Project Ids:</td>
+		          <td>&nbsp;<input type="text" name="dest_project_ids" value="{{ dest_project_ids }}" style="width: 400px;padding: 3px;"></td>
+			   </tr>
+			  
+		        <tr>
+		          <td>&nbsp;&nbsp;Job Run Frequency:</td>
+		          <td>&nbsp;<input type="text" name="job_frequency" value="{{ job_frequency }}" style="width: 30px;padding: 3px;"> hours</td>
+			   </tr>
+			   
+			    <td></td>
+			    <td>&nbsp;<input type="submit" value="Save" name="submit" style="width: 150px;padding: 3px;"></td>
+		    </table>
+           
+         </form>
+	    <p>&nbsp;&nbsp;<a href="{{ url_for('propagated_report') }}">Propagated Tag Report</a>&nbsp;&nbsp;<a href="/">Homepage</a></p>
+    </body>
+</html>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+  <head>
+    <title>Tag Engine</title>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+  </head>  
+    <body>
+ 	   <div class="pagetitle">
+ 	   <h1>Tag Engine</h1>
+         </div>
+ 	   <div class="header">
+	    <h2>Tag configs on {{ resource }}</h2>
+	   </div>
+	    <span style="color:#9d9a9a;">
+	    <h5>&nbsp;Mandatory template fields are marked by <span style="color:red;">*</span>. </h5>
+         </span>  
+		    {% for tag_config in tag_configs %}
+		    <table style="background-color:#f1eeee" width="1000">
+		   
+		    <th>&nbsp;{{ tag_config['tag_type'].title() }} tag using {{ tag_config['template_id'] }}</th> 
+			<tr><td>&nbsp;<span style="color:#0b5394;">Tagged Fields:</span></td></tr>
+			{% for field in tag_config['fields'] %}
+	          <tr>
+		     <td>&nbsp;
+				   {% if field['is_required'] == True %}
+					  <span style="color:red;">*</span>
+				   {% else %}
+				       &nbsp;
+				   {% endif %}
+				
+				{{ field['field_id'] }} (<span style="color:green;">{{ field['field_type'] }}</span>): 
+				{% if tag_config['tag_type'] == 'STATIC' %}
+				  {{ field['field_value'] }}
+				{% endif %}
+				{% if tag_config['tag_type'] == 'DYNAMIC' %}
+				  {{ field['query_expression'] }}
+				{% endif %}
+			</td>
+		     </tr>
+			{% endfor %}
+		    <tr>
+		    <td>&nbsp;<span style="color:#0b5394;">Included URIs:</span></td>
+	         </tr>
+		    <tr>
+		    <td>&nbsp;&nbsp;{{ tag_config['included_uris'] }}</td>
+	         </tr>
+		    <tr>
+		    <td>&nbsp;<span style="color:#0b5394;">Excluded URIs:</span></td>
+	         </tr>
+		    <tr>
+		    <td>&nbsp;&nbsp;{{ tag_config['excluded_uris'] }}</td>
+	         </tr>
+	        
+		    {% if tag_config['tag_type'] == 'DYNAMIC' %}
+		    <tr>
+		    <td>&nbsp;<span style="color:#0b5394;">Refresh frequency:</span></td>
+	         </tr>
+		    <tr>
+		    <td>&nbsp;&nbsp;{{ tag_config['refresh_frequency'] }} hours
+		    </td>
+		    </tr>
+		    {% endif %}
+		   
+	        </table>
+		   <br>
+		   {% endfor %}         
+    &nbsp;<a href="{{ url_for('coverage_report') }}">Coverage Report</a>&nbsp;&nbsp;<a href="/">Homepage</a></p>
+    </body>
+</html>

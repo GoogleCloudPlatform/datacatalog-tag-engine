@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+  <head>
+    <title>Tag Engine</title>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+  </head>  
+    <body>
+	   <div class="pagetitle">
+	   <h1>Tag Engine</h1>
+        </div>
+	   <div class="header">
+	   <h2>Create and Edit Tags</h2>
+	   </div>
+	   <span style="color:#9d9a9a;">
+		   <h5>&nbsp;Choose a Data Catalog Tag Template to start tagging. Enter the template's id, project, and region.</h5>
+	   </span> 
+         <form method="post" action="/search_template">
+		    <table>
+		        <tr>
+		          <td>Tag Template Id:</td>
+		          <td><input type="text" name="template_id" value="{{ template_id }}" style="width: 150px;padding: 3px;"></td>
+			   </tr>
+		        <tr>
+		          <td>GCP Project Id:</td>
+		          <td><input type="text" name="project_id" value="{{ project_id }}" style="width: 150px;padding: 3px;"></td>
+			   </tr>
+		        <tr>
+		          <td>GCP Region:</td>
+		          <td><input type="text" name="region" value="{{ region }}" style="width: 150px;padding: 3px;"></td>
+			   </tr>
+			    <td></td>
+			    <td><input type="submit" value="Search" name="search" style="width: 158px;padding: 3px;"></td>
+		    </table>
+           
+         </form>
+	    <p>&nbsp;</p>
+	    <div class="header">
+	    <h2>View Reports</h2>
+	    </div>
+	    &nbsp;<a href="{{ url_for('coverage_report') }}">Coverage Report</a><br>
+	    &nbsp;<a href="{{ url_for('propagated_report') }}">Propagated Tags Report</a><br>
+	    <p>&nbsp;</p>
+	    <div class="header">
+	    <h2>Customize Settings</h2>
+	    </div>
+	    &nbsp;<a href="{{ url_for('default_settings', saved=0) }}">Default Template Settings</a><br>
+	    &nbsp;<a href="{{ url_for('coverage_settings', saved=0) }}">Coverage Settings</a><br>
+	    &nbsp;<a href="{{ url_for('propagated_settings', saved=0) }}">Propagated Tags Settings</a>
+    </body>
+</html>

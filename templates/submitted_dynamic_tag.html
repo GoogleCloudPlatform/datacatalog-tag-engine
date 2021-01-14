@@ -1,0 +1,39 @@
+<html>
+ <head>
+   <title>Dynamic Tag Created</title>
+   <link rel="stylesheet" type="text/css" href="/static/style.css">
+ </head>
+ <body>
+   <div id="container">
+     <div class="pagetitle">
+       <h1>Dynamic Tag Created</h1>
+     </div>
+     <div id="main">
+       <p>Here's a summary of your dynamic tag config:</p>
+       <p>
+          <span style="color:#0b5394;">Template_id</span>: {{ template_id }} <br>
+          <span style="color:#0b5394;">Project_id</span>: {{ project_id }} <br>
+          <span style="color:#0b5394;">Region</span>: {{ region }} <br>
+		<p>
+		<span style="color:#0b5394;">Fields</span>: <br>
+		{% for field in fields: %}
+          	{{ field['field_id'] }} <span style="color:green;">({{ field['field_type'] }})</span> = {{ field['query_expression'] }} <br>
+		{% endfor %}
+   		<p></p>
+		<span style="color:#0b5394;">Included URIs</span>: <br>
+		{{ included_uris }} 
+   		 <p></p>
+ 		<span style="color:#0b5394;">Excluded URIs</span>: <br>
+		{% if excluded_uris is not defined or excluded_uris.isspace(): %}
+		   N/A
+		{% else: %}
+ 		  {{ excluded_uris }}
+		{% endif %}
+   	     </p></p>
+		<span style="color:#0b5394;">Refresh frequency</span>: {{ refresh_frequency }} hours<br>
+	  </p>
+	  <p><a href="{{ url_for('choose_action',template_id=template_id,project_id=project_id,region=region) }}">Create Another Tag</a>&nbsp;&nbsp;<a href="/">Homepage</a></p>
+     </div>
+   </div>
+ </body>
+</html>
