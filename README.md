@@ -17,7 +17,7 @@
 
 ### Step 3: To run Tag Engine:
 ```
-export REPO=https://source.developers.google.com/p/tag-engine-283315/r/tag-engine
+export REPO=https://github.com/GoogleCloudPlatform/datacatalog-tag-engine.git
 git clone $REPO
 gcloud app deploy
 gcloud app browse
