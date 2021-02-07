@@ -191,7 +191,10 @@ def set_propagated():
 def coverage_report():
     
     tagstore = te.TagEngineUtils()
-    report = tagstore.generate_coverage_report()
+    summary_report, detailed_report = tagstore.generate_coverage_report()
+    
+    print('summary_report: ' + str(summary_report))
+    print('detailed_report: ' + str(detailed_report))
     
     exists, settings = tagstore.read_coverage_settings()
     project_ids = settings['project_ids']
@@ -199,7 +202,8 @@ def coverage_report():
     return render_template(
         "coverage_report.html",
         project_ids=project_ids,
-        report_data=report)
+        report_headers=summary_report,
+        report_data=detailed_report)
         
 @app.route("/coverage_details<string:res>", methods=['GET'])
 def coverage_details(res):

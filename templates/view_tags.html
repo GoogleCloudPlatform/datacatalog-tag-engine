@@ -12,14 +12,14 @@
 	    <h2>Tag configs using {{ template_id }}</h2>
 	   </div>
 	    <span style="color:#9d9a9a;">
-	    <h5>
+	    <h6>
 		   {% if tag_configs|length > 0 %} 
 		    	&nbsp;Mandatory template fields are marked by <span style="color:red;">*</span>. <br>
 		   	&nbsp;Click on Edit Tag Config to update the rules of a config.
 		   {% else %}
 		     &nbsp;Tag Engine has no tag configs for this template. 
 		   {% endif %}
-	    </h5>
+	    </h6>
          </span>  
 		    {% for tag_config in tag_configs %}
 		    <table style="background-color:#f1eeee" width="1000">

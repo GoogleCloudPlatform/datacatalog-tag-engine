@@ -114,7 +114,8 @@ class TagEngineUtils:
         
     def generate_coverage_report(self):    
     
-        report = []
+        summary_report = []
+        detailed_report = []
         
         exists, settings = self.read_coverage_settings()
         project_ids = settings['project_ids']
@@ -132,14 +133,19 @@ class TagEngineUtils:
             project_id = project.strip()
             bq_client = bigquery.Client(project=project_id)
             datasets = list(bq_client.list_datasets())
-        
+            
+            total_tags = 0
+            
             for dataset in datasets:
                 print("dataset: " + dataset.dataset_id)
             
                 if project_id + "." + dataset.dataset_id in excluded_datasets:
                     print('skipping ' + project_id + "." + dataset.dataset_id)
                     continue
-            
+                
+                qualified_dataset = project_id + "." + dataset.dataset_id
+                total_tags = 0    
+                table_list = []
                 tables = list(bq_client.list_tables(dataset.dataset_id))
             
                 for table in tables:
@@ -147,9 +153,11 @@ class TagEngineUtils:
                 
                     table_path_full = table.full_table_id.replace(':', '/datasets/').replace('.', '/tables/')
                     table_path_short = table.full_table_id.replace(':', '.')
+                    table_name = table_path_full.split('/')[4]
                 
                     print('table_path_full: ' + table_path_full)
                     print('table_path_short: ' + table_path_short)
+                    print('table_name: ' + table_name)
                 
                     if table_path_short in project_id + '.' + excluded_tables:
                         print('skipping ' + table_path_short)
@@ -159,12 +167,21 @@ class TagEngineUtils:
                     results = query.stream() 
                 
                     tag_count = len(list(results))
+                    total_tags = total_tags + tag_count
                     print("tag_count = " + str(tag_count))
+                    print("total_tags = " + str(total_tags))
                 
-                    record = (table_path_short, tag_count)
-                    report.append(record)
+                    # add the table name and tag count to a list 
+                    table_tag = (table_name, tag_count)
+                    table_list.append(table_tag)
+
+                # add record to summary report
+                summary_record = (qualified_dataset, total_tags)
+                summary_report.append(summary_record)
+                detailed_record = {qualified_dataset: table_list}
+                detailed_report.append(detailed_record)
         
-        return report
+        return summary_report, detailed_report
                      
     
     def run_propagated_job(self, source_project_ids, dest_project_ids):

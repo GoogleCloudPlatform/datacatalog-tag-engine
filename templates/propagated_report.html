@@ -5,20 +5,14 @@
     <link rel="stylesheet" type="text/css" href="/static/style.css">
   </head>  
     <body>
-    		{% if settings == 1 %}
-    	 	<table><tr><td>
-    		 &nbsp;<span style="color:green;">Settings Saved!</span>
-        	</td></tr></table><p>
-    		 {% endif %}
-	   
 	   <div class="pagetitle">
 	   <h1>Tag Engine</h1>
         </div>
 	   <div class="header">
 	   <h2>Propagated Tags Report for {{ project_ids }}</h2>
-	   
+        </div>
 	   <form method="post" action="/propagated_report">
-	    <h5>  
+	    <h5>&nbsp;  
 	   {% if last_run != 'Never' %}   
 		  Last run: {{ last_run }} UTC&nbsp;&nbsp;<input type="submit" value="Run Now" name="view" style="width: 100px;padding: 3px;"> 
 	   {% else %}

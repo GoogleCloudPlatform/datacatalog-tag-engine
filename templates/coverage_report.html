@@ -3,46 +3,64 @@
   <head>
     <title>Tag Engine</title>
     <link rel="stylesheet" type="text/css" href="/static/style.css">
-  </head>  
+  </head>
+  <div class="pagetitle">
+  <h1>Tag Engine</h1>
+  </div>
+  <div class="header">
+  <h2>Coverage Report</h2>
+  </div>  
     <body>
-    		{% if settings == 1 %}
-    	 	<table><tr><td>
-    		 &nbsp;<span style="color:green;">Settings Saved!</span>
-        	</td></tr></table><p>
-    		 {% endif %}
-	   
-	   <div class="pagetitle">
-	   <h1>Tag Engine</h1>
-        </div>
-	   <div class="header">
-	   <h2>Coverage Report for {{ project_ids }}</h2>
-	   </div>
-		    <table>
-			   {% for record in report_data: %}
-			   {% set res = record.0 %}
-		        <tr>
-		          <td style="text-align:right">&nbsp;&nbsp;
-				{% if record.1 > 0 %}	
-					<a href="{{ url_for('coverage_details', res=res) }}">{{ record.0 }}</a>
-				{% else %}
-					{{ record.0 }}
-				{% endif %}
-				</td>
-				<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
-		          <td>
-					{% if record.1 == 0 %}
-					<td style="background-color:red">&nbsp;&nbsp;{{ record.1 }} tags
-					{% elif record.1 == 1 %}
-					<td style="background-color:yellow">&nbsp;&nbsp;{{ record.1 }} tag
-					{% elif record.1 == 2 %}
-					<td style="background-color:lightgreen">&nbsp;&nbsp;{{ record.1 }} tags
-					{% else %}
-					<td style="background-color:green">&nbsp;&nbsp;{{ record.1 }} tags
-					{% endif %}
-					&nbsp;&nbsp;</td>
-			   </tr>
+	  <table>
+	 {% for project in project_ids.split(",") %}
+      	<tr><td>
+      	<h4>&nbsp;&nbsp;Project {{ project }}</h4>
+          </td></tr>
+	    {% for header in report_headers: %}
+	      {% set project_dataset, total_tags = header %}
+		 {% set current_project = project_dataset.split('.')[0] %}
+		 {% set current_dataset = project_dataset.split('.')[1] %}
+		 {% if current_project in project: %}
+		    <tr><td style="text-align:left"><b>&nbsp;&nbsp;Dataset {{ current_dataset }} - {{ total_tags }} tags</b></td></tr>
+		   
+			   {% for dataset_record in report_data: %}
+			      {% for dataset, tables in dataset_record.items(): %}
+			        {% if project_dataset in dataset: %}
+			           {% for table in tables: %}
+					   {% set table_name = table.0 %}
+					   {% set tag_count = table.1 %}
+					   {% set res = project_dataset + "." + table_name %}
+				        <tr>
+				          <td style="text-align:left">&nbsp;&nbsp;
+						{% if tag_count > 0 %}	
+							<a href="{{ url_for('coverage_details', res=res) }}">{{ table_name }}</a>
+						{% else %}
+							{{ table_name }}
+						{% endif %}
+				          </td>
+						<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+				          <td>
+							{% if tag_count == 0 %}
+							<td style="background-color:red">&nbsp;&nbsp;{{ tag_count }} tags
+							{% elif tag_count == 1 %}
+							<td style="background-color:yellow">&nbsp;&nbsp;{{ tag_count }} tag
+							{% elif tag_count == 2 %}
+							<td style="background-color:lightgreen">&nbsp;&nbsp;{{ tag_count }} tags
+							{% else %}
+							<td style="background-color:green">&nbsp;&nbsp;{{ tag_count }} tags
+							{% endif %}
+							&nbsp;&nbsp;</td>
+					    </tr>
+					{% endfor %}
+				  {% endif %}
+				{% endfor %}
 			   {% endfor %}
-		    </table>
+		    
+		     {% endif %}
+		   {% endfor %}
+		   <tr><td>&nbsp;</td></tr>
+		{% endfor %}
+		</table>
          <p>&nbsp;&nbsp;</p>
 	    &nbsp;&nbsp;<strong>Legend:&nbsp;&nbsp;</strong><span style="background-color:red">&nbsp;&nbsp;</span>&nbsp;Missing&nbsp;&nbsp;&nbsp;&nbsp;
 	                            <span style="background-color:yellow">&nbsp;&nbsp;</span>&nbsp;Partial&nbsp;&nbsp;&nbsp;&nbsp;
