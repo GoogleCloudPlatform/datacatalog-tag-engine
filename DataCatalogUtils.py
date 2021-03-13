@@ -13,8 +13,9 @@
 # limitations under the License.
 
 import requests
-from google.cloud.datacatalog_v1 import DataCatalogClient
-from google.cloud.datacatalog_v1.types import Tag
+from google.cloud import datacatalog
+from google.cloud.datacatalog import DataCatalogClient
+#from google.cloud.datacatalog_v1.types import Tag
 from google.cloud import bigquery
 import Resources as res
 import TagEngineUtils as te
@@ -34,19 +35,16 @@ class DataCatalogUtils:
         
         fields = []
         
-        TagTemplate = self.client.get_tag_template(self.template_path)
+        tag_template = self.client.get_tag_template(name=self.template_path)
         
-        for field_id, field_value in TagTemplate.fields.items():
-            
-            # TO DO: extract mandatory attribute from template
+        for field_id, field_value in tag_template.fields.items():
             
             field_id = str(field_id)
             display_name = field_value.display_name
             is_required = field_value.is_required
             
-            FieldType = field_value.type
-            
             #print("field_id: " + str(field_id))
+            #print("field_value: " + str(field_value))
             #print("display_name: " + display_name)
             #print("primitive_type: " + str(FieldType.primitive_type))
             #print("is_required: " + str(is_required))
@@ -54,20 +52,20 @@ class DataCatalogUtils:
             enum_values = []
             
             field_type = None
-             
-            if FieldType.primitive_type == 1:
+            
+            if field_value.type.primitive_type == datacatalog.FieldType.PrimitiveType.DOUBLE:
                 field_type = "double"
-            if FieldType.primitive_type == 2:
+            if field_value.type.primitive_type == datacatalog.FieldType.PrimitiveType.STRING:
                 field_type = "string"
-            if FieldType.primitive_type == 3:
+            if field_value.type.primitive_type == datacatalog.FieldType.PrimitiveType.BOOL:
                 field_type = "bool"
-            if FieldType.primitive_type == 4:
+            if field_value.type.primitive_type == datacatalog.FieldType.PrimitiveType.TIMESTAMP:
                 field_type = "datetime"
-            if FieldType.primitive_type == 0:
+            if field_value.type.primitive_type == datacatalog.FieldType.PrimitiveType.PRIMITIVE_TYPE_UNSPECIFIED:
                 field_type = "enum"   
                      
                 index = 0
-                enum_values_long = str(FieldType).split(":") 
+                enum_values_long = str(field_value.type).split(":") 
                 for long_value in enum_values_long:
                     if index > 0:
                         enum_value = long_value.split('"')[1]
@@ -95,9 +93,11 @@ class DataCatalogUtils:
         store = te.TagEngineUtils()        
         bigquery_resource = '//bigquery.googleapis.com/projects/' + view_res
         print("bigquery_resource: " + bigquery_resource)
-            
-        entry = self.client.lookup_entry(linked_resource=bigquery_resource)
         
+        request = datacatalog.LookupEntryRequest()
+        request.linked_resource=bigquery_resource
+        entry = self.client.lookup_entry(request)
+       
         creation_status = constants.SUCCESS
             
         try:    
@@ -110,7 +110,7 @@ class DataCatalogUtils:
                 tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
                 print('tag_exists: ' + str(tag_exists))
             
-                tag = Tag()
+                tag = datacatalog.Tag()
                 tag.template = self.template_path
             
                 for field in fields:
@@ -119,19 +119,28 @@ class DataCatalogUtils:
                     field_value = field['field_value']
             
                     if field_type == "bool":
-                        tag.fields[field_id].bool_value = bool(field_value)
+                        bool_field = datacatalog.TagField()
+                        bool_field.bool_value = bool(field_value)
+                        tag.fields[field_id] = bool_field    
                     if field_type == "string":
-                        tag.fields[field_id].string_value = field_value
+                        string_field = datacatalog.TagField()
+                        string_field.string_value = str(field_value)
+                        tag.fields[field_id] = string_field
                     if field_type == "double":
-                        tag.fields[field_id].double_value = int(field_value)
+                        int_field = datacatalog.TagField()
+                        int_field.double_value = int(field_value)
+                        tag.fields[field_id] = int_field
                     if field_type == "enum":
-                        tag.fields[field_id].enum_value.display_name = field_value
+                        enum_field = datacatalog.TagField()
+                        enum_field.enum_value.display_name = field_value
+                        tag.fields[field_id] = enum_field
                     if field_type == "datetime":
+                        datetime_field = datacatalog.TagField()
                         split_datetime = field_value.split(" ")
                         datetime_value = split_datetime[0] + "T" + split_datetime[1] + "Z"
                         print("datetime_value: " + datetime_value)
                         tag.fields[field_id].timestamp_value.FromJsonString(datetime_value)
-            
+                            
                 if column != "":
                     tag.column = column
                     print('tag.column == ' + column)   
@@ -159,8 +168,11 @@ class DataCatalogUtils:
         store = te.TagEngineUtils()
         bq_client = bigquery.Client()        
         bigquery_resource = '//bigquery.googleapis.com/projects/' + view_res
-        entry = self.client.lookup_entry(linked_resource=bigquery_resource)
         
+        request = datacatalog.LookupEntryRequest()
+        request.linked_resource=bigquery_resource
+        entry = self.client.lookup_entry(request)
+         
         creation_status = constants.SUCCESS
         
         try:    
@@ -173,7 +185,7 @@ class DataCatalogUtils:
                 tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
                 print('tag_exists == ' + str(tag_exists))
     
-                tag = Tag()
+                tag = datacatalog.Tag()
                 tag.template = self.template_path
     
                 for field in fields:
@@ -192,18 +204,27 @@ class DataCatalogUtils:
                         field_value = row[0]
                     
                     if field_type == "bool":
-                        tag.fields[field_id].bool_value = bool(field_value)
+                        bool_field = datacatalog.TagField()
+                        bool_field.bool_value = bool(field_value)
+                        tag.fields[field_id] = bool_field
                     if field_type == "string":
-                        tag.fields[field_id].string_value = field_value
+                        string_field = datacatalog.TagField()
+                        string_field.string_value = str(field_value)
+                        tag.fields[field_id] = string_field
                     if field_type == "double":
-                        tag.fields[field_id].double_value = int(field_value)
+                        int_field = datacatalog.TagField()
+                        int_field.double_value = int(field_value)
+                        tag.fields[field_id] = int_field
                     if field_type == "enum":
-                        tag.fields[field_id].enum_value.display_name = field_value
+                        enum_field = datacatalog.TagField()
+                        enum_field.enum_value.display_name = field_value
+                        tag.fields[field_id] = enum_field
                     if field_type == "datetime":
-                        timestamp_value = field_value.isoformat()
-                        reformatted_timestamp = timestamp_value[0:19] + timestamp_value[26:32] + "Z"
-                        print("reformatted_timestamp: " + reformatted_timestamp)
-                        tag.fields[field_id].timestamp_value.FromJsonString(reformatted_timestamp)
+                        datetime_field = datacatalog.TagField()
+                        split_datetime = field_value.split(" ")
+                        datetime_value = split_datetime[0] + "T" + split_datetime[1] + "Z"
+                        print("datetime_value: " + datetime_value)
+                        tag.fields[field_id].timestamp_value.FromJsonString(datetime_value)
     
                 if column != "":
                     tag.column = column
@@ -238,7 +259,7 @@ class DataCatalogUtils:
         tag_exists = False
         tag_id = ""
         
-        tag_list = self.client.list_tags(parent)
+        tag_list = self.client.list_tags(parent=parent)
         
         for tag_instance in tag_list:
             print('tag name: ' + str(tag_instance.name))
@@ -290,13 +311,15 @@ class DataCatalogUtils:
             bigquery_resource = '//bigquery.googleapis.com/projects/' + resource
             print("bigquery_resource: " + bigquery_resource)
             
-            entry = self.client.lookup_entry(linked_resource=bigquery_resource)
+            request = datacatalog.LookupEntryRequest()
+            request.linked_resource=bigquery_resource
+            entry = self.client.lookup_entry(request)
             
             try:    
                 
                 tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
                 
-                tag = Tag()
+                tag = datacatalog.Tag()
                 tag.template = self.template_path
                 
                 for field in fields:
@@ -305,16 +328,26 @@ class DataCatalogUtils:
                     field_value = field['field_value']
                 
                     if field_type == "bool":
-                        tag.fields[field_id].bool_value = bool(field_value)
+                        bool_field = datacatalog.TagField()
+                        bool_field.bool_value = bool(field_value)
+                        tag.fields[field_id] = bool_field
                     if field_type == "string":
-                        tag.fields[field_id].string_value = field_value
+                        string_field = datacatalog.TagField()
+                        string_field.string_value = str(field_value)
+                        tag.fields[field_id] = string_field
                     if field_type == "double":
-                        tag.fields[field_id].double_value = int(field_value)
+                        int_field = datacatalog.TagField()
+                        int_field.double_value = int(field_value)
+                        tag.fields[field_id] = int_field
                     if field_type == "enum":
-                        tag.fields[field_id].enum_value.display_name = field_value
+                        enum_field = datacatalog.TagField()
+                        enum_field.enum_value.display_name = field_value
+                        tag.fields[field_id] = enum_field
                     if field_type == "datetime":
+                        datetime_field = datacatalog.TagField()
                         split_datetime = field_value.split(" ")
                         datetime_value = split_datetime[0] + "T" + split_datetime[1] + "Z"
+                        print("datetime_value: " + datetime_value)
                         tag.fields[field_id].timestamp_value.FromJsonString(datetime_value)
                 
                 if column != "":
@@ -358,15 +391,17 @@ class DataCatalogUtils:
                 column = split_resource[1]
                 
             bigquery_resource = '//bigquery.googleapis.com/projects/' + resource
-            entry = self.client.lookup_entry(linked_resource=bigquery_resource)
-            
+            request = datacatalog.LookupEntryRequest()
+            request.linked_resource=bigquery_resource
+            entry = self.client.lookup_entry(request)
+
             try:    
                 
                 tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
                 #print("tag_exists on column " + column + " == " + str(tag_exists))
                 
                 # create new tag
-                tag = Tag()
+                tag = datacatalog.Tag()
                 tag.template = self.template_path
                 
                 for field in fields:
@@ -379,28 +414,39 @@ class DataCatalogUtils:
                     query_str = query_expression.replace('$$', qualified_table)
                     #print('query_str: ' + query_str)
                     rows = bq_client.query(query_str).result()
-                
-                    for row in rows: 
-                        #print("query result: " + str(row[0]))
+                    
+                    # Note: there should only be a single row with a single field_value 
+                    for row in rows:
                         field_value = row[0]
+                    
+                    #print('field_value: ' + str(field_value))           
                                 
                     if field_type == "bool":
-                        tag.fields[field_id].bool_value = bool(field_value)
+                        bool_field = datacatalog.TagField()
+                        bool_field.bool_value = bool(field_value)
+                        tag.fields[field_id] = bool_field
                     if field_type == "string":
-                        tag.fields[field_id].string_value = field_value
+                        string_field = datacatalog.TagField()
+                        string_field.string_value = str(field_value)
+                        tag.fields[field_id] = string_field
                     if field_type == "double":
-                        tag.fields[field_id].double_value = int(field_value)
+                        int_field = datacatalog.TagField()
+                        int_field.double_value = int(field_value)
+                        tag.fields[field_id] = int_field
                     if field_type == "enum":
-                        tag.fields[field_id].enum_value.display_name = field_value
+                        enum_field = datacatalog.TagField()
+                        enum_field.enum_value.display_name = field_value
+                        tag.fields[field_id] = enum_field
                     if field_type == "datetime":
+                    
                         # timestamp value must be in this format: 2020-12-02T16:34:14Z
                         timestamp_value = field_value.isoformat()
-                        
+                    
                         if len(timestamp_value) == 10:
                             reformatted_timestamp = timestamp_value + 'T12:00:00Z'
                         else:
                             reformatted_timestamp = timestamp_value[0:19] + timestamp_value[26:32] + "Z"
-                        
+                    
                         tag.fields[field_id].timestamp_value.FromJsonString(reformatted_timestamp)
                 
                 if column != "":
@@ -426,4 +472,5 @@ class DataCatalogUtils:
 
 if __name__ == '__main__':
     dcu = DataCatalogUtils(template_id='dg_template', project_id='tag-engine-283315', region='us');
-    dcu.get_template()
+    fields = dcu.get_template()
+    print(str(fields))

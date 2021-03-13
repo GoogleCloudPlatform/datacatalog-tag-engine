@@ -190,11 +190,12 @@ class TagEngineUtils:
         
         for dest_project in dest_project_ids.split(','):
             dest_project_id = dest_project.strip()
+            print("dest_project_id: " + dest_project_id)
             bq_client = bigquery.Client(project=dest_project_id)
             datasets = list(bq_client.list_datasets())
         
             for dataset in datasets:
-                #print("dataset_id: " + dataset.dataset_id)
+                print("dataset_id: " + dataset.dataset_id)
 
                 query_str = """
                         select table_name as view_name, view_definition
