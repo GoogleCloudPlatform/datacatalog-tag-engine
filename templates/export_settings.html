@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+  <head>
+    <title>Tag Engine</title>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+  </head>  
+    <body>
+	    {% if settings == 1 %}
+	    <table><tr><td>
+	    &nbsp;<span style="color:green;">Settings Saved!</span>
+         </td></tr></table><p>
+	    {% endif %}
+	    
+	   <div class="pagetitle">
+	   <h1>Tag Engine</h1>
+        </div>
+	   <div class="header">
+	   <h2>BigQuery Export Settings</h2>
+	   </div>
+	   <span style="color:#9d9a9a;">
+		   <h6>&nbsp;&nbsp;Set your preferences to export your Data Catalog tags into BigQuery. As Tag Engine receives new tags, a copy of those tags are written to BigQuery.
+			 <br><br>&nbsp;&nbsp;Mandatory settings are marked by <span style="color:red;">*</span>
+		   </h6>
+	   </span> 
+         <form method="post" action="/set_export">
+		    <table>
+		        <tr>
+		          <td><span style="color:red;">*</span>&nbsp;BigQuery Project Id:</td>
+		          <td>&nbsp;<input type="text" name="project_id" value="{{ project_id }}" style="width: 150px;padding: 3px;"></td>
+			   </tr>
+		        <tr>
+		          <td><span style="color:red;">*</span>&nbsp;BigQuery Region:</td>
+		          <td>&nbsp;<input type="text" name="region" value="{{ region }}" style="width: 150px;padding: 3px;"></td>
+			   </tr>
+		        <tr>
+		          <td><span style="color:red;">*</span>&nbsp;BigQuery Dataset:</td>
+		          <td>&nbsp;<input type="text" name="dataset" value="{{ dataset }}" style="width: 150px;padding: 3px;"></td>
+			   </tr>
+			   <tr>
+			    <td></td>
+			    <td>&nbsp;<input type="submit" value="Save" name="submit" style="width: 160px;padding: 3px;"></td> 
+			  </tr>
+		    </table>
+           
+         </form>
+	    <p>&nbsp;&nbsp;<a href="/">Homepage</a></p>
+    </body>
+</html>

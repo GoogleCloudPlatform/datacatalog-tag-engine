@@ -145,11 +145,11 @@
 		    <p>&nbsp;</p>
 			   <h2>Choose Rules</h2>
 		 	   <span style="color:#9d9a9a;">
-		 		   <h5>Specify comma-separated list of URIs for resources to include in and exclude from your static tag. Wildcards are allowed. <br><br>
+		 		   <h6>Specify comma-separated list of URIs for resources to include in and exclude from your static tag. Wildcards are allowed. <br><br>
 					  Supported URIs for BigQuery resources: <br>
 					  bigquery/project/{project_id}/dataset/{dataset}/* <br>
 				       bigquery/project/{project_id}/dataset/{dataset}/{table} <br>
-				       bigquery/project/{project_id}/dataset/{dataset}/{table}/{column} </h5>
+				       bigquery/project/{project_id}/dataset/{dataset}/{table}/{column} </h6>
 				</span>
 			    <table>
 			     <tr>
@@ -163,6 +163,17 @@
 		          <textarea name="excluded_uris" style="align-content:left; overflow:auto;">{{ tag_config['excluded_uris'] }}
 		          </textarea></td>
 		         </tr>
+			    {% if display_export_option == 1 %}
+			    <tr><td>&nbsp;</td></tr>
+			    <tr><td>
+				    {% if tag_config['tag_export'] == True %} 
+				    		<input type="checkbox" class="form-control move-left" name="export" value="selected" checked>
+				    {% else %}
+				         	<input type="checkbox" class="form-control move-left" name="export" value="selected">
+				    {% endif %}
+				    Save a copy of your tags in BigQuery&nbsp;&nbsp;
+			    </td></tr>
+			    {% endif %}
 		        </table>
 	         <p>&nbsp;</p>
 		        <table>

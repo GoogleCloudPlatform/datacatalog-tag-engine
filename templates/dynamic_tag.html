@@ -9,7 +9,7 @@
 	   <h1>Tag Engine</h1>
         </div>
 	   <div class="header">
-	   <h2>Create Dynamic Tag using {{ template_id }}</h2>
+	   <h2>Create dynamic tag config using {{ template_id }}</h2>
 	   <span style="color:#9d9a9a;">
 		   <h6>To include a field in your tag, click on the checkbox next to the field and enter a query expression for the field in the text box. The result of the query expression must satisfy the type requirements of the field. For example, if the field is of type string, the query expression must return a string type.
 		    <br><br>Mandatory template fields are marked by <span style="color:red;">*</span> and are already checked for you.
@@ -44,11 +44,11 @@
 		    <p>&nbsp;</p>
 			   <h2>Choose Rules</h2>
 		 	   <span style="color:#9d9a9a;">
-		 		   <h5>Specify URIs for resources to include in or exclude from your dynamic tag. Wildcards are allowed. <br><br>
+		 		   <h6>Specify URIs for resources to include in or exclude from your dynamic tag. Wildcards are allowed. <br><br>
 					  Supported URIs for BigQuery resources: <br>
 					  bigquery/project/{project_id}/dataset/{dataset}/* <br>
 				       bigquery/project/{project_id}/dataset/{dataset}/{table} <br>
-				       bigquery/project/{project_id}/dataset/{dataset}/{table}/{column} </h5>
+				       bigquery/project/{project_id}/dataset/{dataset}/{table}/{column} </h6>
 				</span>
 			    <table>
 			     <tr>
@@ -69,6 +69,12 @@ bigquery/project/{{ project_id }}/dataset/{dataset}/*, bigquery/project/{{ proje
 				<tr>	
 			    <td>Refresh frequency: <input type="text" value="24" name="refresh_frequency" style="width: 30px;padding: 3px;"> hours.</td>
 		         </tr>
+			    {% if display_export_option == 1 %}
+			    <tr><td>&nbsp;</td></tr>
+			    <tr><td><input type="checkbox" class="form-control move-left" name="export" value="selected" checked>
+				    Save a copy of your tags in BigQuery&nbsp;&nbsp;
+			    </td></tr>
+			    {% endif %}
 		        </table>
 	         <p>&nbsp;</p>
 		        <table>

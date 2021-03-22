@@ -1,4 +1,4 @@
-# Copyright 2020 Google, LLC.
+# Copyright 2020-2021 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -100,6 +100,31 @@ def coverage_settings(saved):
         settings=saved)
     # [END render_template]
     
+@app.route("/export_settings<int:saved>", methods=["GET"])
+def export_settings(saved):
+    
+    tagstore = te.TagEngineUtils()
+    exists, settings = tagstore.read_export_settings()
+    
+    if exists:
+        project_id = settings['project_id']
+        region = settings['region']
+        dataset = settings['dataset']
+    else:
+        project_id = "{your_project_id}"
+        region = "{your_region}"
+        dataset = "{your_dataset}"
+    
+    # [END default_settings]
+    # [START render_template]
+    return render_template(
+        'export_settings.html',
+        project_id=project_id,
+        region=region,
+        dataset=dataset,
+        settings=saved)
+    # [END render_template]
+    
 @app.route("/propagated_settings<int:saved>")
 def propagated_settings(saved):
     
@@ -125,6 +150,7 @@ def propagated_settings(saved):
         settings=saved)
     # [END render_template]
 
+
 @app.route("/set_default", methods=['POST'])
 def set_default():
     
@@ -144,6 +170,32 @@ def set_default():
         tagstore.write_default_settings(template_id, project_id, region)
         
     return default_settings(1)
+        
+        
+@app.route("/set_export", methods=['POST'])
+def set_export():
+    
+    project_id = request.form['project_id'].rstrip()
+    region = request.form['region'].rstrip()
+    dataset = request.form['dataset'].rstrip()
+    
+    print("project_id: " + project_id)
+    print("region: " + region)
+    print("dataset: " + dataset)
+    
+    if project_id == "{your_project_id}":
+        template_id = None
+    if region == "{your_region}":
+        region = None
+    if dataset == "{your_dataset}":
+        dataset = None
+    
+    if project_id != None and region != None and dataset != None:
+        tagstore = te.TagEngineUtils()
+        tagstore.write_export_settings(project_id, region, dataset)
+        
+    return export_settings(1)
+
         
 @app.route("/set_coverage", methods=['POST'])
 def set_coverage():
@@ -167,7 +219,8 @@ def set_coverage():
         tagstore = te.TagEngineUtils()
         tagstore.write_coverage_settings(project_ids, datasets, tables)
         
-    return coverage_settings(1)
+    return coverage_settings(1)  
+ 
     
 @app.route("/set_propagated", methods=['POST'])
 def set_propagated():
@@ -644,13 +697,21 @@ def display_selected_action():
     dcu = dc.DataCatalogUtils(template_id, project_id, region)
     template_fields = dcu.get_template()
     
+    tagstore = te.TagEngineUtils()
+    exists, settings = tagstore.read_export_settings()
+    
+    if exists == True:
+        export = 1
+    else:
+        export = 0
+    
+    print("export: " + str(export))
+
     if action == "View and Edit Tags":
         
         tagstore = te.TagEngineUtils()
         tag_configs = tagstore.read_tag_configs(template_id, project_id, region)
-        
-        # [END display_selected_action]
-        # [START render_template]
+
         return render_template(
             'view_tags.html',
             template_id=template_id,
@@ -659,24 +720,22 @@ def display_selected_action():
             tag_configs=tag_configs)
         
     elif action == "Create Static Tag":
-        # [END display_selected_action]
-        # [START render_template]
         return render_template(
             'static_tag.html',
             template_id=template_id,
             project_id=project_id,
             region=region,
             fields=template_fields,
-            current_time=datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
+            current_time=datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+            display_export_option=export)
     else:
-        # [END display_action]
-        # [START render_template]
         return render_template(
             'dynamic_tag.html',
             template_id=template_id,
             project_id=project_id,
             region=region,
-            fields=template_fields)
+            fields=template_fields,
+            display_export_option=export)
     # [END render_template]
 
 @app.route('/update_tag', methods=['POST'])
@@ -701,6 +760,16 @@ def update_tag():
     template_fields = dcu.get_template()
     print("fields: " + str(template_fields))
     
+    tagstore = te.TagEngineUtils()
+    exists, settings = tagstore.read_export_settings()
+    
+    if exists == True:
+        export = 1
+    else:
+        export = 0
+    
+    print("export: " + str(export))
+    
     if tag_type == "STATIC":
         # [END update_tag]
         # [START render_template]
@@ -711,7 +780,8 @@ def update_tag():
             region=region,
             fields=template_fields,
             tag_config=tag_config, 
-            current_time=datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
+            current_time=datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+            display_export_option=export)
     else:
         # [END display_action]
         # [START render_template]
@@ -721,7 +791,8 @@ def update_tag():
             project_id=project_id,
             region=region,
             fields=template_fields,
-            tag_config=tag_config)
+            tag_config=tag_config,
+            display_export_option=export)
     # [END render_template]
     
 @app.route('/process_update_static_tag', methods=['POST'])
@@ -763,11 +834,19 @@ def process_update_static_tag():
                 break
     
         print('fields: ' + str(fields))
+        
+        tag_export = False
+    
+        if "export" in request.form:
+            export_option = request.form.get("export")
+    
+            if export_option == "selected":
+                tag_export = True
     
         template_exists, template_uuid = tagstore.read_tag_template(template_id, project_id, region)
-        new_tag_uuid = tagstore.update_tag_config(old_tag_uuid, 'STATIC', 'ACTIVE', fields, included_uris, excluded_uris, template_uuid, None)
+        new_tag_uuid = tagstore.update_tag_config(old_tag_uuid, 'STATIC', 'ACTIVE', fields, included_uris, excluded_uris, template_uuid, None, tag_export)
         
-        update_status = dcu.create_update_static_tags(fields, included_uris, excluded_uris, new_tag_uuid, template_uuid)
+        update_status = dcu.create_update_static_tags(fields, included_uris, excluded_uris, new_tag_uuid, template_uuid, tag_export)
     
         if update_status == constants.SUCCESS:
             print('update_static_tags SUCCEEDED.')
@@ -831,11 +910,19 @@ def process_update_dynamic_tag():
                 break
     
         print('fields: ' + str(fields))
+        
+        tag_export = False
+    
+        if "export" in request.form:
+            export_option = request.form.get("export")
+    
+            if export_option == "selected":
+                tag_export = True
     
         template_exists, template_uuid = tagstore.read_tag_template(template_id, project_id, region)
-        new_tag_uuid = tagstore.update_tag_config(old_tag_uuid, 'DYNAMIC', 'ACTIVE', fields, included_uris, excluded_uris, template_uuid, refresh_frequency)
+        new_tag_uuid = tagstore.update_tag_config(old_tag_uuid, 'DYNAMIC', 'ACTIVE', fields, included_uris, excluded_uris, template_uuid, refresh_frequency, tag_export)
         
-        update_status = dcu.create_update_dynamic_tags(fields, included_uris, excluded_uris, new_tag_uuid, template_uuid)
+        update_status = dcu.create_update_dynamic_tags(fields, included_uris, excluded_uris, new_tag_uuid, template_uuid, tag_export)
     
         if update_status == constants.SUCCESS:
             print('update_dynamic_tags SUCCEEDED.')
@@ -905,11 +992,19 @@ def process_static_tag():
     
     print('fields: ' + str(fields))
     
+    tag_export = False
+    
+    if "export" in request.form:
+        export_option = request.form.get("export")
+    
+        if export_option == "selected":
+            tag_export = True
+        
     tagstore = te.TagEngineUtils()
     template_uuid = tagstore.write_tag_template(template_id, project_id, region)
-    tag_uuid = tagstore.write_static_tag('ACTIVE', fields, included_uris, excluded_uris, template_uuid)
+    tag_uuid = tagstore.write_static_tag('ACTIVE', fields, included_uris, excluded_uris, template_uuid, tag_export)
     
-    creation_status = dcu.create_update_static_tags(fields, included_uris, excluded_uris, tag_uuid, template_uuid)
+    creation_status, tagged_entries = dcu.create_update_static_tags(fields, included_uris, excluded_uris, tag_uuid, template_uuid, tag_export)
     
     if creation_status == constants.SUCCESS:
         print('create_update_static_tags SUCCEEDED.')
@@ -979,11 +1074,19 @@ def process_dynamic_tag():
     
     print('fields: ' + str(fields))
     
+    tag_export = False
+    
+    if "export" in request.form:
+        export_option = request.form.get("export")
+    
+        if export_option == "selected":
+            tag_export = True
+    
     tagstore = te.TagEngineUtils()
     template_uuid = tagstore.write_tag_template(template_id, project_id, region)
-    tag_uuid = tagstore.write_dynamic_tag('ACTIVE', fields, included_uris, excluded_uris, template_uuid, refresh_frequency)
+    tag_uuid = tagstore.write_dynamic_tag('ACTIVE', fields, included_uris, excluded_uris, template_uuid, refresh_frequency, tag_export)
      
-    creation_status = dcu.create_update_dynamic_tags(fields, included_uris, excluded_uris, tag_uuid, template_uuid)
+    creation_status = dcu.create_update_dynamic_tags(fields, included_uris, excluded_uris, tag_uuid, template_uuid, tag_export)
     
     if creation_status == constants.SUCCESS:
         print('create_update_dynamic_tags SUCCEEDED.')

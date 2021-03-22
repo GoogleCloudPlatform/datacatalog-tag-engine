@@ -1,4 +1,4 @@
-# Copyright 2020 Google, LLC.
+# Copyright 2020-2021 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 import uuid, datetime, pytz, os, requests
 import configparser, difflib
 import DataCatalogUtils as dc
+import BigQueryUtils as bq
 from google.cloud import bigquery
 from google.cloud import firestore
 import constants
@@ -35,6 +36,35 @@ class TagEngineUtils:
         exists = False
         
         doc_ref = self.db.collection('settings').document('default')
+        doc = doc_ref.get()
+        
+        if doc.exists:
+            settings = doc.to_dict()
+            exists = True 
+        
+        return exists, settings
+
+    def read_export_settings(self):
+        
+        settings = {}
+        exists = False
+        
+        doc_ref = self.db.collection('settings').document('export')
+        doc = doc_ref.get()
+        
+        if doc.exists:
+            settings = doc.to_dict()
+            exists = True 
+        
+        return exists, settings
+
+   
+    def read_coverage_settings(self):
+        
+        settings = {}
+        exists = False
+        
+        doc_ref = self.db.collection('settings').document('coverage')
         doc = doc_ref.get()
         
         if doc.exists:
@@ -71,6 +101,7 @@ class TagEngineUtils:
         
         print('Saved propagated settings.')
     
+    
     def write_default_settings(self, template_id, project_id, region):
         
         report_settings = self.db.collection('settings')
@@ -82,22 +113,23 @@ class TagEngineUtils:
         })
         
         print('Saved default settings.')
-
-
-    def read_coverage_settings(self):
-        
-        settings = {}
-        exists = False
-        
-        doc_ref = self.db.collection('settings').document('coverage')
-        doc = doc_ref.get()
-        
-        if doc.exists:
-            settings = doc.to_dict()
-            exists = True 
-        
-        return exists, settings
     
+    
+    def write_export_settings(self, project_id, region, dataset):
+        
+        export_settings = self.db.collection('settings')
+        doc_ref = export_settings.document('export')
+        doc_ref.set({
+            'project_id': project_id,
+            'region':  region,
+            'dataset': dataset
+        })
+        
+        print('Saved default settings.')
+        
+        bqu = bq.BigQueryUtils()
+        bqu.create_dataset(project_id, region, dataset)
+
     
     def write_coverage_settings(self, project_ids, datasets, tables):
         
@@ -914,7 +946,7 @@ class TagEngineUtils:
         return template_uuid
         
         
-    def write_static_tag(self, config_status, fields, included_uris, excluded_uris, template_uuid):
+    def write_static_tag(self, config_status, fields, included_uris, excluded_uris, template_uuid, tag_export):
         
         # check to see if this tag config already exists
         tag_ref = self.db.collection('tag_config')
@@ -946,14 +978,15 @@ class TagEngineUtils:
             'fields': fields,
             'included_uris': included_uris,
             'excluded_uris': excluded_uris,
-            'template_uuid': template_uuid
+            'template_uuid': template_uuid,
+            'tag_export': tag_export
         })
         print('Created new static tag config.')
         
         return tag_uuid
     
     
-    def write_dynamic_tag(self, config_status, fields, included_uris, excluded_uris, template_uuid, refresh_frequency):
+    def write_dynamic_tag(self, config_status, fields, included_uris, excluded_uris, template_uuid, refresh_frequency, tag_export):
         
         # check to see if this tag config already exists
         tag_ref = self.db.collection('tag_config')
@@ -992,10 +1025,11 @@ class TagEngineUtils:
             'included_uris': included_uris,
             'excluded_uris': excluded_uris,
             'template_uuid': template_uuid,
-            'refresh_frequency' : refresh_frequency,
-            'scheduling_status' : 'READY',
-            'next_run' : next_run,
-            'version' : 1
+            'refresh_frequency': refresh_frequency,
+            'tag_export': tag_export,
+            'scheduling_status': 'READY',
+            'next_run': next_run,
+            'version': 1
         })
         
         print('Created new dynamic tag config.')
@@ -1066,17 +1100,17 @@ class TagEngineUtils:
             
         return propagated_tag_config
     
-    def update_tag_config(self, old_tag_uuid, tag_type, config_status, fields, included_uris, excluded_uris, template_uuid, refresh_frequency):
+    def update_tag_config(self, old_tag_uuid, tag_type, config_status, fields, included_uris, excluded_uris, template_uuid, refresh_frequency, tag_export):
         
         self.db.collection('tag_config').document(old_tag_uuid).update({
             'config_status' : "INACTIVE"
         })
         
         if tag_type == 'STATIC':
-            new_tag_uuid = self.write_static_tag(config_status, fields, included_uris, excluded_uris, template_uuid)
+            new_tag_uuid = self.write_static_tag(config_status, fields, included_uris, excluded_uris, template_uuid, tag_export)
         
         if tag_type == 'DYNAMIC':
-            new_tag_uuid = self.write_dynamic_tag(config_status, fields, included_uris, excluded_uris, template_uuid, refresh_frequency)
+            new_tag_uuid = self.write_dynamic_tag(config_status, fields, included_uris, excluded_uris, template_uuid, refresh_frequency, tag_export)
             
         return new_tag_uuid
 

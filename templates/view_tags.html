@@ -54,10 +54,31 @@
 		    <tr>
 		    <td>&nbsp;<span style="color:#0b5394;">Excluded URIs:</span></td>
 	         </tr>
+		    
+		    {% if tag_config['excluded_uris'] != '' %}
 		    <tr>
 		    <td>&nbsp;&nbsp;{{ tag_config['excluded_uris'] }}</td>
 	         </tr>
+		    {% else %}
+		    <tr>
+		    <td>&nbsp;&nbsp;N/A</td>
 	         </tr>
+	         {% endif %}
+		    
+		    {% if 'refresh_frequency' in tag_config %}
+		    <tr>
+		    <td>&nbsp;<span style="color:#0b5394;">Refresh Frequency:</span>
+			    &nbsp;{{ tag_config['refresh_frequency'] }}</td>
+	         </tr>
+		    {% endif %} 
+		    
+		    {% if 'tag_export' in tag_config %}
+		    <tr>
+		    <td>&nbsp;<span style="color:#0b5394;">Exported to BigQuery:</span>
+		        &nbsp;{{ tag_config['tag_export'] }}</td>
+	         </tr>
+		    {% endif %}
+		    
 	        </table>
 		   <br>
 		   <input type="hidden" name="template_id" value="{{ template_id }}">

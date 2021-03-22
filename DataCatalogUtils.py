@@ -1,4 +1,4 @@
-# Copyright 2020 Google, LLC.
+# Copyright 2020-2021 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ from google.cloud.datacatalog import DataCatalogClient
 from google.cloud import bigquery
 import Resources as res
 import TagEngineUtils as te
+import BigQueryUtils as bq
 import constants
 
 class DataCatalogUtils:
@@ -289,7 +290,7 @@ class DataCatalogUtils:
         return tag_exists, tag_id
     
     
-    def create_update_static_tags(self, fields, included_uris, excluded_uris, tag_uuid, template_uuid):
+    def create_update_static_tags(self, fields, included_uris, excluded_uris, tag_uuid, template_uuid, tag_export):
         
         store = te.TagEngineUtils()        
         rs = res.Resources(self.project_id)
@@ -347,9 +348,8 @@ class DataCatalogUtils:
                         datetime_field = datacatalog.TagField()
                         split_datetime = field_value.split(" ")
                         datetime_value = split_datetime[0] + "T" + split_datetime[1] + "Z"
-                        print("datetime_value: " + datetime_value)
                         tag.fields[field_id].timestamp_value.FromJsonString(datetime_value)
-                
+                        
                 if column != "":
                     tag.column = column
                     print('tag.column == ' + column)   
@@ -363,6 +363,11 @@ class DataCatalogUtils:
                     tag_id = response.name
                     store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, resource, column, "STATIC", tag_uuid, tag_id, template_uuid)
                 
+                if tag_export == True:
+                    bqu = bq.BigQueryUtils()
+                    template_fields = self.get_template()
+                    bqu.copy_tag(self.template_id, template_fields, resource, column, fields)
+                
                 print("response: " + str(response))
             
             except ValueError:
@@ -371,17 +376,17 @@ class DataCatalogUtils:
             
         return creation_status
 
-    def create_update_dynamic_tags(self, fields, included_uris, excluded_uris, tag_uuid, template_uuid):
+    def create_update_dynamic_tags(self, fields, included_uris, excluded_uris, tag_uuid, template_uuid, tag_export):
         
         store = te.TagEngineUtils()
         bq_client = bigquery.Client()
                 
         rs = res.Resources(self.project_id)
-        resource_list = rs.get_resources(included_uris, excluded_uris)
+        resources = rs.get_resources(included_uris, excluded_uris)
         
         creation_status = constants.SUCCESS
 
-        for resource in resource_list:
+        for resource in resources:
             
             column = ""
             if "/column/" in resource:
@@ -443,11 +448,14 @@ class DataCatalogUtils:
                         timestamp_value = field_value.isoformat()
                     
                         if len(timestamp_value) == 10:
-                            reformatted_timestamp = timestamp_value + 'T12:00:00Z'
+                            field_value = timestamp_value + 'T12:00:00Z'
                         else:
-                            reformatted_timestamp = timestamp_value[0:19] + timestamp_value[26:32] + "Z"
+                            field_value = timestamp_value[0:19] + timestamp_value[26:32] + "Z"
                     
-                        tag.fields[field_id].timestamp_value.FromJsonString(reformatted_timestamp)
+                        tag.fields[field_id].timestamp_value.FromJsonString(field_value)
+                        
+                    # store the value back in the dict, so that it can be accessed by the exporter
+                    field['field_value'] = field_value
                 
                 if column != "":
                     tag.column = column
@@ -461,6 +469,11 @@ class DataCatalogUtils:
                     response = self.client.create_tag(parent=entry.name, tag=tag)
                     tag_id = response.name
                     store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, resource, column, "DYNAMIC", tag_uuid, tag_id, template_uuid)
+                
+                if tag_export == True:
+                    bqu = bq.BigQueryUtils()
+                    template_fields = self.get_template()
+                    bqu.copy_tag(self.template_id, template_fields, resource, column, fields)
                     
                 #print("response: " + str(response))
             
