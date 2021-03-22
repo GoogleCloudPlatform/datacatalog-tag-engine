@@ -60,7 +60,7 @@ class BigQueryUtils:
     
     def create_table(self, dataset_id, table_name, fields):
         
-        schema = [bigquery.SchemaField('event_timestamp', 'DATETIME', mode='REQUIRED')]
+        schema = [bigquery.SchemaField('event_timestamp', 'DATETIME', mode='REQUIRED'), bigquery.SchemaField('data_asset', 'STRING', mode='REQUIRED')]
 
         for field in fields:
             
@@ -101,16 +101,16 @@ class BigQueryUtils:
         return table_id
     
     
-    def insert_row(self, table_id, tagged_values):
+    def insert_row(self, table_id, data_asset, tagged_values):
         
-        #print('*** insert_row ***')
+        print('*** insert_row ***')
         
-        row = {'event_timestamp': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')}
+        row = {'event_timestamp': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'), 'data_asset': data_asset}
         
         for tagged_value in tagged_values:
             row[tagged_value['field_id']]= tagged_value['field_value']
     
-        #print('row: ' + str(row))
+        print('row: ' + str(row))
         
         row_to_insert = [row,]
 
@@ -122,12 +122,12 @@ class BigQueryUtils:
             print("encountered errors while inserting rows: {}".format(errors))
         
     
-    def copy_tag(self, table_name, table_fields, tagged_resource, tagged_column, tagged_values):
+    def copy_tag(self, table_name, table_fields, tagged_table, tagged_column, tagged_values):
         
         print("*** inside BigQueryUtils.copy_tag() ***")
         print("table_name: " + table_name)
         print("table_fields: " + str(table_fields))
-        print("tagged_resource: " + tagged_resource)
+        print("tagged_table: " + tagged_table)
         print("tagged_column: " + tagged_column)
         print("tagged_values: " + str(tagged_values))
         
@@ -137,7 +137,14 @@ class BigQueryUtils:
             dataset_id = self.client.dataset(settings['dataset'], project=settings['project_id'])
             table_id = self.create_table(dataset_id, table_name, table_fields)
 
-        self.insert_row(table_id, tagged_values)  
+        if tagged_column not in "":
+            data_asset = ("{}/column/{}".format(tagged_table, tagged_column))
+        else:
+            data_asset = tagged_table
+            
+        data_asset = data_asset.replace("datasets", "dataset").replace("tables", "table")
+                
+        self.insert_row(table_id, data_asset, tagged_values)  
         
         
         

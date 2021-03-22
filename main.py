@@ -1004,7 +1004,7 @@ def process_static_tag():
     template_uuid = tagstore.write_tag_template(template_id, project_id, region)
     tag_uuid = tagstore.write_static_tag('ACTIVE', fields, included_uris, excluded_uris, template_uuid, tag_export)
     
-    creation_status, tagged_entries = dcu.create_update_static_tags(fields, included_uris, excluded_uris, tag_uuid, template_uuid, tag_export)
+    creation_status = dcu.create_update_static_tags(fields, included_uris, excluded_uris, tag_uuid, template_uuid, tag_export)
     
     if creation_status == constants.SUCCESS:
         print('create_update_static_tags SUCCEEDED.')
