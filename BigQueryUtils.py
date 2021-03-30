@@ -73,7 +73,7 @@ class BigQueryUtils:
                 col_type = 'STRING'
                 
             if field['field_type'] == 'double':
-                col_type = 'INTEGER'
+                col_type = 'NUMERIC'
                 
             if field['field_type'] == 'bool':
                 col_type = 'BOOLEAN'
@@ -93,7 +93,8 @@ class BigQueryUtils:
         
         table_id = dataset_id.table(table_name)
         table = bigquery.Table(table_id, schema=schema)
-        table = self.client.create_table(table)  # Make an API request.
+        table.time_partitioning = bigquery.TimePartitioning(type_=bigquery.TimePartitioningType.DAY, field="event_timestamp")  # column used for partitioning
+        table = self.client.create_table(table)  # make API request
         
         print("Created table {}.{}.{}".format(table.project, table.dataset_id, table.table_id))        
         table_id = ("{}.{}.{}".format(table.project, table.dataset_id, table.table_id))

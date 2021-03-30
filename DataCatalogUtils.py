@@ -128,9 +128,9 @@ class DataCatalogUtils:
                         string_field.string_value = str(field_value)
                         tag.fields[field_id] = string_field
                     if field_type == "double":
-                        int_field = datacatalog.TagField()
-                        int_field.double_value = int(field_value)
-                        tag.fields[field_id] = int_field
+                        float_field = datacatalog.TagField()
+                        float_field.double_value = float(field_value)
+                        tag.fields[field_id] = float_field
                     if field_type == "enum":
                         enum_field = datacatalog.TagField()
                         enum_field.enum_value.display_name = field_value
@@ -213,9 +213,9 @@ class DataCatalogUtils:
                         string_field.string_value = str(field_value)
                         tag.fields[field_id] = string_field
                     if field_type == "double":
-                        int_field = datacatalog.TagField()
-                        int_field.double_value = int(field_value)
-                        tag.fields[field_id] = int_field
+                        float_field = datacatalog.TagField()
+                        float_field.double_value = float(field_value)
+                        tag.fields[field_id] = float_field
                     if field_type == "enum":
                         enum_field = datacatalog.TagField()
                         enum_field.enum_value.display_name = field_value
@@ -337,9 +337,9 @@ class DataCatalogUtils:
                         string_field.string_value = str(field_value)
                         tag.fields[field_id] = string_field
                     if field_type == "double":
-                        int_field = datacatalog.TagField()
-                        int_field.double_value = int(field_value)
-                        tag.fields[field_id] = int_field
+                        float_field = datacatalog.TagField()
+                        float_field.double_value = float(field_value)
+                        tag.fields[field_id] = float_field
                     if field_type == "enum":
                         enum_field = datacatalog.TagField()
                         enum_field.enum_value.display_name = field_value
@@ -435,9 +435,9 @@ class DataCatalogUtils:
                         string_field.string_value = str(field_value)
                         tag.fields[field_id] = string_field
                     if field_type == "double":
-                        int_field = datacatalog.TagField()
-                        int_field.double_value = int(field_value)
-                        tag.fields[field_id] = int_field
+                        float_field = datacatalog.TagField()
+                        float_field.double_value = float(field_value)
+                        tag.fields[field_id] = float_field
                     if field_type == "enum":
                         enum_field = datacatalog.TagField()
                         enum_field.enum_value.display_name = field_value
