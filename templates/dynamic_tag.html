@@ -15,12 +15,13 @@
 			   <br>
 			   The query expression must be a valid select statement in BQ. It can contain aggregate functions, joins, filters, groupings, etc. <br>
 			   <br>
-			   To refer to the table being tagged, use the $table variable. To refer to the column being tagged, use the $column variable. <br>
+			   To refer to the table being tagged, use the <b>$table</b> variable. To refer to the column being tagged, use the <b>$column</b> variable. <br>
 			   <br>
 			   Here are a few examples: <br>
 			   select count(*) from $table<br>
 			   select count(distinct($column)) from $table <br>
-			   select score from my-project.my-dataset.my-table where score = $table<br>
+			   select count(*) > 1 from $table where $column is null<br>
+			   select score from my-project.my-dataset.my-table where score = '$table'<br>
 			    <br>
 			   Note: The result of the query expression must satisfy the type requirements of the field in the tag template. <br>
 			   For example, if the tag template field is of type string, the query expression must return a string type.<br><br>
