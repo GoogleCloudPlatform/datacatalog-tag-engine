@@ -6,13 +6,14 @@
   </head>  
     <body>
 	   <div class="pagetitle">
-	   <h1>Tag Engine</h1>
+	   <h1>Data Catalog Tag Engine</h1>
         </div>
 	   <div class="header">
-	   <h2>Create and Edit Tags</h2>
+	   <h2>Tag Engine Tags</h2>
 	   </div>
 	   <span style="color:#9d9a9a;">
-		   <h6>&nbsp;Choose a Data Catalog Tag Template to start tagging. Enter the template's id, project, and region.</h6>
+		   <h6>&nbsp;Choose an existing Tag Template to create, edit or view your Data Catalog tags.<br> 
+			  &nbsp;Enter the Tag Template's id, project, and region in the text boxes below.</h6>
 	   </span> 
          <form method="post" action="/search_template">
 		    <table>
@@ -35,17 +36,17 @@
          </form>
 	    <p>&nbsp;</p>
 	    <div class="header">
-	    <h2>View Reports</h2>
+	    <h2>Tag Engine Reports</h2>
 	    </div>
-	    &nbsp;<a href="{{ url_for('coverage_report') }}">Coverage Report</a><br>
-	    &nbsp;<a href="{{ url_for('propagated_report') }}">Propagated Tags Report</a><br>
+	    &nbsp;<a href="{{ url_for('coverage_report') }}">View Coverage Report</a><br>
+	    &nbsp;<a href="{{ url_for('propagated_report') }}">Run and View Tag Propagation Report</a><br>
 	    <p>&nbsp;</p>
 	    <div class="header">
-	    <h2>Configure Settings</h2>
+	    <h2>Tag Engine Settings</h2>
 	    </div>
-	    &nbsp;<a href="{{ url_for('default_settings', saved=0) }}">Default Template Settings</a><br>
-	    &nbsp;<a href="{{ url_for('coverage_settings', saved=0) }}">Coverage Settings</a><br>
-	    &nbsp;<a href="{{ url_for('export_settings', saved=0) }}">Export Settings</a><br>
-	    &nbsp;<a href="{{ url_for('propagated_settings', saved=0) }}">Propagated Tags Settings</a>
+	    &nbsp;<a href="{{ url_for('default_settings', saved=0) }}">Configure Default Tag Template</a><br>
+	    &nbsp;<a href="{{ url_for('coverage_settings', saved=0) }}">Configure Coverage Settings</a><br>
+	    &nbsp;<a href="{{ url_for('export_settings', saved=0) }}">Configure Tag History Settings</a><br>
+	    &nbsp;<a href="{{ url_for('propagated_settings', saved=0) }}">Configure Tag Propagation Settings</a>
     </body>
 </html>

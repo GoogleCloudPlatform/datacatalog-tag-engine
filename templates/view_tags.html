@@ -9,7 +9,7 @@
  	   <h1>Tag Engine</h1>
          </div>
  	   <div class="header">
-	    <h2>Tag configs using {{ template_id }}</h2>
+	    <h2>Tags attached to template: {{ template_id }}</h2>
 	   </div>
 	    <span style="color:#9d9a9a;">
 	    <h6>
@@ -17,7 +17,7 @@
 		    	&nbsp;Mandatory template fields are marked by <span style="color:red;">*</span>. <br>
 		   	&nbsp;Click on Edit Tag Config to update the rules of a config.
 		   {% else %}
-		     &nbsp;Tag Engine has no tag configs for this template. 
+		     &nbsp;&nbsp;<span style="color:red;">Tag Engine has no configs for this tag template ({{ template_id }}).</span> 
 		   {% endif %}
 	    </h6>
          </span>  
@@ -87,7 +87,19 @@
 		   <input type="hidden" name="tag_uuid" value="{{ tag_config['tag_uuid'] }}">
 		   <input type="hidden" name="tag_type" value="{{ tag_config['tag_type'] }}">
 		   </form>
-		   {% endfor %}         
-    <p>&nbsp;<a href="{{ url_for('choose_action',template_id=template_id,project_id=project_id,region=region) }}">Create Tag</a>&nbsp;&nbsp;<a href="/">Homepage</a></p>
+		   {% endfor %}
+		   <p>&nbsp;</p>
+		   <form method="post" action="/display_selected_action">
+		    <table>
+		     <tr>
+		    <td>&nbsp;<input type="submit" value="Create Static Tag" name="action"></td>
+		    <td>&nbsp;<input type="submit" value="Create Dynamic Tag" name="action"></td>
+	         </tr>
+	        </table>
+		   <input type="hidden" name="template_id" value="{{ template_id }}">
+		   <input type="hidden" name="project_id" value="{{ project_id }}">
+		   <input type="hidden" name="region" value="{{ region }}">
+		   </form>        
+    <p>&nbsp;&nbsp;<a href="/">Switch templates / Homepage</a></p>
     </body>
 </html>

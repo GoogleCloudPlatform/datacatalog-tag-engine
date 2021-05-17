@@ -260,9 +260,10 @@ class DataCatalogUtils:
         tag_exists = False
         tag_id = ""
         
-        tag_list = self.client.list_tags(parent=parent)
+        tag_list = self.client.list_tags(parent=parent, timeout=10)
         
         for tag_instance in tag_list:
+            print('tag_instance: ' + str(tag_instance))
             print('tag name: ' + str(tag_instance.name))
             tagged_column = tag_instance.column
             
@@ -286,6 +287,9 @@ class DataCatalogUtils:
                     tag_id = tag_instance.name
                     print('tag_id: ' + tag_id)
                     break
+        
+        print('tag_exists: ' + str(tag_exists))
+        print('tag_id: ' + str(tag_id))
            
         return tag_exists, tag_id
     
@@ -388,6 +392,8 @@ class DataCatalogUtils:
 
         for resource in resources:
             
+            print('resource: ' + resource)
+            
             column = ""
             if "/column/" in resource:
                 # we have a column tag
@@ -403,7 +409,7 @@ class DataCatalogUtils:
             try:    
                 
                 tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
-                #print("tag_exists on column " + column + " == " + str(tag_exists))
+                print("tag_exists: " + str(tag_exists))
                 
                 # create new tag
                 tag = datacatalog.Tag()
@@ -413,18 +419,54 @@ class DataCatalogUtils:
                     field_id = field['field_id']
                     field_type = field['field_type']
                     query_expression = field['query_expression']
+                    
+                    print('field_id: ' + field_id + ', field_type: ' + field_type + ', query_exp: ' + query_expression)
                 
-                    # run query in BQ
-                    qualified_table = resource.replace('/project/', '.').replace('/datasets/', '.').replace('/tables/', '.')
-                    query_str = query_expression.replace('$$', qualified_table)
-                    #print('query_str: ' + query_str)
+                    # analyze query expression
+                    from_index = query_expression.rfind(" from ", 0)
+                    where_index = query_expression.rfind(" where ", 0)
+                    table_index = query_expression.rfind("$table", 0)
+                    column_index = query_expression.rfind("$column", 0)
+                    
+                    #print('from_index: ' + str(from_index))
+                    #print('where_index: ' + str(where_index))
+                    #print('table_index: ' + str(table_index))
+                    #print('column_index: ' + str(column_index))
+                    
+                    # $table referenced in from clause, use fully qualified table
+                    if table_index > from_index and (table_index < where_index or where_index == -1):
+                         print('$table referenced in from clause')
+                         qualified_table = resource.replace('/project/', '.').replace('/datasets/', '.').replace('/tables/', '.')
+                         query_str = query_expression.replace('$table', qualified_table)
+                         
+                         if column_index != -1:
+                             query_str = query_str.replace('$column', column)
+                    
+                    # table referenced in where clause, only use table name
+                    if table_index > where_index and where_index != -1:
+                        print('$table referenced in where clause')
+                        table_index = resource.rfind('/') + 1
+                        #print('table_index: ' + str(table_index))
+                        table_name = resource[table_index:]
+                        print('table_name: ' + table_name)
+                        query_str = query_expression.replace('$table', table_name)
+                        
+                    # run resulting query in BQ
+                    print('query_str: ' + query_str)
                     rows = bq_client.query(query_str).result()
                     
-                    # Note: there should only be a single row with a single field_value 
+                    # Note: if query expression is well-formed, there should only be a single row with a single field_value
+                    # However, the user may also run a query that returns a list of rows. In that case, grab the top row 
+                    row_count = 0
                     for row in rows:
+                        
+                        row_count = row_count + 1
                         field_value = row[0]
+                        
+                        if row_count > 1:
+                            break
                     
-                    #print('field_value: ' + str(field_value))           
+                    print('field_value: ' + str(field_value))           
                                 
                     if field_type == "bool":
                         bool_field = datacatalog.TagField()
@@ -459,13 +501,15 @@ class DataCatalogUtils:
                 
                 if column != "":
                     tag.column = column
-                    #print('tag.column == ' + column) 
+                    print('tag.column: ' + column) 
                 
                 if tag_exists == True:
+                    print('updating tag')
                     tag.name = tag_id
                     response = self.client.update_tag(tag=tag)
                     store.write_log_entry(constants.TAG_UPDATED, constants.BQ_RES, resource, column, "DYNAMIC", tag_uuid, tag_id, template_uuid)
                 else:
+                    print('creating tag')
                     response = self.client.create_tag(parent=entry.name, tag=tag)
                     tag_id = response.name
                     store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, resource, column, "DYNAMIC", tag_uuid, tag_id, template_uuid)
@@ -475,7 +519,7 @@ class DataCatalogUtils:
                     template_fields = self.get_template()
                     bqu.copy_tag(self.template_id, template_fields, resource, column, fields)
                     
-                #print("response: " + str(response))
+                print("response: " + str(response))
             
             except ValueError:
                 print("ValueError: create_dynamic_tags failed due to invalid parameters.")

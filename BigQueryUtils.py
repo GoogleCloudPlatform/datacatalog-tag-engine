@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import json, datetime
+import decimal
 
 from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
@@ -109,7 +110,11 @@ class BigQueryUtils:
         row = {'event_timestamp': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'), 'data_asset': data_asset}
         
         for tagged_value in tagged_values:
-            row[tagged_value['field_id']]= tagged_value['field_value']
+            
+            if isinstance(tagged_value['field_value'], decimal.Decimal):
+                row[tagged_value['field_id']]= float(tagged_value['field_value'])
+            else:
+                row[tagged_value['field_id']]= tagged_value['field_value']
     
         print('row: ' + str(row))
         

@@ -11,9 +11,9 @@
 	   <div class="header">
 	   <h2>Update Dynamic Tag using {{ template_id }}</h2>
  	   <span style="color:#9d9a9a;">
- 		   <h5>Make changes to your tag config. A checked field indicates it is part of the tag config. You can add new fields and/or remove existing ones from the tag config. You can also edit the included, excluded URIs, and refresh frequency. When you are done, click Save Changes. <br><br>
+ 		   <h6>Make changes to your dynamic tag config. A checked field indicates it is part of the tag config. You can add new fields and/or remove existing ones from the tag config. You can also edit the included, excluded URIs, and refresh frequency. When you are done making changes, click Save Changes. <br><br>
  		   Mandatory template fields are marked by <span style="color:red;">*</span>. 
- 		   </h5>
+ 		   </h6>
  	  </span>
 	   </div>
          <form method="post" action="/process_update_dynamic_tag">
@@ -55,13 +55,13 @@
 			      {% if current_field['field_id'] == field['field_id'] %}
 		           {% set ns.found = true %}
 				   
-				       <input type="text" value="{{ current_field['query_expression'] }}" name="{{ field['field_id'] }}" style="width: 330px;padding: 3px;">	
+				       <input type="text" value="{{ current_field['query_expression'] }}" name="{{ field['field_id'] }}" style="width: 500px;padding: 3px;">	
 
  					 {% endif %}
  				    {% endfor %}
 			    
 			   {% if ns.found == false %}
-	                <input type="text" value="" name="{{ field['field_id'] }}" style="width: 330px;padding: 3px;">
+	                <input type="text" value="" name="{{ field['field_id'] }}" style="width: 500px;padding: 3px;">
 			   {% endif %}
 				
 				</td>
@@ -102,7 +102,7 @@
 				    {% else %}
 				         	<input type="checkbox" class="form-control move-left" name="export" value="selected">
 				    {% endif %}
-				    Save a copy of your tags in BigQuery&nbsp;&nbsp;
+				    Save tag history to BigQuery&nbsp;&nbsp;
 			    </td></tr>
 			    {% endif %}
 		        </table>

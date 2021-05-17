@@ -1020,7 +1020,8 @@ def process_static_tag():
         region=region,
         fields=fields,
         included_uris=included_uris,
-        excluded_uris=excluded_uris
+        excluded_uris=excluded_uris,
+        tag_export=tag_export
         )
     # [END render_template]
 
@@ -1104,7 +1105,8 @@ def process_dynamic_tag():
         fields=fields,
         included_uris=included_uris,
         excluded_uris=excluded_uris,
-        refresh_frequency=refresh_frequency
+        refresh_frequency=refresh_frequency,
+        tag_export=tag_export
         )
     # [END render_template]
 

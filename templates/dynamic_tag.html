@@ -11,7 +11,20 @@
 	   <div class="header">
 	   <h2>Create dynamic tag config using {{ template_id }}</h2>
 	   <span style="color:#9d9a9a;">
-		   <h6>To include a field in your tag, click on the checkbox next to the field and enter a query expression for the field in the text box. The result of the query expression must satisfy the type requirements of the field. For example, if the field is of type string, the query expression must return a string type.
+		   <h6>To include a field in your tag, click on the checkbox next to the field and enter a query expression for the field in the text box. <br>
+			   <br>
+			   The query expression must be a valid select statement in BQ. It can contain aggregate functions, joins, filters, groupings, etc. <br>
+			   <br>
+			   To refer to the table being tagged, use the $table variable. To refer to the column being tagged, use the $column variable. <br>
+			   <br>
+			   Here are a few examples: <br>
+			   select count(*) from $table<br>
+			   select count(distinct($column)) from $table <br>
+			   select score from my-project.my-dataset.my-table where score = $table<br>
+			    <br>
+			   Note: The result of the query expression must satisfy the type requirements of the field in the tag template. <br>
+			   For example, if the tag template field is of type string, the query expression must return a string type.<br><br>
+			   
 		    <br><br>Mandatory template fields are marked by <span style="color:red;">*</span> and are already checked for you.
 		    </h6>
 	  </span>
@@ -36,7 +49,7 @@
 				{{ dict_field['field_id'] }} (type {{ dict_field['field_type'] }}):
 				</td>
 				<td>
-				<input type="text" value="select {exp} from $$ [where {exp}]" name="{{ dict_field['field_id'] }}" style="width: 330px;padding: 3px;">
+				<input type="text" value="select ..." name="{{ dict_field['field_id'] }}" style="width: 500px;padding: 3px;">
 				</td>
 			   </tr>
 			   {% endfor %}
@@ -72,7 +85,7 @@ bigquery/project/{{ project_id }}/dataset/{dataset}/*, bigquery/project/{{ proje
 			    {% if display_export_option == 1 %}
 			    <tr><td>&nbsp;</td></tr>
 			    <tr><td><input type="checkbox" class="form-control move-left" name="export" value="selected" checked>
-				    Save a copy of your tags in BigQuery&nbsp;&nbsp;
+				    Save tag history to BigQuery&nbsp;&nbsp;
 			    </td></tr>
 			    {% endif %}
 		        </table>

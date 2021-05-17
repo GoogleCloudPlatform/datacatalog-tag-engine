@@ -32,8 +32,9 @@
  		  {{ excluded_uris }}
 		{% endif %}
    	     </p></p>
+		<span style="color:#0b5394;">Save tag history to BigQuery</span>: {{ tag_export }}<br>
 	  </p></p>
-	  <p><a href="{{ url_for('choose_action',template_id=template_id,project_id=project_id,region=region) }}">Create Another Tag</a>&nbsp;&nbsp;<a href="/">Homepage</a></p>
+	  <p><a href="{{ url_for('choose_action',template_id=template_id,project_id=project_id,region=region) }}">Create more tags</a>&nbsp;&nbsp;<a href="/">Switch tag templates / Homepage</a></p>
      </div>
    </div>
  </body>
