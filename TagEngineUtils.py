@@ -988,6 +988,8 @@ class TagEngineUtils:
     
     def write_dynamic_tag(self, config_status, fields, included_uris, excluded_uris, template_uuid, refresh_frequency, tag_export):
         
+        print('*** enter write_dynamic_tag ***')
+        
         # check to see if this tag config already exists
         tag_ref = self.db.collection('tag_config')
         query = tag_ref.where('template_uuid', '==', template_uuid).where('included_uris', '==', included_uris).where('tag_type', '==', 'DYNAMIC').where('config_status', '==', config_status)
@@ -1007,10 +1009,12 @@ class TagEngineUtils:
        
         tag_uuid = uuid.uuid1().hex
         
-        if isinstance(refresh_frequency, int):
-            delta = refresh_frequency
+        if refresh_frequency.isdigit():
+            delta = int(refresh_frequency)
         else:
             delta = 24
+        
+        #print('delta: ' + str(delta))
         
         next_run = datetime.datetime.utcnow() + datetime.timedelta(hours=delta)
        

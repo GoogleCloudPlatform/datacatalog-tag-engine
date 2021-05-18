@@ -1151,7 +1151,7 @@ def dynamic_catalog_update():
         dcu = dc.DataCatalogUtils(
             tem.get('template_id'), tem.get('project_id'), tem.get('region'))
         dcu.create_update_dynamic_tags(
-            tag.get('fields'), tag.get('included_uris'), tag.get('excluded_uris'), tag.get('tag_uuid'), tem.get('template_uuid'))
+            tag.get('fields'), tag.get('included_uris'), tag.get('excluded_uris'), tag.get('tag_uuid'), tem.get('template_uuid'), tem.get('tag_export'))
         #update the document's scheduling information
         sm.schedule_job(doc_id)
     resp = jsonify(success=True)

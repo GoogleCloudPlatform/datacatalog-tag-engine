@@ -40,8 +40,9 @@ def update_doc_in_transaction(transaction, doc, update_dict):
 
 class ScheduleManager:
     """Class for managing scheduled tasks to update
-
-    collection_name = firestore collection parent to the tag configs
+    
+    template_collection_name = firestore collection parent to the tag templates
+    config_collection_name = firestore collection parent to the tag configs
     queue_id = "projects/{project}/locations/{region}/queues/{queue_name}"
     app_engine_uri = task handler uri set inside the 
                      app engine project hosting the cloud task queue
@@ -159,9 +160,9 @@ class ScheduleManager:
         delta = data.get('refresh_frequency', 24)
         next_run = datetime.utcnow() + timedelta(hours=delta)
         
-        #print('version: ' + str(version))
-        #print('delta: ' + str(delta))
-        #print('next_run: ' + str(next_run))
+        print('version: ' + str(version))
+        print('delta: ' + str(delta))
+        print('next_run: ' + str(next_run))
         
         task = {
             'version': version,
