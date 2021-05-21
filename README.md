@@ -51,10 +51,10 @@ gcloud functions deploy zeta --trigger-http --entry-point com.google.cloud.sa.ta
 Open `tagengine.ini` and set the `TASK_QUEUE` and `ZETA_URL` variables. The `TASK_QUEUE` variable should be set to your fully qualified Tag Engine task queue and the `ZETA_URL` variable should be set to your zeta cloud function. 
 
 For example:
-
-`TASK_QUEUE = 'projects/tag-engine-283315/locations/us-east1/queues/tag-engine'`
-`ZETA_URL = 'https://us-central1-tag-engine-283315.cloudfunctions.net/zeta'`
-
+```
+TASK_QUEUE = 'projects/tag-engine-283315/locations/us-east1/queues/tag-engine'
+ZETA_URL = 'https://us-central1-tag-engine-283315.cloudfunctions.net/zeta'
+```
 
 ### Step 8: To run Tag Engine:
 
