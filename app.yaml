@@ -13,3 +13,4 @@
 # limitations under the License.
 
 runtime: python38
+instance_class: F2

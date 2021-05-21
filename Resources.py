@@ -92,6 +92,7 @@ class Resources:
             dataset = self.bq_client.get_dataset(dataset_id)
 
             table_expression = split_path[5]
+            print("table_expression: " + table_expression)
         
             path_length = len(split_path)
             print("path_length: " + str(path_length))
@@ -106,80 +107,97 @@ class Resources:
                 tag_type = constants.BQ_COLUMN_TAG
                 
             
-            if tag_type == constants.BQ_TABLE_TAG:  
+            if table_expression == "*":
+                print("list all tables in dataset")
+                tables = list(self.bq_client.list_tables(dataset))
             
-                if table_expression == "*":
-                    print("list all tables in dataset")
-                    tables = list(self.bq_client.list_tables(dataset))
+                for table in tables:
+                    
+                    print("full_table_id: " + str(table.full_table_id))
+                    resources.add(table.full_table_id)
+                    
+            elif "*" in table_expression:
+                print("table expression contains wildcard")
+                table_substring = table_expression.replace("*", "")
+            
+                tables = list(self.bq_client.list_tables(dataset))
                 
-                    for table in tables:
+                for table in tables:
+                    if table_substring in table.full_table_id:
+                        
                         print("full_table_id: " + str(table.full_table_id))
-                        formatted_resource = self.format_table_resource(table.full_table_id)
-                        resources.add(formatted_resource)
-                        
-                elif "*" in table_expression:
-                    print("table expression contains wildcard")
-                    table_substring = table_expression.replace("*", "")
+                        resources.add(table.full_table_id)
                 
-                    tables = list(self.bq_client.list_tables(dataset))
-                    
-                    for table in tables:
-                        if table_substring in table.full_table_id:
-                            print("full_table_id: " + str(table.full_table_id))
-                            formatted_resource = self.format_table_resource(table.full_table_id)
-                            resources.add(formatted_resource)
-                    
-                else:
-                    print("table expression == table name")
-                    table_id = dataset_id + "." + table_expression
-                    
-                    try:
-                        table = self.bq_client.get_table(table_id)
-                        
-                        print("full_table_id: " + table.full_table_id)
-                        formatted_resource = self.format_table_resource(table.full_table_id)
-                        resources.add(formatted_resource)
-                        
-                    except NotFound:
-                        print("NotFound: table " + table_expression + " not found.")
+            else:
+                print("table expression == table name")
                 
+                table_id = dataset_id + "." + table_expression
+                
+                print('table_id: ' + table_id)
+                
+                try:
+                    table = self.bq_client.get_table(table_id)
+                    
+                    print("full_table_id: " + table.full_table_id)
+                    resources.add(table.full_table_id)
+                    
+                except NotFound:
+                    print("NotFound: table " + table_id + " not found.")
+            
             if tag_type == constants.BQ_COLUMN_TAG:
                 print("tagging a column")
             
                 column_exists = False
                 column = split_path[6]
                 print("column: " + column)
-            
-                try:
-                    table_id = dataset_id + "." + table_expression
-                    print("table_id: " + table_id)
-                
-                    table = self.bq_client.get_table(table_id)
-                    schema = table.schema
-                    #print("table schema: " + str(table.schema))
-                
-                    for schema_field in schema:
-                        if schema_field.name == column:
-                            column_exists = True
-                            break
+
+                column_resources = set()
+                     
+                for table_id in resources:
+                        
+                    print('table_id: ' + table_id)
                     
+                    try:
+                    
+                        table = self.bq_client.get_table(table_id.replace(':', '.'))
+                        
+                        schema = table.schema
+                        print("table schema: " + str(table.schema))
+                        
+                        for schema_field in schema:
+                            if schema_field.name == column:
+                                column_exists = True
+                                break
+                    
+                    except:
+                        print("NotFound: table " + table_id + " not found.")
+                
+
                     if column_exists == True:
                         print("column exists")
-                        table_resource = self.format_table_resource(table.full_table_id)
+                        table_resource = self.format_table_resource(table_id)
                         table_column_resource = table_resource + "/column/" + column
                         print("table_column_resource: " + table_column_resource)
-                        resources.add(table_column_resource)
+                        column_resources.add(table_column_resource)
                     else:
+                        print('Error: column ' + column + ' not found in table ' + table_id)
                         return None
                     
-                except NotFound:
-                    print("NotFound: table " + table_expression + " not found.")
-       
-        return resources
+                return column_resources
+
+                            
+            if tag_type == constants.BQ_TABLE_TAG:
+                table_resources = set()
+                
+                for table in resources:
+                    formatted_table = self.format_table_resource(table)
+                    table_resources.add(formatted_table)      
+                    
+                return table_resources
 
 if __name__ == '__main__':
     res = Resources(project_id='tag-engine-283315');
-    included_uris='bigquery/project/tag-engine-283315/dataset/covid/Employees*, bigquery/project/tag-engine-283315/dataset/covid/Employee_RTO/emp_id, bigquery/project/tag-engine-283315/dataset/views/*'
+    included_uris='bigquery/project/data-lake-290221/dataset/hr/FTE_*'
     excluded_uris=None
     resources = res.get_resources(included_uris, excluded_uris)
     print('resources: ' + str(resources))

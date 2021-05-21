@@ -451,6 +451,10 @@ class DataCatalogUtils:
                         print('table_name: ' + table_name)
                         query_str = query_expression.replace('$table', table_name)
                         
+                    # table not in query expression (e.g. select 'string')
+                    if table_index == -1:
+                        query_str = query_expression
+                        
                     # run resulting query in BQ
                     print('query_str: ' + query_str)
                     rows = bq_client.query(query_str).result()

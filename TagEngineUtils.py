@@ -1029,7 +1029,7 @@ class TagEngineUtils:
             'included_uris': included_uris,
             'excluded_uris': excluded_uris,
             'template_uuid': template_uuid,
-            'refresh_frequency': refresh_frequency,
+            'refresh_frequency': delta,
             'tag_export': tag_export,
             'scheduling_status': 'READY',
             'next_run': next_run,

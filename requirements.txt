@@ -4,4 +4,4 @@ google-cloud-bigquery
 google-cloud-core
 google-cloud-firestore
 google-cloud-storage
-google-cloud-tasks
+google-cloud-tasks==2.2.0

@@ -15,15 +15,14 @@
 5. Click Save and you're almost done! 
 6. Open Tag Engine and go to Report Settings. Add your project to the project_ids field so that it gets included in the Coverage Report. 
 
-### Step 3: To run Tag Engine:
+### Step 3: Deploy Tag Engine:
 ```
 export REPO=https://github.com/GoogleCloudPlatform/datacatalog-tag-engine.git
 git clone $REPO
 gcloud app deploy
-gcloud app browse
 ```
 
-### Step 4: Create App Engine Task Queue 
+### Step 4: Create App Engine Task Queue:
 #### Task queue is used to refresh dynamic tags
 ```
 gcloud config set project $PROJECT_ID
@@ -31,7 +30,7 @@ gcloud tasks queues create tag-engine
 gcloud tasks queues update tag-engine --max-attempts=3
 ```
 
-### Step 5: Create cron jobs through Cloud Scheduler 
+### Step 5: Create cron jobs through Cloud Scheduler: 
 #### Cron jobs are used to refresh dynamic tags and to run tag propagation
 ```
 gcloud scheduler jobs create app-engine run-ready-jobs --schedule='every 60 minutes' --relative-url "/run_ready_jobs"
@@ -39,7 +38,7 @@ gcloud scheduler jobs create app-engine clear-stale-jobs --schedule='every 30 mi
 gcloud scheduler jobs create app-engine run-propagation --schedule='every 60 minutes' --relative-url "/run_propagation"
 ```
 
-### Step 6: Deploy Zeta cloud function
+### Step 6: Deploy Zeta cloud function:
 #### Cloud function is used to parse BQ view definitions when running tag propagation 
 ```
 cd tag-engine/zeta
@@ -47,8 +46,19 @@ gcloud functions deploy zeta --trigger-http --entry-point com.google.cloud.sa.ta
 --runtime java11 --memory 1GB --allow-unauthenticated
 ```
 
-Open constants.py and set the ZETA_URL variable to your cloud function trigger URL:
+### Step 7: Set config variables:
+
+Open `tagengine.ini` and set the `TASK_QUEUE` and `ZETA_URL` variables. The `TASK_QUEUE` variable should be set to your fully qualified Tag Engine task queue and the `ZETA_URL` variable should be set to your zeta cloud function. 
+
+For example:
+
+`TASK_QUEUE = 'projects/tag-engine-283315/locations/us-east1/queues/tag-engine'`
 `ZETA_URL = 'https://us-central1-tag-engine-283315.cloudfunctions.net/zeta'`
+
+
+### Step 8: To run Tag Engine:
+
+`gcloud app browse`
 
 ### To clean up the task queue and cron jobs:
 ```

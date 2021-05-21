@@ -15,7 +15,7 @@
 from flask import Flask, render_template, request, jsonify
 import datetime, configparser
 from google.cloud import firestore
-from TagScheduler import ScheduleManager
+import TagScheduler as scheduler
 import DataCatalogUtils as dc
 import TagEngineUtils as te
 import constants
@@ -24,7 +24,7 @@ config = configparser.ConfigParser()
 config.read("tagengine.ini")
 
 app = Flask(__name__)
-sm = ScheduleManager(config['DEFAULT']['TAG_TEMPLATE'], config['DEFAULT']['TAG_CONFIG'], config['DEFAULT']['TASK_QUEUE'], "/dynamic_catalog_update")
+ts = scheduler.TagScheduler(config['DEFAULT']['TASK_QUEUE'], "/dynamic_catalog_update")
 
 @app.route("/")
 def homepage():
@@ -1033,12 +1033,12 @@ def process_dynamic_tag():
     region = request.form['region']
     included_uris = request.form['included_uris'].rstrip()
     excluded_uris = request.form['excluded_uris'].rstrip()
-    refresh_frequency = int(request.form['refresh_frequency'])
+    refresh_frequency = request.form['refresh_frequency']
     action = request.form['action']
     
     print('included_uris: ' + included_uris)
     print('excluded_uris: ' + excluded_uris)
-    print('refresh_frequency: ' + str(refresh_frequency))
+    print('refresh_frequency: ' + refresh_frequency)
     
     dcu = dc.DataCatalogUtils(template_id, project_id, region)
     template = dcu.get_template()
@@ -1115,8 +1115,8 @@ def process_dynamic_tag():
 def run_ready_jobs():
     try:
         print('scan_for_updates')
-        sm.scan_for_update_jobs()
-        print('finish scan')
+        ts.scan_for_update_jobs()
+        print('finished scan')
     except Exception as e:
         print('failed run ready jobs {}'.format(e))
 
@@ -1128,7 +1128,7 @@ def run_ready_jobs():
 @app.route("/clear_stale_jobs", methods=['POST'])
 def reset_stale_jobs():
     try:
-        sm.reset_stale_jobs()
+        ts.reset_stale_jobs()
     except Exception as e:
         print('failed reset job {}'.format(e))
         
@@ -1142,7 +1142,7 @@ def dynamic_catalog_update():
     json = request.get_json(force=True)
     doc_id = json['doc_id']
     version = json['version']
-    tag, tem = sm.get_config_and_template(doc_id)
+    tag, tem = ts.get_config_and_template(doc_id)
     
     print('tag: ' + str(tag))
     print('tem: ' + str(tem))
@@ -1151,9 +1151,9 @@ def dynamic_catalog_update():
         dcu = dc.DataCatalogUtils(
             tem.get('template_id'), tem.get('project_id'), tem.get('region'))
         dcu.create_update_dynamic_tags(
-            tag.get('fields'), tag.get('included_uris'), tag.get('excluded_uris'), tag.get('tag_uuid'), tem.get('template_uuid'), tem.get('tag_export'))
+            tag.get('fields'), tag.get('included_uris'), tag.get('excluded_uris'), tag.get('tag_uuid'), tem.get('template_uuid'), tag.get('tag_export'))
         #update the document's scheduling information
-        sm.schedule_job(doc_id)
+        ts.schedule_job(doc_id)
     resp = jsonify(success=True)
     return resp
 #[END dynamic_catalog_update]
@@ -1163,7 +1163,7 @@ def dynamic_catalog_update():
 def server_error(e):
     # Log the error and stacktrace.
     #logging.exception('An error occurred during a request.')
-    return 'An internal error occurred.', 500
+    return 'An internal error occurred: ' + str(e), 500
 # [END app]
 
 

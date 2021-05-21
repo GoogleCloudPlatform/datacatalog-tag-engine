@@ -13,15 +13,16 @@
 	   <span style="color:#9d9a9a;">
 		   <h6>To include a field in your tag, click on the checkbox next to the field and enter a query expression for the field in the text box. <br>
 			   <br>
-			   The query expression must be a valid select statement in BQ. It can contain aggregate functions, joins, filters, groupings, etc. <br>
+			   The query expression must be a <i>valid</i> select statement in BQ. It can contain aggregate functions, joins, filters, groupings, etc. <br>
 			   <br>
 			   To refer to the table being tagged, use the <b>$table</b> variable. To refer to the column being tagged, use the <b>$column</b> variable. <br>
 			   <br>
-			   Here are a few examples: <br>
+			   Here are a few query expression examples: <br>
 			   select count(*) from $table<br>
 			   select count(distinct($column)) from $table <br>
 			   select count(*) > 1 from $table where $column is null<br>
 			   select score from my-project.my-dataset.my-table where score = '$table'<br>
+			   select '30-DAYS'<br>
 			    <br>
 			   Note: The result of the query expression must satisfy the type requirements of the field in the tag template. <br>
 			   For example, if the tag template field is of type string, the query expression must return a string type.<br><br>
@@ -58,11 +59,12 @@
 		    <p>&nbsp;</p>
 			   <h2>Choose Rules</h2>
 		 	   <span style="color:#9d9a9a;">
-		 		   <h6>Specify URIs for resources to include in or exclude from your dynamic tag. Wildcards are allowed. <br><br>
+		 		   <h6>Specify URIs for resources to include in or exclude from your dynamic tag. Wildcards are allowed in the table name. <br><br>
 					  Supported URIs for BigQuery resources: <br>
 					  bigquery/project/{project_id}/dataset/{dataset}/* <br>
 				       bigquery/project/{project_id}/dataset/{dataset}/{table} <br>
-				       bigquery/project/{project_id}/dataset/{dataset}/{table}/{column} </h6>
+				       bigquery/project/{project_id}/dataset/{dataset}/{table}/{column} <br>
+				  </h6>
 				</span>
 			    <table>
 			     <tr>
