@@ -15,14 +15,13 @@
 5. Click Save and you're almost done! 
 6. Open Tag Engine and go to Report Settings. Add your project to the project_ids field so that it gets included in the Coverage Report. 
 
-### Step 3: Deploy Tag Engine:
+### Step 3: Clone the repo:
 ```
 export REPO=https://github.com/GoogleCloudPlatform/datacatalog-tag-engine.git
 git clone $REPO
-gcloud app deploy
 ```
 
-### Step 4: Create App Engine Task Queue:
+### Step 4: Create App Engine task queue:
 #### Task queue is used to refresh dynamic tags
 ```
 gcloud config set project $PROJECT_ID
@@ -56,9 +55,11 @@ TASK_QUEUE = 'projects/tag-engine-283315/locations/us-east1/queues/tag-engine'
 ZETA_URL = 'https://us-central1-tag-engine-283315.cloudfunctions.net/zeta'
 ```
 
-### Step 8: To run Tag Engine:
-
-`gcloud app browse`
+### Step 8: Deploy Tag Engine:
+```
+gcloud app deploy
+gcloud app browse
+```
 
 ### To clean up the task queue and cron jobs:
 ```
