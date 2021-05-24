@@ -63,7 +63,9 @@ class Resources:
         # BQ resources are specified as:  
         # bigquery/project/<project>/dataset/<dataset>/<table>/<column>
         # wildcards are allowed 
-        resources = set() 
+        resources = set()
+        table_resources = set() 
+        column_resources = set() 
         
         uri_list = uris.split(",")
         for uri in uri_list:
@@ -114,7 +116,7 @@ class Resources:
                 for table in tables:
                     
                     print("full_table_id: " + str(table.full_table_id))
-                    resources.add(table.full_table_id)
+                    table_resources.add(table.full_table_id)
                     
             elif "*" in table_expression:
                 print("table expression contains wildcard")
@@ -126,7 +128,7 @@ class Resources:
                     if table_substring in table.full_table_id:
                         
                         print("full_table_id: " + str(table.full_table_id))
-                        resources.add(table.full_table_id)
+                        table_resources.add(table.full_table_id)
                 
             else:
                 print("table expression == table name")
@@ -139,7 +141,7 @@ class Resources:
                     table = self.bq_client.get_table(table_id)
                     
                     print("full_table_id: " + table.full_table_id)
-                    resources.add(table.full_table_id)
+                    table_resources.add(table.full_table_id)
                     
                 except NotFound:
                     print("NotFound: table " + table_id + " not found.")
@@ -150,10 +152,8 @@ class Resources:
                 column_exists = False
                 column = split_path[6]
                 print("column: " + column)
-
-                column_resources = set()
-                     
-                for table_id in resources:
+     
+                for table_id in table_resources:
                         
                     print('table_id: ' + table_id)
                     
@@ -178,22 +178,20 @@ class Resources:
                         table_resource = self.format_table_resource(table_id)
                         table_column_resource = table_resource + "/column/" + column
                         print("table_column_resource: " + table_column_resource)
-                        column_resources.add(table_column_resource)
+                        resources.add(table_column_resource)
                     else:
                         print('Error: column ' + column + ' not found in table ' + table_id)
                         return None
-                    
-                return column_resources
-
                             
             if tag_type == constants.BQ_TABLE_TAG:
-                table_resources = set()
                 
-                for table in resources:
+                for table in table_resources:
                     formatted_table = self.format_table_resource(table)
-                    table_resources.add(formatted_table)      
+                    resources.add(formatted_table)
+        
+        return resources      
                     
-                return table_resources
+
 
 if __name__ == '__main__':
     res = Resources(project_id='tag-engine-283315');
