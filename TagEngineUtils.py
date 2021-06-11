@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import uuid, datetime, pytz, os, requests
-import configparser, difflib
+import configparser, difflib, hashlib
 import DataCatalogUtils as dc
 import BigQueryUtils as bq
 from google.cloud import bigquery
@@ -948,9 +948,12 @@ class TagEngineUtils:
         
     def write_static_tag(self, config_status, fields, included_uris, excluded_uris, template_uuid, tag_export):
         
+        # hash the included_uris string
+        included_uris_hash = hashlib.md5(included_uris.encode()).hexdigest()
+        
         # check to see if this tag config already exists
         tag_ref = self.db.collection('tag_config')
-        query = tag_ref.where('template_uuid', '==', template_uuid).where('included_uris', '==', included_uris).where('tag_type', '==', 'STATIC').where('config_status', '==', config_status)
+        query = tag_ref.where('template_uuid', '==', template_uuid).where('included_uris_hash', '==', included_uris_hash).where('tag_type', '==', 'STATIC').where('config_status', '==', config_status)
        
         matches = query.get()
        
@@ -977,6 +980,7 @@ class TagEngineUtils:
             'creation_time': datetime.datetime.utcnow(), 
             'fields': fields,
             'included_uris': included_uris,
+            'included_uris_hash': included_uris_hash,
             'excluded_uris': excluded_uris,
             'template_uuid': template_uuid,
             'tag_export': tag_export
@@ -988,11 +992,11 @@ class TagEngineUtils:
     
     def write_dynamic_tag(self, config_status, fields, included_uris, excluded_uris, template_uuid, refresh_frequency, tag_export):
         
-        print('*** enter write_dynamic_tag ***')
+        included_uris_hash = hashlib.md5(included_uris.encode()).hexdigest()
         
         # check to see if this tag config already exists
         tag_ref = self.db.collection('tag_config')
-        query = tag_ref.where('template_uuid', '==', template_uuid).where('included_uris', '==', included_uris).where('tag_type', '==', 'DYNAMIC').where('config_status', '==', config_status)
+        query = tag_ref.where('template_uuid', '==', template_uuid).where('included_uris_hash', '==', included_uris_hash).where('tag_type', '==', 'DYNAMIC').where('config_status', '==', config_status)
        
         matches = query.get()
        
@@ -1027,6 +1031,7 @@ class TagEngineUtils:
             'creation_time': datetime.datetime.utcnow(), 
             'fields': fields,
             'included_uris': included_uris,
+            'included_uris_hash': included_uris_hash,
             'excluded_uris': excluded_uris,
             'template_uuid': template_uuid,
             'refresh_frequency': delta,
