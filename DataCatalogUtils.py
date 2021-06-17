@@ -420,11 +420,14 @@ class DataCatalogUtils:
                     field_type = field['field_type']
                     query_expression = field['query_expression']
                     
-                    print('field_id: ' + field_id + ', field_type: ' + field_type + ', query_exp: ' + query_expression)
+                    print('resource: ' + resource)
+                    print('query_expression: ' + query_expression)
                 
                     # analyze query expression
                     from_index = query_expression.rfind(" from ", 0)
                     where_index = query_expression.rfind(" where ", 0)
+                    project_index = query_expression.rfind("$project", 0)
+                    dataset_index = query_expression.rfind("$dataset", 0)
                     table_index = query_expression.rfind("$table", 0)
                     column_index = query_expression.rfind("$column", 0)
                     
@@ -432,6 +435,18 @@ class DataCatalogUtils:
                     #print('where_index: ' + str(where_index))
                     #print('table_index: ' + str(table_index))
                     #print('column_index: ' + str(column_index))
+                    
+                    if project_index != -1:
+                        project_end = resource.find('/') 
+                        project = resource[0:project_end]
+                        print('project: ' + project)
+                        
+                    if dataset_index != -1:
+                        dataset_start = resource.find('/datasets/') + 10
+                        dataset_string = resource[dataset_start:]
+                        dataset_end = dataset_string.find('/') 
+                        dataset = dataset_string[0:dataset_end]
+                        print('dataset: ' + dataset)
                     
                     # $table referenced in from clause, use fully qualified table
                     if table_index > from_index and (table_index < where_index or where_index == -1):
@@ -442,7 +457,7 @@ class DataCatalogUtils:
                          if column_index != -1:
                              query_str = query_str.replace('$column', column)
                     
-                    # table referenced in where clause, only use table name
+                    # $table is referenced in where clause, replace $table with actual table name
                     if table_index > where_index and where_index != -1:
                         print('$table referenced in where clause')
                         table_index = resource.rfind('/') + 1
@@ -450,6 +465,10 @@ class DataCatalogUtils:
                         table_name = resource[table_index:]
                         print('table_name: ' + table_name)
                         query_str = query_expression.replace('$table', table_name)
+                        
+                        # $project and $dataset are referenced in where clause too
+                        if project is not None and dataset is not None:
+                            query_str = query_str.replace('$project', project).replace('$dataset', dataset)
                         
                     # table not in query expression (e.g. select 'string')
                     if table_index == -1:

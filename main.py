@@ -1094,7 +1094,6 @@ def process_dynamic_tag():
     else:
         print('create_update_dynamic_tags FAILED.')
      
-
     # [END process_dynamic_tag]
     # [START render_template]
     return render_template(

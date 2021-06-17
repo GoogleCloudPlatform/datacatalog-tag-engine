@@ -13,16 +13,20 @@
  	   <span style="color:#9d9a9a;">
  		   <h6>Make changes to your dynamic tag config. A checked field indicates it is part of the tag config. You can add new fields and/or remove existing ones from the tag config. You can also edit the query expression, included URIs, excluded URIs, refresh frequency, and tag history.  <br><br>
 	   The query expression must be a <i>valid</i> select statement in BQ. It can contain aggregate functions, joins, filters, groupings, etc. <br>
-	   <br>
-	   To refer to the table being tagged, use the <b>$table</b> variable. To refer to the column being tagged, use the <b>$column</b> variable. <br>
-	   <br>
-		Here are a few query expression examples: <br>
-		select count(*) from $table<br>
-		select count(distinct($column)) from $table <br>
-		select count(*) > 1 from $table where $column is null<br>
-		select score from my-project.my-dataset.my-table where score = '$table'<br>
-		select '30-DAYS'<br>
-	    <br>
+   <br>
+   In addition, the query expression can contain the following variables:<br>
+   - <b>$table</b> refers to the table (or view) being tagged<br>
+   - <b>$column</b> refers to the column being tagged<br>
+   - <b>$dataset</b> refers to the dataset of the table (or view) being tagged<br>
+   - <b>$project</b> refers to the project of the table (or view) being tagged<br>
+   <br>
+   Here are some examples: <br>
+   select count(*) from $table<br>
+   select count(distinct($column)) from $table <br>
+   select count(*) > 1 from $table where $column is null<br>
+   select rating from dw-project.quality.scores where table = '$table' and dataset = '$dataset' and project = '$project'<br>
+   select '30-DAYS'<br>
+    <br>
 	   Note: The result of the query expression must satisfy the type requirements of the field in the tag template. <br>
 	   For example, if the tag template field is of type string, the query expression must return a string type.<br><br>
 			   
@@ -69,13 +73,13 @@
 			      {% if current_field['field_id'] == field['field_id'] %}
 		           {% set ns.found = true %}
 				   
-				       <input type="text" value="{{ current_field['query_expression'] }}" name="{{ field['field_id'] }}" style="width: 500px;padding: 3px;">	
+				       <input type="text" value="{{ current_field['query_expression'] }}" name="{{ field['field_id'] }}" style="width: 700px;padding: 3px;">	
 
  					 {% endif %}
  				    {% endfor %}
 			    
 			   {% if ns.found == false %}
-	                <input type="text" value="" name="{{ field['field_id'] }}" style="width: 500px;padding: 3px;">
+	                <input type="text" value="" name="{{ field['field_id'] }}" style="width: 700px;padding: 3px;">
 			   {% endif %}
 				
 				</td>
@@ -94,13 +98,13 @@
 			    <table>
 			     <tr>
 			    <td>Included URIs:&nbsp;&nbsp;
-			    	   <textarea name="included_uris" style="align-content:left; overflow:auto;">{{ tag_config['included_uris'] }}
+			    	   <textarea name="included_uris" style="align-content:left; width: 700px; overflow:auto;">{{ tag_config['included_uris'] }}
 			    	   </textarea></td>
 			     </tr>
 			     <tr><td>&nbsp;</td></tr>
  				<tr>
  			    <td>Excluded URIs:&nbsp;
-			    	   <textarea name="excluded_uris" style="align-content:left; overflow:auto;">{{ tag_config['excluded_uris'] }}
+			    	   <textarea name="excluded_uris" style="align-content:left; width: 700px; overflow:auto;">{{ tag_config['excluded_uris'] }}
 			    	   </textarea>
 			    </td>
  		         </tr>		        

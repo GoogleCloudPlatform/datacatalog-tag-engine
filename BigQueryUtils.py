@@ -105,8 +105,6 @@ class BigQueryUtils:
     
     def insert_row(self, table_id, data_asset, tagged_values):
         
-        print('*** insert_row ***')
-        
         row = {'event_timestamp': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'), 'data_asset': data_asset}
         
         for tagged_value in tagged_values:
@@ -116,7 +114,7 @@ class BigQueryUtils:
             else:
                 row[tagged_value['field_id']]= tagged_value['field_value']
     
-        #print('row: ' + str(row))
+        print('inserted row: ' + str(row))
         
         row_to_insert = [row,]
 
