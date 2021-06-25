@@ -16,6 +16,7 @@
 		   </h6>
 	  </span>
 	   </div>
+	   <h2>Choose Template Fields</h2>
          <form method="post" action="/process_update_static_tag">
 		    <table>
 			   {% for field in fields %}
@@ -143,7 +144,7 @@
 			   {% endfor %}
 			   </table>
 		    <p>&nbsp;</p>
-			   <h2>Choose Rules</h2>
+			   <h2>Choose URIs</h2>
 		 	   <span style="color:#9d9a9a;">
 		 		   <h6>Specify comma-separated list of URIs for resources to include in and exclude from your static tag. Wildcards are allowed in the table name. <br><br>
 					  Supported URIs for BigQuery resources: <br>
@@ -163,8 +164,11 @@
 		          <textarea name="excluded_uris" style="align-content:left; overflow:auto;">{{ tag_config['excluded_uris'] }}
 		          </textarea></td>
 		         </tr>
+		         </table>
 			    {% if display_export_option == 1 %}
-			    <tr><td>&nbsp;</td></tr>
+			      <p>&nbsp;</p>
+				<h2>Choose Export</h2>
+			    <table>
 			    <tr><td>
 				    {% if tag_config['tag_export'] == True %} 
 				    		<input type="checkbox" class="form-control move-left" name="export" value="selected" checked>
@@ -173,8 +177,8 @@
 				    {% endif %}
 				    Save tag history BigQuery&nbsp;&nbsp;
 			    </td></tr>
+			    </table>
 			    {% endif %}
-		        </table>
 	         <p>&nbsp;</p>
 		        <table>
 		        <tr>

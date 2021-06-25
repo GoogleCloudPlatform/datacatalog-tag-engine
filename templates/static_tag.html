@@ -16,6 +16,7 @@
 		   </h6>
 	  </span>
 	   </div>
+	   <h2>Choose Template Fields</h2>
          <form method="post" action="/process_static_tag">
 		    <table>
 			   {% for dict_field in fields %}
@@ -61,7 +62,7 @@
 			   {% endfor %}
 			   </table>
 		    <p>&nbsp;</p>
-			   <h2>Choose Rules</h2>
+			   <h2>Choose URIs</h2>
 		 	   
 			   <span style="color:#9d9a9a;"><h6>
 			   Specify comma-separated list of URIs for resources to include in and exclude from your static tag. Wildcards are allowed in the table name. <br><br>
@@ -84,13 +85,17 @@ bigquery/project/{{ project_id }}/dataset/{dataset}/*, bigquery/project/{{ proje
 bigquery/project/{{ project_id }}/dataset/{dataset}/*, bigquery/project/{{ project_id }}/dataset/{dataset}/{table}*, bigquery/project/{{ project_id }}/dataset/{dataset}/{table}/{column}
 		          </textarea></td>
 		         </tr>
+		        </table>
 			    {% if display_export_option == 1 %}
+			      <p>&nbsp;</p>
+				<h2>Choose Export</h2>
+			    <table>
 			    <tr><td>&nbsp;</td></tr>
 			    <tr><td><input type="checkbox" class="form-control move-left" name="export" value="selected" checked>
 				    Save tag history to BigQuery&nbsp;&nbsp;
 			    </td></tr>
+			    </table>
 			    {% endif %}
-		        </table>
 	         <p>&nbsp;</p>
 		        <table>
 		        <tr>

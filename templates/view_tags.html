@@ -65,6 +65,13 @@
 	         </tr>
 	         {% endif %}
 		    
+		    {% if 'refresh_mode' in tag_config %}
+		    <tr>
+		    <td>&nbsp;<span style="color:#0b5394;">Refresh Mode:</span>
+			    &nbsp;{{ tag_config['refresh_mode'] }}</td>
+	         </tr>
+		    {% endif %}
+		    
 		    {% if 'refresh_frequency' in tag_config %}
 		    <tr>
 		    <td>&nbsp;<span style="color:#0b5394;">Refresh Frequency:</span>

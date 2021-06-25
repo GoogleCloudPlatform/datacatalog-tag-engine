@@ -64,6 +64,7 @@ class TagScheduler:
         
         db = firestore.Client()
         tag_ref = db.collection('tag_config')
+        tag_ref = tag_ref.where("refresh_mode", "==", "AUTO")
         tag_ref = tag_ref.where("scheduling_status", "==", "READY")
         tag_ref = tag_ref.where("config_status", "==", "ACTIVE")
         tag_ref = tag_ref.where("next_run", "<=", datetime.utcnow())

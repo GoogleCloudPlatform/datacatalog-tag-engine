@@ -35,6 +35,8 @@
 		    </h6>
 	  </span>
 	   </div>
+	   <p>&nbsp;</p>
+	   <h2>Choose Template Fields</h2>
          <form method="post" action="/process_dynamic_tag">
 		    <table>
 			   {% for dict_field in fields %}
@@ -60,8 +62,8 @@
 			   </tr>
 			   {% endfor %}
 			   </table>
-		    <p>&nbsp;</p>
-			   <h2>Choose Rules</h2>
+			   <p>&nbsp;</p>
+			   <h2>Choose URIs</h2>
 		 	   <span style="color:#9d9a9a;">
 		 		   <h6>Specify URIs for resources to include in or exclude from your dynamic tag. Wildcards are allowed in the table name. <br><br>
 					  Supported URIs for BigQuery resources: <br>
@@ -84,18 +86,37 @@ bigquery/project/{{ project_id }}/dataset/{dataset}/*, bigquery/project/{{ proje
 bigquery/project/{{ project_id }}/dataset/{dataset}/*, bigquery/project/{{ project_id }}/dataset/{dataset}/{table}*, bigquery/project/{{ project_id }}/dataset/{dataset}/{table}/{column}
 			    		          </textarea>
 			    </td>
- 		         </tr>		        
+ 		         </tr>
+		    </table>
+		        <p>&nbsp;</p>
+			   <h2>Choose Scheduling</h2>
+		 	   <span style="color:#9d9a9a;">
+		 		   <h6>If you choose the AUTO refresh mode, your tags will be scheduled for update based on your specified refresh frequency. <br>
+					   If you choose the ON-DEMAND refresh mode, your tags will <b>not</b> be scheduled for refresh (even if you specify a refresh frequency). <br>This mode is useful when you have tags that don't need to be updated or when you want to trigger the update from the API. <br><br>
+				   </h6>
+				</span>
+			     <table>
+				<tr>	
+			    <td>Refresh mode:&nbsp;<select name="refresh_mode">
+  				  				<option value="AUTO" selected>AUTO</option>
+  							   	<option value="ON-DEMAND">ON-DEMAND</option>
+							  </select>
+			    </td>
+		         </tr>
 			     <tr><td>&nbsp;</td></tr>
 				<tr>	
-			    <td>Refresh frequency: <input type="text" value="24" name="refresh_frequency" style="width: 30px;padding: 3px;"> hours.</td>
+			    <td>Refresh frequency:&nbsp;<input type="text" value="24" name="refresh_frequency" style="width: 30px;padding: 3px;"> hours.</td>
 		         </tr>
+		        </table>
 			    {% if display_export_option == 1 %}
-			    <tr><td>&nbsp;</td></tr>
+			      <p>&nbsp;</p>
+				<h2>Choose Export</h2>
+			    <table>
 			    <tr><td><input type="checkbox" class="form-control move-left" name="export" value="selected" checked>
 				    Save tag history to BigQuery&nbsp;&nbsp;
 			    </td></tr>
+			    </table>
 			    {% endif %}
-		        </table>
 	         <p>&nbsp;</p>
 		        <table>
 		        <tr>
