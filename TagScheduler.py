@@ -212,7 +212,7 @@ class TagScheduler:
 if __name__ == '__main__':
 
     TASK_QUEUE = 'projects/tag-engine-283315/locations/us-east1/queues/tag-engine'
-    ts = TagScheduler(TASK_QUEUE, "/dynamic_catalog_update")
+    ts = TagScheduler(TASK_QUEUE, "/dynamic_auto_update")
     ts.reset_stale_jobs()
     ts.scan_for_update_jobs()
     

@@ -24,12 +24,12 @@ config = configparser.ConfigParser()
 config.read("tagengine.ini")
 
 app = Flask(__name__)
-ts = scheduler.TagScheduler(config['DEFAULT']['TASK_QUEUE'], "/dynamic_catalog_update")
+ts = scheduler.TagScheduler(config['DEFAULT']['TASK_QUEUE'], "/dynamic_auto_update")
+tagstore = te.TagEngineUtils()
 
 @app.route("/")
 def homepage():
     
-    tagstore = te.TagEngineUtils()
     exists, settings = tagstore.read_default_settings()
     
     if exists:
@@ -1139,8 +1139,8 @@ def reset_stale_jobs():
 #[End reset stale jobs]
 
 
-@app.route("/dynamic_catalog_update", methods=['POST'])
-def dynamic_catalog_update():
+@app.route("/dynamic_auto_update", methods=['POST'])
+def dynamic_auto_update():
     json = request.get_json(force=True)
     doc_id = json['doc_id']
     version = json['version']
@@ -1158,7 +1158,52 @@ def dynamic_catalog_update():
         ts.schedule_job(doc_id)
     resp = jsonify(success=True)
     return resp
-#[END dynamic_catalog_update]
+#[END dynamic_auto_update]
+
+
+@app.route("/dynamic_ondemand_update", methods=['POST'])
+def dynamic_ondemand_update():
+    json = request.get_json(force=True)    
+    template_id = json['template_id']
+    project_id = json['project_id']
+    region = json['region']
+    
+    template_exists, template_uuid = tagstore.read_tag_template(template_id, project_id, region)
+    
+    if not template_exists:
+        print("tag_template " + template_id + " doesn't exist")
+        resp = jsonify(success=False)
+        return resp
+    
+    if 'included_uris_hash' in json:
+        included_uris_hash = json['included_uris_hash']
+        success, tag_config = tagstore.lookup_tag_config_by_uris(template_uuid, None, included_uris_hash)
+    elif 'included_uris' in json:
+        included_uris = json['included_uris']
+        success, tag_config = tagstore.lookup_tag_config_by_uris(template_uuid, included_uris, None)
+    else:
+        resp = jsonify(success=False)
+        return resp
+    
+    if not success:
+        resp = jsonify(success=False)
+        return resp
+    
+    dcu = dc.DataCatalogUtils(template_id, project_id, region)
+    dcu.create_update_dynamic_tags(
+        tag_config.get('fields'), tag_config.get('included_uris'), tag_config.get('excluded_uris'), tag_config.get('tag_uuid'), tag_config.get('template_uuid'), tag_config.get('tag_export'))
+    
+    tagstore.increment_tag_config_version(tag_config.get('tag_uuid'), tag_config.get('version'))
+    
+    resp = jsonify(success=True)
+    return resp
+    #[END dynamic_ondemand_update]
+    
+    
+@app.route("/ping", methods=['GET'])
+def ping():
+    return "I'm alive"
+#[END ping]
 
 
 @app.errorhandler(500)

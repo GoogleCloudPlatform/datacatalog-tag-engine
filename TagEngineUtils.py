@@ -1012,35 +1012,53 @@ class TagEngineUtils:
                 print('Updated status to INACTIVE.')
        
         tag_uuid = uuid.uuid1().hex
-        
-        if refresh_frequency.isdigit():
-            delta = int(refresh_frequency)
-        else:
-            delta = 24
-        
-        #print('delta: ' + str(delta))
-        
-        next_run = datetime.datetime.utcnow() + datetime.timedelta(hours=delta)
-       
         tag_config = self.db.collection('tag_config')
         doc_ref = tag_config.document(tag_uuid)
-        doc_ref.set({
-            'tag_uuid': tag_uuid,
-            'tag_type': 'DYNAMIC',
-            'config_status': config_status, 
-            'creation_time': datetime.datetime.utcnow(), 
-            'fields': fields,
-            'included_uris': included_uris,
-            'included_uris_hash': included_uris_hash,
-            'excluded_uris': excluded_uris,
-            'template_uuid': template_uuid,
-            'refresh_mode': refresh_mode,
-            'refresh_frequency': delta,
-            'tag_export': tag_export,
-            'scheduling_status': 'READY',
-            'next_run': next_run,
-            'version': 1
-        })
+        
+        if refresh_mode == 'AUTO':
+            if refresh_frequency.isdigit():
+                delta = int(refresh_frequency)
+            else:
+                delta = 24
+        
+            #print('delta: ' + str(delta))
+        
+            next_run = datetime.datetime.utcnow() + datetime.timedelta(hours=delta)
+            
+            doc_ref.set({
+                'tag_uuid': tag_uuid,
+                'tag_type': 'DYNAMIC',
+                'config_status': config_status, 
+                'creation_time': datetime.datetime.utcnow(), 
+                'fields': fields,
+                'included_uris': included_uris,
+                'included_uris_hash': included_uris_hash,
+                'excluded_uris': excluded_uris,
+                'template_uuid': template_uuid,
+                'refresh_mode': refresh_mode,
+                'refresh_frequency': delta,
+                'tag_export': tag_export,
+                'scheduling_status': 'READY',
+                'next_run': next_run,
+                'version': 1
+            })
+            
+        else:
+            doc_ref.set({
+                'tag_uuid': tag_uuid,
+                'tag_type': 'DYNAMIC',
+                'config_status': config_status, 
+                'creation_time': datetime.datetime.utcnow(), 
+                'fields': fields,
+                'included_uris': included_uris,
+                'included_uris_hash': included_uris_hash,
+                'excluded_uris': excluded_uris,
+                'template_uuid': template_uuid,
+                'refresh_mode': refresh_mode,
+                'refresh_frequency': 0,
+                'tag_export': tag_export,
+                'version': 1
+            })
         
         print('Created new dynamic tag config.')
         
@@ -1109,6 +1127,35 @@ class TagEngineUtils:
             #print(str(tag_config))
             
         return propagated_tag_config
+        
+    def lookup_tag_config_by_uris(self, template_uuid, included_uris, included_uris_hash):
+        
+        success = False
+        tag_config = {}
+        
+        tag_ref = self.db.collection('tag_config')
+        
+        if included_uris is not None:
+            docs = tag_ref.where('template_uuid', '==', template_uuid).where('refresh_mode', '==', 'ON-DEMAND').where('included_uris', '==', included_uris).stream()
+        if included_uris_hash is not None:
+            docs = tag_ref.where('template_uuid', '==', template_uuid).where('refresh_mode', '==', 'ON-DEMAND').where('included_uris_hash', '==', included_uris_hash).stream()
+        
+        for doc in docs:
+            tag_config = doc.to_dict()
+            break
+        
+        print('tag_config: ' + str(tag_config))
+        
+        if tag_config:
+            success = True     
+
+        return success, tag_config
+        
+    def increment_tag_config_version(self, tag_uuid, version):
+        
+        self.db.collection('tag_config').document(tag_uuid).update({
+            'version' : version + 1
+        })
     
     def update_tag_config(self, old_tag_uuid, tag_type, config_status, fields, included_uris, excluded_uris, template_uuid, refresh_mode, refresh_frequency, tag_export):
         
