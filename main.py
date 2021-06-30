@@ -1160,7 +1160,17 @@ def dynamic_auto_update():
     return resp
 #[END dynamic_auto_update]
 
-
+"""
+Args:
+    template_id: The Tag Template to use
+    project_id: The Tag Template's Google Cloud project 
+    region: The Tag Template's region 
+    included_uris_hash: The included_uris' md5 hash value (optional)
+    included_uris: The included_uris value (optional). 
+Note: caller must provide either the included_uris_hash or included_uris
+Returns:
+    status_code = 200 if successful, otherwise error
+"""
 @app.route("/dynamic_ondemand_update", methods=['POST'])
 def dynamic_ondemand_update():
     json = request.get_json(force=True)    
@@ -1202,7 +1212,7 @@ def dynamic_ondemand_update():
     
 @app.route("/ping", methods=['GET'])
 def ping():
-    return "I'm alive"
+    return "Tag Engine is alive"
 #[END ping]
 
 

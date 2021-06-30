@@ -28,7 +28,7 @@ default_args = {
     'start_date': YESTERDAY
 }
 
-dag = DAG('tag_engine_dag', default_args=default_args)
+dag = DAG('dynamic_tags_update', default_args=default_args)
 
 update_tags = SimpleHttpOperator(
     task_id='update_tags',
