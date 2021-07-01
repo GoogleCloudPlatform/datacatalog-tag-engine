@@ -15,7 +15,7 @@
 import requests
 from google.cloud import datacatalog
 from google.cloud.datacatalog import DataCatalogClient
-#from google.cloud.datacatalog_v1.types import Tag
+from google.protobuf.timestamp_pb2 import Timestamp
 from google.cloud import bigquery
 import Resources as res
 import TagEngineUtils as te
@@ -331,6 +331,10 @@ class DataCatalogUtils:
                     field_id = field['field_id']
                     field_type = field['field_type']
                     field_value = field['field_value']
+                    
+                    #print('field_id: ' + field_id)
+                    #print('field_type: ' + field_type)
+                    #print('field_value: ' + field_value)
                 
                     if field_type == "bool":
                         bool_field = datacatalog.TagField()
@@ -349,10 +353,16 @@ class DataCatalogUtils:
                         enum_field.enum_value.display_name = field_value
                         tag.fields[field_id] = enum_field
                     if field_type == "datetime":
-                        datetime_field = datacatalog.TagField()
                         split_datetime = field_value.split(" ")
                         datetime_value = split_datetime[0] + "T" + split_datetime[1] + "Z"
-                        tag.fields[field_id].timestamp_value.FromJsonString(datetime_value)
+                        print('datetime_value: ' + datetime_value)
+                        
+                        timestamp = Timestamp()
+                        timestamp.FromJsonString(datetime_value)
+                        
+                        datetime_field = datacatalog.TagField()
+                        datetime_field.timestamp_value = timestamp
+                        tag.fields[field_id] = datetime_field
                         
                 if column != "":
                     tag.column = column
@@ -517,7 +527,12 @@ class DataCatalogUtils:
                         else:
                             field_value = timestamp_value[0:19] + timestamp_value[26:32] + "Z"
                     
-                        tag.fields[field_id].timestamp_value.FromJsonString(field_value)
+                        timestamp = Timestamp()
+                        timestamp.FromJsonString(field_value)
+                        
+                        datetime_field = datacatalog.TagField()
+                        datetime_field.timestamp_value = timestamp
+                        tag.fields[field_id] = datetime_field
                         
                     # store the value back in the dict, so that it can be accessed by the exporter
                     field['field_value'] = field_value
