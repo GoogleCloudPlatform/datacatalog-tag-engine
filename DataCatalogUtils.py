@@ -454,9 +454,6 @@ class DataCatalogUtils:
                          qualified_table = resource.replace('/project/', '.').replace('/datasets/', '.').replace('/tables/', '.')
                          query_str = query_expression.replace('$table', qualified_table)
                          
-                         if column_index != -1:
-                             query_str = query_str.replace('$column', column)
-                    
                     # $table is referenced in where clause, replace $table with actual table name
                     if table_index > where_index and where_index != -1:
                         print('$table referenced in where clause')
@@ -474,8 +471,11 @@ class DataCatalogUtils:
                     if table_index == -1:
                         query_str = query_expression
                         
-                    # run resulting query in BQ
-                    print('query_str: ' + query_str)
+                    if column_index != -1:
+                        query_str = query_str.replace('$column', column)
+                        
+                    # run final query string in BQ
+                    print('**** query_str: ****' + query_str)
                     rows = bq_client.query(query_str).result()
                     
                     # Note: if query expression is well-formed, there should only be a single row with a single field_value

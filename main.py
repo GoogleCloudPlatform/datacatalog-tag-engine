@@ -1107,6 +1107,7 @@ def process_dynamic_tag():
         fields=fields,
         included_uris=included_uris,
         excluded_uris=excluded_uris,
+        refresh_mode=refresh_mode,
         refresh_frequency=refresh_frequency,
         tag_export=tag_export
         )
