@@ -4,9 +4,15 @@
    <link rel="stylesheet" type="text/css" href="/static/style.css">
  </head>
  <body>
+    {% if status == -1 %}
+    <table><tr><td>
+    &nbsp;<span style="color:red;">Errors occurred while processing your tag submission. Please check Firestore for details. </span>
+      </td></tr></table><p>
+    {% endif %}
+    
    <div id="container">
      <div class="pagetitle">
-       <h1>Dynamic Tag Created</h1>
+       <h1>Dynamic Tag Config Created</h1>
      </div>
      <div id="main">
        <p>Here's a summary of your dynamic tag config:</p>

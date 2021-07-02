@@ -866,7 +866,8 @@ def process_update_static_tag():
          project_id=project_id,
          region=region,
          fields=template_fields,
-         tag_configs=tag_configs)  
+         tag_configs=tag_configs,
+         status=update_status)  
 
 @app.route('/process_update_dynamic_tag', methods=['POST'])
 def process_update_dynamic_tag():
@@ -944,7 +945,8 @@ def process_update_dynamic_tag():
          project_id=project_id,
          region=region,
          fields=template_fields,
-         tag_configs=tag_configs)  
+         tag_configs=tag_configs,
+         status=update_status)  
 
 
 @app.route('/process_static_tag', methods=['POST'])
@@ -1022,8 +1024,8 @@ def process_static_tag():
         fields=fields,
         included_uris=included_uris,
         excluded_uris=excluded_uris,
-        tag_export=tag_export
-        )
+        tag_export=tag_export,
+        status=creation_status)
     # [END render_template]
 
 
@@ -1109,8 +1111,8 @@ def process_dynamic_tag():
         excluded_uris=excluded_uris,
         refresh_mode=refresh_mode,
         refresh_frequency=refresh_frequency,
-        tag_export=tag_export
-        )
+        tag_export=tag_export,
+        status=creation_status)
     # [END render_template]
 
 

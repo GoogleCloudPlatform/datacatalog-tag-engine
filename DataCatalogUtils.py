@@ -332,10 +332,6 @@ class DataCatalogUtils:
                     field_type = field['field_type']
                     field_value = field['field_value']
                     
-                    #print('field_id: ' + field_id)
-                    #print('field_type: ' + field_type)
-                    #print('field_value: ' + field_value)
-                
                     if field_type == "bool":
                         bool_field = datacatalog.TagField()
                         bool_field.bool_value = bool(field_value)
@@ -386,6 +382,7 @@ class DataCatalogUtils:
             
             except ValueError:
                 print("ValueError: create_static_tags failed due to invalid parameters.")
+                store.write_error_entry('invalid value: "' + field_value + '" provided for field "' + field_id + '" of type ' + field_type) 
                 creation_status = constants.ERROR
             
         return creation_status
@@ -402,6 +399,7 @@ class DataCatalogUtils:
 
         for resource in resources:
             
+            error_exists = False
             print('resource: ' + resource)
             
             column = ""
@@ -441,11 +439,6 @@ class DataCatalogUtils:
                     table_index = query_expression.rfind("$table", 0)
                     column_index = query_expression.rfind("$column", 0)
                     
-                    #print('from_index: ' + str(from_index))
-                    #print('where_index: ' + str(where_index))
-                    #print('table_index: ' + str(table_index))
-                    #print('column_index: ' + str(column_index))
-                    
                     if project_index != -1:
                         project_end = resource.find('/') 
                         project = resource[0:project_end]
@@ -473,9 +466,13 @@ class DataCatalogUtils:
                         print('table_name: ' + table_name)
                         query_str = query_expression.replace('$table', table_name)
                         
-                        # $project and $dataset are referenced in where clause too
-                        if project is not None and dataset is not None:
-                            query_str = query_str.replace('$project', project).replace('$dataset', dataset)
+                        # $project referenced in where clause too
+                        if project_index > -1:
+                            query_str = query_str.replace('$project', project)
+                        
+                        # $dataset referenced in where clause too    
+                        if dataset_index > -1:
+                            query_str = query_str.replace('$dataset', dataset)
                         
                     # table not in query expression (e.g. select 'string')
                     if table_index == -1:
@@ -488,7 +485,7 @@ class DataCatalogUtils:
                     print('**** query_str: ****' + query_str)
                     rows = bq_client.query(query_str).result()
                     
-                    # Note: if query expression is well-formed, there should only be a single row with a single field_value
+                    # Note: if query expression is well-formed, there should only be a single row returned with a single field_value
                     # However, the user may also run a query that returns a list of rows. In that case, grab the top row 
                     row_count = 0
                     for row in rows:
@@ -498,6 +495,15 @@ class DataCatalogUtils:
                         
                         if row_count > 1:
                             break
+                    
+                    # check row_count
+                    if row_count == 0:
+                        # SQL query returned nothing
+                        # log the error in Firestore
+                        error_exists = True
+                        print('query_str returned nothing, writing error entry')
+                        store.write_error_entry('sql returned nothing: ' + query_str)
+                        break
                     
                     print('field_value: ' + str(field_value))           
                                 
@@ -537,6 +543,12 @@ class DataCatalogUtils:
                     # store the value back in the dict, so that it can be accessed by the exporter
                     field['field_value'] = field_value
                 
+                if error_exists:
+                    # error was encountered while running SQL expressions
+                    # don't create or update this tag
+                    creation_status = constants.ERROR
+                    break
+                                
                 if column != "":
                     tag.column = column
                     print('tag.column: ' + column) 

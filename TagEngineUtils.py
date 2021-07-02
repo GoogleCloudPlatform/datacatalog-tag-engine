@@ -1086,6 +1086,16 @@ class TagEngineUtils:
         print('Wrote log entry.')
         
     
+    def write_error_entry(self, msg):
+                    
+        error_entry = {}
+        error_entry['ts'] = datetime.datetime.utcnow()
+        error_entry['msg'] = msg
+        
+        self.db.collection('errors').add(error_entry)
+        print('Wrote error entry.')
+    
+    
     def read_tag_configs(self, template_id, project_id, region):
         
         tag_configs = []

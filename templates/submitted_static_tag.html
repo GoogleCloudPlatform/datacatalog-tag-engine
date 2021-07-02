@@ -4,11 +4,17 @@
    <link rel="stylesheet" type="text/css" href="/static/style.css">
  </head>
  <body>
+      {% if status == -1 %}
+      <table><tr><td>
+      &nbsp;<span style="color:red;">Errors occurred while processing your tag submission. Please check Firestore for details. </span>
+        </td></tr></table><p>
+      {% endif %}
+	 
    <div class="pagetitle">
    <h1>Tag Engine</h1>
     </div>
    <div class="header">
-    <h2>Static Tag Created</h2>
+    <h2>Static Tag Config Created</h2>
    </div>
        <p>Here's a summary of your static tag config:</p>
        <p>
