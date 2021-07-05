@@ -812,7 +812,7 @@ def process_update_static_tag():
     dcu = dc.DataCatalogUtils(template_id, project_id, region)
     template_fields = dcu.get_template()
     
-    if action == "Save Changes":
+    if action == "Submit Tag":
         
         fields = []
     
@@ -888,7 +888,7 @@ def process_update_dynamic_tag():
     dcu = dc.DataCatalogUtils(template_id, project_id, region)
     template_fields = dcu.get_template()
     
-    if action == "Save Changes":
+    if action == "Submit Tag":
         
         fields = []
     
@@ -937,7 +937,7 @@ def process_update_dynamic_tag():
     
     tag_configs = tagstore.read_tag_configs(template_id, project_id, region)
       
-     # [END process_update_static_tag]
+     # [END process_update_dynamic_tag]
      # [START render_template]
     return render_template(
          'view_tags.html',
