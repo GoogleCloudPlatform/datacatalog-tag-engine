@@ -1,5 +1,5 @@
 Flask==1.1.2
-google-cloud-datacatalog==2.0.0
+google-cloud-datacatalog==3.3.0
 google-cloud-bigquery
 google-cloud-core
 google-cloud-firestore==2.1.3

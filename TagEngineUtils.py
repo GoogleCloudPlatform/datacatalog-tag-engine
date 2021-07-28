@@ -1062,7 +1062,7 @@ class TagEngineUtils:
         
         print('Created new dynamic tag config.')
         
-        return tag_uuid
+        return tag_uuid, included_uris_hash
         
         
     def write_log_entry(self, dc_op, resource_type, resource, column, tag_type, tag_uuid, tag_id, template_uuid):
@@ -1177,7 +1177,8 @@ class TagEngineUtils:
             new_tag_uuid = self.write_static_tag(config_status, fields, included_uris, excluded_uris, template_uuid, tag_export)
         
         if tag_type == 'DYNAMIC':
-            new_tag_uuid = self.write_dynamic_tag(config_status, fields, included_uris, excluded_uris, template_uuid, refresh_mode, refresh_frequency, tag_export)
+            new_tag_uuid, included_uris_hash = self.write_dynamic_tag(config_status, fields, included_uris, excluded_uris, template_uuid, refresh_mode, refresh_frequency, tag_export)
+            # note: we do not need to return the included_uris_hash
             
         return new_tag_uuid
 

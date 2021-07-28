@@ -1090,7 +1090,7 @@ def process_dynamic_tag():
     
     tagstore = te.TagEngineUtils()
     template_uuid = tagstore.write_tag_template(template_id, project_id, region)
-    tag_uuid = tagstore.write_dynamic_tag('ACTIVE', fields, included_uris, excluded_uris, template_uuid, refresh_mode, refresh_frequency, tag_export)
+    tag_uuid, included_uris_hash = tagstore.write_dynamic_tag('ACTIVE', fields, included_uris, excluded_uris, template_uuid, refresh_mode, refresh_frequency, tag_export)
      
     creation_status = dcu.create_update_dynamic_tags(fields, included_uris, excluded_uris, tag_uuid, template_uuid, tag_export)
     
@@ -1108,6 +1108,7 @@ def process_dynamic_tag():
         region=region,
         fields=fields,
         included_uris=included_uris,
+        included_uris_hash=included_uris_hash,
         excluded_uris=excluded_uris,
         refresh_mode=refresh_mode,
         refresh_frequency=refresh_frequency,

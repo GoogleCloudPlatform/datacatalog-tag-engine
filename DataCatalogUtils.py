@@ -13,9 +13,10 @@
 # limitations under the License.
 
 import requests
+from operator import itemgetter
+from google.protobuf.timestamp_pb2 import Timestamp
 from google.cloud import datacatalog
 from google.cloud.datacatalog import DataCatalogClient
-from google.protobuf.timestamp_pb2 import Timestamp
 from google.cloud import bigquery
 import Resources as res
 import TagEngineUtils as te
@@ -43,7 +44,8 @@ class DataCatalogUtils:
             field_id = str(field_id)
             display_name = field_value.display_name
             is_required = field_value.is_required
-            
+            order = field_value.order
+     
             #print("field_id: " + str(field_id))
             #print("field_value: " + str(field_value))
             #print("display_name: " + display_name)
@@ -54,15 +56,15 @@ class DataCatalogUtils:
             
             field_type = None
             
-            if field_value.type.primitive_type == datacatalog.FieldType.PrimitiveType.DOUBLE:
+            if field_value.type_.primitive_type == datacatalog.FieldType.PrimitiveType.DOUBLE:
                 field_type = "double"
-            if field_value.type.primitive_type == datacatalog.FieldType.PrimitiveType.STRING:
+            if field_value.type_.primitive_type == datacatalog.FieldType.PrimitiveType.STRING:
                 field_type = "string"
-            if field_value.type.primitive_type == datacatalog.FieldType.PrimitiveType.BOOL:
+            if field_value.type_.primitive_type == datacatalog.FieldType.PrimitiveType.BOOL:
                 field_type = "bool"
-            if field_value.type.primitive_type == datacatalog.FieldType.PrimitiveType.TIMESTAMP:
+            if field_value.type_.primitive_type == datacatalog.FieldType.PrimitiveType.TIMESTAMP:
                 field_type = "datetime"
-            if field_value.type.primitive_type == datacatalog.FieldType.PrimitiveType.PRIMITIVE_TYPE_UNSPECIFIED:
+            if field_value.type_.primitive_type == datacatalog.FieldType.PrimitiveType.PRIMITIVE_TYPE_UNSPECIFIED:
                 field_type = "enum"   
                      
                 index = 0
@@ -80,13 +82,14 @@ class DataCatalogUtils:
             field['display_name'] = display_name
             field['field_type'] = field_type
             field['is_required'] = is_required
+            field['order'] = order
             
             if field_type == "enum":
                 field['enum_values'] = enum_values
 
             fields.append(field)
                           
-        return fields
+        return sorted(fields, key=itemgetter('order'), reverse=True)
     
         
     def create_update_static_propagated_tag(self, config_status, source_res, view_res, columns, fields, source_tag_uuid, view_tag_uuid, template_uuid):
@@ -437,6 +440,7 @@ class DataCatalogUtils:
                     project_index = query_expression.rfind("$project", 0)
                     dataset_index = query_expression.rfind("$dataset", 0)
                     table_index = query_expression.rfind("$table", 0)
+                    from_clause_table_index = query_expression.rfind(" from $table", 0)
                     column_index = query_expression.rfind("$column", 0)
                     
                     if project_index != -1:
@@ -452,16 +456,16 @@ class DataCatalogUtils:
                         print('dataset: ' + dataset)
                     
                     # $table referenced in from clause, use fully qualified table
-                    if table_index > from_index and (table_index < where_index or where_index == -1):
+                    if from_clause_table_index != -1:
                          print('$table referenced in from clause')
                          qualified_table = resource.replace('/project/', '.').replace('/datasets/', '.').replace('/tables/', '.')
+                         print('qualified_table: ' + qualified_table)
                          query_str = query_expression.replace('$table', qualified_table)
                          
-                    # $table is referenced in where clause, replace $table with actual table name
-                    if table_index > where_index and where_index != -1:
-                        print('$table referenced in where clause')
+                    # $table is referenced somewhere in the expression, replace $table with actual table name
+                    if from_clause_table_index == -1 and table_index != -1:
+                        print('$table referenced somewhere, but not in the from clause')
                         table_index = resource.rfind('/') + 1
-                        #print('table_index: ' + str(table_index))
                         table_name = resource[table_index:]
                         print('table_name: ' + table_name)
                         query_str = query_expression.replace('$table', table_name)

@@ -109,12 +109,17 @@ class BigQueryUtils:
         
         for tagged_value in tagged_values:
             
+            print('tagged_value: ' + str(tagged_value))
+            
             if isinstance(tagged_value['field_value'], decimal.Decimal):
                 row[tagged_value['field_id']]= float(tagged_value['field_value'])
+            elif tagged_value['field_type'] == 'datetime':
+                row[tagged_value['field_id']]= tagged_value['field_value'][0:-1]
             else:
+                #row[tagged_value['field_id']]= json.dumps(tagged_value['field_value'], default=str)
                 row[tagged_value['field_id']]= tagged_value['field_value']
     
-        print('inserted row: ' + str(row))
+        print('insert row: ' + str(row))
         
         row_to_insert = [row,]
 

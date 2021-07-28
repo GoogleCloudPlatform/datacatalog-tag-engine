@@ -57,6 +57,14 @@
 		    <tr>
 		    <td>&nbsp;&nbsp;{{ tag_config['included_uris'] }}</td>
 	         </tr>
+		    {% if tag_config['tag_type'] == 'DYNAMIC' %}
+		       <tr>
+		       <td>&nbsp;<span style="color:#0b5394;">Included URIs Hash:</span></td>
+	            </tr>
+		       <tr>
+		       <td>&nbsp;&nbsp;{{ tag_config['included_uris_hash'] }}</td>
+	            </tr>
+		    {% endif %}
 		    <tr>
 		    <td>&nbsp;<span style="color:#0b5394;">Excluded URIs:</span></td>
 	         </tr>
