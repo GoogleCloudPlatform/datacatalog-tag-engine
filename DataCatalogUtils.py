@@ -417,100 +417,108 @@ class DataCatalogUtils:
             request.linked_resource=bigquery_resource
             entry = self.client.lookup_entry(request)
 
-            try:    
+            tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
+            print("tag_exists: " + str(tag_exists))
+            
+            # create new tag
+            tag = datacatalog.Tag()
+            tag.template = self.template_path
+            verified_field_count = 0
+            
+            for field in fields:
+                field_id = field['field_id']
+                field_type = field['field_type']
+                query_expression = field['query_expression']
                 
-                tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
-                print("tag_exists: " + str(tag_exists))
+                print('resource: ' + resource)
+                print('query_expression: ' + query_expression)
+            
+                # analyze query expression
+                from_index = query_expression.rfind(" from ", 0)
+                where_index = query_expression.rfind(" where ", 0)
+                project_index = query_expression.rfind("$project", 0)
+                dataset_index = query_expression.rfind("$dataset", 0)
+                table_index = query_expression.rfind("$table", 0)
+                from_clause_table_index = query_expression.rfind(" from $table", 0)
+                column_index = query_expression.rfind("$column", 0)
                 
-                # create new tag
-                tag = datacatalog.Tag()
-                tag.template = self.template_path
-                
-                for field in fields:
-                    field_id = field['field_id']
-                    field_type = field['field_type']
-                    query_expression = field['query_expression']
+                if project_index != -1:
+                    project_end = resource.find('/') 
+                    project = resource[0:project_end]
+                    print('project: ' + project)
                     
-                    print('resource: ' + resource)
-                    print('query_expression: ' + query_expression)
+                if dataset_index != -1:
+                    dataset_start = resource.find('/datasets/') + 10
+                    dataset_string = resource[dataset_start:]
+                    dataset_end = dataset_string.find('/') 
+                    dataset = dataset_string[0:dataset_end]
+                    print('dataset: ' + dataset)
                 
-                    # analyze query expression
-                    from_index = query_expression.rfind(" from ", 0)
-                    where_index = query_expression.rfind(" where ", 0)
-                    project_index = query_expression.rfind("$project", 0)
-                    dataset_index = query_expression.rfind("$dataset", 0)
-                    table_index = query_expression.rfind("$table", 0)
-                    from_clause_table_index = query_expression.rfind(" from $table", 0)
-                    column_index = query_expression.rfind("$column", 0)
+                # $table referenced in from clause, use fully qualified table
+                if from_clause_table_index != -1:
+                     print('$table referenced in from clause')
+                     qualified_table = resource.replace('/project/', '.').replace('/datasets/', '.').replace('/tables/', '.')
+                     print('qualified_table: ' + qualified_table)
+                     query_str = query_expression.replace('$table', qualified_table)
+                     
+                # $table is referenced somewhere in the expression, replace $table with actual table name
+                if from_clause_table_index == -1 and table_index != -1:
+                    print('$table referenced somewhere, but not in the from clause')
+                    table_index = resource.rfind('/') + 1
+                    table_name = resource[table_index:]
+                    print('table_name: ' + table_name)
+                    query_str = query_expression.replace('$table', table_name)
                     
-                    if project_index != -1:
-                        project_end = resource.find('/') 
-                        project = resource[0:project_end]
-                        print('project: ' + project)
-                        
-                    if dataset_index != -1:
-                        dataset_start = resource.find('/datasets/') + 10
-                        dataset_string = resource[dataset_start:]
-                        dataset_end = dataset_string.find('/') 
-                        dataset = dataset_string[0:dataset_end]
-                        print('dataset: ' + dataset)
+                    # $project referenced in where clause too
+                    if project_index > -1:
+                        query_str = query_str.replace('$project', project)
                     
-                    # $table referenced in from clause, use fully qualified table
-                    if from_clause_table_index != -1:
-                         print('$table referenced in from clause')
-                         qualified_table = resource.replace('/project/', '.').replace('/datasets/', '.').replace('/tables/', '.')
-                         print('qualified_table: ' + qualified_table)
-                         query_str = query_expression.replace('$table', qualified_table)
-                         
-                    # $table is referenced somewhere in the expression, replace $table with actual table name
-                    if from_clause_table_index == -1 and table_index != -1:
-                        print('$table referenced somewhere, but not in the from clause')
-                        table_index = resource.rfind('/') + 1
-                        table_name = resource[table_index:]
-                        print('table_name: ' + table_name)
-                        query_str = query_expression.replace('$table', table_name)
-                        
-                        # $project referenced in where clause too
-                        if project_index > -1:
-                            query_str = query_str.replace('$project', project)
-                        
-                        # $dataset referenced in where clause too    
-                        if dataset_index > -1:
-                            query_str = query_str.replace('$dataset', dataset)
-                        
-                    # table not in query expression (e.g. select 'string')
-                    if table_index == -1:
-                        query_str = query_expression
-                        
-                    if column_index != -1:
-                        query_str = query_str.replace('$column', column)
-                        
-                    # run final query string in BQ
-                    print('**** query_str: ****' + query_str)
+                    # $dataset referenced in where clause too    
+                    if dataset_index > -1:
+                        query_str = query_str.replace('$dataset', dataset)
+                    
+                # table not in query expression (e.g. select 'string')
+                if table_index == -1:
+                    query_str = query_expression
+                    
+                if column_index != -1:
+                    query_str = query_str.replace('$column', column)
+                    
+                # try to run query string in BQ
+                print('**** query_str: ****' + query_str)
+                
+                try:
+                    
                     rows = bq_client.query(query_str).result()
+                
+                except ValueError:
+                    print("invalid query parameter(s), writing error entry")
+                    error_exists = True
+                    store.write_error_entry('invalid query parameter(s): ' + query_str)
+                    continue
                     
-                    # Note: if query expression is well-formed, there should only be a single row returned with a single field_value
-                    # However, the user may also run a query that returns a list of rows. In that case, grab the top row 
-                    row_count = 0
-                    for row in rows:
-                        
-                        row_count = row_count + 1
-                        field_value = row[0]
-                        
-                        if row_count > 1:
-                            break
+                # Note: if query expression is well-formed, there should only be a single row returned with a single field_value
+                # However, user may mistakenly run a query that returns a list of rows. In that case, grab the top row.  
+                row_count = 0
+                for row in rows:
                     
-                    # check row_count
-                    if row_count == 0:
-                        # SQL query returned nothing
-                        # log the error in Firestore
-                        error_exists = True
-                        print('query_str returned nothing, writing error entry')
-                        store.write_error_entry('sql returned nothing: ' + query_str)
+                    row_count = row_count + 1
+                    field_value = row[0]
+                    
+                    if row_count > 1:
                         break
-                    
-                    print('field_value: ' + str(field_value))           
-                                
+                
+                # check row_count
+                if row_count == 0:
+                    # SQL query returned nothing, log error in Firestore
+                    error_exists = True
+                    print('query_str returned nothing, writing error entry')
+                    store.write_error_entry('sql returned nothing: ' + query_str)
+                    continue
+                
+                print('field_value: ' + str(field_value))           
+                
+                try:             
                     if field_type == "bool":
                         bool_field = datacatalog.TagField()
                         bool_field.bool_value = bool(field_value)
@@ -528,57 +536,64 @@ class DataCatalogUtils:
                         enum_field.enum_value.display_name = field_value
                         tag.fields[field_id] = enum_field
                     if field_type == "datetime":
-                    
+                
                         # timestamp value must be in this format: 2020-12-02T16:34:14Z
                         timestamp_value = field_value.isoformat()
-                    
+                
                         if len(timestamp_value) == 10:
                             field_value = timestamp_value + 'T12:00:00Z'
                         else:
                             field_value = timestamp_value[0:19] + timestamp_value[26:32] + "Z"
-                    
+                
                         timestamp = Timestamp()
                         timestamp.FromJsonString(field_value)
-                        
+                    
                         datetime_field = datacatalog.TagField()
                         datetime_field.timestamp_value = timestamp
                         tag.fields[field_id] = datetime_field
-                        
-                    # store the value back in the dict, so that it can be accessed by the exporter
-                    field['field_value'] = field_value
-                
-                if error_exists:
-                    # error was encountered while running SQL expressions
-                    # don't create or update this tag
-                    creation_status = constants.ERROR
-                    break
-                                
-                if column != "":
-                    tag.column = column
-                    print('tag.column: ' + column) 
-                
-                if tag_exists == True:
-                    print('updating tag')
-                    tag.name = tag_id
-                    response = self.client.update_tag(tag=tag)
-                    store.write_log_entry(constants.TAG_UPDATED, constants.BQ_RES, resource, column, "DYNAMIC", tag_uuid, tag_id, template_uuid)
-                else:
-                    print('creating tag')
-                    response = self.client.create_tag(parent=entry.name, tag=tag)
-                    tag_id = response.name
-                    store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, resource, column, "DYNAMIC", tag_uuid, tag_id, template_uuid)
-                
-                if tag_export == True:
-                    bqu = bq.BigQueryUtils()
-                    template_fields = self.get_template()
-                    bqu.copy_tag(self.template_id, template_fields, resource, column, fields)
+                except ValueError:
+                    print("cast error, writing error entry")
+                    error_exists = True
+                    store.write_error_entry('cast error: ' + query_str)
+                    continue
                     
-                print("response: " + str(response))
+                verified_field_count = verified_field_count + 1    
+                
+                # store the value back in the dict, so that it can be accessed by the exporter
+                field['field_value'] = field_value
             
-            except ValueError:
-                print("ValueError: create_dynamic_tags failed due to invalid parameters.")
+            if error_exists:
+                # error was encountered while running SQL expression
+                # proceed with tag creation / update, but return error to user
                 creation_status = constants.ERROR
+                
+            if verified_field_count == 0:
+                # tag is empty due to errors, skip tag creation
+                continue
+                            
+            if column != "":
+                tag.column = column
+                print('tag.column: ' + column) 
             
+            if tag_exists == True:
+                print('updating tag')
+                tag.name = tag_id
+                response = self.client.update_tag(tag=tag)
+                store.write_log_entry(constants.TAG_UPDATED, constants.BQ_RES, resource, column, "DYNAMIC", tag_uuid, tag_id, template_uuid)
+            else:
+                print('creating tag')
+                response = self.client.create_tag(parent=entry.name, tag=tag)
+                tag_id = response.name
+                store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, resource, column, "DYNAMIC", tag_uuid, tag_id, template_uuid)
+            
+            if tag_export == True:
+                bqu = bq.BigQueryUtils()
+                template_fields = self.get_template()
+                bqu.copy_tag(self.template_id, template_fields, resource, column, fields)
+                
+            print("response: " + str(response))
+                    
+                        
         return creation_status
 
 if __name__ == '__main__':

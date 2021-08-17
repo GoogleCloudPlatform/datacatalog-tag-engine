@@ -111,6 +111,9 @@ class BigQueryUtils:
             
             print('tagged_value: ' + str(tagged_value))
             
+            if 'field_value' not in tagged_value:
+                continue
+            
             if isinstance(tagged_value['field_value'], decimal.Decimal):
                 row[tagged_value['field_id']]= float(tagged_value['field_value'])
             elif tagged_value['field_type'] == 'datetime':
