@@ -1,5 +1,6 @@
-Tag Engine is an open-source tool that makes it easier for Data Stewards to create business metadata in Google Cloud’s [Data Catalog](https://cloud.google.com/data-catalog/docs/concepts/overview). It is a self-service tool that lets you create bulk tags for your BigQuery tables, columns, and views based on simple SQL expressions and file path expressions. It also refreshes these tags on a schedule or when triggered from the API. The tool comes with a friendly UI so that business users, who are often the Data Stewards in their organization, can be productive at tagging without much training. The screenshot below shows how Data Stewards create dynamic tags in Tag Engine. 
-
+Tag Engine is a self-service tool that makes it easier for Data Stewards to create business metadata in Google Cloud’s [Data Catalog](https://cloud.google.com/data-catalog/docs/concepts/overview). It enables them to create <b>bulk tags</b> for their BigQuery tables, columns, and views based on simple <b>SQL expressions</b> and <b>file path expressions</b>. It also refreshes their tags on a schedule or when triggered via the Tag Engine API. 
+<br>
+The tool comes with a friendly UI so that business users, who are often the Data Stewards in their organization, can be productive at tagging without much training. The screenshot below shows the creation of a dynamic tag in Tag Engine.  
 ![](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/screenshot.png)
 
 ## Follow the steps below to set up Tag Engine on Google Cloud. 
