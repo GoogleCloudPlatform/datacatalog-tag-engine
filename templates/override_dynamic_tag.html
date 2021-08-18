@@ -123,7 +123,7 @@
 			   <input type="hidden" name="tag_uuid" value="{{ propagated_tag_config['view_tag_uuid'] }}">
 			   
 			   {% for field in fields %}
-			   	<input type="hidden" name="{{ field['field_id'] }}_type" value="{{ field['field_type'] }}">
+			   	<input type="hidden" name="{{ field['field_id'] }}_datatype" value="{{ field['field_type'] }}">
 			   {% endfor %}
 
          </form>

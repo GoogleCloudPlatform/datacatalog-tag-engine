@@ -130,7 +130,7 @@ bigquery/project/{{ project_id }}/dataset/{dataset}/*, bigquery/project/{{ proje
 			   <input type="hidden" name ="region" value="{{ region }}">
 
 			   {% for dict_field in fields %}
-			   	<input type="hidden" name="{{ dict_field['field_id'] }}_type" value="{{ dict_field['field_type'] }}">
+			   	<input type="hidden" name="{{ dict_field['field_id'] }}_datatype" value="{{ dict_field['field_type'] }}">
 			    {% endfor %}	
 
          </form>

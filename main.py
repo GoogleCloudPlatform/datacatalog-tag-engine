@@ -475,7 +475,7 @@ def override_propagated_dynamic_tag():
         for selected_field in selected_fields:
             query_expression = request.form.get(selected_field)
             #print("query_expression: " + query_expression)
-            selected_field_type = request.form.get(selected_field + "_type")
+            selected_field_type = request.form.get(selected_field + "_datatype")
             print(selected_field + ", " + query_expression + ", " + selected_field_type)
             
             for template_field in template_fields:
@@ -571,7 +571,7 @@ def override_propagated_static_tag():
     
         for selected_field in selected_fields:
             selected_value = request.form.get(selected_field)
-            selected_type = request.form.get(selected_field + "_type")
+            selected_type = request.form.get(selected_field + "_datatype")
             print(selected_field + ", " + selected_value + ", " + selected_type)
             
             for template_field in template_fields:
@@ -584,7 +584,7 @@ def override_propagated_static_tag():
                 fields.append(field)
                 break
     
-        print('fields: ' + str(fields))
+        #print('fields: ' + str(fields))
     
         template_exists, template_uuid = tagstore.read_tag_template(template_id, project_id, region)
         
@@ -821,7 +821,7 @@ def process_update_static_tag():
     
         for selected_field in selected_fields:
             selected_value = request.form.get(selected_field)
-            selected_type = request.form.get(selected_field + "_type")
+            selected_type = request.form.get(selected_field + "_datatype")
             print(selected_field + ", " + selected_value + ", " + selected_type)
             
             for template_field in template_fields:
@@ -898,7 +898,7 @@ def process_update_dynamic_tag():
         for selected_field in selected_fields:
             query_expression = request.form.get(selected_field)
             print("query_expression: " + query_expression)
-            selected_field_type = request.form.get(selected_field + "_type")
+            selected_field_type = request.form.get(selected_field + "_datatype")
             print(selected_field + ", " + query_expression + ", " + selected_field_type)
             
             for template_field in template_fields:
@@ -980,7 +980,7 @@ def process_static_tag():
     
     for selected_field in selected_fields:
         selected_value = request.form.get(selected_field)
-        selected_type = request.form.get(selected_field + "_type")
+        selected_type = request.form.get(selected_field + "_datatype")
         print(selected_field + ", " + selected_value + ", " + selected_type)
         
         for template_field in template:
@@ -1065,7 +1065,8 @@ def process_dynamic_tag():
     for selected_field in selected_fields:
         query_expression = request.form.get(selected_field)
         print("query_expression: " + query_expression)
-        selected_field_type = request.form.get(selected_field + "_type")
+        selected_field_type = request.form.get(selected_field + "_datatype")
+        print("selected_field_type: " + selected_field_type)
         print(selected_field + ", " + query_expression + ", " + selected_field_type)
         
         for template_field in template:

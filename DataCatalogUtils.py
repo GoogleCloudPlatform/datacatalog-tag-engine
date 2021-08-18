@@ -431,6 +431,8 @@ class DataCatalogUtils:
                 query_expression = field['query_expression']
                 
                 print('resource: ' + resource)
+                #print('field_id: ' + field_id)
+                #print('field_type: ' + field_type)
                 print('query_expression: ' + query_expression)
             
                 # analyze query expression
@@ -516,7 +518,8 @@ class DataCatalogUtils:
                     store.write_error_entry('sql returned nothing: ' + query_str)
                     continue
                 
-                print('field_value: ' + str(field_value))           
+                print('field_value: ' + str(field_value))
+                #print('field_type: ' + str(field_type))            
                 
                 try:             
                     if field_type == "bool":
@@ -557,11 +560,12 @@ class DataCatalogUtils:
                     store.write_error_entry('cast error: ' + query_str)
                     continue
                     
-                verified_field_count = verified_field_count + 1    
+                verified_field_count = verified_field_count + 1
+                print('verified_field_count: ' + str(verified_field_count))    
                 
                 # store the value back in the dict, so that it can be accessed by the exporter
                 field['field_value'] = field_value
-            
+                
             if error_exists:
                 # error was encountered while running SQL expression
                 # proceed with tag creation / update, but return error to user
@@ -577,11 +581,13 @@ class DataCatalogUtils:
             
             if tag_exists == True:
                 print('updating tag')
+                print('tag request' + str(tag))
                 tag.name = tag_id
                 response = self.client.update_tag(tag=tag)
                 store.write_log_entry(constants.TAG_UPDATED, constants.BQ_RES, resource, column, "DYNAMIC", tag_uuid, tag_id, template_uuid)
             else:
                 print('creating tag')
+                print('tag request' + str(tag))
                 response = self.client.create_tag(parent=entry.name, tag=tag)
                 tag_id = response.name
                 store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, resource, column, "DYNAMIC", tag_uuid, tag_id, template_uuid)
