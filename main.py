@@ -844,7 +844,8 @@ def process_update_static_tag():
                 tag_export = True
     
         template_exists, template_uuid = tagstore.read_tag_template(template_id, project_id, region)
-        new_tag_uuid = tagstore.update_tag_config(old_tag_uuid, 'STATIC', 'ACTIVE', fields, included_uris, excluded_uris, template_uuid, None, None, tag_export)
+        new_tag_uuid = tagstore.update_tag_config(old_tag_uuid, 'STATIC', 'ACTIVE', fields, included_uris, excluded_uris, template_uuid,\
+                                                  None, None, None, tag_export)
         
         update_status = dcu.create_update_static_tags(fields, included_uris, excluded_uris, new_tag_uuid, template_uuid, tag_export)
     
@@ -879,6 +880,7 @@ def process_update_dynamic_tag():
     excluded_uris = request.form['excluded_uris'].rstrip()
     refresh_mode = request.form['refresh_mode']
     refresh_frequency = request.form['refresh_frequency'].rstrip()
+    refresh_unit = request.form['refresh_unit']
     action = request.form['action']
     
     print('old_tag_uuid: ' + old_tag_uuid)
@@ -907,7 +909,8 @@ def process_update_dynamic_tag():
                 
                 is_required = template_field['is_required']
         
-                field = {'field_id': selected_field, 'query_expression': query_expression, 'field_type': selected_field_type, 'is_required': is_required}
+                field = {'field_id': selected_field, 'query_expression': query_expression, 'field_type': selected_field_type,\
+                         'is_required': is_required}
                 fields.append(field)
                 break
     
@@ -922,7 +925,8 @@ def process_update_dynamic_tag():
                 tag_export = True
     
         template_exists, template_uuid = tagstore.read_tag_template(template_id, project_id, region)
-        new_tag_uuid = tagstore.update_tag_config(old_tag_uuid, 'DYNAMIC', 'ACTIVE', fields, included_uris, excluded_uris, template_uuid, refresh_mode, refresh_frequency, tag_export)
+        new_tag_uuid = tagstore.update_tag_config(old_tag_uuid, 'DYNAMIC', 'ACTIVE', fields, included_uris, excluded_uris,\
+                                                  template_uuid, refresh_mode, refresh_frequency, refresh_unit, tag_export)
         
         update_status = dcu.create_update_dynamic_tags(fields, included_uris, excluded_uris, new_tag_uuid, template_uuid, tag_export)
     
@@ -1038,12 +1042,14 @@ def process_dynamic_tag():
     excluded_uris = request.form['excluded_uris'].rstrip()
     refresh_mode = request.form['refresh_mode']
     refresh_frequency = request.form['refresh_frequency']
+    refresh_unit = request.form['refresh_unit']
     action = request.form['action']
     
     print('included_uris: ' + included_uris)
     print('excluded_uris: ' + excluded_uris)
     print('refresh_mode: ' + refresh_mode)
     print('refresh_frequency: ' + refresh_frequency)
+    print('refresh_unit: ' + refresh_unit)
     
     dcu = dc.DataCatalogUtils(template_id, project_id, region)
     template = dcu.get_template()
@@ -1091,7 +1097,8 @@ def process_dynamic_tag():
     
     tagstore = te.TagEngineUtils()
     template_uuid = tagstore.write_tag_template(template_id, project_id, region)
-    tag_uuid, included_uris_hash = tagstore.write_dynamic_tag('ACTIVE', fields, included_uris, excluded_uris, template_uuid, refresh_mode, refresh_frequency, tag_export)
+    tag_uuid, included_uris_hash = tagstore.write_dynamic_tag('ACTIVE', fields, included_uris, excluded_uris, template_uuid, refresh_mode,\
+                                                             refresh_frequency, refresh_unit, tag_export)
      
     creation_status = dcu.create_update_dynamic_tags(fields, included_uris, excluded_uris, tag_uuid, template_uuid, tag_export)
     
@@ -1113,6 +1120,7 @@ def process_dynamic_tag():
         excluded_uris=excluded_uris,
         refresh_mode=refresh_mode,
         refresh_frequency=refresh_frequency,
+        refresh_unit=refresh_unit,
         tag_export=tag_export,
         status=creation_status)
     # [END render_template]

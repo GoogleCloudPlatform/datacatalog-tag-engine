@@ -168,7 +168,12 @@ class TagScheduler:
 
         version = data.get('version', 0) + 1
         delta = data.get('refresh_frequency', 24)
-        next_run = datetime.utcnow() + timedelta(hours=delta)
+        unit = data.get('refresh_unit', 'hours')
+        
+        if unit == 'hours':
+            next_run = datetime.utcnow() + timedelta(hours=delta)
+        if unit == 'days':
+            next_run = datetime.utcnow() + timedelta(days=delta)
         
         print('version: ' + str(version))
         print('delta: ' + str(delta))

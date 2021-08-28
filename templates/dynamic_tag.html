@@ -105,7 +105,11 @@ bigquery/project/{{ project_id }}/dataset/{dataset}/*, bigquery/project/{{ proje
 		         </tr>
 			     <tr><td>&nbsp;</td></tr>
 				<tr>	
-			    <td>Refresh frequency:&nbsp;<input type="text" value="24" name="refresh_frequency" style="width: 30px;padding: 3px;"> hours.</td>
+			    <td>Refresh frequency:&nbsp;<input type="text" value="24" name="refresh_frequency" style="width: 30px;padding: 3px;">&nbsp;
+				    			  <select name="refresh_unit" style="width: 70px;padding: 3px;">
+  				  				<option value="hours" selected>hours</option>
+  							   	<option value="days">days</option>
+							  </select></td>
 		         </tr>
 		        </table>
 			    {% if display_export_option == 1 %}

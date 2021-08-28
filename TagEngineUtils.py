@@ -990,7 +990,7 @@ class TagEngineUtils:
         return tag_uuid
     
     
-    def write_dynamic_tag(self, config_status, fields, included_uris, excluded_uris, template_uuid, refresh_mode, refresh_frequency, tag_export):
+    def write_dynamic_tag(self, config_status, fields, included_uris, excluded_uris, template_uuid, refresh_mode, refresh_frequency, refresh_unit, tag_export):
         
         included_uris_hash = hashlib.md5(included_uris.encode()).hexdigest()
         
@@ -1020,10 +1020,11 @@ class TagEngineUtils:
                 delta = int(refresh_frequency)
             else:
                 delta = 24
-        
-            #print('delta: ' + str(delta))
-        
-            next_run = datetime.datetime.utcnow() + datetime.timedelta(hours=delta)
+                
+            if refresh_unit == 'hours':
+                next_run = datetime.datetime.utcnow() + datetime.timedelta(hours=delta)
+            if refresh_unit == 'days':
+                next_run = datetime.datetime.utcnow() + datetime.timedelta(days=delta)
             
             doc_ref.set({
                 'tag_uuid': tag_uuid,
@@ -1035,8 +1036,9 @@ class TagEngineUtils:
                 'included_uris_hash': included_uris_hash,
                 'excluded_uris': excluded_uris,
                 'template_uuid': template_uuid,
-                'refresh_mode': refresh_mode,
+                'refresh_mode': refresh_mode, # AUTO
                 'refresh_frequency': delta,
+                'refresh_unit': refresh_unit,
                 'tag_export': tag_export,
                 'scheduling_status': 'READY',
                 'next_run': next_run,
@@ -1054,7 +1056,7 @@ class TagEngineUtils:
                 'included_uris_hash': included_uris_hash,
                 'excluded_uris': excluded_uris,
                 'template_uuid': template_uuid,
-                'refresh_mode': refresh_mode,
+                'refresh_mode': refresh_mode, # ON_DEMAND
                 'refresh_frequency': 0,
                 'tag_export': tag_export,
                 'version': 1
@@ -1167,7 +1169,8 @@ class TagEngineUtils:
             'version' : version + 1
         })
     
-    def update_tag_config(self, old_tag_uuid, tag_type, config_status, fields, included_uris, excluded_uris, template_uuid, refresh_mode, refresh_frequency, tag_export):
+    def update_tag_config(self, old_tag_uuid, tag_type, config_status, fields, included_uris, excluded_uris, template_uuid, \
+                          refresh_mode, refresh_frequency, refresh_unit, tag_export):
         
         self.db.collection('tag_config').document(old_tag_uuid).update({
             'config_status' : "INACTIVE"
@@ -1177,7 +1180,8 @@ class TagEngineUtils:
             new_tag_uuid = self.write_static_tag(config_status, fields, included_uris, excluded_uris, template_uuid, tag_export)
         
         if tag_type == 'DYNAMIC':
-            new_tag_uuid, included_uris_hash = self.write_dynamic_tag(config_status, fields, included_uris, excluded_uris, template_uuid, refresh_mode, refresh_frequency, tag_export)
+            new_tag_uuid, included_uris_hash = self.write_dynamic_tag(config_status, fields, included_uris, excluded_uris, \
+                                                            template_uuid, refresh_mode, refresh_frequency, refresh_unit, tag_export)
             # note: we do not need to return the included_uris_hash
             
         return new_tag_uuid
