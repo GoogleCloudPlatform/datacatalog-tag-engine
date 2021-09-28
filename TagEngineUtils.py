@@ -74,12 +74,12 @@ class TagEngineUtils:
         return exists, settings
 
 
-    def read_propagated_settings(self):
+    def read_propagation_settings(self):
         
         settings = {}
         exists = False
         
-        doc_ref = self.db.collection('settings').document('propagated')
+        doc_ref = self.db.collection('settings').document('propagation')
         doc = doc_ref.get()
         
         if doc.exists:
@@ -89,17 +89,18 @@ class TagEngineUtils:
         return exists, settings
         
         
-    def write_propagated_settings(self, source_project_ids, dest_project_ids, job_frequency):
+    def write_propagation_settings(self, source_project_ids, dest_project_ids, excluded_datasets, job_frequency):
         
         report_settings = self.db.collection('settings')
-        doc_ref = report_settings.document('propagated')
+        doc_ref = report_settings.document('propagation')
         doc_ref.set({
             'source_project_ids': source_project_ids,
             'dest_project_ids':  dest_project_ids,
+            'excluded_datasets': excluded_datasets,
             'job_frequency': job_frequency
         })
         
-        print('Saved propagated settings.')
+        print('Saved tag propagation settings.')
     
     
     def write_default_settings(self, template_id, project_id, region):
@@ -216,18 +217,28 @@ class TagEngineUtils:
         return summary_report, detailed_report
                      
     
-    def run_propagated_job(self, source_project_ids, dest_project_ids):
+    def run_propagation_job(self, source_project_ids, dest_project_ids, excluded_datasets):
         
-        print('enter run_propagated_job')
+        #print('*** enter run_propagation_job ***')
+        #print("source_project_ids: " + source_project_ids)
+        #print("dest_project_ids: " + dest_project_ids)
+        #print("excluded_datasets: " + excluded_datasets)
         
         for dest_project in dest_project_ids.split(','):
             dest_project_id = dest_project.strip()
+            
             print("dest_project_id: " + dest_project_id)
+            
             bq_client = bigquery.Client(project=dest_project_id)
             datasets = list(bq_client.list_datasets())
         
             for dataset in datasets:
                 print("dataset_id: " + dataset.dataset_id)
+                
+                # filter out excluded datasets
+                if dest_project_id + "." + dataset.dataset_id in excluded_datasets:
+                    print("excluding " + dest_project_id + "." + dataset.dataset_id + " from propagation")
+                    continue
 
                 query_str = """
                         select table_name as view_name, view_definition
@@ -242,7 +253,7 @@ class TagEngineUtils:
                     print('view_name: ' + view_name)
                     print('view_def: ' + view_def)
                     
-                    view_res = dest_project_id + '/datasets/' + dataset.dataset_id + '/tables/' + view_name
+                    view_res = dest_project_id + '/datasets/' + dataset.dataset_id + '/views/' + view_name
                     print('view_res: ' + view_res)
                 
                     source_tables = self.source_tables_from_view(view_def)
@@ -267,7 +278,7 @@ class TagEngineUtils:
                             continue
                         
                         source_res = source_project + '/datasets/' + source_dataset + '/tables/' + source_table
-                        #print('source_res: ' + source_res)
+                        print('source_res: ' + source_res)
                                         
                         tag_configs = self.read_tag_configs_on_res(source_res)
                         
@@ -320,16 +331,19 @@ class TagEngineUtils:
                         #print('columns: ' + str(columns))
                         
                         # create or update propagated_config 
-                        view_tag_uuid = self.create_or_update_propagated_config(source_tag_uuid, source_res, view_res, config_status, columns, view_def, tag_type, fields, template_uuid)
+                        view_tag_uuid = self.create_or_update_propagated_config(source_tag_uuid, source_res, view_res, config_status, columns, view_def, \
+                                            tag_type, fields, template_uuid)
                         
                         if config_status == 'CONFLICT':
                             self.write_unpropagated_log_entry(source_res, view_res, 'PROPAGATED', config_status, template_uuid)
                         elif config_status == 'PROPAGATED':
                             if tag_type == "STATIC":
-                                dcu.create_update_static_propagated_tag('PROPAGATED', source_res, view_res, columns, fields, source_tag_uuid, view_tag_uuid, template_uuid)
+                                dcu.create_update_static_propagated_tag('PROPAGATED', source_res, view_res, columns, fields, source_tag_uuid, view_tag_uuid,\
+                                     template_uuid)
                             
                             if tag_type == "DYNAMIC":
-                                dcu.create_update_dynamic_propagated_tag('PROPAGATED', source_res, view_res, columns, fields, source_tag_uuid, view_tag_uuid, template_uuid)
+                                dcu.create_update_dynamic_propagated_tag('PROPAGATED', source_res, view_res, columns, fields, source_tag_uuid, view_tag_uuid,\
+                                     template_uuid)
 
                         
     def add_source_to_configs(self, tag_configs, source_res):
@@ -341,8 +355,8 @@ class TagEngineUtils:
 
     def triage_tag_configs(self, view_res, source_tables_tag_configs):
         
-        print('enter triage_tag_configs')
-        print('view_res: ' + view_res)
+        #print('enter triage_tag_configs')
+        #print('view_res: ' + view_res)
         #print('source_tables_tag_configs: ' + str(source_tables_tag_configs))
         
         reconciled_tags = [] # tracks configs which conflict or/and agree  
@@ -443,7 +457,7 @@ class TagEngineUtils:
      
     def run_diff(self, tag_uuid_list, overlapping_tags):
         
-        print('enter run_diff')
+        #print('enter run_diff')
         #print('tag_uuid_list: ' + str(tag_uuid_list))
         #print('overlapping_tags: ' + str(overlapping_tags)) 
         
@@ -513,10 +527,10 @@ class TagEngineUtils:
         
     def extract_tagged_columns(self, source_res_list, view_res, included_uris):
                 
-        print('enter extract_tagged_columns')
-        print('source_res_list: ' + str(source_res_list))
-        print('view_res: ' + view_res)
-        print('included: ' + included_uris)
+        #print('enter extract_tagged_columns')
+        #print('source_res_list: ' + str(source_res_list))
+        #print('view_res: ' + view_res)
+        #print('included: ' + included_uris)
         
         view_res_split = view_res.split("/")
         project = view_res_split[0]
@@ -590,9 +604,10 @@ class TagEngineUtils:
         return False
         
 
-    def create_or_update_propagated_config(self, source_tag_uuid, source_res, view_res, config_status, columns, view_def, tag_type, fields, template_uuid):
+    def create_or_update_propagated_config(self, source_tag_uuid, source_res, view_res, config_status, columns, view_def, tag_type, fields,\
+                                           template_uuid):
         
-        print('enter create_or_update_propagated_config')
+        #print('enter create_or_update_propagated_config')
         
         # check to see if we have an active config 
         tag_ref = self.db.collection('propagated_config')
@@ -702,19 +717,22 @@ class TagEngineUtils:
         self.db.collection('logs').add(log_entry)
         print('Wrote log entry.')
         
-    def generate_propagated_report(self):    
+    def generate_propagation_report(self):    
     
+        #print("*** enter generate_propagation_report ***")
+        
         report = []
         last_run = None
         source_view_set = set()
         
-        configs = self.db.collection('propagated_config').stream()
+        prop_configs = self.db.collection('propagated_config').stream()
 
-        for config in configs:  
+        for config in prop_configs:  
                       
             prop_entry = config.to_dict()
+            print("prop_entry: " + str(prop_entry))
             
-            view_res_pretty = prop_entry['view_res'].replace('/datasets', '').replace('/tables', '')
+            view_res_pretty = prop_entry['view_res'].replace('/datasets', '').replace('/views', '')
             prop_entry['view_res'] = view_res_pretty
                     
             source_res_list = prop_entry['source_res']
@@ -740,7 +758,8 @@ class TagEngineUtils:
         
         last_hour_ts = datetime.datetime.utcnow() - datetime.timedelta(hours = 1)
         
-        logs = self.db.collection('logs').where('config_type', '==', 'PROPAGATED').where('config_status', '==', 'NONE').where('ts', '>=', last_hour_ts).order_by('ts', direction=firestore.Query.DESCENDING).stream()
+        logs = self.db.collection('logs').where('config_type', '==', 'PROPAGATED').where('config_status', '==', 'NONE').where('ts', '>=',\
+                last_hour_ts).order_by('ts', direction=firestore.Query.DESCENDING).stream()
 
         for log in logs:
             
@@ -781,7 +800,8 @@ class TagEngineUtils:
         tag_config_ref = self.db.collection('tag_config')
          
         log_ref = self.db.collection('logs')
-        query1 = log_ref.where('template_uuid', '==', template_uuid).where('source_res', '==', source_res_full).where('view_res', '==', view_res_full).order_by('ts', direction=firestore.Query.DESCENDING).limit(1)
+        query1 = log_ref.where('template_uuid', '==', template_uuid).where('source_res', '==', source_res_full).where('view_res', '==',\
+                 view_res_full).order_by('ts', direction=firestore.Query.DESCENDING).limit(1)
         prop_results = query1.stream()
         
         for prop_record in prop_results:
@@ -857,6 +877,8 @@ class TagEngineUtils:
         
         
     def read_tag_configs_on_res(self, res):
+        
+        #print("*** enter read_tag_configs_on_res ***")
             
         template_uuid_set = set()
         

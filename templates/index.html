@@ -39,14 +39,14 @@
 	    <h2>Tag Engine Reports</h2>
 	    </div>
 	    &nbsp;<a href="{{ url_for('coverage_report') }}">Coverage Report</a><br>
-	    &nbsp;<a href="{{ url_for('propagated_report') }}">Tag Propagation Report</a><br>
+	    &nbsp;<a href="{{ url_for('propagation_report') }}">Tag Propagation Report</a><br>
 	    <p>&nbsp;</p>
 	    <div class="header">
 	    <h2>Tag Engine Settings</h2>
 	    </div>
-	    &nbsp;<a href="{{ url_for('default_settings', saved=0) }}">Configure Default Tag Template</a><br>
-	    &nbsp;<a href="{{ url_for('coverage_settings', saved=0) }}">Configure Coverage Settings</a><br>
-	    &nbsp;<a href="{{ url_for('export_settings', saved=0) }}">Configure Tag History Settings</a><br>
-	    &nbsp;<a href="{{ url_for('propagated_settings', saved=0) }}">Configure Tag Propagation Settings</a>
+	    &nbsp;<a href="{{ url_for('default_settings', saved=0) }}">Default Tag Template</a><br>
+	    &nbsp;<a href="{{ url_for('coverage_settings', saved=0) }}">Coverage Settings</a><br>
+	    &nbsp;<a href="{{ url_for('export_settings', saved=0) }}">Tag History Settings</a><br>
+	    &nbsp;<a href="{{ url_for('propagation_settings', saved=0) }}">Tag Propagation Settings</a>
     </body>
 </html>

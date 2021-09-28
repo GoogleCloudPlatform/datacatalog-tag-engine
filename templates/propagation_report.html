@@ -11,7 +11,7 @@
 	   <div class="header">
 	   <h2>Propagated Tags Report for {{ project_ids }}</h2>
         </div>
-	   <form method="post" action="/propagated_report">
+	   <form method="post" action="/propagation_report">
 	    <h5>&nbsp;  
 	   {% if last_run != 'Never' %}   
 		  Last run: {{ last_run }} UTC&nbsp;&nbsp;<input type="submit" value="Run Now" name="view" style="width: 100px;padding: 3px;"> 
@@ -85,7 +85,7 @@
 			     {% elif record['config_status'] == 'CONFLICT' %}
 			   	  <td style="background-color:#f98989;text-align:left">&nbsp;&nbsp;Tag Conflict&nbsp;&nbsp; 
 			     {% elif record['config_status'] == 'NONE' %}
-				  <td style="background-color:#ffffff;text-align:left">&nbsp;&nbsp;Source Untagged&nbsp;&nbsp;	  
+				  <td style="background-color:#ffffff;text-align:left">&nbsp;&nbsp;N/A&nbsp;&nbsp;	  
 				{% endif %}
 			     </td>
 				{% if record['config_status'] == 'NONE' %}
@@ -111,6 +111,6 @@
 			   {% endfor %}
 		    </table>
          <p>&nbsp;</p>
-	    <p>&nbsp;<a href="{{ url_for('propagated_settings', saved=0) }}">Propagated Settings</a>&nbsp;&nbsp;<a href="/">Homepage</a></p>
+	    <p>&nbsp;<a href="{{ url_for('propagation_settings', saved=0) }}">Propagation Settings</a>&nbsp;&nbsp;<a href="/">Homepage</a></p>
     </body>
 </html>

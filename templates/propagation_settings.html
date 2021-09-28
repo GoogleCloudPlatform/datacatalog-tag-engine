@@ -15,16 +15,21 @@
 	   <h1>Tag Engine</h1>
         </div>
 	   <div class="header">
-	   <h2>Propagated Tags Settings</h2>
+	   <h2>Tag Propagation Settings</h2>
 	   </div>
 	   <span style="color:#9d9a9a;">
-		   <h6>&nbsp;&nbsp;Tag Engine can copy tags from BigQuery tables to views as long as those views reference tagged tables. This is called tag propagation. 
-			   <br>&nbsp;&nbsp;If you want Tag Engine to propagate your tags, fill out the fields below. You must set at least one source project and at least one destination project. 
-			   <br>&nbsp;&nbsp;You may optionally specify the frequency with which the tag propagate job should run. The default frequency is every 24 hours.  
+		   <h6>&nbsp;&nbsp;Tag Engine can copy Data Catalog tags which are attached to BigQuery tables to BigQuery views as long as those views reference tagged tables.<br> 
+			   
+			   <br>&nbsp;&nbsp;The source project ids is where your tagged tables reside. The destination project ids is where your views reside. They can be in the same project. 
+			   <br>&nbsp;&nbsp;You must set at least one source project and at least one destination project. <br>
+			   
+			   <br>&nbsp;&nbsp;You can optionally exclude certain datasets from tag propagation. The excluded datasets must be qualified by their project (e.g. project_id.dataset). <br>
+
+			   <br>&nbsp;&nbsp;You can also specify the frequency with which the tag propagation job should run. The default frequency is every 24 hours.  
 		        <br><br>&nbsp;&nbsp;Mandatory settings are marked by <span style="color:red;">*</span>
 		   </h6>
 	   </span> 
-         <form method="post" action="/set_propagated">
+         <form method="post" action="/set_propagation">
 		    <table>
 			   <tr>
 		          <td><span style="color:red;">*</span> Source Project Ids:</td>
@@ -34,7 +39,10 @@
 		          <td><span style="color:red;">*</span> Destination Project Ids:</td>
 		          <td>&nbsp;<input type="text" name="dest_project_ids" value="{{ dest_project_ids }}" style="width: 400px;padding: 3px;"></td>
 			   </tr>
-			  
+		        <tr>
+		          <td>&nbsp;&nbsp;Excluded Datasets:</td>
+		          <td>&nbsp;<input type="text" name="excluded_datasets" value="{{ excluded_datasets }}" style="width: 400px;padding: 3px;"></td>
+			   </tr>
 		        <tr>
 		          <td>&nbsp;&nbsp;Job Run Frequency:</td>
 		          <td>&nbsp;<input type="text" name="job_frequency" value="{{ job_frequency }}" style="width: 30px;padding: 3px;"> hours</td>
@@ -45,6 +53,6 @@
 		    </table>
            
          </form>
-	    <p>&nbsp;&nbsp;<a href="{{ url_for('propagated_report') }}">Propagated Tag Report</a>&nbsp;&nbsp;<a href="/">Homepage</a></p>
+	    <p>&nbsp;&nbsp;<a href="{{ url_for('propagation_report') }}">Tag Propagation Report</a>&nbsp;&nbsp;<a href="/">Homepage</a></p>
     </body>
 </html>

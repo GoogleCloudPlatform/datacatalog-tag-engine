@@ -125,27 +125,30 @@ def export_settings(saved):
         settings=saved)
     # [END render_template]
     
-@app.route("/propagated_settings<int:saved>")
-def propagated_settings(saved):
+@app.route("/propagation_settings<int:saved>")
+def propagation_settings(saved):
     
     tagstore = te.TagEngineUtils()
-    exists, settings = tagstore.read_propagated_settings()
+    exists, settings = tagstore.read_propagation_settings()
     
     if exists:
         source_project_ids = settings['source_project_ids']
         dest_project_ids = settings['dest_project_ids']
+        excluded_datasets = settings['excluded_datasets']
         job_frequency = settings['job_frequency']
     else:
         source_project_ids = "{projectA}, {projectB}, {projectC}"
         dest_project_ids = "{projectD}, {projectE}, {projectF}"
+        excluded_datasets = "{projectA}.{dataset1}, {projectB}.{dataset2}"
         job_frequency = "24"
     
-    # [END propagated_settings]
+    # [END propagation_settings]
     # [START render_template]
     return render_template(
-        'propagated_settings.html',
+        'propagation_settings.html',
         source_project_ids=source_project_ids,
         dest_project_ids=dest_project_ids,
+        excluded_datasets=excluded_datasets,
         job_frequency=job_frequency,
         settings=saved)
     # [END render_template]
@@ -222,23 +225,26 @@ def set_coverage():
     return coverage_settings(1)  
  
     
-@app.route("/set_propagated", methods=['POST'])
-def set_propagated():
+@app.route("/set_propagation", methods=['POST'])
+def set_propagation():
     
     source_project_ids = request.form['source_project_ids'].rstrip()
     dest_project_ids = request.form['dest_project_ids'].rstrip()
+    excluded_datasets = request.form['excluded_datasets'].rstrip()
     job_frequency = request.form['job_frequency'].rstrip()
     
     if source_project_ids == "{projectA}, {projectB}, {projectC}":
         source_project_ids = None
     if dest_project_ids == "{projectD}, {projectE}, {projectF}":
         dest_project_ids = None
+    if excluded_datasets == "{projectA}.{dataset1}, {projectB}.{dataset2}":
+        dest_project_ids = None
     
     if source_project_ids != None or dest_project_ids != None:
         tagstore = te.TagEngineUtils()
-        tagstore.write_propagated_settings(source_project_ids, dest_project_ids, job_frequency)
+        tagstore.write_propagation_settings(source_project_ids, dest_project_ids, excluded_datasets, job_frequency)
         
-    return propagated_settings(1)
+    return propagation_settings(1)
     
 @app.route("/coverage_report")
 def coverage_report():
@@ -274,11 +280,11 @@ def coverage_details(res):
         project_id=project_id,
         tag_configs=tag_configs)
     
-@app.route("/propagated_report", methods=['GET', 'POST'])
-def propagated_report():
+@app.route("/propagation_report", methods=['GET', 'POST'])
+def propagation_report():
     
     tagstore = te.TagEngineUtils()
-    exists, settings = tagstore.read_propagated_settings()
+    exists, settings = tagstore.read_propagation_settings()
     method = request.method
     
     if method == 'POST':
@@ -287,6 +293,7 @@ def propagated_report():
     if exists == True:
         source_project_ids = settings['source_project_ids']
         dest_project_ids = settings['dest_project_ids']
+        excluded_datasets = settings['excluded_datasets']
         project_ids = source_project_ids
         
         project_list = dest_project_ids.split(",")
@@ -294,7 +301,7 @@ def propagated_report():
             if dest_project not in project_ids:
                 project_ids = project_ids + ", " + dest_project
         
-        report_data, last_run = tagstore.generate_propagated_report() 
+        report_data, last_run = tagstore.generate_propagation_report() 
         
         if last_run is not None:
             last_run = last_run.strftime('%Y-%m-%d %H:%M:%S')
@@ -303,7 +310,7 @@ def propagated_report():
             last_run = 'Never'
             
         return render_template(
-           "propagated_report.html",
+           "propagation_report.html",
             project_ids=project_ids,
             report_data=report_data, 
             last_run=last_run)
@@ -312,19 +319,20 @@ def propagated_report():
         # redirect to propagation settings 
         
         return render_template(
-           "propagated_settings.html")
+           "propagation_settings.html")
 
 @app.route("/run_propagation", methods=['POST'])
 def run_propagation():
     
     tagstore = te.TagEngineUtils()
-    exists, settings = tagstore.read_propagated_settings()
+    exists, settings = tagstore.read_propagation_settings()
     
     if exists == True:
         source_project_ids = settings['source_project_ids']
         dest_project_ids = settings['dest_project_ids']
+        excluded_datasets = settings['excluded_datasets']
         
-        tagstore.run_propagated_job(source_project_ids, dest_project_ids) 
+        tagstore.run_propagation_job(source_project_ids, dest_project_ids, excluded_datasets) 
         
         resp = jsonify(success=True)
         
@@ -372,7 +380,7 @@ def propagated_details():
     return render_template(
         'view_propagated_tag_on_res.html',
         source_res_full=source_res_full,
-        view_res=view_res,
+        view_res_full=view_res_full,
         template_id=template_config['template_id'],
         propagated_tag_config=propagated_tag_config, 
         included_uris=included_uris)
