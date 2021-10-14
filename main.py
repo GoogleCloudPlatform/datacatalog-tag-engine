@@ -736,7 +736,8 @@ def display_selected_action():
             fields=template_fields,
             current_time=datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
             display_export_option=export)
-    else:
+            
+    elif action == "Create Dynamic Tag":
         return render_template(
             'dynamic_tag.html',
             template_id=template_id,
@@ -744,6 +745,16 @@ def display_selected_action():
             region=region,
             fields=template_fields,
             display_export_option=export)
+            
+    else: 
+        return render_template(
+            'propagation_tag.html',
+            template_id=template_id,
+            project_id=project_id,
+            region=region,
+            fields=template_fields,
+            display_export_option=export)
+            
     # [END render_template]
 
 @app.route('/update_tag', methods=['POST'])

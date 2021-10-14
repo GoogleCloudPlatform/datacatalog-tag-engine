@@ -68,7 +68,7 @@ class DataCatalogUtils:
                 field_type = "enum"   
                      
                 index = 0
-                enum_values_long = str(field_value.type).split(":") 
+                enum_values_long = str(field_value.type_).split(":") 
                 for long_value in enum_values_long:
                     if index > 0:
                         enum_value = long_value.split('"')[1]
