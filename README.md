@@ -47,7 +47,7 @@ gcloud tasks queues update tag-engine --max-attempts=3
 ```
 
 ### Step 6: (Optional) Create cron jobs through Cloud Scheduler: 
-#### This step is only required if you want Tag Engine to schedule your dynamic table updates or want to run tag propagation. 
+#### This step is only required if you want Tag Engine to schedule your dynamic tag updates or want to run tag propagation. The first two entries are required for dynamic tag updates, the last entry is only required for tag propagation. 
 ```
 gcloud scheduler jobs create app-engine run-ready-jobs --schedule='every 60 minutes' --relative-url "/run_ready_jobs"
 gcloud scheduler jobs create app-engine clear-stale-jobs --schedule='every 30 minutes' --relative-url "/clear_stale_jobs"
