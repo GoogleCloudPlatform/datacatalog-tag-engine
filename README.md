@@ -38,39 +38,40 @@ python create_indexes.py $PROJECT_ID
 6. Repeat steps 2-5 for each project you would like Tag Engine to be able to access for tagging.  
 
 
-### Step 5: (Optional) Create an App Engine task queue:
-#### The task queue is used to run scheduled dynamic tag updates. This step is only required if you want Tag Engine schedule your dynamic table updates. 
+### Step 5: (Optional) Create an App Engine cloud task queue:
+#### The cloud task queue is used to run scheduled dynamic tag updates. This step is only required if you want Tag Engine schedule your dynamic table updates. 
 ```
 gcloud config set project $PROJECT_ID
-gcloud tasks queues create tag-engine
-gcloud tasks queues update tag-engine --max-attempts=3
+gcloud tasks queues create tag-engine-queue
+gcloud tasks queues describe tag-engine-queue
 ```
 
-### Step 6: (Optional) Create cron jobs through Cloud Scheduler: 
-#### This step is only required if you want Tag Engine to schedule your dynamic tag updates or want to run tag propagation. The first two entries are required for dynamic tag updates, the last entry is only required for tag propagation. 
+### Step 6: (Optional) Set config variables:
+#### This step is required if you want Tag Engine to schedule your dynamic tag updates and/or you want Tag Engine to propagate your tags from tables to views.  
+
+Open `tagengine.ini` and set the `PROJECT` to your App Engine project id, `REGION` to the region where you created your cloud task queue in step 5, and `QUEUE_NAME` to the cloud tasks queue name. The `ZETA_URL` variable should be set to your zeta cloud function (covered in step 8). You only need to set the `ZETA_URL` variable if you are using tag propagation. 
+
+```
+PROJECT = tag-engine-283315
+REGION = us-east1
+TASK_QUEUE = tag-engine-queue
+ZETA_URL = https://us-central1-tag-engine-283315.cloudfunctions.net/zeta
+```
+
+### Step 7: (Optional) Create cron jobs through Cloud Scheduler: 
+#### This step is only required if you want Tag Engine to either schedule your dynamic tag updates or run tag propagation or both. 
 ```
 gcloud scheduler jobs create app-engine run-ready-jobs --schedule='every 60 minutes' --relative-url "/run_ready_jobs"
 gcloud scheduler jobs create app-engine clear-stale-jobs --schedule='every 30 minutes' --relative-url "/clear_stale_jobs"
 gcloud scheduler jobs create app-engine run-propagation --schedule='every 60 minutes' --relative-url "/run_propagation"
 ```
 
-### Step 7: (Optional) Deploy Zeta cloud function:
+### Step 8: (Optional) Deploy Zeta cloud function:
 #### The cloud function is used to analyze BQ views for tag propagation.  This step is only required if you want Tag Engine to propagate your tags from tables to views.  
 ```
 cd tag-engine/zeta
 gcloud functions deploy zeta --trigger-http --entry-point com.google.cloud.sa.tagengine.service.zeta.ZetaSqlParserFunction \
 --runtime java11 --memory 1GB --allow-unauthenticated
-```
-
-### Step 8: (Optional) Set config variables:
-#### This step is required if you want Tag Engine to schedule your dynamic tag updates and/or you want Tag Engine to propagate your tags from tables to views.  
-
-Open `tagengine.ini` and set the `TASK_QUEUE` and `ZETA_URL` variables. The `TASK_QUEUE` variable should be set to your fully qualified Tag Engine task queue and the `ZETA_URL` variable should be set to your zeta cloud function. 
-
-For example:
-```
-TASK_QUEUE = 'projects/tag-engine-283315/locations/us-east1/queues/tag-engine'
-ZETA_URL = 'https://us-central1-tag-engine-283315.cloudfunctions.net/zeta'
 ```
 
 ### Step 9: (Required) Deploy Tag Engine:
