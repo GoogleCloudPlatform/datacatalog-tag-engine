@@ -24,7 +24,7 @@ config = configparser.ConfigParser()
 config.read("tagengine.ini")
 
 app = Flask(__name__)
-ts = scheduler.TagScheduler(config['DEFAULT']['TASK_QUEUE'], "/dynamic_auto_update")
+ts = scheduler.TagScheduler(config['DEFAULT']['PROJECT'], config['DEFAULT']['REGION'], config['DEFAULT']['QUEUE_NAME'], "/dynamic_auto_update")
 tagstore = te.TagEngineUtils()
 
 @app.route("/")

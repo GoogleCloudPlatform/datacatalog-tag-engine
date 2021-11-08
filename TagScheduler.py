@@ -41,17 +41,23 @@ def update_doc_in_transaction(transaction, doc, update_dict):
 class TagScheduler:
     """Class for managing scheduled tasks to update
     
-    queue_id = "projects/{project}/locations/{region}/queues/{queue_name}"
+    project = my-project 
+    region = us-central1
+    queue_name = tag-engine
     app_engine_uri = task handler uri set inside the 
                      app engine project hosting the cloud task queue
     stale_timer = age of PENDING tasks that gets reset to READY (in minutes)
     """
     def __init__(self,
-                queue_id, 
+                project,
+                region,
+                queue_name, 
                 app_engine_uri, 
                 stale_time=10):
 
-        self.queue_id = queue_id
+        self.project = project
+        self.region = region
+        self.queue_name = queue_name
         self.app_engine_uri = app_engine_uri
         self.stale_time = stale_time
         self.db = firestore.Client()
@@ -196,32 +202,38 @@ class TagScheduler:
         print('*** enter _send_cloud_task ***')
         
         client = tasks_v2.CloudTasksClient()
+        parent = client.queue_path(self.project, self.region, self.queue_name)
+        
         task = {
             'app_engine_http_request': {  
-                'http_method': 'POST',
+                'http_method':  tasks_v2.HttpMethod.POST,
                 'relative_uri': self.app_engine_uri
             }
         }
-
+        
+        task['app_engine_http_request']['headers'] = {'Content-type': 'application/json'}
         payload = {'doc_id':doc_id, 'version':version}
         print('payload: ' + str(payload))
         
         payload_utf8 = json.dumps(payload).encode()
         task['app_engine_http_request']['body'] = payload_utf8
 
-        response = client.create_task(parent=self.queue_id, task=task)
-        #print('response: ' + str(response))
+        response = client.create_task(parent=parent, task=task)
+        print('response: ' + str(response))
         
         return response
 
 if __name__ == '__main__':
 
-    TASK_QUEUE = 'projects/tag-engine-283315/locations/us-east1/queues/tag-engine'
-    ts = TagScheduler(TASK_QUEUE, "/dynamic_auto_update")
+    project = 'tag-engine-283315'
+    region = 'us-east1'
+    queue_name = 'tag-engine-queue'
+    app_engine_uri = '/dynamic_auto_update'
+    ts = TagScheduler(project, region, queue_name, app_engine_uri)
     ts.reset_stale_jobs()
     ts.scan_for_update_jobs()
     
-    print("done")
+    print('done')
 
 
 
