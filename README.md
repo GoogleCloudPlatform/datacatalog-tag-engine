@@ -54,7 +54,7 @@ Open `tagengine.ini` and set the `PROJECT` to your App Engine project id, `REGIO
 ```
 PROJECT = tag-engine-283315
 REGION = us-east1
-TASK_QUEUE = tag-engine-queue
+QUEUE_NAME = tag-engine-queue
 ZETA_URL = https://us-central1-tag-engine-283315.cloudfunctions.net/zeta
 ```
 
