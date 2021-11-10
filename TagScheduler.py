@@ -225,9 +225,12 @@ class TagScheduler:
 
 if __name__ == '__main__':
 
-    project = 'tag-engine-283315'
-    region = 'us-east1'
-    queue_name = 'tag-engine-queue'
+    config = configparser.ConfigParser()
+    config.read("tagengine.ini")
+    
+    project = config['DEFAULT']['PROJECT']
+    region = config['DEFAULT']['REGION']
+    queue_name = config['DEFAULT']['QUEUE_NAME']
     app_engine_uri = '/dynamic_auto_update'
     ts = TagScheduler(project, region, queue_name, app_engine_uri)
     ts.reset_stale_jobs()

@@ -109,7 +109,7 @@ class BigQueryUtils:
         
         for tagged_value in tagged_values:
             
-            print('tagged_value: ' + str(tagged_value))
+            #print('tagged_value: ' + str(tagged_value))
             
             if 'field_value' not in tagged_value:
                 continue
@@ -122,7 +122,7 @@ class BigQueryUtils:
                 #row[tagged_value['field_id']]= json.dumps(tagged_value['field_value'], default=str)
                 row[tagged_value['field_id']]= tagged_value['field_value']
     
-        print('insert row: ' + str(row))
+        #print('insert row: ' + str(row))
         
         row_to_insert = [row,]
 

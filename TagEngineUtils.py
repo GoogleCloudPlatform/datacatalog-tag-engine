@@ -1209,5 +1209,9 @@ class TagEngineUtils:
         return new_tag_uuid
 
 if __name__ == '__main__':
+    
+    config = configparser.ConfigParser()
+    config.read("tagengine.ini")
+    
     te = TagEngineUtils();
-    te.write_template('quality_template', 'tag-engine-283315', 'us', 'ACTIVE')
+    te.write_template('quality_template', config['DEFAULT']['PROJECT'], config['DEFAULT']['REGION'], 'ACTIVE')

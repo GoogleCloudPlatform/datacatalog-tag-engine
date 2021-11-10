@@ -35,7 +35,7 @@
 		    </h6>
 	  </span>
 	   </div>
-	   <h2>Choose Template Fields</h2>
+	   <h3>Choose Template Fields</h3>
          <form method="post" action="/process_dynamic_tag">
 		    <table>
 			   {% for dict_field in fields %}
@@ -56,16 +56,17 @@
 				{{ dict_field['field_id'] }} (type {{ dict_field['field_type'] }}):
 				</td>
 				<td>
-				<input type="text" value="select ..." name="{{ dict_field['field_id'] }}" style="width: 700px;padding: 3px;">
+				<input type="text" value="select ..." name="{{ dict_field['field_id'] }}" style="width: 700px;padding: 3px;overflow:auto;">
 				</td>
 			   </tr>
 			   {% endfor %}
 			   </table>
 			   <p>&nbsp;</p>
-			   <h2>Choose URIs</h2>
+			   <h3>Choose URIs</h3>
 		 	   <span style="color:#9d9a9a;">
 		 		   <h6>Specify URIs for resources to include in or exclude from your dynamic tag. Wildcards are allowed in the table name. <br><br>
-					  Supported URIs for BigQuery resources: <br>
+					  Supported URIs: <br>
+					  bigquery/project/{project_id}/* <br>
 					  bigquery/project/{project_id}/dataset/{dataset}/* <br>
 				       bigquery/project/{project_id}/dataset/{dataset}/{table} <br>
 				       bigquery/project/{project_id}/dataset/{dataset}/{table}/{column} <br>
@@ -88,7 +89,7 @@ bigquery/project/{{ project_id }}/dataset/{dataset}/*, bigquery/project/{{ proje
  		         </tr>
 		    </table>
 		        <p>&nbsp;</p>
-			   <h2>Choose Scheduling</h2>
+			   <h3>Choose Scheduling</h3>
 		 	   <span style="color:#9d9a9a;">
 		 		   <h6>If you choose the AUTO refresh mode, your tags will be scheduled for update based on your specified refresh frequency. <br>
 					   If you choose the ON-DEMAND refresh mode, your tags will <b>not</b> be scheduled for refresh (even if you specify a refresh frequency). <br>This mode is useful when you have tags that don't need to be updated or when you want to trigger the update from the API. <br><br>
@@ -113,7 +114,7 @@ bigquery/project/{{ project_id }}/dataset/{dataset}/*, bigquery/project/{{ proje
 		        </table>
 			    {% if display_export_option == 1 %}
 			      <p>&nbsp;</p>
-				<h2>Choose Export</h2>
+				<h3>Choose Export</h3>
 			    <table>
 			    <tr><td><input type="checkbox" class="form-control move-left" name="export" value="selected" checked>
 				    Save tag history to BigQuery&nbsp;&nbsp;

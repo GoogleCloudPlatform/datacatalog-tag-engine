@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import requests
+import requests, configparser
 from operator import itemgetter
 from google.protobuf.timestamp_pb2 import Timestamp
 from google.cloud import datacatalog
@@ -424,8 +424,7 @@ class DataCatalogUtils:
     def create_update_static_tags(self, fields, included_uris, excluded_uris, tag_uuid, template_uuid, tag_export):
         
         store = te.TagEngineUtils()        
-        rs = res.Resources(self.project_id)
-        resources = rs.get_resources(included_uris, excluded_uris)
+        resources = res.Resources.get_resources(included_uris, excluded_uris)
         print("resources: " + str(resources))
         
         creation_status = constants.SUCCESS
@@ -519,8 +518,7 @@ class DataCatalogUtils:
         store = te.TagEngineUtils()
         bq_client = bigquery.Client()
                 
-        rs = res.Resources(self.project_id)
-        resources = rs.get_resources(included_uris, excluded_uris)
+        resources = res.Resources.get_resources(included_uris, excluded_uris)
         
         creation_status = constants.SUCCESS
 
@@ -588,13 +586,13 @@ class DataCatalogUtils:
             
             if tag_exists == True:
                 print('updating tag')
-                print('tag request' + str(tag))
+                #print('tag request: ' + str(tag))
                 tag.name = tag_id
                 response = self.client.update_tag(tag=tag)
                 store.write_log_entry(constants.TAG_UPDATED, constants.BQ_RES, resource, column, "DYNAMIC", tag_uuid, tag_id, template_uuid)
             else:
                 print('creating tag')
-                print('tag request' + str(tag))
+                #print('tag request: ' + str(tag))
                 response = self.client.create_tag(parent=entry.name, tag=tag)
                 tag_id = response.name
                 store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, resource, column, "DYNAMIC", tag_uuid, tag_id, template_uuid)
@@ -610,6 +608,10 @@ class DataCatalogUtils:
         return creation_status
 
 if __name__ == '__main__':
-    dcu = DataCatalogUtils(template_id='dg_template', project_id='tag-engine-283315', region='us');
+    
+    config = configparser.ConfigParser()
+    config.read("tagengine.ini")
+
+    dcu = DataCatalogUtils(template_id='dg_template', project_id=config['DEFAULT']['PROJECT'], region=config['DEFAULT']['REGION']);
     fields = dcu.get_template()
     print(str(fields))
