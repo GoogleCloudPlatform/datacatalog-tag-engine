@@ -83,8 +83,8 @@ resource "google_project_iam_member" "data_catalog_viewer_binding" {
 # cloud task
 resource "google_cloud_tasks_queue" "tag_engine_queue" {
   name = "tag-engine-queue"
-  location = "us-central1"
-  project = var.tag_engine_project
+  location = var.task_queue_region
+  project = var.app_engine_subregion
 
   stackdriver_logging_config {
     sampling_ratio = 0.9
@@ -103,7 +103,7 @@ resource "google_cloud_scheduler_job" "ready-jobs" {
   time_zone        = "CST"
   attempt_deadline = "320s"
   project 	    = var.tag_engine_project
-  region 		    = "us-central1"
+  region 		    = var.app_engine_subregion
 
   retry_config {
     min_backoff_duration = "5s"
@@ -133,7 +133,7 @@ resource "google_cloud_scheduler_job" "clear-stale-jobs" {
   time_zone        = "CST"
   attempt_deadline = "320s"
   project 	    = var.tag_engine_project
-  region 		    = "us-central1"
+  region 		    = var.app_engine_subregion
 
   retry_config {
     min_backoff_duration = "5s"

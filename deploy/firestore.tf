@@ -1,9 +1,3 @@
-#resource "google_app_engine_application" "app" {
-  #project     = var.tag_engine_project
-  #location_id = var.app_engine_region
-  #database_type = "CLOUD_FIRESTORE"
-  #}
-
 resource "google_firestore_index" "index-1" {
   project = var.tag_engine_project
 
