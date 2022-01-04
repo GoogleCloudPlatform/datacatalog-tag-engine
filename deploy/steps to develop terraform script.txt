@@ -1,0 +1,49 @@
+procedure:
+
+create projects with billing account
+export TAG_ENGINE_PROJECT=tag-engine-vanilla-335716
+export BQ_PROJECT=warehouse-335716
+
+git clone https://github.com/GoogleCloudPlatform/datacatalog-tag-engine.git
+cd datacatalog-tag-engine
+
+gcloud app deploy --project $TAG_ENGINE_PROJECT
+
+gcloud config set project $TAG_ENGINE_PROJECT
+gcloud auth activate-service-account terraform@tag-engine-vanilla-335716.iam.gserviceaccount.com --key-file=/Users/scohen/keys/tag-engine-vanilla.json
+cd terraform
+terraform init
+terraform apply
+
+=======
+testing:
+
+create service account for terraform
+
+gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+    --member=serviceAccount:terraform@${TAG_ENGINE_PROJECT}.iam.gserviceaccount.com --role=roles/owner
+
+gcloud config set account terraform@tag-engine-vanilla-335716.iam.gserviceaccount.com 
+gcloud config set project $TAG_ENGINE_PROJECT
+
+
+export TAG_ENGINE_PROJECT=tag-engine-vanilla
+gcloud services enable cloudresourcemanager.googleapis.com --project $TAG_ENGINE_PROJECT
+gcloud services enable appengine.googleapis.com --project $TAG_ENGINE_PROJECT
+gcloud services enable iam.googleapis.com --project $TAG_ENGINE_PROJECT
+
+
+
+descriptor:                  [/Users/scohen/code/datacatalog-tag-engine/app.yaml]
+source:                      [/Users/scohen/code/datacatalog-tag-engine]
+target project:              [tag-engine-283315]
+target service:              [default]
+target version:              [20211218t091637]
+target url:                  [https://tag-engine-283315.ue.r.appspot.com]
+target service account:      [App Engine default service account]
+
+
+resource "google_project_iam_member" "postgres-svc-account-iam-admin" {
+  member = "serviceAccount:${google_service_account.service-account-postgres.email}"
+  role = "roles/cloudsql.admin"
+}
