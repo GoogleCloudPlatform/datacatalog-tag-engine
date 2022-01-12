@@ -35,7 +35,7 @@ class TagEngineUtils:
         settings = {}
         exists = False
         
-        doc_ref = self.db.collection('settings').document('default')
+        doc_ref = self.db.collection('settings').document('default_tag_template')
         doc = doc_ref.get()
         
         if doc.exists:
@@ -44,20 +44,39 @@ class TagEngineUtils:
         
         return exists, settings
 
-    def read_export_settings(self):
+    def read_tag_history_settings(self):
         
         settings = {}
-        exists = False
+        enabled = False
         
-        doc_ref = self.db.collection('settings').document('export')
+        doc_ref = self.db.collection('settings').document('tag_history')
         doc = doc_ref.get()
         
         if doc.exists:
             settings = doc.to_dict()
-            exists = True 
-        
-        return exists, settings
+            
+            if settings['enabled']:
+                enabled = True
+            
+        return enabled, settings
 
+
+    def read_tag_stream_settings(self):
+        
+        settings = {}
+        enabled = False
+        
+        doc_ref = self.db.collection('settings').document('tag_stream')
+        doc = doc_ref.get()
+        
+        if doc.exists:
+            settings = doc.to_dict()
+            
+            if settings['enabled']:
+                enabled = True
+            
+        return enabled, settings
+   
    
     def read_coverage_settings(self):
         
@@ -106,7 +125,7 @@ class TagEngineUtils:
     def write_default_settings(self, template_id, project_id, region):
         
         report_settings = self.db.collection('settings')
-        doc_ref = report_settings.document('default')
+        doc_ref = report_settings.document('default_tag_template')
         doc_ref.set({
             'template_id': template_id,
             'project_id':  project_id,
@@ -116,22 +135,37 @@ class TagEngineUtils:
         print('Saved default settings.')
     
     
-    def write_export_settings(self, project_id, region, dataset):
+    def write_tag_history_settings(self, enabled, project_id, region, dataset):
         
-        export_settings = self.db.collection('settings')
-        doc_ref = export_settings.document('export')
+        history_settings = self.db.collection('settings')
+        doc_ref = history_settings.document('tag_history')
         doc_ref.set({
+            'enabled': bool(enabled),
             'project_id': project_id,
             'region':  region,
             'dataset': dataset
         })
         
-        print('Saved default settings.')
+        print('Saved tag history settings.')
         
-        bqu = bq.BigQueryUtils()
-        bqu.create_dataset(project_id, region, dataset)
+        # assume that the BQ dataset exists
+        #bqu = bq.BigQueryUtils()
+        #bqu.create_dataset(project_id, region, dataset)
 
     
+    def write_tag_stream_settings(self, enabled, project_id, topic):
+        
+        history_settings = self.db.collection('settings')
+        doc_ref = history_settings.document('tag_stream')
+        doc_ref.set({
+            'enabled': bool(enabled),
+            'project_id': project_id,
+            'topic':  topic
+        })
+        
+        print('Saved tag stream settings.')
+
+
     def write_coverage_settings(self, project_ids, datasets, tables):
         
         report_settings = self.db.collection('settings')
@@ -968,14 +1002,15 @@ class TagEngineUtils:
         return template_uuid
         
         
-    def write_static_tag(self, config_status, fields, included_uris, excluded_uris, template_uuid, tag_export):
+    def write_static_tag(self, config_status, fields, included_uris, excluded_uris, template_uuid, tag_history, tag_stream):
         
         # hash the included_uris string
         included_uris_hash = hashlib.md5(included_uris.encode()).hexdigest()
         
         # check to see if this tag config already exists
         tag_ref = self.db.collection('tag_config')
-        query = tag_ref.where('template_uuid', '==', template_uuid).where('included_uris_hash', '==', included_uris_hash).where('tag_type', '==', 'STATIC').where('config_status', '==', config_status)
+        query = tag_ref.where('template_uuid', '==', template_uuid).where('included_uris_hash', '==',\
+                            included_uris_hash).where('tag_type', '==', 'STATIC').where('config_status', '==', config_status)
        
         matches = query.get()
        
@@ -1005,14 +1040,16 @@ class TagEngineUtils:
             'included_uris_hash': included_uris_hash,
             'excluded_uris': excluded_uris,
             'template_uuid': template_uuid,
-            'tag_export': tag_export
+            'tag_history': tag_history,
+            'tag_stream': tag_stream
         })
         print('Created new static tag config.')
         
         return tag_uuid
     
     
-    def write_dynamic_tag(self, config_status, fields, included_uris, excluded_uris, template_uuid, refresh_mode, refresh_frequency, refresh_unit, tag_export):
+    def write_dynamic_tag(self, config_status, fields, included_uris, excluded_uris, template_uuid, refresh_mode,\
+                          refresh_frequency, refresh_unit, tag_history, tag_stream):
         
         included_uris_hash = hashlib.md5(included_uris.encode()).hexdigest()
         
@@ -1061,7 +1098,8 @@ class TagEngineUtils:
                 'refresh_mode': refresh_mode, # AUTO
                 'refresh_frequency': delta,
                 'refresh_unit': refresh_unit,
-                'tag_export': tag_export,
+                'tag_history': tag_history,
+                'tag_stream': tag_stream,
                 'scheduling_status': 'READY',
                 'next_run': next_run,
                 'version': 1
@@ -1080,7 +1118,8 @@ class TagEngineUtils:
                 'template_uuid': template_uuid,
                 'refresh_mode': refresh_mode, # ON_DEMAND
                 'refresh_frequency': 0,
-                'tag_export': tag_export,
+                'tag_history': tag_history,
+                'tag_stream': tag_stream,
                 'version': 1
             })
         
@@ -1192,19 +1231,21 @@ class TagEngineUtils:
         })
     
     def update_tag_config(self, old_tag_uuid, tag_type, config_status, fields, included_uris, excluded_uris, template_uuid, \
-                          refresh_mode, refresh_frequency, refresh_unit, tag_export):
+                          refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream):
         
         self.db.collection('tag_config').document(old_tag_uuid).update({
             'config_status' : "INACTIVE"
         })
         
         if tag_type == 'STATIC':
-            new_tag_uuid = self.write_static_tag(config_status, fields, included_uris, excluded_uris, template_uuid, tag_export)
+            new_tag_uuid = self.write_static_tag(config_status, fields, included_uris, excluded_uris, template_uuid, \
+                                                 tag_history, tag_stream)
         
         if tag_type == 'DYNAMIC':
             new_tag_uuid, included_uris_hash = self.write_dynamic_tag(config_status, fields, included_uris, excluded_uris, \
-                                                            template_uuid, refresh_mode, refresh_frequency, refresh_unit, tag_export)
-            # note: we do not need to return the included_uris_hash
+                                                                     template_uuid, refresh_mode, refresh_frequency, refresh_unit,\
+                                                                     tag_history, tag_stream)
+            # note: don't need to return the included_uris_hash
             
         return new_tag_uuid
 

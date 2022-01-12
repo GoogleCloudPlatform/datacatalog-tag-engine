@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
   <head>
-    <title>Tag Engine</title>
+    <title>Tag Engine for Data Catalog</title>
     <link rel="stylesheet" type="text/css" href="/static/style.css">
   </head>  
     <body>
@@ -12,7 +12,7 @@
 	    {% endif %}
 	    
  	   <div class="pagetitle">
- 	   <h1>Tag Engine</h1>
+ 	   <h1>Tag Engine for Data Catalog</h1>
          </div>
  	   <div class="header">
 	    <h2>Tags attached to template: {{ template_id }}</h2>
@@ -20,7 +20,7 @@
 	    <span style="color:#9d9a9a;">
 	    <h6>
 		   {% if tag_configs|length > 0 %} 
-		    	&nbsp;Mandatory template fields are marked by <span style="color:red;">*</span>. <br>
+		    	&nbsp;Mandatory tag template fields are marked by <span style="color:red;">*</span>. <br>
 		   	&nbsp;Click on Edit Tag Config to update the rules of a config.
 		   {% else %}
 		     &nbsp;&nbsp;<span style="color:red;">Tag Engine has no configs for this tag template ({{ template_id }}).</span> 
@@ -93,10 +93,17 @@
 	         </tr>
 		    {% endif %} 
 		    
-		    {% if 'tag_export' in tag_config %}
+		    {% if 'tag_history' in tag_config %}
 		    <tr>
-		    <td>&nbsp;<span style="color:#0b5394;">Exported to BigQuery:</span>
-		        &nbsp;{{ tag_config['tag_export'] }}</td>
+		    <td>&nbsp;<span style="color:#0b5394;">Tag History:</span>
+		        &nbsp;{{ tag_config['tag_history'] }}</td>
+	         </tr>
+		    {% endif %}
+		    
+		    {% if 'tag_stream' in tag_config %}
+		    <tr>
+		    <td>&nbsp;<span style="color:#0b5394;">Tag Stream:</span>
+		        &nbsp;{{ tag_config['tag_stream'] }}</td>
 	         </tr>
 		    {% endif %}
 		    

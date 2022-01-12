@@ -165,17 +165,31 @@
 		          </textarea></td>
 		         </tr>
 		         </table>
-			    {% if display_export_option == 1 %}
+			    {% if display_tag_history_option == 1 %}
 			      <p>&nbsp;</p>
-				<h3>Choose Export</h3>
+				<h3>Choose Tag History</h3>
 			    <table>
 			    <tr><td>
-				    {% if tag_config['tag_export'] == True %} 
-				    		<input type="checkbox" class="form-control move-left" name="export" value="selected" checked>
+				    {% if tag_config['tag_history'] == True %} 
+				    		<input type="checkbox" class="form-control move-left" name="tag_history" value="selected" checked>
 				    {% else %}
-				         	<input type="checkbox" class="form-control move-left" name="export" value="selected">
+				         	<input type="checkbox" class="form-control move-left" name="tag_history" value="selected">
 				    {% endif %}
-				    Save tag history BigQuery&nbsp;&nbsp;
+				    Save tag values to BigQuery history table&nbsp;&nbsp;
+			    </td></tr>
+			    </table>
+			    {% endif %}
+			    {% if display_tag_stream_option == 1 %}
+			      <p>&nbsp;</p>
+				<h3>Choose Tag Stream</h3>
+			    <table>
+			    <tr><td>
+				    {% if tag_config['tag_stream'] == True %} 
+				    		<input type="checkbox" class="form-control move-left" name="tag_stream" value="selected" checked>
+				    {% else %}
+				         	<input type="checkbox" class="form-control move-left" name="tag_stream" value="selected">
+				    {% endif %}
+				    Save tag values to Pub/Sub tag stream topic&nbsp;&nbsp;
 			    </td></tr>
 			    </table>
 			    {% endif %}

@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
   <head>
-    <title>Tag Engine</title>
+    <title>Tag Engine for Data Catalog</title>
     <link rel="stylesheet" type="text/css" href="/static/style.css">
   </head>  
     <body>
 	   <div class="pagetitle">
-	   <h1>Tag Engine</h1>
+	   <h1>Tag Engine for Data Catalog</h1>
         </div>
 	   <div class="header">
 	   <h2>Create static tag config using {{ template_id }}</h2>
@@ -16,7 +16,7 @@
 		   </h6>
 	  </span>
 	   </div>
-	   <h3>Choose Template Fields</h3>
+	   <h3>Choose Tag Template Fields</h3>
          <form method="post" action="/process_static_tag">
 		    <table>
 			   {% for dict_field in fields %}
@@ -86,13 +86,21 @@ bigquery/project/{{ project_id }}/dataset/{dataset}/*, bigquery/project/{{ proje
 		          </textarea></td>
 		         </tr>
 		        </table>
-			    {% if display_export_option == 1 %}
+			    {% if display_tag_history %}
 			      <p>&nbsp;</p>
-				<h3>Choose Export</h3>
+				<h3>Choose Tag History</h3>
 			    <table>
-			    <tr><td>&nbsp;</td></tr>
-			    <tr><td><input type="checkbox" class="form-control move-left" name="export" value="selected" checked>
-				    Save tag history to BigQuery&nbsp;&nbsp;
+			    <tr><td><input type="checkbox" class="form-control move-left" name="tag_history" value="selected" checked>
+				    Save tag values from this config to BigQuery tag history table.&nbsp;&nbsp;
+			    </td></tr>
+			    </table>
+			    {% endif %}
+			    {% if display_tag_stream %}
+			      <p>&nbsp;</p>
+				<h3>Choose Tag Stream</h3>
+			    <table>
+			    <tr><td><input type="checkbox" class="form-control move-left" name="tag_stream" value="selected" checked>
+				    Publish tag values from this config to Pub/Sub tag stream topic.&nbsp;&nbsp;
 			    </td></tr>
 			    </table>
 			    {% endif %}

@@ -20,7 +20,7 @@ variable "app_engine_subregion" {
 
 variable "gcp_services_tag_engine" {
 	type = list
-	default = ["cloudresourcemanager.googleapis.com", "firestore.googleapis.com", "cloudtasks.googleapis.com", "cloudscheduler.googleapis.com"]
+	default = ["cloudresourcemanager.googleapis.com", "firestore.googleapis.com", "cloudtasks.googleapis.com", "cloudscheduler.googleapis.com", "datacatalog.googleapis.com"]
 }
 	
 variable "gcp_services_bigquery" {

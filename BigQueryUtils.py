@@ -1,4 +1,4 @@
-# Copyright 2020-2021 Google, LLC.
+# Copyright 2020-2022 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,14 +33,14 @@ class BigQueryUtils:
         dataset_status = self.client.create_dataset(dataset_id, exists_ok=True)  
         print("Created dataset {}".format(dataset_status.dataset_id))
         
-    
+    # used by tag history feature
     def table_exists(self, table_name):
         
         store = te.TagEngineUtils()
-        exists, settings = store.read_export_settings()
+        enabled, settings = store.read_tag_history_settings()
         
-        if exists == False:
-            return exists, settings
+        if enabled == False:
+            return enabled, settings
         
         project_id = settings['project_id']
         region = settings['region']
@@ -52,16 +52,18 @@ class BigQueryUtils:
         try:
             self.client.get_table(table_id) 
             exists = True 
-            print("Table {} already exists.".format(table_id))
+            print("Tag history table {} already exists.".format(table_name))
         except NotFound:
             exists = False
-            print("Table {} is not found.".format(table_id))
+            print("Tag history table {} not found.".format(table_name))
         
         return exists, table_id, settings
     
+    # used by tag history feature
     def create_table(self, dataset_id, table_name, fields):
         
-        schema = [bigquery.SchemaField('event_timestamp', 'DATETIME', mode='REQUIRED'), bigquery.SchemaField('data_asset', 'STRING', mode='REQUIRED')]
+        schema = [bigquery.SchemaField('event_time', 'DATETIME', mode='REQUIRED'), \
+                  bigquery.SchemaField('asset_name', 'STRING', mode='REQUIRED')]
 
         for field in fields:
             
@@ -94,18 +96,18 @@ class BigQueryUtils:
         
         table_id = dataset_id.table(table_name)
         table = bigquery.Table(table_id, schema=schema)
-        table.time_partitioning = bigquery.TimePartitioning(type_=bigquery.TimePartitioningType.DAY, field="event_timestamp")  # column used for partitioning
-        table = self.client.create_table(table)  # make API request
+        table.time_partitioning = bigquery.TimePartitioning(type_=bigquery.TimePartitioningType.DAY, field="event_time")  
+        table = self.client.create_table(table)  
         
         print("Created table {}.{}.{}".format(table.project, table.dataset_id, table.table_id))        
         table_id = ("{}.{}.{}".format(table.project, table.dataset_id, table.table_id))
         
         return table_id
     
-    
-    def insert_row(self, table_id, data_asset, tagged_values):
+    # used by tag history feature
+    def insert_row(self, table_id, asset_name, tagged_values):
         
-        row = {'event_timestamp': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'), 'data_asset': data_asset}
+        row = {'event_time': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'), 'asset_name': asset_name}
         
         for tagged_value in tagged_values:
             
@@ -133,7 +135,7 @@ class BigQueryUtils:
         else:
             print("encountered errors while inserting rows: {}".format(errors))
         
-    
+    # used by tag history feature
     def copy_tag(self, table_name, table_fields, tagged_table, tagged_column, tagged_values):
         
         print("*** inside BigQueryUtils.copy_tag() ***")
@@ -145,18 +147,18 @@ class BigQueryUtils:
         
         exists, table_id, settings = self.table_exists(table_name)
         
-        if exists == False:
+        if exists != True:
             dataset_id = self.client.dataset(settings['dataset'], project=settings['project_id'])
             table_id = self.create_table(dataset_id, table_name, table_fields)
 
         if tagged_column not in "":
-            data_asset = ("{}/column/{}".format(tagged_table, tagged_column))
+            asset_name = ("{}/column/{}".format(tagged_table, tagged_column))
         else:
-            data_asset = tagged_table
+            asset_name = tagged_table
             
-        data_asset = data_asset.replace("datasets", "dataset").replace("tables", "table")
+        asset_name = asset_name.replace("datasets", "dataset").replace("tables", "table")
                 
-        self.insert_row(table_id, data_asset, tagged_values)  
+        self.insert_row(table_id, asset_name, tagged_values)  
         
         
         

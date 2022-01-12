@@ -45,7 +45,19 @@ body {
   margin-left: 50px;
 }
 
-input, textarea {
+input {
+  font-size: 12px;
+  width: 200px;
+  padding: 3px;
+}
+
+select {
+  font-size: 12px;
+  width: 200px;
+  padding: 3px;
+}
+
+textarea {
   width: 200px;
   font-size: 12px;
   padding: 3px;

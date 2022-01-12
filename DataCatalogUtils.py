@@ -21,6 +21,7 @@ from google.cloud import bigquery
 import Resources as res
 import TagEngineUtils as te
 import BigQueryUtils as bq
+import PubSubUtils as ps
 import constants
 
 class DataCatalogUtils:
@@ -421,7 +422,7 @@ class DataCatalogUtils:
         return tag_exists, tag_id
     
     
-    def create_update_static_tags(self, fields, included_uris, excluded_uris, tag_uuid, template_uuid, tag_export):
+    def create_update_static_tags(self, fields, included_uris, excluded_uris, tag_uuid, template_uuid, tag_history, tag_stream):
         
         store = te.TagEngineUtils()        
         resources = res.Resources.get_resources(included_uris, excluded_uris)
@@ -493,27 +494,34 @@ class DataCatalogUtils:
                 if tag_exists == True:
                     tag.name = tag_id
                     response = self.client.update_tag(tag=tag)
-                    store.write_log_entry(constants.TAG_UPDATED, constants.BQ_RES, resource, column, "STATIC", tag_uuid, tag_id, template_uuid)
+                    store.write_log_entry(constants.TAG_UPDATED, constants.BQ_RES, resource, column, "STATIC", tag_uuid,\
+                                          tag_id, template_uuid)
                 else:
                     response = self.client.create_tag(parent=entry.name, tag=tag)
                     tag_id = response.name
-                    store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, resource, column, "STATIC", tag_uuid, tag_id, template_uuid)
+                    store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, resource, column, "STATIC", tag_uuid,\
+                                          tag_id, template_uuid)
                 
-                if tag_export == True:
+                if tag_history:
                     bqu = bq.BigQueryUtils()
                     template_fields = self.get_template()
                     bqu.copy_tag(self.template_id, template_fields, resource, column, fields)
+                
+                if tag_stream:
+                    psu = ps.PubSubUtils()
+                    psu.copy_tag(self.template_id, resource, column, fields)
                 
                 print("response: " + str(response))
             
             except ValueError:
                 print("ValueError: create_static_tags failed due to invalid parameters.")
-                store.write_error_entry('invalid value: "' + field_value + '" provided for field "' + field_id + '" of type ' + field_type) 
+                store.write_error_entry('invalid value: "' + field_value + '" provided for field "' + field_id \
+                                        + '" of type ' + field_type) 
                 creation_status = constants.ERROR
             
         return creation_status
 
-    def create_update_dynamic_tags(self, fields, included_uris, excluded_uris, tag_uuid, template_uuid, tag_export):
+    def create_update_dynamic_tags(self, fields, included_uris, excluded_uris, tag_uuid, template_uuid, tag_history, tag_stream):
         
         store = te.TagEngineUtils()
         bq_client = bigquery.Client()
@@ -589,18 +597,24 @@ class DataCatalogUtils:
                 #print('tag request: ' + str(tag))
                 tag.name = tag_id
                 response = self.client.update_tag(tag=tag)
-                store.write_log_entry(constants.TAG_UPDATED, constants.BQ_RES, resource, column, "DYNAMIC", tag_uuid, tag_id, template_uuid)
+                store.write_log_entry(constants.TAG_UPDATED, constants.BQ_RES, resource, column, "DYNAMIC", tag_uuid, \
+                                      tag_id, template_uuid)
             else:
                 print('creating tag')
                 #print('tag request: ' + str(tag))
                 response = self.client.create_tag(parent=entry.name, tag=tag)
                 tag_id = response.name
-                store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, resource, column, "DYNAMIC", tag_uuid, tag_id, template_uuid)
+                store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, resource, column, "DYNAMIC", tag_uuid, tag_id, \
+                                      template_uuid)
             
-            if tag_export == True:
+            if tag_history:
                 bqu = bq.BigQueryUtils()
                 template_fields = self.get_template()
                 bqu.copy_tag(self.template_id, template_fields, resource, column, fields)
+                
+            if tag_stream:
+                psu = ps.PubSubUtils()
+                psu.copy_tag(self.template_id, resource, column, fields)
                 
             print("response: " + str(response))
                     
