@@ -38,12 +38,11 @@
 		{% else: %}
  		  {{ excluded_uris }}
 		{% endif %}
-   	     </p></p>
+   	     <p></p>
 		<span style="color:#0b5394;">Refresh mode</span>: {{ refresh_mode }} <br>
-   	     </p></p>
 		<span style="color:#0b5394;">Refresh frequency</span>: {{ refresh_frequency }} {{ refresh_unit }}<br>
-	  </p></p>
-		<span style="color:#0b5394;">Tag history option</span>: {{ tag_history }}<br><br>
+	     <p></p>
+		<span style="color:#0b5394;">Tag history option</span>: {{ tag_history }}<br>
 		<span style="color:#0b5394;">Tag stream option</span>: {{ tag_stream }}<br>
 	  <p><a href="{{ url_for('choose_action',template_id=template_id,project_id=project_id,region=region) }}">Create more tags</a>&nbsp;&nbsp;<a href="/">Switch tag templates / Homepage</a></p>
      </div>

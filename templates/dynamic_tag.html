@@ -9,7 +9,7 @@
 	   <h1>Tag Engine for Data Catalog</h1>
         </div>
 	   <div class="header">
-	   <h2>Create dynamic tag config using {{ template_id }}</h2>
+	   <h2>Create dynamic tag config on {{ template_id }}</h2>
 	   <span style="color:#9d9a9a;">
 		   <h6>To include a field in your tag, click on the checkbox next to the field and enter a query expression for the field in the text box. <br>
 			   <br>
@@ -31,7 +31,7 @@
 			   Note: The result of the query expression must satisfy the type requirements of the field in the tag template. <br>
 			   For example, if the tag template field is of type string, the query expression must return a string type.
 			   
-		    <br><br>Mandatory template fields are marked by <span style="color:red;">*</span> and are already checked for you.
+		    <br><br>Mandatory fields are marked by <span style="color:red;">*</span> and are already checked for you.
 		    </h6>
 	  </span>
 	   </div>
@@ -56,7 +56,8 @@
 				{{ dict_field['field_id'] }} (type {{ dict_field['field_type'] }}):
 				</td>
 				<td>
-				<input type="text" value="select ..." name="{{ dict_field['field_id'] }}" style="width: 700px;padding: 3px;overflow:auto;">
+				<textarea name="{{ dict_field['field_id'] }}" style="align-content:left; width: 700px; overflow:auto;">select ...
+				</textarea>
 				</td>
 			   </tr>
 			   {% endfor %}
@@ -74,17 +75,15 @@
 				</span>
 			    <table>
 			     <tr>
-			    <td>Included URIs:&nbsp;&nbsp;
-			    				<textarea name="included_uris" style="align-content:left; width: 700px; overflow:auto;">
-bigquery/project/{{ project_id }}/dataset/{dataset}/*, bigquery/project/{{ project_id }}/dataset/{dataset}/{table}*, bigquery/project/{{ project_id }}/dataset/{dataset}/{table}/{column}
-			    				</textarea></td>
+			    <td><span style="color:red;">*</span> Included URIs:&nbsp;&nbsp;
+			    	  <input type="text" value="bigquery/project/{{ project_id }}/dataset/{dataset}/*" name="included_uris" style="align-content:left; width: 700px; overflow:auto;"/>
+
+			    	</td>
 			     </tr>
 			     <tr><td>&nbsp;</td></tr>
  				<tr>
- 			    <td>Excluded URIs:&nbsp;
-			    		          <textarea name="excluded_uris" style="align-content:left; width: 700px; overflow:auto;">
-bigquery/project/{{ project_id }}/dataset/{dataset}/*, bigquery/project/{{ project_id }}/dataset/{dataset}/{table}*, bigquery/project/{{ project_id }}/dataset/{dataset}/{table}/{column}
-			    		          </textarea>
+ 			    <td>&nbsp;&nbsp;Excluded URIs:&nbsp;
+			    	  <input type="text" name="excluded_uris" style="align-content:left; width: 700px; overflow:auto;"/>			 
 			    </td>
  		         </tr>
 		    </table>
@@ -97,7 +96,7 @@ bigquery/project/{{ project_id }}/dataset/{dataset}/*, bigquery/project/{{ proje
 				</span>
 			     <table>
 				<tr>	
-			    <td>Refresh mode:&nbsp;<select name="refresh_mode" style="width: 100px;padding: 3px;">
+			    <td><span style="color:red;">*</span> Refresh mode:&nbsp;<select name="refresh_mode" style="width: 100px;padding: 3px;">
   				  				<option value="AUTO" selected>AUTO</option>
   							   	<option value="ON-DEMAND">ON-DEMAND</option>
 							  </select>
@@ -105,7 +104,7 @@ bigquery/project/{{ project_id }}/dataset/{dataset}/*, bigquery/project/{{ proje
 		         </tr>
 			     <tr><td>&nbsp;</td></tr>
 				<tr>	
-			    <td>Refresh frequency:&nbsp;<input type="text" value="24" name="refresh_frequency" style="width: 30px;padding: 3px;">&nbsp;
+			    <td><span style="color:red;">*</span> Refresh frequency:&nbsp;<input type="text" value="24" name="refresh_frequency" style="width: 30px;padding: 3px;">&nbsp;
 				    			  <select name="refresh_unit" style="width: 70px;padding: 3px;">
   				  				<option value="hours" selected>hours</option>
   							   	<option value="days">days</option>
@@ -116,7 +115,7 @@ bigquery/project/{{ project_id }}/dataset/{dataset}/*, bigquery/project/{{ proje
 			      <p>&nbsp;</p>
 				<h3>Choose Tag History</h3>
 			    <table>
-			    <tr><td><input type="checkbox" class="form-control move-left" name="tag_history" value="selected" checked>
+			    <tr><td><span style="color:red;">*</span> <input type="checkbox" class="form-control move-left" name="tag_history" value="selected" checked>
 				    Save tag values from this config to BigQuery tag history table.&nbsp;&nbsp;
 			    </td></tr>
 			    </table>
@@ -125,7 +124,7 @@ bigquery/project/{{ project_id }}/dataset/{dataset}/*, bigquery/project/{{ proje
 			      <p>&nbsp;</p>
 				<h3>Choose Tag Stream</h3>
 			    <table>
-			    <tr><td><input type="checkbox" class="form-control move-left" name="tag_stream" value="selected" checked>
+			    <tr><td><span style="color:red;">*</span> <input type="checkbox" class="form-control move-left" name="tag_stream" value="selected" checked>
 				    Publish tag values from this config to Pub/Sub tag stream topic.&nbsp;&nbsp;
 			    </td></tr>
 			    </table>

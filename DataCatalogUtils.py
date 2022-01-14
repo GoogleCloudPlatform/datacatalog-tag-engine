@@ -562,6 +562,8 @@ class DataCatalogUtils:
 
                 # parse and run query in BQ
                 query_str = self.parse_query_expression(resource, query_expression)
+                print('query_str: ' + query_str)
+                
                 field_value, error_exists = self.run_query(bq_client, query_str, store)
         
                 if error_exists:
@@ -573,10 +575,10 @@ class DataCatalogUtils:
                     continue
                                         
                 verified_field_count = verified_field_count + 1
-                print('verified_field_count: ' + str(verified_field_count))    
+                #print('verified_field_count: ' + str(verified_field_count))    
                 
                 # store the value back in the dict, so that it can be accessed by the exporter
-                print('field_value: ' + str(field_value))
+                #print('field_value: ' + str(field_value))
                 field['field_value'] = field_value
                 
             if error_exists:
