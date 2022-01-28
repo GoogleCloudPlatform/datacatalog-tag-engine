@@ -16,24 +16,34 @@ import datetime, json
 from airflow import DAG
 from airflow.providers.http.operators.http import SimpleHttpOperator
 
+TAG_TEMPLATE_ID = 'quality_template' # tag template id
+TAG_TEMPLATE_PROJECT = 'your-project' # project where above tag template is created
+TAG_TEMPLATE_REGION = 'us-central1' # region where above tag template is created
+
+BQ_PROJECT = 'your-project' # project where BQ data is stored 
+BQ_DATASET = 'your-dataset' # BQ dataset name 
+INCLUDED_URIS = 'bigquery/project/{bq_project}/dataset/{bq_dataset}/*' # included uris field in Tag Engine
+
+USER_EMAIL = 'airflow@gmail.com' # email for sending failure notifications
+
 YESTERDAY = datetime.datetime.now() - datetime.timedelta(days=1)
 
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
-    'email': ['airflow@example.com'],
+    'email': [USER_EMAIL],
     'email_on_failure': False,
     'email_on_retry': False,
     'retries': 0,
     'start_date': YESTERDAY
 }
 
-dag = DAG('dynamic_tags_update', default_args=default_args)
+dag = DAG('dynamic_update_dag', default_args=default_args)
 
 update_tags = SimpleHttpOperator(
     task_id='update_tags',
     method='POST',
-    data=json.dumps({'template_id': 'quality_template', 'project_id': 'tag-engine-283315', 'region': 'us-central1', 'included_uris_hash': 'ffa131c300794b3e5d42b9b86bfb15a4'}),
+    data=json.dumps({'template_id': TAG_TEMPLATE_ID, 'project_id': TAG_TEMPLATE_PROJECT, 'region': TAG_TEMPLATE_REGION, 'included_uris_hash': INCLUDED_URIS}),
     endpoint='dynamic_ondemand_update',
     dag=dag
 )

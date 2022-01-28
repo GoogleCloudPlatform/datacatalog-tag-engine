@@ -10,21 +10,24 @@ from airflow.utils.dates import days_ago
 
 from google.cloud.dlp import DlpServiceClient
 
-PROJECT_ID = 'data-lake-290221'
+DLP_PROJECT = 'your-project' # project for running DLP 
 DLP_REGION = 'global'
-DLP_TEMPLATE = 'projects/data-lake-290221/locations/global/inspectTemplates/pii_any_region'
-DATASET = 'retail'
-USER_EMAIL = 'scohen@google.com'
+DLP_TEMPLATE = 'projects/{dlp_project}/locations/{dlp_region}/inspectTemplates/{template_name}'
 
+BQ_PROJECT = 'your-project' # project for storing BQ data 
+BQ_DATASET = 'your-dataset' # BQ dataset name with input data and for storing DLP results
+USER_EMAIL = 'username@gmail.com' # email for sending failure notifications
+
+TAG_TEMPLATE_ID = 'pii-classification' # tag template id
+TAG_TEMPLATE_PROJECT = 'your-project' # project where above tag template is created
+TAG_TEMPLATE_REGION = 'us-central1' # region where above tag template is created
+INCLUDED_URIS = 'bigquery/project/{bq_project}/dataset/{bq_dataset}/*' # included uris field in Tag Engine
 
 def create_dlp_job(index, **context):
   ti = context['ti']
   tables = ti.xcom_pull(task_ids='get_dataset_tables')
   table_dict = tables[index]
   table = table_dict['tableId']
-  print('tables: ' + str(tables))
-  print('index: ' + str(index))
-  print('table: ' + str(table)) 
   
   dlp = DlpServiceClient()
 
@@ -34,8 +37,8 @@ def create_dlp_job(index, **context):
       'storage_config': {
           'big_query_options': {
               'table_reference': {
-                  'project_id': PROJECT_ID,
-                  'dataset_id': DATASET,
+                  'project_id': BQ_PROJECT,
+                  'dataset_id': BQ_DATASET,
                   'table_id': table
               },
               'rows_limit': 50000,
@@ -53,8 +56,8 @@ def create_dlp_job(index, **context):
             'save_findings': {
               'output_config': {
                 'table': {
-                  'project_id': PROJECT_ID,
-                  'dataset_id': DATASET + '_dlp',
+                  'project_id': BQ_PROJECT,
+                  'dataset_id': BQ_DATASET + '_dlp',
                   'table_id': table + '_scan_results'
                 }
               }
@@ -109,8 +112,8 @@ with models.DAG(dag_id='pii_classification_dag',
   update_dynamic_tags = SimpleHttpOperator(
       task_id='update_dynamic_tags',
       method='POST',
-      data=json.dumps({'template_id': 'pii_classification', 'project_id': 'tag-engine-283315', 'region': 'us-central1', 'included_uris': \
-                       'bigquery/project/data-lake-290221/dataset/retail/*'}),
+      data=json.dumps({'template_id': TAG_TEMPLATE_ID, 'project_id': TAG_TEMPLATE_PROJECT, 'region': TAG_TEMPLATE_REGION, 'included_uris': \
+                       INCLUDED_URIS}),
       endpoint='dynamic_ondemand_update'
   )
       

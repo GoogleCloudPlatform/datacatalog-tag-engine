@@ -28,8 +28,7 @@ class TagEngineUtils:
         
         config = configparser.ConfigParser()
         config.read("tagengine.ini")
-        self.zeta = config['DEFAULT']['ZETA_URL']
-
+        
     def read_default_settings(self):
         
         settings = {}
@@ -858,7 +857,8 @@ class TagEngineUtils:
         source_tables = []
         payload = {"sql": view_def}
         
-        response = requests.post(self.zeta, json=payload)
+        zeta = config['DEFAULT']['ZETA_URL']
+        response = requests.post(zeta, json=payload)
         print('zeta response: ' + str(response))
         
         resp_dict = response.json()
