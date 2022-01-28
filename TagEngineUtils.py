@@ -1045,7 +1045,7 @@ class TagEngineUtils:
         })
         print('Created new static tag config.')
         
-        return tag_uuid
+        return tag_uuid, included_uris_hash
     
     
     def write_dynamic_tag(self, config_status, fields, included_uris, excluded_uris, template_uuid, refresh_mode,\
@@ -1075,10 +1075,17 @@ class TagEngineUtils:
         doc_ref = tag_config.document(tag_uuid)
         
         if refresh_mode == 'AUTO':
-            if refresh_frequency.isdigit():
-                delta = int(refresh_frequency)
-            else:
-                delta = 24
+            if type(refresh_frequency) is int: 
+                if refresh_frequency > 0:
+                    delta = refresh_frequency
+                else:
+                    delta = 24
+            
+            if type(refresh_frequency) is str:
+                if refresh_frequency.isdigit():
+                    delta = int(refresh_frequency)
+                else:
+                    delta = 24
                 
             if refresh_unit == 'hours':
                 next_run = datetime.datetime.utcnow() + datetime.timedelta(hours=delta)
@@ -1201,7 +1208,7 @@ class TagEngineUtils:
             
         return propagated_tag_config
         
-    def lookup_tag_config_by_uris(self, template_uuid, included_uris, included_uris_hash):
+    def lookup_tag_config_by_included_uris(self, template_uuid, included_uris, included_uris_hash):
         
         success = False
         tag_config = {}
@@ -1209,9 +1216,11 @@ class TagEngineUtils:
         tag_ref = self.db.collection('tag_config')
         
         if included_uris is not None:
-            docs = tag_ref.where('template_uuid', '==', template_uuid).where('refresh_mode', '==', 'ON-DEMAND').where('included_uris', '==', included_uris).stream()
+            docs = tag_ref.where('template_uuid', '==', template_uuid).where('config_status', '==', 'ACTIVE')\
+            .where('included_uris', '==', included_uris).stream()
         if included_uris_hash is not None:
-            docs = tag_ref.where('template_uuid', '==', template_uuid).where('refresh_mode', '==', 'ON-DEMAND').where('included_uris_hash', '==', included_uris_hash).stream()
+            docs = tag_ref.where('template_uuid', '==', template_uuid).where('config_status', '==', 'ACTIVE')\
+            .where('included_uris_hash', '==', included_uris_hash).stream()
         
         for doc in docs:
             tag_config = doc.to_dict()

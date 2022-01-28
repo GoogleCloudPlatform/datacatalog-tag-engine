@@ -71,21 +71,20 @@
 				       bigquery/project/{project_id}/dataset/{dataset}/{table} <br>
 				       bigquery/project/{project_id}/dataset/{dataset}/{table}/{column} </h6>
 				</span>
-			    <table>
-			     <tr>
-			    <td>Included URIs:&nbsp;&nbsp;
-				<textarea name="included_uris" style="align-content:left; overflow:auto;">
-bigquery/project/{{ project_id }}/dataset/{dataset}/*, bigquery/project/{{ project_id }}/dataset/{dataset}/{table}*, bigquery/project/{{ project_id }}/dataset/{dataset}/{table}/{column}
-				</textarea></td>
-			     </tr>
-			     <tr><td>&nbsp;</td></tr>
-				<tr>
-			    <td>Excluded URIs:&nbsp;
-		          <textarea name="excluded_uris" style="align-content:left; overflow:auto;">
-bigquery/project/{{ project_id }}/dataset/{dataset}/*, bigquery/project/{{ project_id }}/dataset/{dataset}/{table}*, bigquery/project/{{ project_id }}/dataset/{dataset}/{table}/{column}
-		          </textarea></td>
-		         </tr>
-		        </table>
+				    <table>
+				     <tr>
+				    <td><span style="color:red;">*</span> Included URIs:&nbsp;&nbsp;
+				    	  <input type="text" value="bigquery/project/{{ project_id }}/dataset/{dataset}/*" name="included_uris" style="align-content:left; width: 700px; overflow:auto;"/>
+
+				    	</td>
+				     </tr>
+				     <tr><td>&nbsp;</td></tr>
+	 				<tr>
+	 			    <td>&nbsp;&nbsp;Excluded URIs:&nbsp;
+				    	  <input type="text" name="excluded_uris" style="align-content:left; width: 700px; overflow:auto;"/>			 
+				    </td>
+	 		         </tr>
+			    </table>
 			    {% if display_tag_history %}
 			      <p>&nbsp;</p>
 				<h3>Choose Tag History</h3>

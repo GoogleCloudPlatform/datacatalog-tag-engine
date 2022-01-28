@@ -1,4 +1,4 @@
-# Copyright 2020-2021 Google, LLC.
+# Copyright 2020-2022 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ config = configparser.ConfigParser()
 config.read("tagengine.ini")
 
 app = Flask(__name__)
-ts = scheduler.TagScheduler(config['DEFAULT']['PROJECT'], config['DEFAULT']['REGION'], config['DEFAULT']['QUEUE_NAME'], "/dynamic_auto_update")
+ts = scheduler.TagScheduler(config['DEFAULT']['TAG_ENGINE_PROJECT'], config['DEFAULT']['QUEUE_REGION'], config['DEFAULT']['QUEUE_NAME'], "/dynamic_auto_update")
 tagstore = te.TagEngineUtils()
 
 @app.route("/")
@@ -1326,7 +1326,8 @@ def dynamic_auto_update():
         dcu = dc.DataCatalogUtils(
             tem.get('template_id'), tem.get('project_id'), tem.get('region'))
         dcu.create_update_dynamic_tags(
-            tag.get('fields'), tag.get('included_uris'), tag.get('excluded_uris'), tag.get('tag_uuid'), tem.get('template_uuid'), tag.get('tag_export'))
+            tag.get('fields'), tag.get('included_uris'), tag.get('excluded_uris'), tag.get('tag_uuid'),\
+            tem.get('template_uuid'), tag.get('tag_history'), tag.get('tag_stream'))
         #update the document's scheduling information
         ts.schedule_job(doc_id)
     resp = jsonify(success=True)
@@ -1338,8 +1339,8 @@ Args:
     template_id: The Tag Template to use
     project_id: The Tag Template's Google Cloud project 
     region: The Tag Template's region 
-    included_uris_hash: The included_uris' md5 hash value (optional)
-    included_uris: The included_uris value (optional). 
+    included_uris: The included uris of the tag config
+    included_uris_hash: The included_uris' md5 hash value (in place of the included_uris) 
 Note: caller must provide either the included_uris_hash or included_uris
 Returns:
     status_code = 200 if successful, otherwise error
@@ -1350,7 +1351,7 @@ def dynamic_ondemand_update():
     template_id = json['template_id']
     project_id = json['project_id']
     region = json['region']
-    
+        
     template_exists, template_uuid = tagstore.read_tag_template(template_id, project_id, region)
     
     if not template_exists:
@@ -1358,79 +1359,163 @@ def dynamic_ondemand_update():
         resp = jsonify(success=False)
         return resp
     
-    if 'included_uris_hash' in json:
+    if 'included_uris' in json:
+       included_uris = json['included_uris']
+       success, tag_config = tagstore.lookup_tag_config_by_included_uris(template_uuid, included_uris, None)
+          
+    elif 'included_uris_hash' in json:
         included_uris_hash = json['included_uris_hash']
-        success, tag_config = tagstore.lookup_tag_config_by_uris(template_uuid, None, included_uris_hash)
-    elif 'included_uris' in json:
-        included_uris = json['included_uris']
-        success, tag_config = tagstore.lookup_tag_config_by_uris(template_uuid, included_uris, None)
+        success, tag_config = tagstore.lookup_tag_config_by_included_uris(template_uuid, None, included_uris_hash)
+    
     else:
         resp = jsonify(success=False)
         return resp
     
-    if not success:
+    
+    if success != True:
+        print("tag config not found " + str(tag_config))
         resp = jsonify(success=False)
         return resp
     
+    
     dcu = dc.DataCatalogUtils(template_id, project_id, region)
-    dcu.create_update_dynamic_tags(tag_config.get('fields'), tag_config.get('included_uris'),\
+    creation_status = dcu.create_update_dynamic_tags(tag_config.get('fields'), tag_config.get('included_uris'),\
                                     tag_config.get('excluded_uris'), tag_config.get('tag_uuid'),\
-                                    tag_config.get('template_uuid'), tag_config.get('tag_export'))
+                                    tag_config.get('template_uuid'), tag_config.get('tag_history'), tag_config.get('tag_stream'))
     
-    tagstore.increment_tag_config_version(tag_config.get('tag_uuid'), tag_config.get('version'))
+    if creation_status == constants.SUCCESS:
+        tagstore.increment_tag_config_version(tag_config.get('tag_uuid'), tag_config.get('version'))
+        resp = jsonify(success=True)
+        return resp
+    else:
+        resp = jsonify(success=False)
+        return resp
     
-    resp = jsonify(success=True)
-    return resp
     #[END dynamic_ondemand_update]
     
+
+"""
+Args:
+    template_id: The Tag Template to use
+    project_id: The Tag Template's Google Cloud project 
+    region: The Tag Template's region 
+    included_uris: The included_uris value
+    excluded_uris: The excluded_uris value (optional)
+    fields: list of selected fields containing field name, field type and query expression
+    refresh_mode: AUTO or ON_DEMAND
+    refresh_frequency: positive integer
+    refresh_unit: minutes or hours
+    tag_history: true if tag history is on, false otherwise 
+    tag_stream: true if tag stream is on, false otherwise
+Returns:
+    status_code = 200 if successful, otherwise error
+"""
+@app.route("/dynamic_create", methods=['POST'])
+def dynamic_create():
+    json = request.get_json(force=True) 
+    print('json: ' + str(json))
+       
+    template_id = json['template_id']
+    project_id = json['project_id']
+    region = json['region']
+    
+    print('template_id: ' + template_id)
+    print('project_id: ' + project_id)
+    print('region: ' + region)
+    
+    tagstore = te.TagEngineUtils()
+    template_exists, template_uuid = tagstore.read_tag_template(template_id, project_id, region)
+    
+    if not template_exists:
+        print("tag_template " + template_id + " doesn't exist")
+        resp = jsonify(success=False)
+        return resp 
+    
+    fields = json['fields']
+    excluded_uris = json['excluded_uris']
+    included_uris = json['included_uris']
+    refresh_mode = json['refresh_mode']
+    refresh_frequency = json['refresh_frequency']
+    refresh_unit = json['refresh_unit']
+    tag_history = json['tag_history']
+    tag_stream = json['tag_stream']
+    
+    tag_uuid, included_uris_hash = tagstore.write_dynamic_tag('ACTIVE', fields, included_uris, excluded_uris, template_uuid,\
+                                                             refresh_mode, refresh_frequency, refresh_unit, \
+                                                             tag_history, tag_stream)
+     
+    dcu = dc.DataCatalogUtils(template_id, project_id, region)
+    creation_status = dcu.create_update_dynamic_tags(fields, included_uris, excluded_uris, tag_uuid, template_uuid,\
+                                                     tag_history, tag_stream)
+    
+    if creation_status == constants.SUCCESS:
+        resp = jsonify(success=True)
+    else:
+        resp = jsonify(success=False)
+    
+    return resp
+
+
+"""
+Args:
+    template_id: The Tag Template to use
+    project_id: The Tag Template's Google Cloud project 
+    region: The Tag Template's region 
+    included_uris: The included_uris value
+    excluded_uris: The excluded_uris value (optional)
+    fields: list of selected fields containing field name, field type and query expression
+    tag_history: true if tag history is on, false otherwise 
+    tag_stream: true if tag stream is on, false otherwise
+Returns:
+    status_code = 200 if successful, otherwise error
+"""
+@app.route("/static_create", methods=['POST'])
+def static_create():
+    json = request.get_json(force=True) 
+    print('json: ' + str(json))
+       
+    template_id = json['template_id']
+    project_id = json['project_id']
+    region = json['region']
+    
+    print('template_id: ' + template_id)
+    print('project_id: ' + project_id)
+    print('region: ' + region)
+    
+    tagstore = te.TagEngineUtils()
+    template_exists, template_uuid = tagstore.read_tag_template(template_id, project_id, region)
+    
+    if not template_exists:
+        print("tag_template " + template_id + " doesn't exist")
+        resp = jsonify(success=False)
+        return resp 
+    
+    fields = json['fields']
+    excluded_uris = json['excluded_uris']
+    included_uris = json['included_uris']
+    tag_history = json['tag_history']
+    tag_stream = json['tag_stream']
+    
+    tag_uuid, included_uris_hash = tagstore.write_static_tag('ACTIVE', fields, included_uris, excluded_uris, template_uuid,\
+                                                             tag_history, tag_stream)
+     
+    dcu = dc.DataCatalogUtils(template_id, project_id, region)
+    creation_status = dcu.create_update_static_tags(fields, included_uris, excluded_uris, tag_uuid, template_uuid,\
+                                                     tag_history, tag_stream)
+    
+    if creation_status == constants.SUCCESS:
+        resp = jsonify(success=True)
+    else:
+        resp = jsonify(success=False)
+    
+    return resp
+ 
     
 @app.route("/ping", methods=['GET'])
 def ping():
     return "Tag Engine is alive"
 #[END ping]
 
-@app.route("/simple_task", methods=['GET'])
-def simple_task():
-    
-    client = tasks_v2.CloudTasksClient()
-
-    project = 'tag-engine-vanilla-337221'
-    location = 'us-central1'
-    queue = 'default'
-    payload = 'hello'
-
-    parent = client.queue_path(project, location, queue)
-
-    task = {
-            'app_engine_http_request': {  
-                'http_method': tasks_v2.HttpMethod.POST,
-                'relative_uri': '/update_counter'
-            }
-    }
-
-    converted_payload = payload.encode()
-    task['app_engine_http_request']['body'] = converted_payload
-    
-    d = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=1)
-    timestamp = timestamp_pb2.Timestamp()
-    timestamp.FromDatetime(d)
-    task['schedule_time'] = timestamp
-
-    response = client.create_task(parent=parent, task=task)
-    print('created task {}'.format(response.name))
-    
-    return render_template('processing.html')
-#[END simple_task]
-
-@app.route('/check_status', methods=['POST'])
-def check_status():
-   
-    payload = request.get_data(as_text=True) or '(empty payload)'
-    print('received task with payload: {}'.format(payload))
-    print('sleeping for 10 seconds')
-    time.sleep(10)
-    print('done sleeping')
-    #return redirect(url_for('confirmation'))
 
 @app.errorhandler(500)
 def server_error(e):

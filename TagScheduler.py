@@ -1,4 +1,4 @@
-# Copyright 2020 Google, LLC.
+# Copyright 2020-2022 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,14 +49,14 @@ class TagScheduler:
     stale_timer = age of PENDING tasks that gets reset to READY (in minutes)
     """
     def __init__(self,
-                project,
-                region,
+                tag_engine_project,
+                queue_region,
                 queue_name, 
                 app_engine_uri, 
                 stale_time=10):
 
-        self.project = project
-        self.region = region
+        self.tag_engine_project = tag_engine_project
+        self.queue_region = queue_region
         self.queue_name = queue_name
         self.app_engine_uri = app_engine_uri
         self.stale_time = stale_time
@@ -202,7 +202,7 @@ class TagScheduler:
         print('*** enter _send_cloud_task ***')
         
         client = tasks_v2.CloudTasksClient()
-        parent = client.queue_path(self.project, self.region, self.queue_name)
+        parent = client.queue_path(self.tag_engine_project, self.queue_region, self.queue_name)
         
         task = {
             'app_engine_http_request': {  
