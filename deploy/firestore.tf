@@ -36,3 +36,31 @@ resource "google_firestore_index" "index-1" {
     }
 
 }
+
+
+resource "google_firestore_index" "index-3" {
+    project = var.tag_engine_project
+
+    collection = "tag-config"
+
+    fields {
+      field_path = "config_status"
+      order      = "ASCENDING"
+    }
+
+    fields {
+      field_path = "refresh_mode"
+      order      = "ASCENDING"
+    }
+  
+    fields {
+      field_path = "scheduling_status"
+      order      = "ASCENDING"
+    }
+	
+    fields {
+      field_path = "next_run"
+      order      = "ASCENDING"
+    }
+
+}

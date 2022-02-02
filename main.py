@@ -905,6 +905,7 @@ def update_tag():
     
 @app.route('/process_update_static_tag', methods=['POST'])
 def process_update_static_tag():
+    
     template_id = request.form['template_id']
     project_id = request.form['project_id']
     region = request.form['region']
@@ -913,7 +914,8 @@ def process_update_static_tag():
     excluded_uris = request.form['excluded_uris'].rstrip()
     action = request.form['action']
     
-    print('old_tag_uuid: ' + old_tag_uuid)
+    update_status = 0
+    
     print("action: " + str(action))
     
     tagstore = te.TagEngineUtils()
