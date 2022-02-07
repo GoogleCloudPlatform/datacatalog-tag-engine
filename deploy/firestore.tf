@@ -64,3 +64,26 @@ resource "google_firestore_index" "index-3" {
     }
 
 }
+
+
+resource "google_firestore_index" "index-4" {
+    project = var.tag_engine_project
+
+    collection = "tasks"
+
+    fields {
+      field_path = "job_uuid"
+      order      = "ASCENDING"
+    }
+
+    fields {
+      field_path = "tag_uuid"
+      order      = "ASCENDING"
+    }
+  
+    fields {
+      field_path = "uri"
+      order      = "ASCENDING"
+    }
+	
+}

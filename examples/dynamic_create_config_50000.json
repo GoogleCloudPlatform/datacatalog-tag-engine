@@ -70,7 +70,7 @@
             "query_expression": "select current_datetime"
         }
     ],
-    "included_uris": "bigquery/project/warehouse-337221/dataset/cities_311/*",
+    "included_uris": "bigquery/project/warehouse-337221/dataset/austin_311_50000/*",
     "excluded_uris": "",
     "refresh_mode": "AUTO",
     "refresh_frequency": 24,

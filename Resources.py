@@ -1,4 +1,4 @@
-# Copyright 2020 Google, LLC.
+# Copyright 2020-2022 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,18 +25,18 @@ class Resources:
     def get_resources(included_uris, excluded_uris):
         
         print("enter get_resources")
-        print("included_uris: " + included_uris)
+        #print("included_uris: " + included_uris)
         
         included_resources = Resources.find_resources(included_uris)
-        print("included_resources: " + str(included_resources))
+        #print("included_resources: " + str(included_resources))
         
         if excluded_uris is None or excluded_uris == "" or excluded_uris.isspace():
             return included_resources
         else:
-            print("excluded_uris: " + excluded_uris)
+            #print("excluded_uris: " + excluded_uris)
             
             excluded_resources = Resources.find_resources(excluded_uris)
-            print("excluded_resources: " + str(excluded_resources))
+            #print("excluded_resources: " + str(excluded_resources))
         
             remaining_resources = included_resources.difference(excluded_resources)
             return remaining_resources
@@ -47,7 +47,7 @@ class Resources:
          # DC expected resource format: project_id + '/datasets/' + dataset + '/tables/' + short_table
          
         formatted = table_resource.replace(":", "/datasets/").replace(".", "/tables/")
-        print("formatted: " + table_resource)
+        #print("formatted: " + table_resource)
          
         return formatted
     
@@ -65,10 +65,10 @@ class Resources:
         uri_list = uris.split(",")
         for uri in uri_list:
             
-            print("uri: " + uri)
+            #print("uri: " + uri)
             split_path = uri.strip().split("/")
             resource_type = split_path[0]
-            print("resource_type: " + resource_type)
+            #print("resource_type: " + resource_type)
         
             if resource_type != Resources.bigquery_resource:
                 print("Error: bigquery is the only resource type currently supported")
@@ -82,7 +82,7 @@ class Resources:
             bq_client = bigquery.client.Client(project=project_id)
             
             path_length = len(split_path)
-            print("path_length: " + str(path_length))
+            #print("path_length: " + str(path_length))
             
             if path_length == 4:
                 
@@ -105,13 +105,13 @@ class Resources:
                 dataset = split_path[4]
                 dataset_id = project_id + "." + dataset
             
-                print("dataset: " + dataset)
+                #print("dataset: " + dataset)
                 #print("dataset_id: " + dataset_id)
             
                 dataset = bq_client.get_dataset(dataset_id)
 
                 table_expression = split_path[5]
-                print("table_expression: " + table_expression)
+                #print("table_expression: " + table_expression)
 
                 if path_length < 6 or path_length > 7:
                     print("Error. Invalid URI " + path)
@@ -124,7 +124,7 @@ class Resources:
                 
                 if table_expression == "*":
                     
-                    print("list all tables in dataset")
+                    #print("list all tables in dataset")
                     tables = list(bq_client.list_tables(dataset))
             
                     for table in tables:
@@ -133,7 +133,7 @@ class Resources:
                         table_resources.add(table.full_table_id)
                     
                 elif "*" in table_expression:
-                    print("table expression contains wildcard")
+                    #print("table expression contains wildcard")
                     table_substring = table_expression.replace("*", "")
             
                     tables = list(bq_client.list_tables(dataset))
@@ -141,15 +141,15 @@ class Resources:
                     for table in tables:
                         
                         if table_substring in table.full_table_id:
-                            print("full_table_id: " + str(table.full_table_id))
+                            #print("full_table_id: " + str(table.full_table_id))
                             table_resources.add(table.full_table_id)
                 
                 else:
-                    print("table expression == table name")
+                    #print("table expression == table name")
                 
                     table_id = dataset_id + "." + table_expression
                 
-                    print('table_id: ' + table_id)
+                    #print('table_id: ' + table_id)
                 
                     try:
                         table = bq_client.get_table(table_id)
@@ -161,11 +161,11 @@ class Resources:
                         print("NotFound: table " + table_id + " not found.")
             
             if tag_type == constants.BQ_COLUMN_TAG:
-                print("tagging a column")
+                #print("tagging a column")
     
                 column_exists = False
                 column = split_path[6]
-                print("column: " + column)
+                #print("column: " + column)
 
                 for table_id in table_resources:
                 
@@ -188,10 +188,10 @@ class Resources:
         
 
                     if column_exists == True:
-                        print("column exists")
+                        #print("column exists")
                         table_resource = Resources.format_table_resource(table_id)
                         table_column_resource = table_resource + "/column/" + column
-                        print("table_column_resource: " + table_column_resource)
+                        #print("table_column_resource: " + table_column_resource)
                         resources.add(table_column_resource)
                     else:
                         print('Error: column ' + column + ' not found in table ' + table_id)

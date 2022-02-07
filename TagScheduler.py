@@ -212,7 +212,7 @@ class TagScheduler:
         }
         
         task['app_engine_http_request']['headers'] = {'Content-type': 'application/json'}
-        payload = {'doc_id':doc_id, 'version':version}
+        payload = {'doc_id': doc_id, 'version': version}
         print('payload: ' + str(payload))
         
         payload_utf8 = json.dumps(payload).encode()
@@ -228,10 +228,10 @@ if __name__ == '__main__':
     config = configparser.ConfigParser()
     config.read("tagengine.ini")
     
-    project = config['DEFAULT']['PROJECT']
-    region = config['DEFAULT']['REGION']
-    queue_name = config['DEFAULT']['QUEUE_NAME']
-    app_engine_uri = '/dynamic_auto_update'
+    project = config['DEFAULT']['TAG_ENGINE_PROJECT']
+    region = config['DEFAULT']['QUEUE_REGION']
+    queue_name = config['DEFAULT']['SCHEDULER_QUEUE']
+    app_engine_uri = '/_dynamic_auto_update'
     ts = TagScheduler(project, region, queue_name, app_engine_uri)
     ts.reset_stale_jobs()
     ts.scan_for_update_jobs()

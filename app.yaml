@@ -13,5 +13,9 @@
 # limitations under the License.
 
 runtime: python38
-#instance_class: F4_1G
-instance_class: F1
+
+#automatic_scaling:
+  #instance_class: F1 
+instance_class: B4
+manual_scaling:
+  instances: 20

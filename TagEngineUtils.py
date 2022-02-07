@@ -1,4 +1,4 @@
-# Copyright 2020-2021 Google, LLC.
+# Copyright 2020-2022 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -733,7 +733,7 @@ class TagEngineUtils:
         log_entry['template_uuid'] = template_uuid
 
         self.db.collection('logs').add(log_entry)
-        print('Wrote log entry.')
+        #print('Wrote log entry.')
     
     def write_unpropagated_log_entry(self, source_res_list, view_res, config_type, config_status, template_uuid):
         log_entry = {}
@@ -748,7 +748,7 @@ class TagEngineUtils:
         log_entry['ts'] = datetime.datetime.utcnow()
         
         self.db.collection('logs').add(log_entry)
-        print('Wrote log entry.')
+        #print('Wrote log entry.')
         
     def generate_propagation_report(self):    
     
@@ -1153,7 +1153,7 @@ class TagEngineUtils:
         log_entry['template_uuid'] = template_uuid
 
         self.db.collection('logs').add(log_entry)
-        print('Wrote log entry.')
+        #print('Wrote log entry.')
         
     
     def write_error_entry(self, msg):
@@ -1195,6 +1195,7 @@ class TagEngineUtils:
             
         return tag_config
         
+    
     def read_propagated_tag_config(self, tag_uuid):
                 
         propagated_tag_config = {}
@@ -1204,9 +1205,9 @@ class TagEngineUtils:
         
         if doc.exists:
             propagated_tag_config = doc.to_dict()
-            #print(str(tag_config))
             
         return propagated_tag_config
+     
         
     def lookup_tag_config_by_included_uris(self, template_uuid, included_uris, included_uris_hash):
         

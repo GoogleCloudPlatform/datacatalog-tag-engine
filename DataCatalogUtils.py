@@ -113,7 +113,7 @@ class DataCatalogUtils:
             for column in columns:
             
                 tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
-                print('tag_exists: ' + str(tag_exists))
+                #print('tag_exists: ' + str(tag_exists))
             
                 tag = datacatalog.Tag()
                 tag.template = self.template_path
@@ -167,10 +167,10 @@ class DataCatalogUtils:
             
         return creation_status
          
-    def parse_query_expression(self, resource, query_expression):
+    def parse_query_expression(self, uri, query_expression):
         
         #print("*** enter parse_query_expression ***")
-        #print("resource: " + resource)
+        #print("uri: " + uri)
         #print("query_expression: " + query_expression)
         
         query_str = None
@@ -185,30 +185,30 @@ class DataCatalogUtils:
         column_index = query_expression.rfind("$column", 0)
         
         if project_index != -1:
-            project_end = resource.find('/') 
-            project = resource[0:project_end]
+            project_end = uri.find('/') 
+            project = uri[0:project_end]
             print('project: ' + project)
             
         if dataset_index != -1:
-            dataset_start = resource.find('/datasets/') + 10
-            dataset_string = resource[dataset_start:]
+            dataset_start = uri.find('/datasets/') + 10
+            dataset_string = uri[dataset_start:]
             dataset_end = dataset_string.find('/') 
             dataset = dataset_string[0:dataset_end]
             print('dataset: ' + dataset)
         
         # $table referenced in from clause, use fully qualified table
         if from_clause_table_index != -1:
-             print('$table referenced in from clause')
-             qualified_table = resource.replace('/project/', '.').replace('/datasets/', '.').replace('/tables/', '.')
-             print('qualified_table: ' + qualified_table)
+             #print('$table referenced in from clause')
+             qualified_table = uri.replace('/project/', '.').replace('/datasets/', '.').replace('/tables/', '.')
+             #print('qualified_table: ' + qualified_table)
              query_str = query_expression.replace('$table', qualified_table)
              
         # $table is referenced somewhere in the expression, replace $table with actual table name
         if from_clause_table_index == -1 and table_index != -1:
-            print('$table referenced somewhere, but not in the from clause')
-            table_index = resource.rfind('/') + 1
-            table_name = resource[table_index:]
-            print('table_name: ' + table_name)
+            #print('$table referenced somewhere, but not in the from clause')
+            table_index = uri.rfind('/') + 1
+            table_name = uri[table_index:]
+            #print('table_name: ' + table_name)
             query_str = query_expression.replace('$table', table_name)
             
             # $project referenced in where clause too
@@ -259,7 +259,7 @@ class DataCatalogUtils:
             store.write_error_entry('sql returned nothing: ' + query_str)
 
         
-        print('field_value: ' + str(field_value))
+        #print('field_value: ' + str(field_value))
         return field_value, error_exists
         
 
@@ -391,11 +391,11 @@ class DataCatalogUtils:
         tag_list = self.client.list_tags(parent=parent, timeout=10)
         
         for tag_instance in tag_list:
-            print('tag_instance: ' + str(tag_instance))
-            print('tag name: ' + str(tag_instance.name))
+            #print('tag_instance: ' + str(tag_instance))
+            #print('tag name: ' + str(tag_instance.name))
             tagged_column = tag_instance.column
             
-            print('found tagged column: ' + tagged_column)
+            #print('found tagged column: ' + tagged_column)
             
             tagged_template = tag_instance.template.split('/')[5]
              
@@ -405,7 +405,7 @@ class DataCatalogUtils:
                     print('Table tag exists.')
                     tag_exists = True
                     tag_id = tag_instance.name
-                    print('tag_id: ' + tag_id)
+                    #print('tag_id: ' + tag_id)
                     break
             else:
                 # looking for column tags
@@ -413,34 +413,39 @@ class DataCatalogUtils:
                     print('Column tag exists.')
                     tag_exists = True
                     tag_id = tag_instance.name
-                    print('tag_id: ' + tag_id)
+                    #print('tag_id: ' + tag_id)
                     break
         
-        print('tag_exists: ' + str(tag_exists))
-        print('tag_id: ' + str(tag_id))
+        #print('tag_exists: ' + str(tag_exists))
+        #print('tag_id: ' + str(tag_id))
            
         return tag_exists, tag_id
     
     
-    def create_update_static_tags(self, fields, included_uris, excluded_uris, tag_uuid, template_uuid, tag_history, tag_stream):
+    def create_update_static_tags(self, fields, included_uris, excluded_uris, uri, tag_uuid, template_uuid, tag_history, tag_stream):
         
         store = te.TagEngineUtils()        
-        resources = res.Resources.get_resources(included_uris, excluded_uris)
-        print("resources: " + str(resources))
+        
+        if included_uris is not None:
+            uris = res.Resources.get_resources(included_uris, excluded_uris)
+        else:
+            uris = [uri]
+        
+        #print("uris: " + str(uris))
         
         creation_status = constants.SUCCESS
         
-        for resource in resources:
+        for uri in uris:
             
             column = ""
             
-            if "/column/" in resource:
+            if "/column/" in uri:
                 # we have a column tag
-                split_resource = resource.split("/column/")
-                resource = split_resource[0]
+                split_resource = uri.split("/column/")
+                uri = split_resource[0]
                 column = split_resource[1]
             
-            bigquery_resource = '//bigquery.googleapis.com/projects/' + resource
+            bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
             print("bigquery_resource: " + bigquery_resource)
             
             request = datacatalog.LookupEntryRequest()
@@ -494,22 +499,22 @@ class DataCatalogUtils:
                 if tag_exists == True:
                     tag.name = tag_id
                     response = self.client.update_tag(tag=tag)
-                    store.write_log_entry(constants.TAG_UPDATED, constants.BQ_RES, resource, column, "STATIC", tag_uuid,\
+                    store.write_log_entry(constants.TAG_UPDATED, constants.BQ_RES, uri, column, "STATIC", tag_uuid,\
                                           tag_id, template_uuid)
                 else:
                     response = self.client.create_tag(parent=entry.name, tag=tag)
                     tag_id = response.name
-                    store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, resource, column, "STATIC", tag_uuid,\
+                    store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, uri, column, "STATIC", tag_uuid,\
                                           tag_id, template_uuid)
                 
                 if tag_history:
                     bqu = bq.BigQueryUtils()
                     template_fields = self.get_template()
-                    bqu.copy_tag(self.template_id, template_fields, resource, column, fields)
+                    bqu.copy_tag(self.template_id, template_fields, uri, column, fields)
                 
                 if tag_stream:
                     psu = ps.PubSubUtils()
-                    psu.copy_tag(self.template_id, resource, column, fields)
+                    psu.copy_tag(self.template_id, uri, column, fields)
                 
                 print("response: " + str(response))
             
@@ -521,34 +526,38 @@ class DataCatalogUtils:
             
         return creation_status
 
-    def create_update_dynamic_tags(self, fields, included_uris, excluded_uris, tag_uuid, template_uuid, tag_history, tag_stream):
+    def create_update_dynamic_tags(self, fields, included_uris, excluded_uris, uri, tag_uuid, template_uuid, tag_history, tag_stream):
         
         store = te.TagEngineUtils()
         bq_client = bigquery.Client()
-                
-        resources = res.Resources.get_resources(included_uris, excluded_uris)
+        
+        if included_uris is not None:        
+            uris = res.Resources.get_resources(included_uris, excluded_uris)
+        else:
+            uris = [uri]
         
         creation_status = constants.SUCCESS
 
-        for resource in resources:
+        for uri in uris:
+            
+            print('uri: ' + uri)
             
             error_exists = False
-            print('resource: ' + resource)
             
             column = ""
-            if "/column/" in resource:
+            if "/column/" in uri:
                 # we have a column tag
-                split_resource = resource.split("/column/")
-                resource = split_resource[0]
+                split_resource = uri.split("/column/")
+                uri = split_resource[0]
                 column = split_resource[1]
                 
-            bigquery_resource = '//bigquery.googleapis.com/projects/' + resource
+            bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
             request = datacatalog.LookupEntryRequest()
             request.linked_resource=bigquery_resource
             entry = self.client.lookup_entry(request)
 
             tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
-            print("tag_exists: " + str(tag_exists))
+            #print("tag_exists: " + str(tag_exists))
             
             # create new tag
             tag = datacatalog.Tag()
@@ -561,8 +570,8 @@ class DataCatalogUtils:
                 query_expression = field['query_expression']
 
                 # parse and run query in BQ
-                query_str = self.parse_query_expression(resource, query_expression)
-                print('query_str: ' + query_str)
+                query_str = self.parse_query_expression(uri, query_expression)
+                #print('query_str: ' + query_str)
                 
                 field_value, error_exists = self.run_query(bq_client, query_str, store)
         
@@ -599,26 +608,26 @@ class DataCatalogUtils:
                 #print('tag request: ' + str(tag))
                 tag.name = tag_id
                 response = self.client.update_tag(tag=tag)
-                store.write_log_entry(constants.TAG_UPDATED, constants.BQ_RES, resource, column, "DYNAMIC", tag_uuid, \
+                store.write_log_entry(constants.TAG_UPDATED, constants.BQ_RES, uri, column, "DYNAMIC", tag_uuid, \
                                       tag_id, template_uuid)
             else:
                 print('creating tag')
                 #print('tag request: ' + str(tag))
                 response = self.client.create_tag(parent=entry.name, tag=tag)
                 tag_id = response.name
-                store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, resource, column, "DYNAMIC", tag_uuid, tag_id, \
+                store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, uri, column, "DYNAMIC", tag_uuid, tag_id, \
                                       template_uuid)
             
             if tag_history:
                 bqu = bq.BigQueryUtils()
                 template_fields = self.get_template()
-                bqu.copy_tag(self.template_id, template_fields, resource, column, fields)
+                bqu.copy_tag(self.template_id, template_fields, uri, column, fields)
                 
             if tag_stream:
                 psu = ps.PubSubUtils()
-                psu.copy_tag(self.template_id, resource, column, fields)
+                psu.copy_tag(self.template_id, uri, column, fields)
                 
-            print("response: " + str(response))
+            #print("response: " + str(response))
                     
                         
         return creation_status
