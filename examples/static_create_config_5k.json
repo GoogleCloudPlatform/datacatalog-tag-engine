@@ -1,5 +1,5 @@
 {
-    "template_id": "data_governance",
+    "template_id": "data_governance_5k",
     "project_id": "tag-engine-vanilla-337221",
     "region": "us-central1",
     "fields": [
@@ -46,9 +46,8 @@
             "field_value": "30_DAYS"
         }
     ],
-    "included_uris": "bigquery/project/warehouse-337221/dataset/cities_311/*",
+    "included_uris": "bigquery/project/warehouse-337221/dataset/austin_311_5k/*",
     "excluded_uris": "",
-	"refresh_mode": "ON_DEMAND",
     "tag_history": false,
-    "tag_stream": false   
+    "tag_stream": false  
 }

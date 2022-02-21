@@ -9,15 +9,16 @@
 	   <h1>Tag Engine for Data Catalog</h1>
         </div>
 	   <div class="header">
-	   <h2>Create static tag config using {{ template_id }}</h2>
+	   <h2>Create static tag config with {{ template_id }}</h2>
 	   <span style="color:#9d9a9a;">
-		   <h6>To include a field in your tag, click on the checkbox next to the field and either enter a value for the field in the text box (if the field is of type string, double or datetime) or choose a value for the field (if the field is of type enum or bool). <br><br>
-		   Mandatory template fields are marked by <span style="color:red;">*</span> and are already checked for you. 
-		   </h6>
 	  </span>
 	   </div>
-	   <h3>Choose Tag Template Fields</h3>
-         <form method="post" action="/process_static_tag">
+	   <h3>Enter Field Values</h3>
+	   <h5 style="width: 500px;">To include a field in your tag, click on the checkbox next to the field and either enter a value for the field in the text box (if the field is of type string, double or datetime) or choose a value for the field (if the field is of type enum or bool). <br><br>
+	   
+	   Mandatory template fields are marked by <span style="color:red;">*</span> and are already checked for you. 
+	   </h5>
+         <form method="post" action="/process_static_config">
 		    <table>
 			   {% for dict_field in fields %}
 		        <tr>
@@ -62,14 +63,14 @@
 			   {% endfor %}
 			   </table>
 		    <p>&nbsp;</p>
-			   <h3>Choose URIs</h3>
+			   <h3>Enter URIs</h3>
 		 	   
-			   <span style="color:#9d9a9a;"><h6>
+			   <span style="color:#9d9a9a;"><h5>
 			   Specify comma-separated list of URIs for resources to include in and exclude from your static tag. Wildcards are allowed in the table name. <br><br>
 					  Supported URIs for BigQuery resources: <br>
 					  bigquery/project/{project_id}/dataset/{dataset}/* <br>
 				       bigquery/project/{project_id}/dataset/{dataset}/{table} <br>
-				       bigquery/project/{project_id}/dataset/{dataset}/{table}/{column} </h6>
+				       bigquery/project/{project_id}/dataset/{dataset}/{table}/{column} </h5>
 				</span>
 				    <table>
 				     <tr>
@@ -87,7 +88,7 @@
 			    </table>
 			    {% if display_tag_history %}
 			      <p>&nbsp;</p>
-				<h3>Choose Tag History</h3>
+				<h3>Choose Tag History Option</h3>
 			    <table>
 			    <tr><td><input type="checkbox" class="form-control move-left" name="tag_history" value="selected" checked>
 				    Save tag values from this config to BigQuery tag history table.&nbsp;&nbsp;
@@ -96,7 +97,7 @@
 			    {% endif %}
 			    {% if display_tag_stream %}
 			      <p>&nbsp;</p>
-				<h3>Choose Tag Stream</h3>
+				<h3>Choose Tag Stream Option</h3>
 			    <table>
 			    <tr><td><input type="checkbox" class="form-control move-left" name="tag_stream" value="selected" checked>
 				    Publish tag values from this config to Pub/Sub tag stream topic.&nbsp;&nbsp;

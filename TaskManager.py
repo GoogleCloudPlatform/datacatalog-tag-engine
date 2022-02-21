@@ -97,7 +97,7 @@ class TaskManager:
     
     def _create_task(self, job_uuid, tag_uuid, uri, task_id, task_uuid):
         
-        print('*** enter _create_work_task ***')
+        print('*** enter _create_task ***')
  
         client = tasks_v2.CloudTasksClient()
         parent = client.queue_path(self.tag_engine_project, self.queue_region, self.queue_name)
@@ -135,7 +135,7 @@ class TaskManager:
 
         task_ref.set({
             'status':  'RUNNING',
-            'end_time': datetime.datetime.utcnow()
+            'start_time': datetime.datetime.utcnow()
         }, merge=True)
         
         print('set task running.')

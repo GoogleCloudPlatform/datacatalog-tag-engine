@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import requests, configparser
+import requests, configparser, time
 from operator import itemgetter
 from google.protobuf.timestamp_pb2 import Timestamp
 from google.cloud import datacatalog
@@ -26,13 +26,15 @@ import constants
 
 class DataCatalogUtils:
     
-    def __init__(self, template_id, project_id, region):
+    def __init__(self, template_id=None, project_id=None, region=None):
         self.template_id = template_id
         self.project_id = project_id
         self.region = region
         
         self.client = DataCatalogClient()
-        self.template_path = DataCatalogClient.tag_template_path(project_id, region, template_id)
+        
+        if template_id is not None and project_id is not None and region is not None:
+            self.template_path = DataCatalogClient.tag_template_path(project_id, region, template_id)
     
     def get_template(self):
         
@@ -159,7 +161,7 @@ class DataCatalogUtils:
                     tag_id = response.name
                     store.write_propagated_log_entry(config_status, constants.TAG_CREATED, constants.BQ_RES, source_res, view_res, column, "STATIC", source_tag_uuid, view_tag_uuid, tag_id, template_uuid)
             
-                print("response: " + str(response))
+                #print("response: " + str(response))
         
         except ValueError:
             print("ValueError: create_static_tags failed due to invalid parameters.")
@@ -228,38 +230,54 @@ class DataCatalogUtils:
             
         return query_str
     
-    def run_query(self, bq_client, query_str, store):
+    def run_query(self, bq_client, query_str, batch_mode, store):
         
         field_value = None
         error_exists = False
-    
+            
         try:
             
-            rows = bq_client.query(query_str).result()
+            if batch_mode:
+                
+                batch_config = bigquery.QueryJobConfig(
+                    # run at batch priority which won't count toward concurrent rate limit
+                    priority=bigquery.QueryPriority.BATCH
+                )
+                
+                query_job = bq_client.query(query_str, job_config=batch_config)
+                job = bq_client.get_job(query_job.job_id, location=query_job.location)
+            
+                while job.state == 'RUNNING':
+                    time.sleep(2)
+            
+                rows = job.result()
+            
+            else:
+                rows = bq_client.query(query_str).result()
+            
+            # if query expression is well-formed, there should only be a single row returned with a single field_value
+            # However, user may mistakenly run a query that returns a list of rows. In that case, grab only the top row.  
+            row_count = 0
+            for row in rows:
+                row_count = row_count + 1
+                field_value = row[0]
+            
+                if row_count > 1:
+                    break
+        
+            # check row_count
+            if row_count == 0:
+                # SQL query returned nothing, log error in Firestore
+                error_exists = True
+                print('query_str returned nothing, writing error entry')
+                store.write_error_entry('sql returned nothing: ' + query_str)
         
         except ValueError:
             error_exists = True
             store.write_error_entry('invalid query parameter(s): ' + query_str)
-
-        # if query expression is well-formed, there should only be a single row returned with a single field_value
-        # However, user may mistakenly run a query that returns a list of rows. In that case, grab only the top row.  
-        row_count = 0
-        for row in rows:
-            row_count = row_count + 1
-            field_value = row[0]
-            
-            if row_count > 1:
-                break
-        
-        # check row_count
-        if row_count == 0:
-            # SQL query returned nothing, log error in Firestore
-            error_exists = True
-            print('query_str returned nothing, writing error entry')
-            store.write_error_entry('sql returned nothing: ' + query_str)
-
         
         #print('field_value: ' + str(field_value))
+        
         return field_value, error_exists
         
 
@@ -308,7 +326,7 @@ class DataCatalogUtils:
         return tag, error_exists
     
     def create_update_dynamic_propagated_tag(self, config_status, source_res, view_res, columns, fields, source_tag_uuid, view_tag_uuid,\
-                                             template_uuid):
+                                             template_uuid, batch_mode=False):
         
         #print('*** enter create_update_dynamic_propagated_tag ***')
         
@@ -343,7 +361,7 @@ class DataCatalogUtils:
     
                     # parse and run query in BQ
                     query_str = self.parse_query_expression(view_res, query_expression)
-                    field_value, error_exists = self.run_query(bq_client, query_str, store)
+                    field_value, error_exists = self.run_query(bq_client, query_str, batch_mode, store)
                     
                     if error_exists:
                         continue
@@ -402,7 +420,7 @@ class DataCatalogUtils:
             if column == "":
                 # looking for table tags
                 if tagged_template == self.template_id and tagged_column == "":
-                    print('Table tag exists.')
+                    #print('Table tag exists.')
                     tag_exists = True
                     tag_id = tag_instance.name
                     #print('tag_id: ' + tag_id)
@@ -410,7 +428,7 @@ class DataCatalogUtils:
             else:
                 # looking for column tags
                 if column == tagged_column and tagged_template == self.template_id:
-                    print('Column tag exists.')
+                    #print('Column tag exists.')
                     tag_exists = True
                     tag_id = tag_instance.name
                     #print('tag_id: ' + tag_id)
@@ -422,7 +440,7 @@ class DataCatalogUtils:
         return tag_exists, tag_id
     
     
-    def create_update_static_tags(self, fields, included_uris, excluded_uris, uri, tag_uuid, template_uuid, tag_history, tag_stream):
+    def create_update_static_configs(self, fields, included_uris, excluded_uris, uri, tag_uuid, template_uuid, tag_history, tag_stream):
         
         store = te.TagEngineUtils()        
         
@@ -446,7 +464,7 @@ class DataCatalogUtils:
                 column = split_resource[1]
             
             bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
-            print("bigquery_resource: " + bigquery_resource)
+            #print("bigquery_resource: " + bigquery_resource)
             
             request = datacatalog.LookupEntryRequest()
             request.linked_resource=bigquery_resource
@@ -494,18 +512,25 @@ class DataCatalogUtils:
                         
                 if column != "":
                     tag.column = column
-                    print('tag.column == ' + column)   
+                    #print('tag.column == ' + column)   
                 
                 if tag_exists == True:
                     tag.name = tag_id
-                    response = self.client.update_tag(tag=tag)
-                    store.write_log_entry(constants.TAG_UPDATED, constants.BQ_RES, uri, column, "STATIC", tag_uuid,\
-                                          tag_id, template_uuid)
+                    
+                    try:
+                        response = self.client.update_tag(tag=tag)
+                    except Exception as e:
+                        print('Error occurred during tag update: ', e)
+                        
+                    #store.write_log_entry(constants.TAG_UPDATED, constants.BQ_RES, uri, column, "STATIC", tag_uuid, tag_id, template_uuid)
                 else:
-                    response = self.client.create_tag(parent=entry.name, tag=tag)
+                    try:
+                        response = self.client.create_tag(parent=entry.name, tag=tag)
+                    except Exception as e:
+                        print('Error occurred during tag create: ', e)
+                        
                     tag_id = response.name
-                    store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, uri, column, "STATIC", tag_uuid,\
-                                          tag_id, template_uuid)
+                    #store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, uri, column, "STATIC", tag_uuid, tag_id, template_uuid)
                 
                 if tag_history:
                     bqu = bq.BigQueryUtils()
@@ -516,7 +541,7 @@ class DataCatalogUtils:
                     psu = ps.PubSubUtils()
                     psu.copy_tag(self.template_id, uri, column, fields)
                 
-                print("response: " + str(response))
+                #print("response: " + str(response))
             
             except ValueError:
                 print("ValueError: create_static_tags failed due to invalid parameters.")
@@ -526,7 +551,7 @@ class DataCatalogUtils:
             
         return creation_status
 
-    def create_update_dynamic_tags(self, fields, included_uris, excluded_uris, uri, tag_uuid, template_uuid, tag_history, tag_stream):
+    def create_update_dynamic_configs(self, fields, included_uris, excluded_uris, uri, tag_uuid, template_uuid, tag_history, tag_stream, batch_mode=False):
         
         store = te.TagEngineUtils()
         bq_client = bigquery.Client()
@@ -540,7 +565,7 @@ class DataCatalogUtils:
 
         for uri in uris:
             
-            print('uri: ' + uri)
+            #print('uri: ' + uri)
             
             error_exists = False
             
@@ -573,7 +598,7 @@ class DataCatalogUtils:
                 query_str = self.parse_query_expression(uri, query_expression)
                 #print('query_str: ' + query_str)
                 
-                field_value, error_exists = self.run_query(bq_client, query_str, store)
+                field_value, error_exists = self.run_query(bq_client, query_str, batch_mode, store)
         
                 if error_exists:
                     continue
@@ -601,22 +626,29 @@ class DataCatalogUtils:
                             
             if column != "":
                 tag.column = column
-                print('tag.column: ' + column) 
+                #print('tag.column: ' + column) 
             
             if tag_exists == True:
-                print('updating tag')
+                #print('updating tag')
                 #print('tag request: ' + str(tag))
                 tag.name = tag_id
-                response = self.client.update_tag(tag=tag)
-                store.write_log_entry(constants.TAG_UPDATED, constants.BQ_RES, uri, column, "DYNAMIC", tag_uuid, \
-                                      tag_id, template_uuid)
+                
+                try:
+                    response = self.client.update_tag(tag=tag)
+                except Exception as e:
+                    print('Error occurred during tag update: ', e)
+                
+                #store.write_log_entry(constants.TAG_UPDATED, constants.BQ_RES, uri, column, "DYNAMIC", tag_uuid, tag_id, template_uuid)
             else:
                 print('creating tag')
-                #print('tag request: ' + str(tag))
-                response = self.client.create_tag(parent=entry.name, tag=tag)
+                
+                try:
+                    response = self.client.create_tag(parent=entry.name, tag=tag)
+                except Exception as e:
+                    print('Error occurred during tag create: ', e)
+                    
                 tag_id = response.name
-                store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, uri, column, "DYNAMIC", tag_uuid, tag_id, \
-                                      template_uuid)
+                #store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, uri, column, "DYNAMIC", tag_uuid, tag_id, template_uuid)
             
             if tag_history:
                 bqu = bq.BigQueryUtils()
@@ -631,6 +663,36 @@ class DataCatalogUtils:
                     
                         
         return creation_status
+        
+        
+    def search_catalog(self, bq_project, bq_dataset):
+        
+        linked_resources = {}
+        
+        scope = datacatalog.SearchCatalogRequest.Scope()
+        scope.include_project_ids.append(bq_project)
+        
+        request = datacatalog.SearchCatalogRequest()
+        request.scope = scope
+    
+        query = 'parent:' + bq_project + '.' + bq_dataset
+        print('query string: ' + query)
+    
+        request.query = query
+        request.page_size = 1
+    
+        for result in self.client.search_catalog(request):
+            print('result: ' + str(result))
+            
+            resp = self.client.list_tags(parent=result.relative_resource_name)
+            tags = list(resp.tags)
+            tag_count = len(tags)
+            
+            index = result.linked_resource.rfind('/')
+            table_name = result.linked_resource[index+1:]
+            linked_resources[table_name] = tag_count
+            
+        return linked_resources
 
 if __name__ == '__main__':
     

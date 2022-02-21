@@ -11,9 +11,13 @@
       {% endif %}
 	 
    <div class="pagetitle">
-   <h1>Static Tag Config Created</h1>
+   <h1>Static Tag Config Submitted</h1>
     </div>
-       <p>Here's a summary of your static tag config:</p>
+       <div id="main">
+         <p>Your static config is being processed. Please check <a href="{{ url_for('view_configs',template_id=template_id,project_id=project_id,region=region) }}">here</a> for the latest status of your request. </p>
+	   
+  	   <p>Here's a summary of your config:</p>
+         <p>
        <p>
           <span style="color:#0b5394;">template_id:</span> {{ template_id }} <br>
           <span style="color:#0b5394;">project_id:</span> {{ project_id }} <br>
@@ -38,7 +42,7 @@
 		<span style="color:#0b5394;">Tag history option</span>: {{ tag_history }}<br>
 		<span style="color:#0b5394;">Tag stream option</span>: {{ tag_stream }}<br>
 	  </p></p>
-	  <p><a href="{{ url_for('choose_action',template_id=template_id,project_id=project_id,region=region) }}">Create more tags</a>&nbsp;&nbsp;<a href="/">Switch tag templates / Homepage</a></p>
+	  <p><a href="{{ url_for('choose_action',template_id=template_id,project_id=project_id,region=region) }}">Create more configs</a>&nbsp;&nbsp;<a href="/">Switch tag templates / Homepage</a></p>
      </div>
    </div>
  </body>

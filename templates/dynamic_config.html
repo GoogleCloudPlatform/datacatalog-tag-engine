@@ -9,34 +9,34 @@
 	   <h1>Tag Engine for Data Catalog</h1>
         </div>
 	   <div class="header">
-	   <h2>Create dynamic tag config on {{ template_id }}</h2>
-	   <span style="color:#9d9a9a;">
-		   <h6>To include a field in your tag, click on the checkbox next to the field and enter a query expression for the field in the text box. <br>
-			   <br>
-			   The query expression must be a <i>valid</i> select statement in BQ. It can contain aggregate functions, joins, filters, groupings, etc. <br>
-			   <br>
-			   In addition, the query expression can contain the following variables:<br>
-			   - <b>$table</b> refers to the table (or view) being tagged<br>
-			   - <b>$column</b> refers to the column being tagged<br>
-			   - <b>$dataset</b> refers to the dataset of the table (or view) being tagged<br>
-			   - <b>$project</b> refers to the project of the table (or view) being tagged<br>
-			   <br>
-			   Here are some examples: <br>
-			   select count(*) from $table<br>
-			   select count(distinct($column)) from $table <br>
-			   select count(*) > 1 from $table where $column is null<br>
-			   select rating from dw-project.quality.scores where table = '$table' and dataset = '$dataset' and project = '$project'<br>
-			   select '30-DAYS'<br>
-			    <br>
-			   Note: The result of the query expression must satisfy the type requirements of the field in the tag template. <br>
-			   For example, if the tag template field is of type string, the query expression must return a string type.
-			   
-		    <br><br>Mandatory fields are marked by <span style="color:red;">*</span> and are already checked for you.
-		    </h6>
-	  </span>
+	   <h2>Create dynamic tag config with {{ template_id }}</h2>
 	   </div>
-	   <h3>Choose Tag Template Fields</h3>
-         <form method="post" action="/process_dynamic_tag">
+	   <h3>&nbsp;Enter Query Expressions</h3>
+ 	   <span style="color:#9d9a9a;">
+ 		   <h5>&nbsp;To include a field in your tag, click on the checkbox next to the field and enter a query expression for the field in the text box. <br>
+ 			   <br>
+ 			   &nbsp;The query expression must be a <i>valid</i> select statement in BQ. It can contain aggregate functions, joins, filters, groupings, etc. <br>
+ 			   <br>
+ 			   &nbsp;In addition, the query expression can contain the following variables:<br>
+ 			   - <b>$table</b> refers to the table (or view) being tagged<br>
+ 			   - <b>$column</b> refers to the column being tagged<br>
+ 			   - <b>$dataset</b> refers to the dataset of the table (or view) being tagged<br>
+ 			   - <b>$project</b> refers to the project of the table (or view) being tagged<br>
+ 			   <br>
+ 			   &nbsp;Here are some examples: <br>
+ 			   &nbsp;select count(*) from $table<br>
+ 			   &nbsp;select count(distinct($column)) from $table <br>
+ 			   &nbsp;select count(*) > 1 from $table where $column is null<br>
+ 			   &nbsp;select rating from dw-project.quality.scores where table = '$table' and dataset = '$dataset' and project = '$project'<br>
+ 			   &nbsp;select '30-DAYS'<br>
+ 			    <br>
+ 			   &nbsp;Note: The result of the query expression must satisfy the type requirements of the field in the tag template. <br>
+ 			   &nbsp;For example, if the tag template field is of type string, the query expression must return a string type.
+			   
+ 		    <br><br>Mandatory tag template fields are marked by <span style="color:red;">*</span> and are already checked for you.
+ 		    </h5>
+ 	  </span>
+         <form method="post" action="/process_dynamic_config">
 		    <table>
 			   {% for dict_field in fields %}
 		        <tr>
@@ -63,15 +63,15 @@
 			   {% endfor %}
 			   </table>
 			   <p>&nbsp;</p>
-			   <h3>Choose URIs</h3>
+			   <h3>Enter BigQuery URIs</h3>
 		 	   <span style="color:#9d9a9a;">
-		 		   <h6>Specify URIs for resources to include in or exclude from your dynamic tag. Wildcards are allowed in the table name. <br><br>
-					  Supported URIs: <br>
+		 		   <h5>Specify one or more URIs to include in or exclude from your dynamic config. Wildcards are allowed in the table name. <br><br>
+					  Supported URI syntax: <br>
 					  bigquery/project/{project_id}/* <br>
 					  bigquery/project/{project_id}/dataset/{dataset}/* <br>
-				       bigquery/project/{project_id}/dataset/{dataset}/{table} <br>
-				       bigquery/project/{project_id}/dataset/{dataset}/{table}/{column} <br>
-				  </h6>
+				      bigquery/project/{project_id}/dataset/{dataset}/{table} <br>
+				      bigquery/project/{project_id}/dataset/{dataset}/{table}/{column} <br>
+				  </h5>
 				</span>
 			    <table>
 			     <tr>
@@ -88,11 +88,11 @@
  		         </tr>
 		    </table>
 		        <p>&nbsp;</p>
-			   <h3>Choose Scheduling</h3>
+			   <h3>Choose Scheduling Options</h3>
 		 	   <span style="color:#9d9a9a;">
-		 		   <h6>If you choose the AUTO refresh mode, your tags will be scheduled for update based on your specified refresh frequency. <br>
+		 		   <h5>If you choose the AUTO refresh mode, your tags will be scheduled for update based on your specified refresh frequency. <br>
 					   If you choose the ON-DEMAND refresh mode, your tags will <b>not</b> be scheduled for refresh (even if you specify a refresh frequency). <br>This mode is useful when you have tags that don't need to be updated or when you want to trigger the update from the API. <br><br>
-				   </h6>
+				   </h5>
 				</span>
 			     <table>
 				<tr>	
@@ -113,7 +113,7 @@
 		        </table>
 			    {% if display_tag_history %}
 			      <p>&nbsp;</p>
-				<h3>Choose Tag History</h3>
+				<h3>Choose Tag History Option</h3>
 			    <table>
 			    <tr><td><span style="color:red;">*</span> <input type="checkbox" class="form-control move-left" name="tag_history" value="selected" checked>
 				    Save tag values from this config to BigQuery tag history table.&nbsp;&nbsp;
@@ -122,7 +122,7 @@
 			    {% endif %}
 			    {% if display_tag_stream %}
 			      <p>&nbsp;</p>
-				<h3>Choose Tag Stream</h3>
+				<h3>Choose Tag Stream Option</h3>
 			    <table>
 			    <tr><td><span style="color:red;">*</span> <input type="checkbox" class="form-control move-left" name="tag_stream" value="selected" checked>
 				    Publish tag values from this config to Pub/Sub tag stream topic.&nbsp;&nbsp;

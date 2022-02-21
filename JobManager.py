@@ -48,7 +48,7 @@ class JobManager:
         print('*** enter create_job ***')
         
         job_uuid = self._create_job_record(tag_uuid)
-        self._create_job_task(job_uuid, tag_uuid)
+        resp = self._create_job_task(job_uuid, tag_uuid)
         
         return job_uuid 
         
@@ -73,15 +73,18 @@ class JobManager:
         job_ref = self.db.collection('jobs').document(job_uuid)
         
         job_ref.set({
-            'job_tasks': num_tasks,
+            'task_count': num_tasks,
         }, merge=True)
         
         print('Set num_tasks.')
         
 
-    def update_job_completion(self, job_uuid):
+    def calculate_job_completion(self, job_uuid):
         
         print('*** enter update_job_completed ***')
+        
+        is_success = False
+        is_failed = False
         
         tasks_completed = self._get_tasks_completed(job_uuid)
         tasks_failed = self._get_tasks_failed(job_uuid)
@@ -94,16 +97,22 @@ class JobManager:
         if job_doc.exists:
             
             job_dict = job_doc.to_dict()
+            task_count = job_dict['task_count']
             
-            if job_dict['job_tasks'] > tasks_ran:
+            if job_dict['task_count'] > tasks_ran:
                 job_ref.set({
                     'tasks_ran': tasks_completed + tasks_failed,
                     'tasks_completed': tasks_completed,
                 }, merge=True)
+                
+                pct_complete = round(tasks_ran / task_count * 100, 2)
             
-            if job_dict['job_tasks'] == tasks_ran:
+            if job_dict['task_count'] == tasks_ran:
                 
                 if job_dict['tasks_failed'] > 0:
+                    
+                    is_failed = True
+                    
                     job_ref.set({
                         'tasks_ran': tasks_completed + tasks_failed,
                         'tasks_completed': tasks_completed,
@@ -112,12 +121,19 @@ class JobManager:
                     }, merge=True)
                 
                 else:
+                    
+                    is_success = True
+                    
                     job_ref.set({
                         'tasks_ran': tasks_completed + tasks_failed,
                         'tasks_completed': tasks_completed,
                         'job_status': 'COMPLETED',
                         'completion_time': datetime.datetime.utcnow()
                     }, merge=True)
+                
+                pct_complete = 100     
+
+        return is_success, is_failed, pct_complete
                   
 
     def update_job_failed(self, job_uuid):
@@ -136,13 +152,13 @@ class JobManager:
             
             job_dict = job_doc.to_dict()
             
-            if job_dict['job_tasks'] > tasks_ran:
+            if job_dict['task_count'] > tasks_ran:
                 job_ref.set({
                     'tasks_ran': tasks_completed + tasks_failed,
                     'tasks_failed': tasks_failed,
                 }, merge=True)
             
-            if job_dict['job_tasks'] == tasks_ran:
+            if job_dict['task_count'] == tasks_ran:
                 job_ref.set({
                     'tasks_ran': tasks_completed + tasks_failed,
                     'tasks_failed': tasks_failed,
@@ -175,7 +191,7 @@ class JobManager:
             'job_uuid': job_uuid,
             'tag_uuid': tag_uuid,
             'job_status':  'PENDING',
-            'job_tasks': 0,
+            'task_count': 0,
             'tasks_ran': 0,
             'tasks_completed': 0,
             'tasks_failed': 0,
@@ -209,10 +225,21 @@ class JobManager:
         task['app_engine_http_request']['body'] = payload_utf8
 
         resp = client.create_task(parent=parent, task=task)
+        print('resp: ' + str(resp))
         
         return resp
         
-    
+    def _get_task_count(job_uuid):
+        
+        print('*** enter _get_task_count ***')
+        
+        job_doc = self.db.collection('jobs').document(job_uuid).get()
+
+        if job_doc.exists:
+            job_dict = job_doc.to_dict()
+            return job_dict['task_count']
+        
+        
     def _get_tasks_completed(self, job_uuid):
         
         print('*** enter _get_tasks_completed ***')

@@ -9,10 +9,10 @@
 	   <h1>Tag Engine for Data Catalog</h1>
         </div>
 	   <div class="header">
-	   <h3>Schema for Tag Template {{ template_id }}</h2>
+	   <h3>&nbsp;{{ template_id }} tag template details</h3>
 	   </div>
 	   <span style="color:#9d9a9a;">
-		   <h5>&nbsp;&nbsp;Mandatory template fields are marked by <span style="color:red;">*</span></h5>
+		   <h5>&nbsp;&nbsp;Mandatory tag template fields are marked by <span style="color:red;">*</span></h5>
 	   </span>
          <form method="post" action="/display_selected_action">
 		    <table>
@@ -41,13 +41,13 @@
 			    {% endfor %}
 			   </table>
 		    <p>&nbsp;</p>
-			   <h3>Choose Tag Action</h2>
+			   <h3>Choose Action</h2>
 			    <table>
 			     <tr>
-			    <td><input type="submit" value="Create Static Tag" name="action"></td>
-			    <td><input type="submit" value="Create Dynamic Tag" name="action"></td>
+			    <td><input type="submit" value="Create Static Config" name="action"></td>
+			    <td><input type="submit" value="Create Dynamic Config" name="action"></td>
 			    <!--- <td><input type="submit" value="Create Propagation Tag" name="action"></td> --->
-			    <td><input type="submit" value="View and Edit Tags" name="action"></td>
+			    <td><input type="submit" value="View and Edit Configs" name="action"></td>
 		         </tr>
 		        </table>
 			   <p>&nbsp;<a href="/">Switch tag templates / Homepage</a></p>

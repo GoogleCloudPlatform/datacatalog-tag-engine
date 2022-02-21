@@ -11,13 +11,18 @@
 	   <div class="header">
 	   <h2>Update Static Tag using {{ template_id }}</h2>
 	   <span style="color:#9d9a9a;">
-		   <h6>Make changes to your static tag config. A checked field indicates it is part of the tag config. You can add new fields and/or remove existing ones from the tag config. You can also edit a field's value, the included URIs, excluded URIs, and tag history.  <br><br>
-		   Mandatory template fields are marked by <span style="color:red;">*</span>. 
-		   </h6>
+		   <h5>Make changes to your static tag config below. A checked box indicates the field is part of this tag config. You can add new fields and/or remove existing ones from the tag config. <br>You can also edit a field's value, the included URIs, excluded URIs, and tag history.  <br><br>   
+		   </h5>
 	  </span>
 	   </div>
-	   <h3>Choose Template Fields</h3>
-         <form method="post" action="/process_update_static_tag">
+	   <h3>Enter Field Values</h3>
+	   
+	   <span style="color:#9d9a9a;">
+		   <h5>
+	 	Mandatory tag template fields are marked by <span style="color:red;">*</span>. 
+	 	</h5>
+	   </span>
+         <form method="post" action="/process_update_static_config">
 		    <table>
 			   {% for field in fields %}
 		        <tr>
@@ -144,13 +149,13 @@
 			   {% endfor %}
 			   </table>
 		    <p>&nbsp;</p>
-			   <h3>Choose URIs</h3>
+			   <h3>Enter URIs</h3>
 		 	   <span style="color:#9d9a9a;">
-		 		   <h6>Specify comma-separated list of URIs for resources to include in and exclude from your static tag. Wildcards are allowed in the table name. <br><br>
+		 		   <h5>Specify comma-separated list of URIs for resources to include in and exclude from your static tag. Wildcards are allowed in the table name. <br><br>
 					  Supported URIs for BigQuery resources: <br>
 					  bigquery/project/{project_id}/dataset/{dataset}/* <br>
 				       bigquery/project/{project_id}/dataset/{dataset}/{table} <br>
-				       bigquery/project/{project_id}/dataset/{dataset}/{table}/{column} </h6>
+				       bigquery/project/{project_id}/dataset/{dataset}/{table}/{column} </h5>
 				</span>
 			    <table>
 			     <tr>
@@ -167,7 +172,7 @@
 		         </table>
 			    {% if display_tag_history_option == 1 %}
 			      <p>&nbsp;</p>
-				<h3>Choose Tag History</h3>
+				<h3>Choose Tag History Option</h3>
 			    <table>
 			    <tr><td>
 				    {% if tag_config['tag_history'] == True %} 
@@ -181,7 +186,7 @@
 			    {% endif %}
 			    {% if display_tag_stream_option == 1 %}
 			      <p>&nbsp;</p>
-				<h3>Choose Tag Stream</h3>
+				<h3>Choose Tag Stream Option</h3>
 			    <table>
 			    <tr><td>
 				    {% if tag_config['tag_stream'] == True %} 

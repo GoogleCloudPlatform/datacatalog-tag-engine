@@ -1,5 +1,5 @@
 {
-    "template_id": "cities_311",
+    "template_id": "cities_311-50k",
     "project_id": "tag-engine-vanilla-337221",
     "region": "us-central1",
     "fields": [
@@ -70,7 +70,7 @@
             "query_expression": "select current_datetime"
         }
     ],
-    "included_uris": "bigquery/project/warehouse-337221/dataset/cities_311/*",
+    "included_uris": "bigquery/project/warehouse-337221/dataset/cities_311_50k/*",
     "excluded_uris": "",
     "refresh_mode": "ON_DEMAND",
     "tag_history": true,

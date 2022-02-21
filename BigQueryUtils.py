@@ -130,9 +130,7 @@ class BigQueryUtils:
 
         errors = self.client.insert_rows_json(table_id, row_to_insert)  
         
-        if errors == []:
-            print("inserted row.")
-        else:
+        if errors != []:
             print("encountered errors while inserting rows: {}".format(errors))
         
     # used by tag history feature

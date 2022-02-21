@@ -24,7 +24,7 @@ class Resources:
     @staticmethod
     def get_resources(included_uris, excluded_uris):
         
-        print("enter get_resources")
+        #print("enter get_resources")
         #print("included_uris: " + included_uris)
         
         included_resources = Resources.find_resources(included_uris)

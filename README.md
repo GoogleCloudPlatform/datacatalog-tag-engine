@@ -1,104 +1,78 @@
-Tag Engine is a self-service tool that makes it easier for Data Stewards to create business metadata in Google Cloud’s [Data Catalog](https://cloud.google.com/data-catalog/docs/concepts/overview). It enables them to create <b>bulk tags</b> for their BigQuery tables, columns, and views based on simple <b>SQL expressions</b> and <b>file path expressions</b>. It also refreshes their tags on a schedule or when triggered via the Tag Engine API. 
+Tag Engine is a self-service tool that makes it easier for Data Stewards to create bulk metadata in Google Cloud’s [Data Catalog](https://cloud.google.com/data-catalog/docs/concepts/overview). It enables them to create tags for their BigQuery tables, views and columns based on simple <b>SQL expressions</b> and <b>file path expressions</b>. It also keeps their tags up-to-date in accordance to a schedule. 
 <br><br>
-The tool comes with a friendly UI so that business users, who are often the Data Stewards in their organization, can be productive at tagging without much training. The screenshot below shows the creation of a dynamic tag in Tag Engine.  
+The tool comes with a UI and API. Data Stewards normally use the UI because it gives them the agility and autonomy to tag at scale whereas Data Engineers prefer to interact with Tag Engine through the API. The screenshot below shows the creation of a simple dynamic config using the UI.  
 <br><br>
 ![](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/screenshot.png)
 
-## Follow the steps below to set up Tag Engine on Google Cloud. 
+### Follow the steps below to deploy Tag Engine on Google Cloud. 
 
-### Step 1: (Required) Clone this repo:
+#### Step 1: Set the required environment variables:
+```
+export TAG_ENGINE_PROJECT=tag-engine-vanilla-337221
+export TAG_ENGINE_REGION=us-central
+export BQ_PROJECT=warehouse-337221
+export TAG_ENGINE_SA=${TAG_ENGINE_PROJECT}@appspot.gserviceaccount.com
+export TERRAFORM_SA=terraform@${TAG_ENGINE_PROJECT}.iam.gserviceaccount.com
+gcloud config set project $TAG_ENGINE_PROJECT
+```
+
+#### Step 2: Enable the following Google Cloud APIs:
+```
+gcloud services enable iam.googleapis.com
+gcloud services enable appengine.googleapis.com
+```
+
+#### Step 3: Clone this code repository:
 ```
 git clone https://github.com/GoogleCloudPlatform/datacatalog-tag-engine.git
 ```
 
-### Step 2: (Required) Create Firestore database:
-1. Go to GCP Console, select the project that you want to run Tag Engine from, and click on Firestore.
-2. In the Firestore Get Started page, click the SELECT NATIVE MODE button. 
-3. Choose a database location from the drop-down (e.g. us-east1).
-4. Click the CREATE DATABASE button. 
-5. Once your database has been created, you should see "Your database is ready to go. Just add data".  
+#### Step 4: Set the input variables:
+`datacatalog-tag-engine/deploy/variables.tf`: is used to define GCP projects, regions, and Google Cloud APIs, which are used during the deployment process.  
+`datacatalog-tag-engine/tagengine.ini`: is used to define the Cloud Task queues, which are used to process tag write and update requests. 
 
 
-### Step 3: (Required) Create Firestore indexes:
-#### Firestore indexes must be created prior to running Tag Engine. Creating the indexes can take a few minutes. 
-1. Run the create_indexes.py script as follows:
+#### Step 5: Create the database and deploy the application:
 ```
-cd datacatalog-tag-engine/setup
-python create_indexes.py $PROJECT_ID
-```
-2. Go to the Firestore console and click on the indexes tab. Make sure that all 12 indexes have been created before proceeding. You will see a green checkbox next to the index once it's ready.  
+gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --region=$TAG_ENGINE_REGION     
+gcloud app create --project=$TAG_ENGINE_PROJECT --region=$TAG_ENGINE_REGION
+gcloud app deploy datacatalog-tag-engine/app.yaml
 
-
-### Step 4: (Optional) Set up Tag Engine to tag assets in multiple GCP projects:
-1. Go to the IAM console and find the App Engine service account. This account is named [PROJECT_ID]@appspot.gserviceaccount.com. 
-2. Switch to the project you would like to grant Tag Engine access to so that you can create tags for data assets in that project. 
-3. Click Add member and enter the Service Account from step 1 into the New members field (e.g. [PROJECT_ID]@appspot.gserviceaccount.com). 
-4. Assign these 5 roles: BigQuery Job User, BigQuery Metadata Viewer, BigQuery Data Viewer, Data Catalog Tag Editor, and Data Catalog Viewer. 
-5. Click Save. 
-6. Repeat steps 2-5 for each project you would like Tag Engine to be able to access for tagging.  
-
-
-### Step 5: (Optional) Create an App Engine cloud task queue:
-#### The cloud task queue is used to run scheduled dynamic tag updates. This step is only required if you want Tag Engine schedule your dynamic table updates. 
-```
-gcloud config set project $PROJECT_ID
-gcloud tasks queues create tag-engine-queue
-gcloud tasks queues describe tag-engine-queue
 ```
 
-### Step 6: (Optional) Set config variables:
-#### This step is required if you want Tag Engine to schedule your dynamic tag updates and/or you want Tag Engine to propagate your tags from tables to views.  
-
-Open `tagengine.ini` and set the `PROJECT` to your App Engine project id, `REGION` to the region where you created your cloud task queue in step 5, and `QUEUE_NAME` to the cloud tasks queue name. The `ZETA_URL` variable should be set to your zeta cloud function (covered in step 8). You only need to set the `ZETA_URL` variable if you are using tag propagation. 
-
-```
-PROJECT = tag-engine-283315
-REGION = us-east1
-QUEUE_NAME = tag-engine-queue
-ZETA_URL = https://us-central1-tag-engine-283315.cloudfunctions.net/zeta
+#### Step 6: Create a service account for running the Terraform scripts:
+```                
+gcloud iam service-accounts create terraform
+gcloud iam service-accounts keys create key.json --iam-account=$TERRAFORM_SA 
+gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT --member=serviceAccount:${TERRAFORM_SA} --role=roles/owner
+gcloud projects add-iam-policy-binding $BQ_PROJECT --member=serviceAccount:${TERRAFORM_SA} --role=roles/owner
+gcloud auth activate-service-account $TERRAFORM_SA --key-file=/tmp/key.json
 ```
 
-### Step 7: (Optional) Create cron jobs through Cloud Scheduler: 
-#### This step is only required if you want Tag Engine to either schedule your dynamic tag updates or run tag propagation or both. 
+#### Step 7: Run the Terraform scripts:
+```  
+cd datacatalog-tag-engine/deploy
+terraform init
+terraform apply
+```  
+
+#### Step 8:  Delete the Terraform service account:
 ```
-gcloud scheduler jobs create app-engine run-ready-jobs --schedule='every 60 minutes' --relative-url "/run_ready_jobs"
-gcloud scheduler jobs create app-engine clear-stale-jobs --schedule='every 30 minutes' --relative-url "/clear_stale_jobs"
-gcloud scheduler jobs create app-engine run-propagation --schedule='every 60 minutes' --relative-url "/run_propagation"
+gcloud iam service-accounts delete $TERRAFORM_SA
+rm /tmp/key.json
 ```
 
-### Step 8: (Optional) Deploy Zeta cloud function:
-#### The cloud function is used to analyze BQ views for tag propagation.  This step is only required if you want Tag Engine to propagate your tags from tables to views.  
+#### Step 9: Launch the Tag Engine UI:
 ```
-cd tag-engine/zeta
-gcloud functions deploy zeta --trigger-http --entry-point com.google.cloud.sa.tagengine.service.zeta.ZetaSqlParserFunction \
---runtime java11 --memory 1GB --allow-unauthenticated
-```
-
-### Step 9: (Required) Deploy Tag Engine:
-```
-gcloud app deploy
+gcloud auth login
 gcloud app browse
 ```
 
-### Step 10: (Required) Configure Tag Engine settings:
+#### Troubleshooting:
 
-On the Tag Engine landing page, follow the links in the Tag Engine settings section to configure your default tag template, coverage report, tag history, and tag propagation. There are instructions on each page to guide you through the different settings. 
-
-
-### Troubleshooting:
-
-The Tag Engine UI doesn't display the details of an error. If you encounter an error, an generic error message will show up on the page. In order to see the details of the error, you will need to stream the app engine log as follows:
+Consult the App Engine logs if you encounter an error while running Tag Engine:
 
 ```
 gcloud app logs tail -s default
 ```
 
-### Cleaning up:
-#### When you are done using Tag Engine, you should delete the task queue and cron jobs as follows:
-```
-gcloud tasks queues delete tag-engine
-gcloud scheduler jobs delete run-ready-jobs
-gcloud scheduler jobs delete clear-stale-jobs
-gcloud scheduler jobs delete run-propagation
-```
- 

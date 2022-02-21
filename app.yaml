@@ -1,4 +1,4 @@
-# Copyright 2020 Google, LLC.
+# Copyright 2020-2022 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,10 @@
 runtime: python38
 
 #automatic_scaling:
-  #instance_class: F1 
+#instance_class: F4 
+
+#use basic scaling for creating 5K or more tags in bulk
 instance_class: B4
-manual_scaling:
-  instances: 20
+basic_scaling:
+  max_instances: 100
+  idle_timeout: 10m
