@@ -399,9 +399,9 @@ class TagEngineUtils:
                     delta = 24
                 
             if refresh_unit == 'hours':
-                next_run = datetime.utcnow() + datetime.timedelta(hours=delta)
+                next_run = datetime.utcnow() + timedelta(hours=delta)
             if refresh_unit == 'days':
-                next_run = datetime.utcnow() + datetime.timedelta(days=delta)
+                next_run = datetime.utcnow() + timedelta(days=delta)
             
             doc_ref.set({
                 'tag_uuid': tag_uuid,
