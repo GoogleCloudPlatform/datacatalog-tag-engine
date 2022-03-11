@@ -1,11 +1,14 @@
 import json
 import time
+import argparse
 from datetime import timedelta
+from datetime import datetime
 from google.cloud import datacatalog
+from google.cloud import bigquery
 
 dc = datacatalog.DataCatalogClient()
    
-def get_tag_count(bq_project, bq_dataset, tag_template_project, tag_template1, tag_template2=None):
+def search_catalog(bq_project, bq_dataset, tag_template_project, tag_template1, tag_template2=None):
     
     scope = datacatalog.SearchCatalogRequest.Scope()
     scope.include_project_ids.append(bq_project)
@@ -15,7 +18,11 @@ def get_tag_count(bq_project, bq_dataset, tag_template_project, tag_template1, t
     request.scope = scope
     
     parent = 'parent:' + bq_project + '.' + bq_dataset
-    tag = 'tag:' + tag_template_project + '.' + tag_template1 + ' or tag:' + tag_template_project + '.' + tag_template2
+    
+    if tag_template2 != None:
+        tag = 'tag:' + tag_template_project + '.' + tag_template1 + ' or tag:' + tag_template_project + '.' + tag_template2
+    else:
+        tag = 'tag:' + tag_template_project + '.' + tag_template1
     
     query = parent + ' ' + tag
     print('query string: ' + query)
@@ -28,27 +35,74 @@ def get_tag_count(bq_project, bq_dataset, tag_template_project, tag_template1, t
     start_time = time.time()
 
     for result in dc.search_catalog(request):
-        print('result: ' + str(result))
+        #print('result: ' + str(result))
         num_results += 1
         print(str(num_results))
     
-    print('tagged assets found: ' + str(num_results))
+    print('tagged assets count: ' + str(num_results))
     
     end_time = time.time()
     run_time = (end_time - start_time)
     td = timedelta(seconds=run_time)
-    print('runtime:', td)
+    print('search catalog runtime:', td)
+
+
+def list_tags(bq_project, bq_dataset, tag_template_project, tag_template):
     
+    with open('logs/list_' + bq_dataset + '.out', 'w') as log:
+        log.write('started scanning ' + bq_dataset + ' at ' + datetime.now().strftime('%m/%d/%Y, %H:%M:%S') + '\n')
+    
+        bq = bigquery.Client()
+        sql = 'select table_name from ' + bq_project + '.' + bq_dataset + '.INFORMATION_SCHEMA.TABLES'
+        query_job = bq.query(sql)  
+        rows = query_job.result()  
+
+        for row in rows:
+            table_name = row.table_name
+            #print('processing ' + table_name)
+    
+            resource = '//bigquery.googleapis.com/projects/' + bq_project + '/datasets/' + bq_dataset + '/tables/' + table_name
+            #print("resource: " + resource)
+    
+            request = datacatalog.LookupEntryRequest()
+            request.linked_resource=resource
+            entry = dc.lookup_entry(request)
+        
+            page_result = dc.list_tags(parent=entry.name)
+            
+            found_tag = False
+            
+            for tag in page_result:
+                index = tag.template.rfind('/')
+                attached_template = tag.template[index+1:]   
+                #print('attached template: ' + attached_template)
+                
+                if attached_template == tag_template:
+                    found_tag = True
+                    break
+                
+            if found_tag != True:
+                log.write(table_name + ' is untagged \n') 
+        
+        
+        log.write('finished scanning at ' + datetime.now().strftime('%m/%d/%Y, %H:%M:%S') + '\n')
         
 if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser(description='runs tag_checks.py')
+    parser.add_argument('option', help='Choose search or list')
+    args = parser.parse_args()
+    
     bq_project = 'warehouse-337221'
-    bq_dataset = 'cities_311'
+    bq_dataset = 'austin_311_50k'
     
     tag_template_project = 'tag-engine-vanilla-337221'
-    tag_template1 = 'cities_311'
-    tag_template2 = 'data_governance'
+    tag_template1 = 'data_governance_50k'
+    #tag_template2 = 'data_governance'
     
-    get_tag_count(bq_project, bq_dataset, tag_template_project, tag_template1, tag_template2)
+    if args.option == 'search':
+        search_catalog(bq_project, bq_dataset, tag_template_project, tag_template1)
     
+    if args.option == 'list':
+        list_tags(bq_project, bq_dataset, tag_template_project, tag_template1)
  

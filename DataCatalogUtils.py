@@ -521,17 +521,14 @@ class DataCatalogUtils:
                         response = self.client.update_tag(tag=tag)
                     except Exception as e:
                         print('Error occurred during tag update: ', e)
-                        
-                    #store.write_log_entry(constants.TAG_UPDATED, constants.BQ_RES, uri, column, "STATIC", tag_uuid, tag_id, template_uuid)
+                        store.write_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, e)
                 else:
                     try:
                         response = self.client.create_tag(parent=entry.name, tag=tag)
                     except Exception as e:
                         print('Error occurred during tag create: ', e)
+                        store.write_error(constants.TAG_CREATED, uri, column, tag_uuid, template_uuid, e)
                         
-                    tag_id = response.name
-                    #store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, uri, column, "STATIC", tag_uuid, tag_id, template_uuid)
-                
                 if tag_history:
                     bqu = bq.BigQueryUtils()
                     template_fields = self.get_template()
@@ -637,8 +634,8 @@ class DataCatalogUtils:
                     response = self.client.update_tag(tag=tag)
                 except Exception as e:
                     print('Error occurred during tag update: ', e)
+                    store.write_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, e)
                 
-                #store.write_log_entry(constants.TAG_UPDATED, constants.BQ_RES, uri, column, "DYNAMIC", tag_uuid, tag_id, template_uuid)
             else:
                 print('creating tag')
                 
@@ -646,10 +643,8 @@ class DataCatalogUtils:
                     response = self.client.create_tag(parent=entry.name, tag=tag)
                 except Exception as e:
                     print('Error occurred during tag create: ', e)
-                    
-                tag_id = response.name
-                #store.write_log_entry(constants.TAG_CREATED, constants.BQ_RES, uri, column, "DYNAMIC", tag_uuid, tag_id, template_uuid)
-            
+                    store.write_error(constants.TAG_CREATED, uri, column, tag_uuid, template_uuid, e)
+                
             if tag_history:
                 bqu = bq.BigQueryUtils()
                 template_fields = self.get_template()

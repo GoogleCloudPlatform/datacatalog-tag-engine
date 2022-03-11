@@ -467,14 +467,19 @@ class TagEngineUtils:
         #print('Wrote log entry.')
         
     
-    def write_error_entry(self, msg):
+    def write_error(self, op, uri, col, tag_uuid, template_uuid, msg):
                     
-        error_entry = {}
-        error_entry['ts'] = datetime.utcnow()
-        error_entry['msg'] = msg
+        error = {}
+        error['ts'] = datetime.utcnow()
+        error['op'] = op
+        error['uri'] = uri
+        error['col'] = col
+        error['tag_uuid'] = tag_uuid
+        error['template_uuid'] = template_uuid
+        error['msg'] = msg
         
-        self.db.collection('errors').add(error_entry)
-        print('Wrote error entry.')
+        self.db.collection('errors').add(error)
+        #print('Wrote error entry.')
     
     
     def read_tag_configs(self, template_id, project_id, region):

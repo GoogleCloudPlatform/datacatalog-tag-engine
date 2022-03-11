@@ -18,7 +18,8 @@ runtime: python38
 #instance_class: F4 
 
 #use basic scaling for creating 5K or more tags in bulk
-instance_class: B4
+#use B4_1G when creating tags for large configs (500K+ tags)
+instance_class: B4_1G
 basic_scaling:
-  max_instances: 100
+  max_instances: 200
   idle_timeout: 10m

@@ -86,9 +86,9 @@ class JobManager:
         is_success = False
         is_failed = False
         
-        tasks_completed = self._get_tasks_completed(job_uuid)
-        tasks_failed = self._get_tasks_failed(job_uuid)
-        
+        tasks_completed = self._get_tasks_completed(self.db.collection('tasks'), job_uuid, 0)
+        tasks_failed = self._get_tasks_failed(self.db.collection('tasks'), job_uuid, 0)
+                
         tasks_ran = tasks_completed + tasks_failed
         
         job_ref = self.db.collection('jobs').document(job_uuid)
@@ -140,8 +140,8 @@ class JobManager:
         
         print('*** enter update_job_failed ***')
         
-        tasks_completed = self._get_tasks_completed(job_uuid)
-        tasks_failed = self._get_tasks_failed(job_uuid)
+        tasks_completed = self._get_tasks_completed(self.db.collection('tasks'), job_uuid, 0)
+        tasks_failed = self._get_tasks_failed(self.db.collection('tasks'), job_uuid, 0)
         
         tasks_ran = tasks_completed + tasks_failed
                 
@@ -239,37 +239,57 @@ class JobManager:
             job_dict = job_doc.to_dict()
             return job_dict['task_count']
         
-        
-    def _get_tasks_completed(self, job_uuid):
-        
-        print('*** enter _get_tasks_completed ***')
-        
-        tasks_ref = self.db.collection('tasks')
-        task_docs = tasks_ref.where('job_uuid', '==', job_uuid).where('status', '==', 'COMPLETED').stream()
-        
-        tasks_completed = 0
-        
-        for task_doc in task_docs:
-            tasks_completed += 1
-        
-        return tasks_completed
-        
-    
-    def _get_tasks_failed(self, job_uuid):
-        
-        print('*** enter _get_tasks_failed ***')
-        
-        tasks_ref = self.db.collection('tasks')
-        task_docs = tasks_ref.where('job_uuid', '==', job_uuid).where('status', '==', 'FAILED').stream()
-        
-        tasks_failed = 0
-        
-        for task_doc in task_docs:
-            tasks_failed += 1
-        
-        return tasks_failed
-    
+    def count_collection(coll_ref, count, cursor=None):
 
+        if cursor is not None:
+            docs = [snapshot.reference for snapshot
+                    in coll_ref.limit(1000).order_by("__name__").start_after(cursor).stream()]
+        else:
+            docs = [snapshot.reference for snapshot
+                    in coll_ref.limit(1000).order_by("__name__").stream()]
+
+        count = count + len(docs)
+
+        if len(docs) == 1000:
+            return count_collection(coll_ref, count, docs[999].get())
+        else:
+            print(count)
+
+
+    def _get_tasks_completed(self, tasks_ref, job_uuid, count, cursor=None):
+        
+        if cursor is not None:
+            docs = [snapshot.reference for snapshot
+                    in tasks_ref.where('job_uuid', '==', job_uuid).where('status', '==', 'COMPLETED').limit(1000).order_by("__name__").start_after(cursor).stream()]
+        else:
+            docs = [snapshot.reference for snapshot
+                    in tasks_ref.where('job_uuid', '==', job_uuid).where('status', '==', 'COMPLETED').limit(1000).order_by("__name__").stream()]
+                            
+        count = count + len(docs)
+        
+        if len(docs) == 1000:
+            return self._get_tasks_completed(tasks_ref, job_uuid, count, docs[999].get())
+        else:
+            return count
+        
+
+    def _get_tasks_failed(self, tasks_ref, job_uuid, count, cursor=None):
+        
+        if cursor is not None:
+            docs = [snapshot.reference for snapshot
+                    in tasks_ref.where('job_uuid', '==', job_uuid).where('status', '==', 'FAILED').limit(1000).order_by("__name__").start_after(cursor).stream()]
+        else:
+            docs = [snapshot.reference for snapshot
+                    in tasks_ref.where('job_uuid', '==', job_uuid).where('status', '==', 'FAILED').limit(1000).order_by("__name__").stream()]
+                            
+        count = count + len(docs)
+        
+        if len(docs) == 1000:
+            return self._get_tasks_failed(tasks_ref, job_uuid, count, docs[999].get())
+        else:
+            return count
+    
+    
 if __name__ == '__main__':
 
     config = configparser.ConfigParser()

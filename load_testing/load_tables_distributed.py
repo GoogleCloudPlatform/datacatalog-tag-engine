@@ -1,6 +1,9 @@
 import json
 import time
+import argparse
+from datetime import datetime
 from google.cloud import bigquery
+from google.cloud.exceptions import NotFound
 from google.cloud import tasks_v2
     
     
@@ -44,9 +47,67 @@ def create_task(project, queue_region, queue_name, url, src_table, dest_project,
     
     except Exception as e:
         print('Error: could not create task ', e)
-        
+    
 
+def get_table_count(dest_project, dest_dataset):
+    
+    bq = bigquery.Client()
+    sql = 'select count(*) as count from ' + dest_project + '.' + dest_dataset + '.INFORMATION_SCHEMA.TABLES'
+    query_job = bq.query(sql)  
+    rows = query_job.result()
+    
+    for row in rows:
+        count = row.count
+    
+    return count
+
+
+def get_table_list(dest_project, dest_dataset):
+    
+    tables = set()
+    
+    bq = bigquery.Client()
+    sql = 'select table_name from ' + dest_project + '.' + dest_dataset + '.INFORMATION_SCHEMA.TABLES'
+    query_job = bq.query(sql)  
+    rows = query_job.result()
+    
+    for row in rows:
+        tables.add(row.table_name)
+    
+    return tables
+    
+        
+def find_missing(dest_project, dest_dataset, table_prefix, num_copies):
+    
+    with open('logs/missing_' + dest_dataset + '.out', 'w') as log:
+    
+        log.write('started find in ' + dest_dataset + ' at ' + datetime.now().strftime('%m/%d/%Y, %H:%M:%S') + '\n')
+        
+        count = get_table_count(dest_project, dest_dataset)
+        
+        log.write(dest_dataset + ' has ' + str(count) + ' tables\n')
+        
+        if count == num_copies:
+            log.write(dest_dataset + ' has the expected number of tables \n')
+            return
+        
+        tables = get_table_list(dest_project, dest_dataset)
+        
+        for i in range(0, num_copies):
+        
+            dest_table = table_prefix + '_' + str(i)
+        
+            if dest_table not in tables:
+                log.write(dest_table + ' is missing\n')
+
+        log.write('finished find at ' + datetime.now().strftime('%m/%d/%Y, %H:%M:%S') + '\n')
+    
+    
 if __name__ == '__main__':
+    
+    parser = argparse.ArgumentParser(description='runs load_tables_distributed.py')
+    parser.add_argument('option', help='Choose load or find')
+    args = parser.parse_args()
     
     project = 'warehouse-337221'
     queue_region = 'us-central1'
@@ -58,6 +119,11 @@ if __name__ == '__main__':
     dest_dataset = 'austin_311_500k'   # change this each run
     num_copies = 500000                # change this each run
     step = 200                       # keep this small because a function times-out after 9 minutes
-    load_tables(project, queue_region, queue_name, url, src_uri, dest_project, dest_dataset, table_prefix, num_copies, step)    
+    
+    if args.option == 'load':
+        load_tables(project, queue_region, queue_name, url, src_uri, dest_project, dest_dataset, table_prefix, num_copies, step) 
+    
+    if args.option == 'find':
+        find_missing(dest_project, dest_dataset, table_prefix, num_copies)   
 
 
