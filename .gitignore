@@ -1,3 +1,4 @@
-# Configuration files:
+deploy/.terraform*
+deploy/terraform.tfstate*
 deploy/variables.tfvars
 tagengine.ini
