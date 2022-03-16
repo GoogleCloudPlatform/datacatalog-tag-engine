@@ -12,6 +12,8 @@ resource "google_firestore_index" "index-1" {
     field_path = "config_status"
     order      = "ASCENDING"
   }
+  
+  depends_on = ["gcp_services_tag_engine"]
 }
 
 resource "google_firestore_index" "index-2" {
@@ -38,6 +40,8 @@ resource "google_firestore_index" "index-2" {
     field_path = "included_uris_hash"
     order      = "ASCENDING"
   }
+  
+  depends_on = ["gcp_services_tag_engine"]
 }
 
 resource "google_firestore_index" "index-3" {
@@ -64,6 +68,8 @@ resource "google_firestore_index" "index-3" {
       field_path = "next_run"
       order      = "ASCENDING"
     }
+	
+	depends_on = ["gcp_services_tag_engine"]
 }
 
 resource "google_firestore_index" "index-4" {
@@ -85,6 +91,8 @@ resource "google_firestore_index" "index-4" {
       field_path = "ts"
       order      = "DESCENDING"
     }
+	
+	depends_on = ["gcp_services_tag_engine"]
 }
 
 resource "google_firestore_index" "index-5" {
@@ -106,4 +114,6 @@ resource "google_firestore_index" "index-5" {
       field_path = "uri"
       order      = "ASCENDING"
     }
+	
+	depends_on = ["gcp_services_tag_engine"]
 }
