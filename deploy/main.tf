@@ -62,8 +62,8 @@ resource "google_project_iam_member" "data_catalog_viewer_binding" {
 # Cloud task queues
 resource "google_cloud_tasks_queue" "injector_queue" {
   name = "tag-engine-injector-queue"
-  location = var.task_queue_region
-  project = var.app_engine_subregion
+  location = var.app_engine_subregion
+  project = var.tag_engine_project
 
   stackdriver_logging_config {
     sampling_ratio = 0.9
@@ -74,8 +74,8 @@ resource "google_cloud_tasks_queue" "injector_queue" {
 
 resource "google_cloud_tasks_queue" "work_queue" {
   name = "tag-engine-work-queue"
-  location = var.task_queue_region
-  project = var.app_engine_subregion
+  location = var.app_engine_subregion
+  project = var.tag_engine_project
 
   stackdriver_logging_config {
     sampling_ratio = 0.9
