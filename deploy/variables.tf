@@ -1,11 +1,9 @@
 variable "tag_engine_project" {
     type = string
-    default = "tag-engine-vanilla-337221"
 }
 
 variable "bigquery_project" {
      type = string
-     default = "warehouse-337221"
 }
 
 variable "app_engine_region" {
