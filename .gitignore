@@ -1,0 +1,3 @@
+# Terraform artifacts
+deploy/.terraform*
+deploy/terraform.tfstate*

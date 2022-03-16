@@ -1,5 +1,10 @@
-provider "google" {
-  version = "~> 3.65"
+terraform {
+  required_providers {
+    google = {
+      source = "hashicorp/google"
+      version = "3.65.0"
+    }
+  }
 }
 
 resource "google_project_service" "tag_engine_project" {
