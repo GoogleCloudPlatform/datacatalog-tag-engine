@@ -27,7 +27,7 @@ resource "google_firestore_index" "index-2" {
   }
 
   fields {
-    field_path = "config_status"
+    field_path = "included_uris_hash"
     order      = "ASCENDING"
   }
 
@@ -37,7 +37,7 @@ resource "google_firestore_index" "index-2" {
   }
 
   fields {
-    field_path = "included_uris_hash"
+    field_path = "config_status"
     order      = "ASCENDING"
   }
 
