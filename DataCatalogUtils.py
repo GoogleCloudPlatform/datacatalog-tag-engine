@@ -270,11 +270,11 @@ class DataCatalogUtils:
                 # SQL query returned nothing, log error in Firestore
                 error_exists = True
                 print('query_str returned nothing, writing error entry')
-                store.write_error_entry('sql returned nothing: ' + query_str)
+                store.write_tag_value_error('sql returned nothing: ' + query_str)
         
-        except ValueError:
+        except Exception as e:
             error_exists = True
-            store.write_error_entry('invalid query parameter(s): ' + query_str)
+            store.write_tag_value_error('invalid query parameter(s): ' + query_str + ' produced error ' + str(e))
         
         #print('field_value: ' + str(field_value))
         
@@ -321,7 +321,7 @@ class DataCatalogUtils:
         except ValueError:
             error_exists = True
             print("cast error, writing error entry")
-            store.write_error_entry('cast error: ' + query_str)
+            store.write_tag_value_error('cast error in sql query: ' + query_str)
         
         return tag, error_exists
     
@@ -521,13 +521,13 @@ class DataCatalogUtils:
                         response = self.client.update_tag(tag=tag)
                     except Exception as e:
                         print('Error occurred during tag update: ', e)
-                        store.write_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, e)
+                        store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, e)
                 else:
                     try:
                         response = self.client.create_tag(parent=entry.name, tag=tag)
                     except Exception as e:
                         print('Error occurred during tag create: ', e)
-                        store.write_error(constants.TAG_CREATED, uri, column, tag_uuid, template_uuid, e)
+                        store.write_tag_op_error(constants.TAG_CREATED, uri, column, tag_uuid, template_uuid, e)
                         
                 if tag_history:
                     bqu = bq.BigQueryUtils()
@@ -542,7 +542,7 @@ class DataCatalogUtils:
             
             except ValueError:
                 print("ValueError: create_static_tags failed due to invalid parameters.")
-                store.write_error_entry('invalid value: "' + field_value + '" provided for field "' + field_id \
+                store.write_tag_value_error('invalid value: "' + field_value + '" provided for field "' + field_id \
                                         + '" of type ' + field_type) 
                 creation_status = constants.ERROR
             
@@ -634,7 +634,7 @@ class DataCatalogUtils:
                     response = self.client.update_tag(tag=tag)
                 except Exception as e:
                     print('Error occurred during tag update: ', e)
-                    store.write_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, e)
+                    store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, e)
                 
             else:
                 print('creating tag')
@@ -643,7 +643,7 @@ class DataCatalogUtils:
                     response = self.client.create_tag(parent=entry.name, tag=tag)
                 except Exception as e:
                     print('Error occurred during tag create: ', e)
-                    store.write_error(constants.TAG_CREATED, uri, column, tag_uuid, template_uuid, e)
+                    store.write_tag_op_error(constants.TAG_CREATED, uri, column, tag_uuid, template_uuid, e)
                 
             if tag_history:
                 bqu = bq.BigQueryUtils()

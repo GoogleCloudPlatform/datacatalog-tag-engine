@@ -1135,9 +1135,8 @@ def _split_work():
     tag_uuid = json['tag_uuid']
     
     config = teu.read_tag_config(tag_uuid)
-    uris = res.Resources.get_resources(config['included_uris'], config['excluded_uris'])
-    
-    print('uris: ' + str(uris))
+    uris = list(res.Resources.get_resources(config['included_uris'], config['excluded_uris']))
+    #print('uris: ' + str(uris))
 
     jm.record_num_tasks(job_uuid, len(uris))
     jm.update_job_running(job_uuid) 
@@ -1157,11 +1156,12 @@ def _run_task():
     job_uuid = json['job_uuid']
     tag_uuid = json['tag_uuid']
     uri = json['uri']
+    shard_uuid = json['shard_uuid']
     task_uuid = json['task_uuid']
     
-    print('task_uuid: ' + task_uuid)
+    #print('task_uuid: ' + task_uuid)
     
-    tm.update_task_status(task_uuid, 'RUNNING')
+    tm.update_task_status(shard_uuid, task_uuid, 'RUNNING')
     
     # retrieve tag config and template
     tag_config = teu.read_tag_config(tag_uuid)
@@ -1182,7 +1182,7 @@ def _run_task():
                                                         tag_config['template_uuid'], tag_config['tag_history'], \
                                                         tag_config['tag_stream'])
     if creation_status == constants.SUCCESS:
-        tm.update_task_status(task_uuid, 'COMPLETED')
+        tm.update_task_status(shard_uuid, task_uuid, 'COMPLETED')
         is_success, is_failed, pct_complete = jm.calculate_job_completion(job_uuid)
         
         if is_success:
@@ -1195,7 +1195,7 @@ def _run_task():
         
         resp = jsonify(success=True)
     else:
-        tm.update_task_status(task_uuid, 'FAILED')
+        tm.update_task_status(shard_uuid, task_uuid, 'FAILED')
         jm.update_job_failed(job_uuid)
         teu.update_config_status(tag_uuid, 'ERROR')
         resp = jsonify(success=False)

@@ -18,7 +18,7 @@ runtime: python38
 #instance_class: F4 
 
 #use basic scaling for creating 5K or more tags in bulk
-#use B4_1G when creating tags for large configs (500K+ tags)
+#use B4_1G when creating tags for large configs, up to 200 instances (500K+ tags)
 instance_class: B4_1G
 basic_scaling:
   max_instances: 200

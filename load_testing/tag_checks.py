@@ -94,10 +94,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     bq_project = 'warehouse-337221'
-    bq_dataset = 'austin_311_50k'
+    bq_dataset = 'austin_311_500k'
     
     tag_template_project = 'tag-engine-vanilla-337221'
-    tag_template1 = 'data_governance_50k'
+    tag_template1 = 'data_governance_500k'
     #tag_template2 = 'data_governance'
     
     if args.option == 'search':
