@@ -1,6 +1,7 @@
 deploy/.terraform*
 deploy/terraform.tfstate*
 deploy/variables.tfvars
+tagengine.ini
 datacatalog-templates
 .idea
 .envrc

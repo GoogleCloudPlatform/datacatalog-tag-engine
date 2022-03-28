@@ -34,3 +34,6 @@ examples/
 
 # Local virtual env
 venv/
+
+# Make sure the ini file does get uploaded (even if it's gitignored)
+!tagengine.ini
