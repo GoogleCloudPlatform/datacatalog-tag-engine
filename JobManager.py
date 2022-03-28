@@ -165,8 +165,8 @@ class JobManager:
         
         job = self.db.collection('jobs').document(job_uuid).get()
 
-        if doc.exists:
-            job_dict = doc.to_dict()
+        if job.exists:
+            job_dict = job.to_dict()
             return job_dict
                 
 

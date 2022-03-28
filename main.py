@@ -521,7 +521,7 @@ def process_update_static_config():
     excluded_uris = request.form['excluded_uris'].rstrip()
     action = request.form['action']
     
-    update_status = 0
+    job_creation = constants.SUCCESS
     
     #print("action: " + str(action))
 
@@ -578,10 +578,7 @@ def process_update_static_config():
         else:
             job_uuid = None
 	
-    
-        if job_uuid != None: 
-            job_creation = constants.SUCCESS
-        else:
+        if job_uuid == None: 
             job_creation = constants.ERROR
          
     template_fields = dcu.get_template()  
@@ -614,7 +611,7 @@ def process_update_dynamic_config():
     refresh_unit = request.form['refresh_unit']
     action = request.form['action']
     
-    update_status = 0
+    job_creation = constants.SUCCESS
     
     #print('old_tag_uuid: ' + old_tag_uuid)
     #print("action: " + str(action))
@@ -671,9 +668,7 @@ def process_update_dynamic_config():
         
         job_uuid = jm.create_job(new_tag_uuid)
     
-        if job_uuid != None: 
-            job_creation = constants.SUCCESS
-        else:
+        if job_uuid == None: 
             job_creation = constants.ERROR
              
     template_fields = dcu.get_template()  

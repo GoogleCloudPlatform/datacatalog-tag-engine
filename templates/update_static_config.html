@@ -159,15 +159,15 @@
 				</span>
 			    <table>
 			     <tr>
-			    <td>Included URIs:&nbsp;&nbsp;
-				<textarea name="included_uris" style="align-content:left; overflow:auto;">{{ tag_config['included_uris'] }}
-				</textarea></td>
+			    <td><span style="color:red;">*</span>Included URIs:&nbsp;&nbsp;
+					<input type="text" value="{{ tag_config['included_uris'] }}" name="included_uris" style="align-content:left; width: 700px; overflow:auto;"/>
+			     </td>
 			     </tr>
 			     <tr><td>&nbsp;</td></tr>
 				<tr>
-			    <td>Excluded URIs:&nbsp;
-		          <textarea name="excluded_uris" style="align-content:left; overflow:auto;">{{ tag_config['excluded_uris'] }}
-		          </textarea></td>
+ 			    <td>&nbsp;Excluded URIs:&nbsp;&nbsp;
+					<input type="text" value="{{ tag_config['excluded_uris'] }}" name="excluded_uris" style="align-content:left; width: 700px; overflow:auto;"/>	
+			    </td>
 		         </tr>
 		         </table>
 			    {% if display_tag_history_option == 1 %}
