@@ -9,9 +9,9 @@
 	   <h1>Tag Engine</h1>
         </div>
 	   <div class="header">
-	   <h2>Update Dynamic Tag using {{ template_id }}</h2>
+	   <h2>Update dynamic tag config with {{ template_id }}</h2>
  	   <span style="color:#9d9a9a;">
- 		   <h5>Make changes to your dynamic tag config below. A checked box indicates the field is part of this tag config. You can add new fields and/or remove existing ones from the tag config. <br>You can also edit the query expression, included URIs, excluded URIs, refresh frequency, and tag history. </h5>
+ 		   <h5>Make changes to your dynamic config below. A checked box indicates the field is part of this tag config. You can add new fields and/or remove existing ones from the tag config. <br>You can also edit the query expression, included URIs, excluded URIs, refresh frequency, and tag history. </h5>
  	  </span>
 	   </div>
 	  
@@ -79,13 +79,15 @@
 			      {% if current_field['field_id'] == field['field_id'] %}
 		           {% set ns.found = true %}
 				   
-				       <input type="text" value="{{ current_field['query_expression'] }}" name="{{ field['field_id'] }}" style="width: 700px;padding: 3px;">	
-
+					   <textarea name="{{ field['field_id'] }}" style="align-content:left; width: 700px; overflow:auto;">{{ current_field['query_expression'] }}
+					   </textarea>
+				       	
  					 {% endif %}
  				    {% endfor %}
 			    
 			   {% if ns.found == false %}
-	                <input type="text" value="" name="{{ field['field_id'] }}" style="width: 700px;padding: 3px;">
+					<textarea name="{{ field['field_id'] }}" style="align-content:left; width: 700px; overflow:auto;">
+					</textarea>
 			   {% endif %}
 				
 				</td>
@@ -96,23 +98,24 @@
 			   <h3>Enter URIs</h3>
 		 	   <span style="color:#9d9a9a;">
 		 		   <h5>Specify URIs for resources to include in or exclude from your dynamic tag. Wildcards are allowed in the table name. <br><br>
-					  Supported URIs: <br>
-					  bigquery/project/{project_id}/* <br>
-					  bigquery/project/{project_id}/dataset/{dataset}/* <br>
+					   Supported URIs: <br>
+					   bigquery/project/{project_id}/* <br>
+					   bigquery/project/{project_id}/dataset/{dataset}/* <br>
 				       bigquery/project/{project_id}/dataset/{dataset}/{table} <br>
 				       bigquery/project/{project_id}/dataset/{dataset}/{table}/{column} </h5>
 				</span>
 			    <table>
 			     <tr>
-			    <td>Included URIs:&nbsp;&nbsp;
-			    	   <textarea name="included_uris" style="align-content:left; width: 700px; overflow:auto;">{{ tag_config['included_uris'] }}
-			    	   </textarea></td>
+			    <td><span style="color:red;">*</span>Included URIs:&nbsp;&nbsp;
+					
+					<input type="text" value="{{ tag_config['included_uris'] }}" name="included_uris" style="align-content:left; width: 700px; overflow:auto;"/>
+			     </td>
 			     </tr>
 			     <tr><td>&nbsp;</td></tr>
  				<tr>
- 			    <td>Excluded URIs:&nbsp;
-			    	   <textarea name="excluded_uris" style="align-content:left; width: 700px; overflow:auto;">{{ tag_config['excluded_uris'] }}
-			    	   </textarea>
+ 			    <td>&nbsp;Excluded URIs:&nbsp;&nbsp;
+					
+					   <input type="text" value="{{ tag_config['excluded_uris'] }}" name="excluded_uris" style="align-content:left; width: 700px; overflow:auto;"/>	
 			    </td>
  		         </tr>
 		        </table>
