@@ -89,7 +89,7 @@ def list_tags(bq_project, bq_dataset, tag_template_project, tag_template):
         
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description='runs tag_checks.py')
+    parser = argparse.ArgumentParser(description='runs check_tags.py')
     parser.add_argument('option', help='Choose search or list')
     args = parser.parse_args()
     
@@ -97,12 +97,11 @@ if __name__ == '__main__':
     bq_dataset = 'austin_311_500k'
     
     tag_template_project = 'tag-engine-vanilla-337221'
-    tag_template1 = 'data_governance_500k'
-    #tag_template2 = 'data_governance'
-    
+    tag_template = 'data_governance_500k'
+
     if args.option == 'search':
-        search_catalog(bq_project, bq_dataset, tag_template_project, tag_template1)
+        search_catalog(bq_project, bq_dataset, tag_template_project, tag_template)
     
     if args.option == 'list':
-        list_tags(bq_project, bq_dataset, tag_template_project, tag_template1)
+        list_tags(bq_project, bq_dataset, tag_template_project, tag_template)
  

@@ -520,14 +520,36 @@ class DataCatalogUtils:
                     try:
                         response = self.client.update_tag(tag=tag)
                     except Exception as e:
-                        print('Error occurred during tag update: ', e)
-                        store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, e)
+                        msg = 'Error occurred during tag update after sleeping: ' + str(e)
+                        store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, msg)
+                        
+                        # sleep and retry write
+                        if 'Quota exceeded for quota metric' in str(e):
+                            print('sleeping for 3 minutes')
+                            time.sleep(180)
+                            
+                            try:
+                                response = self.client.update_tag(tag=tag)
+                            except Exception as e:
+                                msg = 'Error occurred during tag update after sleeping: ' + str(e)
+                                store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, msg)
                 else:
                     try:
                         response = self.client.create_tag(parent=entry.name, tag=tag)
                     except Exception as e:
-                        print('Error occurred during tag create: ', e)
-                        store.write_tag_op_error(constants.TAG_CREATED, uri, column, tag_uuid, template_uuid, e)
+                        msg = 'Error occurred during tag create: ' + str(e)
+                        store.write_tag_op_error(constants.TAG_CREATED, uri, column, tag_uuid, template_uuid, msg)
+                        
+                        # sleep and retry write
+                        if 'Quota exceeded for quota metric' in str(e):
+                            print('sleeping for 3 minutes')
+                            time.sleep(180)
+                            
+                            try:
+                                response = self.client.create_tag(parent=entry.name, tag=tag)
+                            except Exception as e:
+                                msg = 'Error occurred during tag create after sleeping: ' + str(e)
+                                store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, msg)
                         
                 if tag_history:
                     bqu = bq.BigQueryUtils()
@@ -634,7 +656,7 @@ class DataCatalogUtils:
                     response = self.client.update_tag(tag=tag)
                 except Exception as e:
                     print('Error occurred during tag update: ', e)
-                    store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, e)
+                    store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, str(e))
                 
             else:
                 print('creating tag')
@@ -643,7 +665,7 @@ class DataCatalogUtils:
                     response = self.client.create_tag(parent=entry.name, tag=tag)
                 except Exception as e:
                     print('Error occurred during tag create: ', e)
-                    store.write_tag_op_error(constants.TAG_CREATED, uri, column, tag_uuid, template_uuid, e)
+                    store.write_tag_op_error(constants.TAG_CREATED, uri, column, tag_uuid, template_uuid, str(e))
                 
             if tag_history:
                 bqu = bq.BigQueryUtils()
