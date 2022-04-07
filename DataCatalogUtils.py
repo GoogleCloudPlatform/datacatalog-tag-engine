@@ -520,18 +520,18 @@ class DataCatalogUtils:
                     try:
                         response = self.client.update_tag(tag=tag)
                     except Exception as e:
-                        msg = 'Error occurred during tag update after sleeping: ' + str(e)
+                        msg = 'Error occurred during tag update: ' + str(e)
                         store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, msg)
                         
                         # sleep and retry write
-                        if 'Quota exceeded for quota metric' in str(e):
-                            print('sleeping for 3 minutes')
+                        if 'Quota exceeded for quota metric' or 'service unavailable' in str(e):
+                            print('sleep for 3 minutes')
                             time.sleep(180)
                             
                             try:
                                 response = self.client.update_tag(tag=tag)
                             except Exception as e:
-                                msg = 'Error occurred during tag update after sleeping: ' + str(e)
+                                msg = 'Error occurred during tag update after sleep: ' + str(e)
                                 store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, msg)
                 else:
                     try:
@@ -541,14 +541,14 @@ class DataCatalogUtils:
                         store.write_tag_op_error(constants.TAG_CREATED, uri, column, tag_uuid, template_uuid, msg)
                         
                         # sleep and retry write
-                        if 'Quota exceeded for quota metric' in str(e):
-                            print('sleeping for 3 minutes')
+                        if 'Quota exceeded for quota metric' or 'service unavailable' in str(e):
+                            print('sleep for 3 minutes')
                             time.sleep(180)
                             
                             try:
                                 response = self.client.create_tag(parent=entry.name, tag=tag)
                             except Exception as e:
-                                msg = 'Error occurred during tag create after sleeping: ' + str(e)
+                                msg = 'Error occurred during tag create after sleep: ' + str(e)
                                 store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, msg)
                         
                 if tag_history:
