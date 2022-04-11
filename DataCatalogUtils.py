@@ -406,7 +406,7 @@ class DataCatalogUtils:
         tag_exists = False
         tag_id = ""
         
-        tag_list = self.client.list_tags(parent=parent, timeout=10)
+        tag_list = self.client.list_tags(parent=parent, timeout=120)
         
         for tag_instance in tag_list:
             #print('tag_instance: ' + str(tag_instance))
@@ -524,7 +524,7 @@ class DataCatalogUtils:
                         store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, msg)
                         
                         # sleep and retry write
-                        if 'Quota exceeded for quota metric' or 'service unavailable' in str(e):
+                        if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
                             print('sleep for 3 minutes')
                             time.sleep(180)
                             
@@ -541,7 +541,7 @@ class DataCatalogUtils:
                         store.write_tag_op_error(constants.TAG_CREATED, uri, column, tag_uuid, template_uuid, msg)
                         
                         # sleep and retry write
-                        if 'Quota exceeded for quota metric' or 'service unavailable' in str(e):
+                        if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
                             print('sleep for 3 minutes')
                             time.sleep(180)
                             
