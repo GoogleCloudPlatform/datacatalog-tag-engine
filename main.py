@@ -528,7 +528,7 @@ def process_update_static_config():
     dcu = dc.DataCatalogUtils(template_id, project_id, region)
     template_fields = dcu.get_template()
     
-    if action == "Submit Tag":
+    if action == "Submit Changes":
         
         fields = []
     
@@ -619,7 +619,7 @@ def process_update_dynamic_config():
     dcu = dc.DataCatalogUtils(template_id, project_id, region)
     template_fields = dcu.get_template()
     
-    if action == "Submit Tag":
+    if action == "Submit Changes":
         
         fields = []
     
