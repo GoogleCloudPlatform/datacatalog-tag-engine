@@ -568,7 +568,7 @@ def process_update_static_config():
                 tag_stream = True
     
         template_exists, template_uuid = teu.read_tag_template(template_id, project_id, region)
-        new_tag_uuid = teu.update_tag_config(old_tag_uuid, 'STATIC', 'ACTIVE', fields, included_uris, excluded_uris,\
+        new_tag_uuid = teu.update_tag_config(old_tag_uuid, 'STATIC', 'PENDING', fields, included_uris, excluded_uris,\
                                                  template_uuid, None, None, None, tag_history, tag_stream)
         
         #print('new_tag_uuid: ' + new_tag_uuid)
