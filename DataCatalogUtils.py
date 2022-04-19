@@ -481,11 +481,17 @@ class DataCatalogUtils:
                     field_id = field['field_id']
                     field_type = field['field_type']
                     field_value = field['field_value']
-                    
+
                     if field_type == "bool":
                         bool_field = datacatalog.TagField()
-                        bool_field.bool_value = bool(field_value)
+                        
+                        if field_value.lower() == 'true':
+                            bool_field.bool_value = True
+                        else:
+                            bool_field.bool_value = False
+                        
                         tag.fields[field_id] = bool_field
+
                     if field_type == "string":
                         string_field = datacatalog.TagField()
                         string_field.string_value = str(field_value)
