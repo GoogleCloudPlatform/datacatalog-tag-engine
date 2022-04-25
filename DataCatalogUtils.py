@@ -531,7 +531,7 @@ class DataCatalogUtils:
                         
                         # sleep and retry write
                         if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
-                            print('sleep for 3 minutes')
+                            print('sleep for 3 minutes due to ' + str(e))
                             time.sleep(180)
                             
                             try:
@@ -548,7 +548,7 @@ class DataCatalogUtils:
                         
                         # sleep and retry write
                         if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
-                            print('sleep for 3 minutes')
+                            print('sleep for 3 minutes due to ' + str(e))
                             time.sleep(180)
                             
                             try:
