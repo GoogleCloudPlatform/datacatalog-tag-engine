@@ -1,6 +1,8 @@
 deploy/.terraform*
 deploy/terraform.tfstate*
 deploy/variables.tfvars
-datacatalog-templates
+bkp/*
+docs/*
+.DS_Store
 .idea
 .envrc

@@ -47,7 +47,7 @@ resource "google_firestore_index" "index-2" {
 resource "google_firestore_index" "index-3" {
     project = var.tag_engine_project
 
-    collection = "tag-config"
+    collection = "tag_config"
 
     fields {
       field_path = "config_status"
