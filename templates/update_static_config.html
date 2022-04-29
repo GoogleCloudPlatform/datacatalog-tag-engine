@@ -89,13 +89,13 @@
 					   {% if current_field['field_id'] == field['field_id'] %}
 				           {% set ns.found = true %}
 						   
-						   {% if current_field['field_value'] == 'True' %} 
+						   {% if current_field['field_value'] == True %} 
 						      <option value="True" selected>True</option>
 						   {% else %}
 					           <option value="True">True</option>
 						   {% endif %}
 						   
-						   {% if current_field['field_value'] == 'False' %} 
+						   {% if current_field['field_value'] == False %} 
 						      <option value="False" selected>False</option>
 						   {% else %}
 					           <option value="False">False</option>

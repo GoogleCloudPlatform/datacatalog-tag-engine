@@ -485,10 +485,13 @@ class DataCatalogUtils:
                     if field_type == "bool":
                         bool_field = datacatalog.TagField()
                         
-                        if field_value.lower() == 'true':
-                            bool_field.bool_value = True
+                        if isinstance(field_value, str):
+                            if field_value.lower() == 'true':
+                                bool_field.bool_value = True
+                            else:
+                                bool_field.bool_value = False
                         else:
-                            bool_field.bool_value = False
+                            bool_field.bool_value = field_value
                         
                         tag.fields[field_id] = bool_field
 

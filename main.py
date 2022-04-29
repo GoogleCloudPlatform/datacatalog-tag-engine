@@ -536,9 +536,19 @@ def process_update_static_config():
         #print("selected_fields: " + str(selected_fields))
     
         for selected_field in selected_fields:
-            selected_value = request.form.get(selected_field)
             selected_type = request.form.get(selected_field + "_datatype")
-            print(selected_field + ", " + selected_value + ", " + selected_type)
+            
+            if selected_type == 'bool':
+                selected_value = request.form.get(selected_field)
+                
+                if selected_value.lower() == 'true':
+                    selected_value = True
+                else:
+                    selected_value = False
+            else:
+                selected_value = request.form.get(selected_field)
+            
+            #print(selected_field + ", " + str(selected_value) + ", " + selected_type)
             
             for template_field in template_fields:
                 if template_field['field_id'] != selected_field:
@@ -718,9 +728,19 @@ def process_static_config():
     print("selected_fields: " + str(selected_fields))
     
     for selected_field in selected_fields:
-        selected_value = request.form.get(selected_field)
         selected_type = request.form.get(selected_field + "_datatype")
-        print(selected_field + ", " + selected_value + ", " + selected_type)
+
+        if selected_type == 'bool':
+            selected_value = request.form.get(selected_field)
+            
+            if selected_value.lower() == 'true':
+                selected_value = True
+            else:
+                selected_value = False
+        else:
+            selected_value = request.form.get(selected_field)
+        
+        #print(selected_field + ", " + str(selected_value) + ", " + selected_type)
         
         for template_field in template:
             
