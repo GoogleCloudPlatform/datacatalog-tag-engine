@@ -72,7 +72,9 @@
     ],
     "included_uris": "bigquery/project/warehouse-337221/dataset/cities_311/*",
     "excluded_uris": "",
-    "refresh_mode": "ON_DEMAND",
+    "refresh_mode": "AUTO",
+	"refresh_frequency": 24,
+	"refresh_unit": "hours",
     "tag_history": true,
-    "tag_stream": true  
+    "tag_stream": false  
 }
