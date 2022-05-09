@@ -445,6 +445,93 @@ class TagEngineUtils:
         
         return tag_uuid, included_uris_hash
         
+    
+    def write_entry_config(self, config_status, fields, included_uris, excluded_uris, template_uuid, refresh_mode,\
+                           refresh_frequency, refresh_unit, tag_history, tag_stream):
+        
+        included_uris_hash = hashlib.md5(included_uris.encode()).hexdigest()
+        
+        # check to see if this config already exists
+        tag_ref = self.db.collection('tag_config')
+        query = tag_ref.where('template_uuid', '==', template_uuid).where('included_uris_hash', '==', included_uris_hash).where('config_type', '==', 'ENTRY').where('config_status', '!=', 'INACTIVE')
+       
+        matches = query.get()
+       
+        for match in matches:
+            if match.exists:
+                tag_uuid_match = match.id
+                #print('Tag config already exists. Tag_uuid: ' + str(tag_uuid_match))
+                
+                # update status to INACTIVE 
+                self.db.collection('tag_config').document(tag_uuid_match).update({
+                    'config_status' : "INACTIVE"
+                })
+                print('Updated status to INACTIVE.')
+       
+        tag_uuid = uuid.uuid1().hex
+        tag_config = self.db.collection('tag_config')
+        doc_ref = tag_config.document(tag_uuid)
+        
+        if refresh_mode == 'AUTO':
+            if type(refresh_frequency) is int: 
+                if refresh_frequency > 0:
+                    delta = refresh_frequency
+                else:
+                    delta = 24
+            
+            if type(refresh_frequency) is str:
+                if refresh_frequency.isdigit():
+                    delta = int(refresh_frequency)
+                else:
+                    delta = 24
+                
+            if refresh_unit == 'hours':
+                next_run = datetime.utcnow() + timedelta(hours=delta)
+            if refresh_unit == 'days':
+                next_run = datetime.utcnow() + timedelta(days=delta)
+            
+            doc_ref.set({
+                'tag_uuid': tag_uuid,
+                'config_type': 'ENTRY',
+                'config_status': config_status, 
+                'creation_time': datetime.utcnow(), 
+                'fields': fields,
+                'included_uris': included_uris,
+                'included_uris_hash': included_uris_hash,
+                'excluded_uris': excluded_uris,
+                'template_uuid': template_uuid,
+                'refresh_mode': refresh_mode, # AUTO refresh mode
+                'refresh_frequency': delta,
+                'refresh_unit': refresh_unit,
+                'tag_history': tag_history,
+                'tag_stream': tag_stream,
+                'scheduling_status': 'PENDING',
+                'next_run': next_run,
+                'version': 1
+            })
+            
+        else:
+            doc_ref.set({
+                'tag_uuid': tag_uuid,
+                'config_type': 'ENTRY',
+                'config_status': config_status, 
+                'creation_time': datetime.utcnow(), 
+                'fields': fields,
+                'included_uris': included_uris,
+                'included_uris_hash': included_uris_hash,
+                'excluded_uris': excluded_uris,
+                'template_uuid': template_uuid,
+                'refresh_mode': refresh_mode, # ON_DEMAND refresh mode
+                'refresh_frequency': 0,
+                'tag_history': tag_history,
+                'tag_stream': tag_stream,
+                'version': 1
+            })
+        
+        print('Created new entry config.')
+        
+        return tag_uuid, included_uris_hash
+     
         
     def write_log_entry(self, dc_op, resource_type, resource, column, config_type, tag_uuid, tag_id, template_uuid):
                     

@@ -21,5 +21,5 @@ runtime: python38
 #use B4_1G when creating tags for large configs, up to 200 instances (500K+ tags)
 instance_class: B4_1G
 basic_scaling:
-  max_instances: 200
+  max_instances: 25
   idle_timeout: 10m

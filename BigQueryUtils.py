@@ -121,7 +121,7 @@ class BigQueryUtils:
             elif isinstance(tagged_value['field_value'], datetime.datetime) or isinstance(tagged_value['field_value'], datetime.date):
                 row[tagged_value['field_id']] = tagged_value['field_value'].strftime('%Y-%m-%dT%H:%M:%S.%f')[0:-1]
             else:
-                #row[tagged_value['field_id']]= json.dumps(tagged_value['field_value'], default=str)
+                row[tagged_value['field_id']]= json.dumps(tagged_value['field_value'], default=str)
                 row[tagged_value['field_id']]= tagged_value['field_value']
     
         #print('insert row: ' + str(row))
@@ -149,12 +149,13 @@ class BigQueryUtils:
             dataset_id = self.client.dataset(settings['dataset'], project=settings['project_id'])
             table_id = self.create_table(dataset_id, table_name, table_fields)
 
-        if tagged_column not in "":
+        if tagged_column and tagged_column not in "":
             asset_name = ("{}/column/{}".format(tagged_table, tagged_column))
         else:
             asset_name = tagged_table
             
         asset_name = asset_name.replace("datasets", "dataset").replace("tables", "table")
+        #print('asset_name: ', asset_name)
                 
         self.insert_row(table_id, asset_name, tagged_values)  
         
