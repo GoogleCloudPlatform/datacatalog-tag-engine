@@ -671,7 +671,11 @@ class TagEngineUtils:
             new_tag_uuid, included_uris_hash = self.write_dynamic_config(config_status, fields, included_uris, excluded_uris, \
                                                                      template_uuid, refresh_mode, refresh_frequency, refresh_unit,\
                                                                      tag_history, tag_stream)
-            # note: don't need to return the included_uris_hash
+        if config_type == 'ENTRY':
+            new_tag_uuid, included_uris_hash = self.write_entry_config(config_status, fields, included_uris, excluded_uris, \
+                                                                     template_uuid, refresh_mode, refresh_frequency, refresh_unit,\
+                                                                     tag_history, tag_stream)
+        # note: don't need to return the included_uris_hash
             
         return new_tag_uuid
     

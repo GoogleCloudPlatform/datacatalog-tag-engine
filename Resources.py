@@ -254,7 +254,7 @@ class Resources:
                     #print('folder: ' + folder)
                     
                     for blob in gcs_client.list_blobs(bucket_name, prefix=folder):
-                        if blob.name == folder + '/':
+                        if blob.name == folder + '/' or blob.name.endswith('/'):
                             continue
                         resources.add((bucket_name, blob.name))
                         
@@ -274,6 +274,8 @@ class Resources:
                 
                 if short_uri.endswith('/*'):  
                     for blob in gcs_client.list_blobs(bucket_name):
+                        if blob.name.endswith('/'):
+                            continue
                         #print('blob: ' + str(blob.name))
                         resources.add((bucket_name, blob.name))
                 else:
@@ -283,7 +285,8 @@ class Resources:
                     bucket = gcs_client.get_bucket(bucket_name)
                     blob = bucket.blob(filename)
                     if blob.exists():
-                        resources.add((bucket_name, blob.name))    
+                        if blob.name.endswith('/') == False:
+                            resources.add((bucket_name, blob.name))    
             else:
                 print('Error: invalid uri provided: ' + uri)
                 
@@ -300,12 +303,12 @@ if __name__ == '__main__':
     #excluded_uris=None
     #resources = Resources.get_bq_resources(included_uris, excluded_uris)
     
-    #included_uris = 'gs://discovery-area/*'
+    included_uris = 'gs://discovery-area/*'
     #included_uris = 'gs://discovery-area/austin_311_service_requests.parquet'
     #included_uris = 'gs://discovery-area/cities_311/austin_311_service_requests.parquet', 'gs://discovery-area/cities_311/san_francisco_311_service_requests/*'
     #excluded_uris = 'gs://discovery-area/cities_311/san_francisco_311_service_requests/000000000003'
     #included_uris = 'gs://discovery-area/cities_311/*'
-    included_uris = 'gs://discovery-area/austin_311_service_requests.parquet'
+    #included_uris = 'gs://discovery-area/austin_311_service_requests.parquet'
     #resources = Resources.find_gcs_resources(included_uris)
 
     resources = Resources.get_resources(included_uris, None)

@@ -1387,17 +1387,17 @@ def get_job_status():
     
 
 """
-Method called by Cloud Scheduler entry to update the tags from all active dynamic configs which are set to auto
+Method called by Cloud Scheduler entry to update the tags from all scheduled configs which are set to auto updated
 Args:
     None
 Returns:
     True if the request succeeded, False otherwise
 """ 
-@app.route("/dynamic_auto_update", methods=['POST'])
-def dynamic_auto_update():
+@app.route("/scheduled_auto_updates", methods=['POST'])
+def scheduled_auto_updates():
     
     try:    
-        print('*** enter dynamic_auto_update ***')
+        print('*** enter scheduled_auto_updates ***')
         
         jobs = []
         
@@ -1416,8 +1416,8 @@ def dynamic_auto_update():
         resp = jsonify(success=True, job_ids=json.dumps(jobs))
     
     except Exception as e:
-        print('failed dynamic_auto_update {}'.format(e))
-        resp = jsonify(success=False, message='failed dynamic_auto_update ' + str(e))
+        print('failed scheduled_auto_updates {}'.format(e))
+        resp = jsonify(success=False, message='failed scheduled_auto_updates ' + str(e))
     
     return resp
 
@@ -1442,7 +1442,7 @@ def _split_work():
        return resp 
     
     uris = list(res.Resources.get_resources(config.get('included_uris'), config.get('excluded_uris', None)))
-    print('uris: ' + str(uris))
+    #print('uris: ' + str(uris))
 
     jm.record_num_tasks(job_uuid, len(uris))
     jm.update_job_running(job_uuid) 
@@ -1470,7 +1470,7 @@ def _run_task():
     
     # retrieve tag config and template
     tag_config = teu.read_tag_config(tag_uuid)
-    print('tag_config: ', tag_config)
+    #print('tag_config: ', tag_config)
     
     if 'template_uuid' not in tag_config:
         creation_status = constants.ERROR

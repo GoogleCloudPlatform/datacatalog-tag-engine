@@ -421,7 +421,7 @@ class DataCatalogUtils:
 
     def create_update_entry_config(self, fields, uri, tag_uuid, template_uuid, tag_history, tag_stream, batch_mode=False):
         
-        print('enter create_update_entry_config')
+        print('** create_update_entry_config **')
         
         creation_status = constants.SUCCESS
         store = te.TagEngineUtils()
