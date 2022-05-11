@@ -85,7 +85,7 @@ class BigQueryUtils:
                 col_type = 'TIMESTAMP'
                 
             if field['field_type'] == 'datetime':
-                col_type = 'DATETIME'
+                col_type = 'TIMESTAMP' # datetime fields should be mapped to timestamps in BQ because they actually contain a timezone
             
             if field['is_required'] == True:
                 mode = "REQUIRED"
@@ -119,12 +119,12 @@ class BigQueryUtils:
             if isinstance(tagged_value['field_value'], decimal.Decimal):
                 row[tagged_value['field_id']] = float(tagged_value['field_value'])
             elif isinstance(tagged_value['field_value'], datetime.datetime) or isinstance(tagged_value['field_value'], datetime.date):
-                row[tagged_value['field_id']] = tagged_value['field_value'].strftime('%Y-%m-%dT%H:%M:%S.%f')[0:-1]
+                row[tagged_value['field_id']] = tagged_value['field_value'].isoformat()
             else:
                 row[tagged_value['field_id']]= json.dumps(tagged_value['field_value'], default=str)
                 row[tagged_value['field_id']]= tagged_value['field_value']
     
-        #print('insert row: ' + str(row))
+        print('insert row: ' + str(row))
         
         row_to_insert = [row,]
 

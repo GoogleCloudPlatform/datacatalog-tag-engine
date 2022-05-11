@@ -34,7 +34,7 @@
 		    
 			<th>&nbsp;<input type="submit" value="Edit Tag Config" name="submit"></th>
 			<tr><td>&nbsp;<span style="color:#0b5394;">Config Status:</span> {{ tag_config['config_status'] }}
-			{% if tag_config['config_status'] != 'ACTIVE' %}
+			{% if tag_config['config_status'] != 'ACTIVE' and tag_config['config_status'] != 'ERROR' %}
 				<a href="{{ url_for('view_configs',template_id=template_id,project_id=project_id,region=region) }}">refresh</a>
 			{% endif %}
 			</td></tr> 

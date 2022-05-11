@@ -369,6 +369,8 @@ def view_configs():
     stream_enabled, stream_settings = teu.read_tag_stream_settings()
     
     tag_configs = teu.read_tag_configs(template_id, project_id, region)
+    
+    # TO DO: add logic to calculate most recent job status for each config (if status equals RUNNING or ERROR)
 
     return render_template(
         'view_configs.html',
@@ -1314,8 +1316,8 @@ Note: caller must provide either the included_uris_hash or included_uris
 Returns:
     job_uuid = unique identifer for job
 """
-@app.route("/dynamic_ondemand_update", methods=['POST'])
-def dynamic_ondemand_update():
+@app.route("/ondemand_updates", methods=['POST'])
+def ondemand_updates():
     json = request.get_json(force=True)    
     template_id = json['template_id']
     project_id = json['project_id']
@@ -1323,6 +1325,7 @@ def dynamic_ondemand_update():
         
     template_exists, template_uuid = teu.read_tag_template(template_id, project_id, region)
     
+    # validate request
     if not template_exists:
         print("tag_template " + template_id + " doesn't exist")
         resp = jsonify(success=False)
@@ -1337,7 +1340,7 @@ def dynamic_ondemand_update():
         success, tag_config = teu.lookup_tag_config_by_included_uris(template_uuid, None, included_uris_hash)
     
     else:
-        resp = jsonify(success=False, message="Request is missing required parameter included_uris or included_uris_hash.")
+        resp = jsonify(success=False, message="Request is missing the required field included_uris or included_uris_hash.")
         return resp
     
     if success != True:
@@ -1345,12 +1348,18 @@ def dynamic_ondemand_update():
         resp = jsonify(success=False, message="Tag config not found.")
         return resp
     
-    # process the update request
+    # validate the matching tag_config
     if tag_config['refresh_mode'] == 'AUTO':
-        print("tag config == AUTO" + str(tag_config))
+        print("tag config == AUTO: " + str(tag_config))
         resp = jsonify(success=False, message="Tag config has refresh_mode='AUTO'. Update config to refresh_mode='ON-DEMAND' prior to calling this method.")
         return resp
+        
+    if tag_config['config_type'] == 'STATIC':
+        print("config_type must be either DYNAMIC or ENTRY: " + str(tag_config))
+        resp = jsonify(success=False, message="Tag config must be of type DYNAMIC or ENTRY. Found tag_uuid " + tag_config['tag_uuid'] + " which does not match either type.")
+        return resp
     
+    # config is valid, create the job
     if isinstance(tag_config['tag_uuid'], str): 
         job_uuid = jm.create_job(tag_config['tag_uuid'])
     else:
@@ -1358,7 +1367,7 @@ def dynamic_ondemand_update():
     
     return jsonify(job_uuid=job_uuid)
     
-    #[END dynamic_ondemand_update]
+    #[END ondemand_updates]
    
 
 """

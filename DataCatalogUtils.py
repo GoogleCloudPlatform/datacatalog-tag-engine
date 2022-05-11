@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import requests, configparser, time
+from datetime import datetime, date, time
+import pytz
 from operator import itemgetter
 import pandas as pd
 from pyarrow import parquet
@@ -232,22 +234,23 @@ class DataCatalogUtils:
                     enum_field = datacatalog.TagField()
                     enum_field.enum_value.display_name = field_value
                     tag.fields[field_id] = enum_field
-                if field_type == "datetime":
+                if field_type == "datetime": 
                     # field_value could be a date value e.g. "2022-05-08" or a datetime value e.g. "2022-05-08 15:00:00"
                     if len(field_value) == 10:
-                        datetime_value = field_value + "T12:00:00Z"
-                        
-                    if len(field_value) == 19:
-                        split_datetime = field_value.split(" ")
-                        datetime_value = split_datetime[0] + "T" + split_datetime[1] + "Z"
-                    
-                    print('datetime_value: ' + datetime_value)
-                    timestamp = Timestamp()
-                    timestamp.FromJsonString(datetime_value)
+                        utc = pytz.timezone('UTC')
+                        d = date(int(field_value[0:4]), int(field_value[5:7]), int(field_value[8:10]))
+                        dt = datetime.combine(d, time(00, 00)) # when no time is supplied, default to 12:00:00 AM UTC
+                        timestamp = utc.localize(dt)
+                    else:
+                        timestamp_value = field_value.isoformat()
+                        field_value = timestamp_value[0:19] + timestamp_value[26:32] + "Z"
+                        timestamp = Timestamp()
+                        timestamp.FromJsonString(field_value)
                     
                     datetime_field = datacatalog.TagField()
                     datetime_field.timestamp_value = timestamp
                     tag.fields[field_id] = datetime_field
+                    field['field_value'] = timestamp # store this value back in the field, so that it can be exported
                     
             if column != "":
                 tag.column = column
@@ -460,13 +463,22 @@ class DataCatalogUtils:
             entry.type_ = 'FILESET'
             entry.gcs_fileset_spec.file_patterns = ['gs://' + bucket_name + '/' + filename]
             entry.fully_qualified_name = 'gs://' + bucket_name + '/' + filename
-            entry.source_system_timestamps.create_time = blob.time_created
-            entry.source_system_timestamps.update_time = blob.updated
+            entry.source_system_timestamps.create_time = datetime.utcnow() 
+            entry.source_system_timestamps.update_time = datetime.utcnow() 
             
             # get the file's schema
-            # download file to the tmp directory 
+            # download the file to App Engine's tmp directory 
             tmp_file = '/tmp/' + entry_id
             blob.download_to_filename(filename=tmp_file)
+        
+            # validate that it's a parquet file
+            try:
+                parquet.ParquetFile(tmp_file)
+            except Exception as e:
+                # not a parquet file, ignore it
+                print('The file ' + filename + ' is not a parquet file, ignoring it.')
+                creation_status = constants.ERROR
+                return creation_status   
         
             schema = parquet.read_schema(tmp_file, memory_map=True)
             df = pd.DataFrame(({"column": name, "datatype": str(pa_dtype)} for name, pa_dtype in zip(schema.names, schema.types)))
@@ -858,21 +870,23 @@ class DataCatalogUtils:
                 enum_field.enum_value.display_name = field_value
                 tag.fields[field_id] = enum_field
             if field_type == "datetime":
-        
-                # timestamp value must be in this format: 2020-12-02T16:34:14Z
-                timestamp_value = field_value.isoformat()
-        
-                if len(timestamp_value) == 10:
-                    field_value = timestamp_value + 'T12:00:00Z'
+                # timestamp value gets stored in DC, expected format: 2020-12-02T16:34:14Z
+                # however, field_value can be a date value e.g. "2022-05-08" or a datetime value e.g. "2022-05-08 15:00:00"
+                if len(str(field_value)) == 10:
+                    utc = pytz.timezone('UTC')
+                    d = date(int(field_value[0:4]), int(field_value[5:7]), int(field_value[8:10]))
+                    dt = datetime.combine(d, time(00, 00)) # when no time is supplied, default to 12:00:00 AM UTC
+                    timestamp = utc.localize(dt)
                 else:
+                    timestamp_value = field_value.isoformat()
                     field_value = timestamp_value[0:19] + timestamp_value[26:32] + "Z"
-        
-                timestamp = Timestamp()
-                timestamp.FromJsonString(field_value)
-            
+                    timestamp = Timestamp()
+                    timestamp.FromJsonString(field_value)
+                
                 datetime_field = datacatalog.TagField()
                 datetime_field.timestamp_value = timestamp
                 tag.fields[field_id] = datetime_field
+                
         except ValueError:
             error_exists = True
             print("cast error, writing error entry")
