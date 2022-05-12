@@ -178,138 +178,162 @@ class DataCatalogUtils:
     
     def create_update_static_config(self, fields, uri, tag_uuid, template_uuid, tag_history, tag_stream):
         
+        # uri is either a BQ table/view path or GCS file path
         store = te.TagEngineUtils()        
-        
         creation_status = constants.SUCCESS
-          
-        column = ""
+        column = ''
         
-        if "/column/" in uri:
-            # we have a column tag
-            split_resource = uri.split("/column/")
-            uri = split_resource[0]
-            column = split_resource[1]
+        is_gcs = False
+        is_bq = False
         
-        bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
-        #print("bigquery_resource: " + bigquery_resource)
+        # lookup the entry based on the resource type
+        if isinstance(uri, list):
+            is_gcs = True
+            bucket = uri[0].replace('-', '_')
+            filename = uri[1].split('.')[0].replace('/', '_') # extract the filename without extension, replace '/' with '_'
+            gcs_resource = '//datacatalog.googleapis.com/projects/' + self.project_id + '/locations/' + self.region + '/entryGroups/' + bucket + '/entries/' + filename
+            #print('gcs_resource: ', gcs_resource)
+            request = datacatalog.LookupEntryRequest()
+            request.linked_resource=gcs_resource
+            entry = self.client.lookup_entry(request)
+            #print('entry found: ', entry)
         
-        request = datacatalog.LookupEntryRequest()
-        request.linked_resource=bigquery_resource
-        entry = self.client.lookup_entry(request)
+        if isinstance(uri, str):
+            is_bq = True
+            if "/column/" in uri:
+                # we have a column tag
+                split_resource = uri.split("/column/")
+                uri = split_resource[0]
+                column = split_resource[1]
+        
+            bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
+            #print("bigquery_resource: " + bigquery_resource)
+        
+            request = datacatalog.LookupEntryRequest()
+            request.linked_resource=bigquery_resource
+            entry = self.client.lookup_entry(request)
         
         try:    
-            
             tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
-            
-            tag = datacatalog.Tag()
-            tag.template = self.template_path
-            
-            for field in fields:
-                field_id = field['field_id']
-                field_type = field['field_type']
-                field_value = field['field_value']
-
-                if field_type == "bool":
-                    bool_field = datacatalog.TagField()
-                    
-                    if isinstance(field_value, str):
-                        if field_value.lower() == 'true':
-                            bool_field.bool_value = True
-                        else:
-                            bool_field.bool_value = False
-                    else:
-                        bool_field.bool_value = field_value
-                    
-                    tag.fields[field_id] = bool_field
-
-                if field_type == "string":
-                    string_field = datacatalog.TagField()
-                    string_field.string_value = str(field_value)
-                    tag.fields[field_id] = string_field
-                if field_type == "double":
-                    float_field = datacatalog.TagField()
-                    float_field.double_value = float(field_value)
-                    tag.fields[field_id] = float_field
-                if field_type == "enum":
-                    enum_field = datacatalog.TagField()
-                    enum_field.enum_value.display_name = field_value
-                    tag.fields[field_id] = enum_field
-                if field_type == "datetime": 
-                    # field_value could be a date value e.g. "2022-05-08" or a datetime value e.g. "2022-05-08 15:00:00"
-                    if len(field_value) == 10:
-                        utc = pytz.timezone('UTC')
-                        d = date(int(field_value[0:4]), int(field_value[5:7]), int(field_value[8:10]))
-                        dt = datetime.combine(d, time(00, 00)) # when no time is supplied, default to 12:00:00 AM UTC
-                        timestamp = utc.localize(dt)
-                    else:
-                        timestamp_value = field_value.isoformat()
-                        field_value = timestamp_value[0:19] + timestamp_value[26:32] + "Z"
-                        timestamp = Timestamp()
-                        timestamp.FromJsonString(field_value)
-                    
-                    datetime_field = datacatalog.TagField()
-                    datetime_field.timestamp_value = timestamp
-                    tag.fields[field_id] = datetime_field
-                    field['field_value'] = timestamp # store this value back in the field, so that it can be exported
-                    
-            if column != "":
-                tag.column = column
-                #print('tag.column == ' + column)   
-            
-            if tag_exists == True:
-                tag.name = tag_id
-                
-                try:
-                    #print('tag request: ', tag)
-                    response = self.client.update_tag(tag=tag)
-                except Exception as e:
-                    msg = 'Error occurred during tag update: ' + str(e)
-                    store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, msg)
-                    
-                    # sleep and retry write
-                    if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
-                        print('sleep for 3 minutes due to ' + str(e))
-                        time.sleep(180)
-                        
-                        try:
-                            response = self.client.update_tag(tag=tag)
-                        except Exception as e:
-                            msg = 'Error occurred during tag update after sleep: ' + str(e)
-                            store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, msg)
-            else:
-                try:
-                    response = self.client.create_tag(parent=entry.name, tag=tag)
-                except Exception as e:
-                    msg = 'Error occurred during tag create: ' + str(e)
-                    store.write_tag_op_error(constants.TAG_CREATED, uri, column, tag_uuid, template_uuid, msg)
-                    
-                    # sleep and retry write
-                    if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
-                        print('sleep for 3 minutes due to ' + str(e))
-                        time.sleep(180)
-                        
-                        try:
-                            response = self.client.create_tag(parent=entry.name, tag=tag)
-                        except Exception as e:
-                            msg = 'Error occurred during tag create after sleep: ' + str(e)
-                            store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, msg)
-                    
-            if tag_history:
-                bqu = bq.BigQueryUtils()
-                template_fields = self.get_template()
-                bqu.copy_tag(self.template_id, template_fields, uri, column, fields)
-            
-            if tag_stream:
-                psu = ps.PubSubUtils()
-                psu.copy_tag(self.template_id, uri, column, fields)
-            
-            #print("response: " + str(response))
-        
-        except ValueError:
-            print("ValueError: create_static_tags failed due to invalid parameters.")
-            store.write_tag_value_error('invalid value: "' + field_value + '" provided for field "' + field_id \
-                                    + '" of type ' + field_type) 
+        except Exception as e:
+            print('Error during check_if_exists: ', e)
             creation_status = constants.ERROR
+            return creation_status
+
+        tag = datacatalog.Tag()
+        tag.template = self.template_path
+        
+        for field in fields:
+            field_id = field['field_id']
+            field_type = field['field_type']
+            field_value = field['field_value']
+
+            if field_type == "bool":
+                bool_field = datacatalog.TagField()
+                
+                if isinstance(field_value, str):
+                    if field_value.lower() == 'true':
+                        bool_field.bool_value = True
+                    else:
+                        bool_field.bool_value = False
+                else:
+                    bool_field.bool_value = field_value
+                
+                tag.fields[field_id] = bool_field
+
+            if field_type == "string":
+                string_field = datacatalog.TagField()
+                string_field.string_value = str(field_value)
+                tag.fields[field_id] = string_field
+            if field_type == "double":
+                float_field = datacatalog.TagField()
+                float_field.double_value = float(field_value)
+                tag.fields[field_id] = float_field
+            if field_type == "enum":
+                enum_field = datacatalog.TagField()
+                enum_field.enum_value.display_name = field_value
+                tag.fields[field_id] = enum_field
+            if field_type == "datetime": 
+                # field_value could be a date value e.g. "2022-05-08" or a datetime value e.g. "2022-05-08 15:00:00"
+                utc = pytz.timezone('UTC')
+                
+                if len(field_value) == 10:
+                    d = date(int(field_value[0:4]), int(field_value[5:7]), int(field_value[8:10]))
+                    dt = datetime.combine(d, time(00, 00)) # when no time is supplied, default to 12:00:00 AM UTC  
+                else:
+                    # raw timestamp format: 2022-05-11 21:18:20
+                    d = date(int(field_value[0:4]), int(field_value[5:7]), int(field_value[8:10]))
+                    t = time(int(field_value[11:13]), int(field_value[14:16]))
+                    dt = datetime.combine(d, t)
+                    
+                timestamp = utc.localize(dt)
+                print('timestamp: ', timestamp)    
+                datetime_field = datacatalog.TagField()
+                datetime_field.timestamp_value = timestamp
+                tag.fields[field_id] = datetime_field
+                field['field_value'] = timestamp # store this value back in the field, so it can be exported
+                
+        if column != "":
+            tag.column = column
+            #print('tag.column == ' + column)   
+        
+        if tag_exists == True:
+            tag.name = tag_id
+            
+            try:
+                #print('tag request: ', tag)
+                response = self.client.update_tag(tag=tag)
+            except Exception as e:
+                msg = 'Error occurred during tag update: ' + str(e)
+                store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, msg)
+                
+                # sleep and retry write
+                if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
+                    print('sleep for 3 minutes due to ' + str(e))
+                    time.sleep(180)
+                    
+                    try:
+                        response = self.client.update_tag(tag=tag)
+                    except Exception as e:
+                        msg = 'Error occurred during tag update after sleep: ' + str(e)
+                        store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, msg)
+        else:
+            try:
+                print('tag create request: ', tag)
+                response = self.client.create_tag(parent=entry.name, tag=tag)
+            except Exception as e:
+                msg = 'Error occurred during tag create: ' + str(e) + '. Failed tag request = ' + tag
+                store.write_tag_op_error(constants.TAG_CREATED, uri, column, tag_uuid, template_uuid, msg)
+                
+                # sleep and retry write
+                if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
+                    print('sleep for 3 minutes due to ' + str(e))
+                    time.sleep(180)
+                    
+                    try:
+                        response = self.client.create_tag(parent=entry.name, tag=tag)
+                    except Exception as e:
+                        msg = 'Error occurred during tag create after sleep: ' + str(e)
+                        store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, msg)
+                    
+        if tag_history:
+            bqu = bq.BigQueryUtils()
+            template_fields = self.get_template()
+            
+            if is_gcs:
+                bqu.copy_tag(self.template_id, template_fields, '/'.join(uri), None, fields)
+            if is_bq:
+                bqu.copy_tag(self.template_id, template_fields, uri, column, fields)
+        
+        if tag_stream:
+            psu = ps.PubSubUtils()
+            
+            if is_gcs:
+                bqu.copy_tag(self.template_id, '/'.join(uri), None, fields)
+            if is_bq:
+                psu.copy_tag(self.template_id, uri, column, fields)
+        
+        #print("response: " + str(response))
             
         return creation_status
 
