@@ -170,6 +170,50 @@
 			    </td>
 		         </tr>
 		         </table>
+				 
+    		        <p>&nbsp;</p>
+    			   <h3>Choose Update Options</h3>
+    		 	   <span style="color:#9d9a9a;">
+    		 		   <h5>If you choose the AUTO refresh mode, your static config will be scheduled for updates based on your specified refresh frequency. <br>
+    					   If you choose the ON-DEMAND refresh mode, your static config will <b>not</b> be scheduled for updates (even if you specify a refresh frequency). <br>The AUTO mode is helpful for tagging new tables in BQ or files on GCS on a recurring schedule. It will not re-tag existing tables or files. <br><br>
+    				   </h5>
+    				</span>
+ 			     <table>
+  				<tr>	
+  			    <td>Refresh mode:&nbsp;<select name="refresh_mode">
+ 				    			{% if tag_config['refresh_mode'] == 'AUTO' %}
+    				  				<option value="AUTO" selected>AUTO</option>
+    							   	<option value="ON-DEMAND">ON-DEMAND</option>
+ 							{% else %}
+    				  				<option value="AUTO">AUTO</option>
+    							   	<option value="ON-DEMAND" selected>ON-DEMAND</option>
+ 							{% endif %}
+  							  </select>
+							  
+  			    </td>
+  		         </tr>
+  			     <tr><td>&nbsp;</td></tr>
+ 				<tr>	
+ 			    <td>Refresh frequency: <input type="text" value="{{ tag_config['refresh_frequency'] }}" name="refresh_frequency" style="width: 30px;padding: 3px;"> &nbsp;<select name="refresh_unit" style="width: 70px;padding: 3px;">
+  						{% if tag_config['refresh_unit'] == 'minutes' %}
+     				  			<option value="minutes" selected>minutes</option>
+								<option value="hours">hours</option>
+     							<option value="days">days</option>
+			    		{% elif tag_config['refresh_unit'] == 'hours' %}
+ 				  				<option value="minutes">minutes</option>
+								<option value="hours" selected>hours</option>
+ 							   	<option value="days">days</option>
+						{% else %}
+ 				  				<option value="minutes">minutes</option>
+								<option value="hours">hours</option>
+ 							   	<option value="days">days</option>
+						{% endif %}
+    							  </select></td>
+ 		         </tr>
+ 		         </table>
+				 
+				 
+				 
 			    {% if display_tag_history_option == 1 %}
 			      <p>&nbsp;</p>
 				<h3>Choose Tag History Option</h3>

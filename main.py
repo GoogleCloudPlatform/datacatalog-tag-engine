@@ -492,7 +492,6 @@ def update_config():
     
     print("tag_stream: " + str(tag_stream))
 
-    
     if config_type == "STATIC":
         # [END update_tag]
         # [START render_template]
@@ -506,6 +505,7 @@ def update_config():
             current_time=datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
             display_tag_history_option=tag_history,
             display_tag_stream_option=tag_stream)
+    
     if config_type == "DYNAMIC":
         # [END display_action]
         # [START render_template]
@@ -543,7 +543,11 @@ def process_update_static_config():
     old_tag_uuid = request.form['tag_uuid']
     included_uris = request.form['included_uris'].rstrip()
     excluded_uris = request.form['excluded_uris'].rstrip()
+    refresh_mode = request.form['refresh_mode']
+    refresh_frequency = request.form['refresh_frequency'].rstrip()
+    refresh_unit = request.form['refresh_unit']
     action = request.form['action']
+    overwrite = True # this option overwrites existing tags
     
     job_creation = constants.SUCCESS
     
@@ -603,7 +607,7 @@ def process_update_static_config():
     
         template_exists, template_uuid = teu.read_tag_template(template_id, project_id, region)
         new_tag_uuid = teu.update_tag_config(old_tag_uuid, 'STATIC', 'PENDING', fields, included_uris, excluded_uris,\
-                                                 template_uuid, None, None, None, tag_history, tag_stream)
+                                                 template_uuid, refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite)
         
         #print('new_tag_uuid: ' + new_tag_uuid)
         
@@ -815,6 +819,9 @@ def process_static_config():
     region = request.form['region']
     included_uris = request.form['included_uris'].rstrip()
     excluded_uris = request.form['excluded_uris'].rstrip()
+    refresh_mode = request.form['refresh_mode']
+    refresh_frequency = request.form['refresh_frequency'].rstrip()
+    refresh_unit = request.form['refresh_unit']
     action = request.form['action']
     
     print('included_uris: ' + included_uris)
@@ -885,8 +892,8 @@ def process_static_config():
             tag_stream_enabled = "ON"            
         
     template_uuid = teu.write_tag_template(template_id, project_id, region)
-    tag_uuid, included_uris_hash = teu.write_static_config('PENDING', fields, included_uris, excluded_uris, template_uuid,\
-                                                             tag_history_option, tag_stream_option)
+    tag_uuid, included_uris_hash = teu.write_static_config('PENDING', fields, included_uris, excluded_uris, template_uuid, refresh_mode, \
+                                                            refresh_frequency, refresh_unit, tag_history_option, tag_stream_option)
     
     if isinstance(tag_uuid, str):
         job_uuid = jm.create_job(tag_uuid)
@@ -1201,6 +1208,9 @@ Args:
     included_uris: The included_uris value
     excluded_uris: The excluded_uris value (optional)
     fields: list of selected fields containing field name, field type and query expression
+    refresh_mode: AUTO or ON_DEMAND
+    refresh_frequency: positive integer
+    refresh_unit: minutes or hours
     tag_history: true if tag history is on, false otherwise 
     tag_stream: true if tag stream is on, false otherwise
 Returns:
@@ -1229,9 +1239,24 @@ def static_create():
     included_uris = json['included_uris']
     tag_history = json['tag_history']
     tag_stream = json['tag_stream']
+    refresh_mode = json['refresh_mode']
+    
+    if 'refresh_frequency' in json:
+        refresh_frequency = json['refresh_frequency']
+    else:
+        refresh_frequency = ''
+    
+    if 'refresh_unit' in json:
+        refresh_unit = json['refresh_unit']
+    else:
+        refresh_unit = ''
+    
+    # since we are creating a new config, we are overwriting any previously created tags
+    overwrite = True
     
     tag_uuid, included_uris_hash = teu.write_static_config('PENDING', fields, included_uris, excluded_uris, template_uuid,\
-                                                             tag_history, tag_stream)
+                                                            refresh_mode, refresh_frequency, refresh_unit, \
+                                                            tag_history, tag_stream, overwrite)
      
     if isinstance(tag_uuid, str): 
         job_uuid = jm.create_job(tag_uuid)
@@ -1348,17 +1373,12 @@ def ondemand_updates():
         resp = jsonify(success=False, message="Tag config not found.")
         return resp
     
-    # validate the matching tag_config
+    # validate the matching tag_config, i.e. make sure the scheduling mode is set to ON_DEMAND and not AUTO
     if tag_config['refresh_mode'] == 'AUTO':
         print("tag config == AUTO: " + str(tag_config))
-        resp = jsonify(success=False, message="Tag config has refresh_mode='AUTO'. Update config to refresh_mode='ON-DEMAND' prior to calling this method.")
+        resp = jsonify(success=False, message="Tag config has refresh_mode='AUTO'. Update config to refresh_mode='ON_DEMAND' prior to calling this method.")
         return resp
         
-    if tag_config['config_type'] == 'STATIC':
-        print("config_type must be either DYNAMIC or ENTRY: " + str(tag_config))
-        resp = jsonify(success=False, message="Tag config must be of type DYNAMIC or ENTRY. Found tag_uuid " + tag_config['tag_uuid'] + " which does not match either type.")
-        return resp
-    
     # config is valid, create the job
     if isinstance(tag_config['tag_uuid'], str): 
         job_uuid = jm.create_job(tag_config['tag_uuid'])
@@ -1369,7 +1389,6 @@ def ondemand_updates():
     
     #[END ondemand_updates]
    
-
 """
 Args:
     job_uuid = unique identifer for job
@@ -1387,11 +1406,16 @@ def get_job_status():
     job_uuid = json['job_uuid']
     
     job = jm.get_job_status(job_uuid)
+    print('job: ', job)
     
     if job is None:
         return jsonify(success=False, message="job_uuid " + job_uuid + " cannot be found.")
-    else:
+        
+    elif job['tasks_completed'] == job['task_count']:
         return jsonify(success=True, job_status=job['job_status'], task_count=job['task_count'], tasks_ran=job['tasks_ran'],\
+                       tasks_completed=job['tasks_completed'], tasks_failed=job['tasks_failed'])
+    else:
+        return jsonify(job_status=job['job_status'], task_count=job['task_count'], tasks_ran=job['tasks_ran'],\
                        tasks_completed=job['tasks_completed'], tasks_failed=job['tasks_failed'])
     
 
@@ -1414,8 +1438,9 @@ def scheduled_auto_updates():
         
         for tag_uuid in configs:
         
+            print('ready config: ', tag_uuid)
+            
             if isinstance(tag_uuid, str): 
-                
                 teu.update_config_status(tag_uuid, 'PENDING')
                 teu.increment_version_next_run(tag_uuid)
                 job_uuid = jm.create_job(tag_uuid)
@@ -1497,7 +1522,7 @@ def _run_task():
     if tag_config['config_type'] == 'STATIC':
         creation_status = dcu.create_update_static_config(tag_config['fields'], uri, tag_config['tag_uuid'], \
                                                         tag_config['template_uuid'], tag_config['tag_history'], \
-                                                        tag_config['tag_stream'])                                                   
+                                                        tag_config['tag_stream'], tag_config['overwrite'])                                                   
     if tag_config['config_type'] == 'ENTRY':
         creation_status = dcu.create_update_entry_config(tag_config['fields'], uri, tag_config['tag_uuid'], \
                                                         tag_config['template_uuid'], tag_config['tag_history'], \
@@ -1510,10 +1535,12 @@ def _run_task():
         if is_success:
             teu.update_config_status(tag_uuid, 'ACTIVE')
             teu.update_scheduling_status(tag_uuid, 'READY')
+            teu.update_overwrite_flag(tag_uuid)
         elif is_failed:
             teu.update_config_status(tag_uuid, 'ERROR')
         else:
             teu.update_config_status(tag_uuid, 'PROCESSING: {}% complete'.format(pct_complete))
+            # TO DO: add logic to detect completion of job and update the scheduling status to READY
         
         resp = jsonify(success=True)
     else:

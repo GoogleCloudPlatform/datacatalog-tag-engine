@@ -230,14 +230,20 @@ class TagEngineUtils:
       
     def update_config_status(self, tag_uuid, status):
     
-        config_ref = self.db.collection('tag_config').document(tag_uuid)
-        config_ref.update({'config_status': status})
-     
+        self.db.collection('tag_config').document(tag_uuid).update({
+            'config_status': status
+        })
     
     def update_scheduling_status(self, tag_uuid, status):
     
         config_ref = self.db.collection('tag_config').document(tag_uuid)
-        config_ref.update({'scheduling_status': status})
+        doc = config_ref.get()
+        
+        if doc.exists:
+            tag_config = doc.to_dict()
+            
+            if 'scheduling_status' in tag_config:
+                config_ref.update({'scheduling_status': status})
                          
     
     def increment_version_next_run(self, tag_uuid):
@@ -248,7 +254,9 @@ class TagEngineUtils:
         delta = config.get('refresh_frequency', 24)
         unit = config.get('refresh_unit', 'hours')
         
-        if unit == 'hours':
+        if unit == 'minutes':
+            next_run = datetime.utcnow() + timedelta(minutes=delta)
+        elif unit == 'hours':
             next_run = datetime.utcnow() + timedelta(hours=delta)
         if unit == 'days':
             next_run = datetime.utcnow() + timedelta(days=delta)
@@ -258,7 +266,12 @@ class TagEngineUtils:
             'next_run' : next_run
         })
             
-                                                                         
+    def update_overwrite_flag(self, tag_uuid):
+        
+        self.db.collection('tag_config').document(tag_uuid).update({
+            'overwrite': False
+        })
+                                                                             
     def read_template_config(self, template_uuid):
                 
         tag_config = {}
@@ -314,7 +327,8 @@ class TagEngineUtils:
         return template_uuid
         
         
-    def write_static_config(self, config_status, fields, included_uris, excluded_uris, template_uuid, tag_history, tag_stream):
+    def write_static_config(self, config_status, fields, included_uris, excluded_uris, template_uuid, \
+                            refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite=False):
         
         # hash the included_uris string
         included_uris_hash = hashlib.md5(included_uris.encode()).hexdigest()
@@ -337,24 +351,56 @@ class TagEngineUtils:
                 })
                 #print('Updated status to INACTIVE.')
         
-       
         tag_uuid = uuid.uuid1().hex
+        
+        if refresh_mode == 'AUTO':
+            
+            delta, next_run = self.validate_auto_refresh(refresh_frequency, refresh_unit)
        
-        tag_config = self.db.collection('tag_config')
-        doc_ref = tag_config.document(tag_uuid)
-        doc_ref.set({
-            'tag_uuid': tag_uuid,
-            'config_type': 'STATIC',
-            'config_status': config_status, 
-            'creation_time': datetime.utcnow(), 
-            'fields': fields,
-            'included_uris': included_uris,
-            'included_uris_hash': included_uris_hash,
-            'excluded_uris': excluded_uris,
-            'template_uuid': template_uuid,
-            'tag_history': tag_history,
-            'tag_stream': tag_stream
-        })
+            tag_config = self.db.collection('tag_config')
+            doc_ref = tag_config.document(tag_uuid)
+            doc_ref.set({
+                'tag_uuid': tag_uuid,
+                'config_type': 'STATIC',
+                'config_status': config_status, 
+                'creation_time': datetime.utcnow(), 
+                'fields': fields,
+                'included_uris': included_uris,
+                'included_uris_hash': included_uris_hash,
+                'excluded_uris': excluded_uris,
+                'template_uuid': template_uuid,
+                'refresh_mode': refresh_mode, # AUTO refresh mode
+                'refresh_frequency': delta,
+                'refresh_unit': refresh_unit,
+                'tag_history': tag_history,
+                'tag_stream': tag_stream,
+                'scheduling_status': 'PENDING',
+                'next_run': next_run,
+                'version': 1,
+                'overwrite': overwrite
+            })
+            
+        else:
+            
+            tag_config = self.db.collection('tag_config')
+            doc_ref = tag_config.document(tag_uuid)
+            doc_ref.set({
+                'tag_uuid': tag_uuid,
+                'config_type': 'STATIC',
+                'config_status': config_status, 
+                'creation_time': datetime.utcnow(), 
+                'fields': fields,
+                'included_uris': included_uris,
+                'included_uris_hash': included_uris_hash,
+                'excluded_uris': excluded_uris,
+                'template_uuid': template_uuid,
+                'refresh_mode': refresh_mode, # ON_DEMAND refresh mode
+                'refresh_frequency': 0, # N/A
+                'tag_history': tag_history,
+                'tag_stream': tag_stream,
+                'version': 1,
+                'overwrite': overwrite
+            })
         
         return tag_uuid, included_uris_hash
     
@@ -386,22 +432,8 @@ class TagEngineUtils:
         doc_ref = tag_config.document(tag_uuid)
         
         if refresh_mode == 'AUTO':
-            if type(refresh_frequency) is int: 
-                if refresh_frequency > 0:
-                    delta = refresh_frequency
-                else:
-                    delta = 24
             
-            if type(refresh_frequency) is str:
-                if refresh_frequency.isdigit():
-                    delta = int(refresh_frequency)
-                else:
-                    delta = 24
-                
-            if refresh_unit == 'hours':
-                next_run = datetime.utcnow() + timedelta(hours=delta)
-            if refresh_unit == 'days':
-                next_run = datetime.utcnow() + timedelta(days=delta)
+            delta, next_run = self.validate_auto_refresh(refresh_frequency, refresh_unit)
             
             doc_ref.set({
                 'tag_uuid': tag_uuid,
@@ -444,10 +476,41 @@ class TagEngineUtils:
         print('Created new dynamic config.')
         
         return tag_uuid, included_uris_hash
+  
         
+    def validate_auto_refresh(self, refresh_frequency, refresh_unit):
+        
+        if type(refresh_frequency) is int: 
+            if refresh_frequency > 0:
+                delta = refresh_frequency
+            else:
+                delta = 24
+        
+        if type(refresh_frequency) is str:
+            if refresh_frequency.isdigit():
+                delta = int(refresh_frequency)
+            else:
+                delta = 24
+        
+        if refresh_unit == 'minutes':
+            next_run = datetime.utcnow() + timedelta(minutes=delta)    
+        elif refresh_unit == 'hours':
+            next_run = datetime.utcnow() + timedelta(hours=delta)
+        elif refresh_unit == 'days':
+            next_run = datetime.utcnow() + timedelta(days=delta)
+        else:
+            next_run = datetime.utcnow() + timedelta(days=delta) # default to days
+            
+        return delta, next_run
+    
     
     def write_entry_config(self, config_status, fields, included_uris, excluded_uris, template_uuid, refresh_mode,\
                            refresh_frequency, refresh_unit, tag_history, tag_stream):
+        
+        print('** enter write_entry_config **')
+        print('refresh_mode: ', refresh_mode)
+        print('refresh_frequency: ', refresh_frequency)
+        print('refresh_unit: ', refresh_unit)
         
         included_uris_hash = hashlib.md5(included_uris.encode()).hexdigest()
         
@@ -473,22 +536,8 @@ class TagEngineUtils:
         doc_ref = tag_config.document(tag_uuid)
         
         if refresh_mode == 'AUTO':
-            if type(refresh_frequency) is int: 
-                if refresh_frequency > 0:
-                    delta = refresh_frequency
-                else:
-                    delta = 24
             
-            if type(refresh_frequency) is str:
-                if refresh_frequency.isdigit():
-                    delta = int(refresh_frequency)
-                else:
-                    delta = 24
-                
-            if refresh_unit == 'hours':
-                next_run = datetime.utcnow() + timedelta(hours=delta)
-            if refresh_unit == 'days':
-                next_run = datetime.utcnow() + timedelta(days=delta)
+            delta, next_run = self.validate_auto_refresh(refresh_frequency, refresh_unit)
             
             doc_ref.set({
                 'tag_uuid': tag_uuid,
@@ -657,7 +706,7 @@ class TagEngineUtils:
         
     
     def update_tag_config(self, old_tag_uuid, config_type, config_status, fields, included_uris, excluded_uris, template_uuid, \
-                          refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream):
+                          refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite=False):
         
         self.db.collection('tag_config').document(old_tag_uuid).update({
             'config_status' : "INACTIVE"
@@ -665,7 +714,8 @@ class TagEngineUtils:
         
         if config_type == 'STATIC':
             new_tag_uuid, included_uris_hash = self.write_static_config(config_status, fields, included_uris, excluded_uris, template_uuid, \
-                                                                         tag_history, tag_stream)
+                                                                        refresh_mode, refresh_frequency, refresh_unit, \
+                                                                        tag_history, tag_stream, overwrite)
         
         if config_type == 'DYNAMIC':
             new_tag_uuid, included_uris_hash = self.write_dynamic_config(config_status, fields, included_uris, excluded_uris, \

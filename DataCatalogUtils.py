@@ -176,7 +176,7 @@ class DataCatalogUtils:
         return tag_exists, tag_id
     
     
-    def create_update_static_config(self, fields, uri, tag_uuid, template_uuid, tag_history, tag_stream):
+    def create_update_static_config(self, fields, uri, tag_uuid, template_uuid, tag_history, tag_stream, overwrite=False):
         
         # uri is either a BQ table/view path or GCS file path
         store = te.TagEngineUtils()        
@@ -186,7 +186,7 @@ class DataCatalogUtils:
         is_gcs = False
         is_bq = False
         
-        # lookup the entry based on the resource type
+        # look up the entry based on the resource type
         if isinstance(uri, list):
             is_gcs = True
             bucket = uri[0].replace('-', '_')
@@ -195,8 +195,12 @@ class DataCatalogUtils:
             #print('gcs_resource: ', gcs_resource)
             request = datacatalog.LookupEntryRequest()
             request.linked_resource=gcs_resource
-            entry = self.client.lookup_entry(request)
-            #print('entry found: ', entry)
+            
+            try:
+                entry = self.client.lookup_entry(request)
+            except Exception as e:
+                print('Unable to find entry in the catalog. Entry ' + gcs_resource + ' does not exist.')
+                #print('entry found: ', entry)
         
         if isinstance(uri, str):
             is_bq = True
@@ -215,11 +219,17 @@ class DataCatalogUtils:
         
         try:    
             tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
+        
         except Exception as e:
             print('Error during check_if_exists: ', e)
             creation_status = constants.ERROR
             return creation_status
 
+        if tag_exists and overwrite == False:
+            #print('Tag already exists and overwrite set to False')
+            creation_status = constants.SUCCESS
+            return creation_status
+            
         tag = datacatalog.Tag()
         tag.template = self.template_path
         
@@ -276,18 +286,17 @@ class DataCatalogUtils:
         if column != "":
             tag.column = column
             #print('tag.column == ' + column)   
-        
+                
         if tag_exists == True:
             tag.name = tag_id
             
             try:
-                #print('tag request: ', tag)
                 response = self.client.update_tag(tag=tag)
             except Exception as e:
                 msg = 'Error occurred during tag update: ' + str(e)
                 store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, msg)
                 
-                # sleep and retry write
+                # sleep and retry the tag update
                 if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
                     print('sleep for 3 minutes due to ' + str(e))
                     time.sleep(180)
@@ -299,7 +308,6 @@ class DataCatalogUtils:
                         store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, msg)
         else:
             try:
-                print('tag create request: ', tag)
                 response = self.client.create_tag(parent=entry.name, tag=tag)
             except Exception as e:
                 msg = 'Error occurred during tag create: ' + str(e) + '. Failed tag request = ' + tag
@@ -319,7 +327,6 @@ class DataCatalogUtils:
         if tag_history:
             bqu = bq.BigQueryUtils()
             template_fields = self.get_template()
-            
             if is_gcs:
                 bqu.copy_tag(self.template_id, template_fields, '/'.join(uri), None, fields)
             if is_bq:
@@ -327,14 +334,11 @@ class DataCatalogUtils:
         
         if tag_stream:
             psu = ps.PubSubUtils()
-            
             if is_gcs:
                 bqu.copy_tag(self.template_id, '/'.join(uri), None, fields)
             if is_bq:
                 psu.copy_tag(self.template_id, uri, column, fields)
-        
-        #print("response: " + str(response))
-            
+           
         return creation_status
 
 

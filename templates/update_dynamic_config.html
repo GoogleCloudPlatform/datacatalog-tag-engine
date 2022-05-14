@@ -141,11 +141,17 @@
  			     <tr><td>&nbsp;</td></tr>
 				<tr>	
 			    <td>Refresh frequency: <input type="text" value="{{ tag_config['refresh_frequency'] }}" name="refresh_frequency" style="width: 30px;padding: 3px;"> &nbsp;<select name="refresh_unit" style="width: 70px;padding: 3px;">
-  				    			{% if tag_config['refresh_unit'] == 'days' %}
-     				  				<option value="hours">hours</option>
-     							   	<option value="days" selected>days</option>
+	  						{% if tag_config['refresh_unit'] == 'minutes' %}
+	     				  			<option value="minutes" selected>minutes</option>
+									<option value="hours">hours</option>
+	     							<option value="days">days</option>
+  				    		{% elif tag_config['refresh_unit'] == 'hours' %}
+     				  				<option value="minutes">minutes</option>
+									<option value="hours" selected>hours</option>
+     							   	<option value="days">days</option>
   							{% else %}
-     				  				<option value="hours" selected>hours</option>
+     				  				<option value="minutes">minutes</option>
+									<option value="hours">hours</option>
      							   	<option value="days">days</option>
   							{% endif %}
    							  </select></td>

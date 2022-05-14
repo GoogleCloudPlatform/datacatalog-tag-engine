@@ -5,7 +5,7 @@
     "fields": [
         {
             "field_id": "data_domain",
-            "field_value": "LOGISTICS"
+            "field_value": "MARKETING"
         },
         {
             "field_id": "broad_data_category",
@@ -37,7 +37,8 @@
         }
     ],
     "included_uris": "gs://discovery-area/cities_311/*",
-    "excluded_uris": "",
+    "excluded_uris": "gs://discovery-area/cities_311/austin_311_service_requests.parquet",
+    "refresh_mode": "ON_DEMAND",
     "tag_history": true,
     "tag_stream": false   
 }

@@ -36,8 +36,11 @@
             "field_value": "2022-05-08"
         }
     ],
-    "included_uris": "bigquery/project/warehouse-337221/dataset/cities_311/*",
-    "excluded_uris": "",
+    "included_uris": "gs://discovery-area/cities_311/*",
+    "excluded_uris": "gs://discovery-area/cities_311/austin_311_service_requests.parquet",
+    "refresh_mode": "AUTO",
+    "refresh_frequency": 60,
+    "refresh_unit": "minutes",
     "tag_history": true,
     "tag_stream": false   
 }
