@@ -9,7 +9,7 @@
 	   <h1>Tag Engine for Data Catalog</h1>
         </div>
 	   <div class="header">
-	   <h2>Create GCS entry config with {{ template_id }}</h2>
+	   <h2>Create mapping config with {{ template_id }}</h2>
 	   <span style="color:#9d9a9a;">
 	  </span>
 	   </div>
@@ -18,7 +18,7 @@
 	   
 	   Mandatory template fields are marked by <span style="color:red;">*</span> and are already checked for you. 
 	   </h5>
-         <form method="post" action="/process_entry_config">
+         <form method="post" action="/process_mapping_config">
 		    <table>
 			   {% for dict_field in fields %}
 		        <tr>
@@ -41,20 +41,43 @@
 			   {% endfor %}
 			   </table>
 		    <p>&nbsp;</p>
-			   <h3>Enter URIs</h3>
+		   <h3>Enter Mapping URI</h3>
+	 	   
+		   <span style="color:#9d9a9a;"><h5>
+		   Specify the path to your mapping table in BigQuery. Mapping table must contain the elements source_name and canonical_name.<br><br>
+				  Supported URI format: <br>
+				    bigquery/project/[PROJECT]/dataset/[DATASET]/[TABLE] <br>
+			        </h5>
+			</span>
+			    <table>
+			     <tr>
+			    <td><span style="color:red;">*</span> Mapping Table URI:&nbsp;&nbsp;
+			    	  <input type="text" value="bigquery/project/..." name="mapping_table" style="align-content:left; width: 700px; overflow:auto;"/>
+
+			    	</td>
+			     </tr>
+			 </table>
+				 <p>&nbsp;</p>
+			   <h3>Enter Included and Excluded URIs</h3>
 		 	   
 			   <span style="color:#9d9a9a;"><h5>
-			   Specify a comma-separated list of URIs for file paths to include in and exclude from your entry config. Wildcards are allowed in the path name. <br><br>
+			   Specify a comma-separated list of URIs to include in and exclude from your mapping config. URIs must be GCS or BQ paths. Wildcards are allowed in the path name (GCS) or table name (BQ). <br><br>
 					  Supported URIs for GCS files: <br>
 					    gs://my-bucket/my-folder/* <br>
 				        gs://my-bucket/my-folder/*.parquet <br>
-					    gs://my-bucket/my-folderA/my-folderB/* <br>
-				        </h5>
+					    gs://my-bucket/my-folderA/my-folderB/* <br><br>
+				        
+					  Supported URIs for BQ objects (datasets, tables, views): <br>
+					    bigquery/project/{project_id}/* <br>
+					    bigquery/project/{project_id}/dataset/{dataset}/* <br>
+				        bigquery/project/{project_id}/dataset/{dataset}/{table} <br>
+				        bigquery/project/{project_id}/dataset/{dataset}/{table}/{column} <br>		
+						</h5>
 				</span>
 				    <table>
 				     <tr>
 				    <td><span style="color:red;">*</span> Included URIs:&nbsp;&nbsp;
-				    	  <input type="text" value="gs://" name="included_uris" style="align-content:left; width: 700px; overflow:auto;"/>
+				    	  <input type="text" name="included_uris" style="align-content:left; width: 700px; overflow:auto;"/>
 
 				    	</td>
 				     </tr>
@@ -69,7 +92,7 @@
  			   <h3>Choose Update Options</h3>
  		 	   <span style="color:#9d9a9a;">
  		 		   <h5>If you choose the AUTO refresh mode, your entry config will be scheduled for updates based on your specified refresh frequency. <br>
- 					   If you choose the ON-DEMAND refresh mode, your entry config will <b>not</b> be scheduled for updates (even if you specify a refresh frequency). <br>The AUTO mode is helpful for registering and tagging new files on GCS on a recurring schedule. It will not re-register or re-tag existing files. <br><br> <br><br>
+ 					   If you choose the ON-DEMAND refresh mode, your entry config will <b>not</b> be scheduled for updates (even if you specify a refresh frequency). <br>The AUTO mode is helpful for registering and tagging new files on GCS on a recurring schedule. It will not re-register or re-tag existing files. <br><br>
  				   </h5>
  				</span>
  			     <table>
@@ -111,7 +134,7 @@
 	         <p>&nbsp;</p>
 		        <table>
 		        <tr>
-			   <td><input type="submit" value="Submit Entry Config" name="action">
+			   <td><input type="submit" value="Submit Mapping Config" name="action">
 			       <input type="submit" value="Cancel Changes" name="action">
 			   </td>
 		        </tr>

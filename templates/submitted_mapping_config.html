@@ -1,21 +1,21 @@
 <html>
  <head>
-   <title>Entry Config Created</title>
+   <title>Mapping Config Created</title>
    <link rel="stylesheet" type="text/css" href="/static/style.css">
  </head>
  <body>
     {% if status == -1 %}
     <table><tr><td>
-    &nbsp;<span style="color:red;">Errors occurred while processing your entry config submission. Please check Firestore for details. </span>
+    &nbsp;<span style="color:red;">Errors occurred while processing your config submission. Please check Firestore for details. </span>
       </td></tr></table><p>
     {% endif %}
     
    <div id="container">
      <div class="pagetitle">
-       <h1>Entry Config Submitted</h1>
+       <h1>Mapping Config Submitted</h1>
      </div>
      <div id="main">
-       <p>Your entry config is being processed. Please check <a href="{{ url_for('view_configs',template_id=template_id,project_id=project_id,region=region) }}">here</a> for the latest status of your request. </p>
+       <p>Your mapping config is being processed. Please check <a href="{{ url_for('view_configs',template_id=template_id,project_id=project_id,region=region) }}">here</a> for the latest status of your request. </p>
 	   
 	   <p>Here's a summary of your config:</p>
        <p>
@@ -33,6 +33,9 @@
 		{% endfor %}
 	    </table>
    		<p></p>
+		<span style="color:#0b5394;">Mapping Table</span>: <br>
+		{{ mapping_table }} 
+   		 <p></p>
 		<span style="color:#0b5394;">Included URIs</span>: <br>
 		{{ included_uris }} 
    		 <p></p>

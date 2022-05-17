@@ -200,6 +200,8 @@ class DataCatalogUtils:
                 entry = self.client.lookup_entry(request)
             except Exception as e:
                 print('Unable to find entry in the catalog. Entry ' + gcs_resource + ' does not exist.')
+                creation_status = constants.ERROR
+                return creation_status
                 #print('entry found: ', entry)
         
         if isinstance(uri, str):
@@ -450,7 +452,7 @@ class DataCatalogUtils:
         return creation_status
         
 
-    def create_update_entry_config(self, fields, uri, tag_uuid, template_uuid, tag_history, tag_stream, batch_mode=False):
+    def create_update_entry_config(self, fields, uri, tag_uuid, template_uuid, tag_history, tag_stream):
         
         print('** create_update_entry_config **')
         
@@ -656,6 +658,159 @@ class DataCatalogUtils:
         print('created entry_group: ', entry_group.name)
         return entry_group.name
            
+
+    def create_update_mapping_config(self, fields, mapping_table, uri, tag_uuid, template_uuid, tag_history, tag_stream, overwrite=False):
+        
+        print('** enter create_update_mapping_config **')
+ 
+        # uri is either a BQ table/view path or GCS file path
+        store = te.TagEngineUtils()        
+        creation_status = constants.SUCCESS
+        column = ''
+        
+        is_gcs = False
+        is_bq = False
+        
+        # look up the entry based on the resource type
+        if isinstance(uri, list):
+            is_gcs = True
+            bucket = uri[0].replace('-', '_')
+            filename = uri[1].split('.')[0].replace('/', '_') # extract the filename without the extension, replace '/' with '_'
+            gcs_resource = '//datacatalog.googleapis.com/projects/' + self.project_id + '/locations/' + self.region + '/entryGroups/' + bucket + '/entries/' + filename
+            #print('gcs_resource: ', gcs_resource)
+            request = datacatalog.LookupEntryRequest()
+            request.linked_resource=gcs_resource
+            
+            try:
+                entry = self.client.lookup_entry(request)
+            except Exception as e:
+                print('Unable to find entry in the catalog. Entry ' + gcs_resource + ' does not exist.')
+                creation_status = constants.ERROR
+                return creation_status
+                #print('entry found: ', entry)
+        
+        if isinstance(uri, str):
+            is_bq = True
+            if "/column/" in uri:
+                # we have a column tag
+                split_resource = uri.split("/column/")
+                uri = split_resource[0]
+                column = split_resource[1]
+        
+            bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
+            #print("bigquery_resource: " + bigquery_resource)
+        
+            request = datacatalog.LookupEntryRequest()
+            request.linked_resource=bigquery_resource
+            entry = self.client.lookup_entry(request)
+        
+        try:    
+            tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
+        
+        except Exception as e:
+            print('Error during check_if_exists: ', e)
+            creation_status = constants.ERROR
+            return creation_status
+
+        if tag_exists and overwrite == False:
+            #print('Info: tag already exists and overwrite set to False')
+            creation_status = constants.SUCCESS
+            return creation_status
+         
+        # entry exists while mapping tag does not
+        if entry.schema == None:
+            #print('Error: entry ' + entry.name + ' does not have a schema in the catalog.')
+            creation_status = constants.ERROR
+            return creation_status
+        
+        column_schema_str = ''
+        for column_schema in entry.schema.columns: 
+            column_schema_str += str(column_schema).split(':')[3].strip() + ','
+                
+        mapping_table_formatted = mapping_table.replace('bigquery/project/', '').replace('/dataset/', '.').replace('/', '.')
+                
+        query_str = 'select cannonical_name from `' + mapping_table_formatted + '` where source_name in (' + column_schema_str[0:-1] + ')'
+        #print('query_str: ', query_str)
+        
+        # run query against mapping table
+        bq_client = bigquery.Client()
+        rows = bq_client.query(query_str).result()
+        
+        tag = datacatalog.Tag()
+        tag.template = self.template_path
+        
+        for row in rows:
+            cannonical_name = row['cannonical_name']
+            #print('cannonical_name: ', cannonical_name)
+        
+            for field in fields:
+                if field['field_id'] == cannonical_name:
+                    bool_field = datacatalog.TagField()
+                    bool_field.bool_value = True
+                    tag.fields[cannonical_name] = bool_field
+                    field['field_value'] = True
+                    break
+                        
+        if column != "":
+            tag.column = column
+            #print('tag.column == ' + column)   
+                
+        if tag_exists:
+            # tag already exists and overwrite is True
+            tag.name = tag_id
+            
+            try:
+                print('tag update: ', tag)
+                response = self.client.update_tag(tag=tag)
+            except Exception as e:
+                msg = 'Error occurred during tag update: ' + str(e)
+                store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, msg)
+                
+                # sleep and retry the tag update
+                if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
+                    print('sleep for 3 minutes due to ' + str(e))
+                    time.sleep(180)
+                    
+                    try:
+                        response = self.client.update_tag(tag=tag)
+                    except Exception as e:
+                        msg = 'Error occurred during tag update after sleep: ' + str(e)
+                        store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, msg)
+        else:
+            try:
+                response = self.client.create_tag(parent=entry.name, tag=tag)
+            except Exception as e:
+                msg = 'Error occurred during tag create: ' + str(e) + '. Failed tag request = ' + tag
+                store.write_tag_op_error(constants.TAG_CREATED, uri, column, tag_uuid, template_uuid, msg)
+                
+                # sleep and retry write
+                if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
+                    print('sleep for 3 minutes due to ' + str(e))
+                    time.sleep(180)
+                    
+                    try:
+                        response = self.client.create_tag(parent=entry.name, tag=tag)
+                    except Exception as e:
+                        msg = 'Error occurred during tag create after sleep: ' + str(e)
+                        store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, msg)
+                    
+        if tag_history:
+            bqu = bq.BigQueryUtils()
+            template_fields = self.get_template()
+            if is_gcs:
+                bqu.copy_tag(self.template_id, template_fields, '/'.join(uri), None, fields)
+            if is_bq:
+                bqu.copy_tag(self.template_id, template_fields, uri, column, fields)
+        
+        if tag_stream:
+            psu = ps.PubSubUtils()
+            if is_gcs:
+                bqu.copy_tag(self.template_id, '/'.join(uri), None, fields)
+            if is_bq:
+                psu.copy_tag(self.template_id, uri, column, fields)
+           
+        return creation_status
+                 
         
     def search_catalog(self, bq_project, bq_dataset):
         
@@ -1001,10 +1156,15 @@ if __name__ == '__main__':
     project_id=config['DEFAULT']['TAG_ENGINE_PROJECT']
     region=config['DEFAULT']['QUEUE_REGION']
 
-    dcu = DataCatalogUtils(template_id='file_metadata', project_id=project_id, region=region);
+    dcu = DataCatalogUtils(template_id='enterprise_dictionary_template', project_id=project_id, region=region);
     fields = dcu.get_template()
+    mapping_table = 'bigquery/project/tag-engine-develop/dataset/dictionary/mapping'
     #print(str(fields))
     
-    #uri = ('discovery-area', 'cities_311/san_francisco_311_service_requests/000000000008')
-    uri = ('discovery-area', 'austin_311_service_requests.parquet')
-    dcu.create_update_entry_config(fields, uri, tag_uuid=None, template_uuid=None, tag_history=False, tag_stream=False, batch_mode=False)
+    #uri = ['discovery-area', 'cities_311/san_francisco_311_service_requests/000000000008']
+    #uri = ['discovery-area', 'austin_311_service_requests.parquet']
+    #dcu.create_update_entry_config(fields, uri, tag_uuid=None, template_uuid=None, tag_history=False, tag_stream=False, batch_mode=False)
+    
+    uri = ['discovery-area', 'sample_data/farm.parquet']
+    #uri = ['discovery-area', 'sample_data/usa.parquet']
+    dcu.create_update_mapping_config(fields, mapping_table, uri, tag_uuid=None, template_uuid=None, tag_history=False, tag_stream=False, overwrite=False)

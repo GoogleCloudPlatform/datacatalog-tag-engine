@@ -1,0 +1,78 @@
+{
+    "template_id": "enterprise_dictionary_template",
+    "project_id": "tag-engine-develop",
+    "region": "us-central1",
+    "fields": [
+        {
+            "field_id": "source_supplier_unique_id"
+        },
+        {
+            "field_id": "primary_business_name"
+        },
+        {
+            "field_id": "organization_address_street_address_line1"
+        },
+        {
+            "field_id": "organization_address_city"
+        },
+        {
+            "field_id": "organization_address_state"
+        },
+        {
+            "field_id": "organization_address_postal_code"
+        },
+        {
+            "field_id": "organization_address_country"
+        },
+        {
+            "field_id": "telephone_number"
+        },
+        {
+            "field_id": "chief_executive_officer_first_name"
+        },
+        {
+            "field_id": "chief_executive_officer_last_name"
+        },
+        {
+            "field_id": "chief_executive_officer_name_suffix"
+        },
+        {
+            "field_id": "sic_code_1"
+        },
+        {
+            "field_id": "chief_executive_officer_title"
+        },
+        {
+            "field_id": "sic_code_1_base_6"
+        },
+        {
+            "field_id": "organization_address_county"
+        },
+        {
+            "field_id": "organization_msa_name"
+        },
+        {
+            "field_id": "sic_code_1_base_2"
+        },
+        {
+            "field_id": "sic_code_1_base_4"
+        },
+        {
+            "field_id": "sic_code_1_base_4_description"
+        },
+        {
+            "field_id": "year_started"
+        },
+        {
+            "field_id": "organization_address_postal_code_4_extension"
+        },
+        {
+            "field_id": "company_url"
+        }
+    ],
+	"mapping_table": "bigquery/project/tag-engine-develop/dataset/dictionary/mapping",
+    "included_uris": "gs://discovery-area/sample_data/*",
+    "refresh_mode": "ON_DEMAND",
+    "tag_history": true,
+    "tag_stream": false   
+}

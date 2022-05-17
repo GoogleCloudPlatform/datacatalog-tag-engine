@@ -43,8 +43,7 @@
             "field_id": "media_link"
         }
     ],
-    "included_uris": "gs://discovery-area/cities_311/*",
-    "excluded_uris": "gs://discovery-area/cities_311/austin_311_service_requests.parquet",
+    "included_uris": "gs://discovery-area/sample_data/*",
     "refresh_mode": "ON_DEMAND",
     "tag_history": true,
     "tag_stream": false   
