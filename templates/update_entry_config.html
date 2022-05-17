@@ -9,38 +9,21 @@
 	   <h1>Tag Engine</h1>
         </div>
 	   <div class="header">
-	   <h2>Update dynamic tag config with {{ template_id }}</h2>
+	   <h2>Update entry config using {{ template_id }}</h2>
  	   <span style="color:#9d9a9a;">
- 		   <h5>Make changes to your dynamic config below. A checked box indicates the field is part of this tag config. You can add new fields and/or remove existing ones from the tag config. <br>You can also edit the query expression, included URIs, excluded URIs, refresh frequency, and tag history. </h5>
+ 		   <h5>Make changes to your entry config below. A checked box indicates the field is part of the tag. You can add new fields and/or remove existing ones from the tag. <br>You can also edit the included URIs, excluded URIs, refresh frequency, and tag history settings. </h5>
  	  </span>
 	   </div>
 	  
-	   <h3>Enter Query Expressions</h3>
+	   <h3>Choose Tag Template Fields</h3>
  	   <span style="color:#9d9a9a;">
  		   <h5>
-		   The query expression must be a <i>valid</i> select statement in BQ. It can contain aggregate functions, joins, filters, groupings, etc. <br>
-	   <br>
-	   In addition, the query expression can contain the following variables:<br>
-	   - <b>$table</b> refers to the table (or view) being tagged<br>
-	   - <b>$column</b> refers to the column being tagged<br>
-	   - <b>$dataset</b> refers to the dataset of the table (or view) being tagged<br>
-	   - <b>$project</b> refers to the project of the table (or view) being tagged<br>
-	   <br>
-	   Here are some examples: <br>
-	   select count(*) from $table<br>
-	   select count(distinct($column)) from $table <br>
-	   select count(*) > 1 from $table where $column is null<br>
-	   select rating from dw-project.quality.scores where table = '$table' and dataset = '$dataset' and project = '$project'<br>
-	   select '30-DAYS'<br>
-	    <br>
-		Note: The result of the query expression must satisfy the type requirements of the field in the tag template. <br>
-		For example, if the tag template field is of type string, the query expression must return a string type.<br><br>
-			   
+	   
 	 	Mandatory tag template fields are marked by <span style="color:red;">*</span>. 
 	 	</h5>
 	   </span>
 	   
-         <form method="post" action="/process_update_dynamic_config">
+         <form method="post" action="/process_update_entry_config">
 		    <table>
 			   {% for field in fields %}
 		        <tr>
@@ -68,41 +51,19 @@
 				{% else: %}
 				&nbsp;
 				{% endif %}
-				{{ field['field_id'] }} (type {{ field['field_type'] }}):
-				</td>
-				<td>
-				
-		        {% set ns = namespace(found=false) %}
-		      
-			   {% for current_field in tag_config['fields'] %}
-			   
-			      {% if current_field['field_id'] == field['field_id'] %}
-		           {% set ns.found = true %}
-				   
-					   <textarea name="{{ field['field_id'] }}" style="align-content:left; width: 700px; overflow:auto;">{{ current_field['query_expression'] }}
-					   </textarea>
-				       	
- 					 {% endif %}
- 				    {% endfor %}
-			    
-			   {% if ns.found == false %}
-					<textarea name="{{ field['field_id'] }}" style="align-content:left; width: 700px; overflow:auto;">
-					</textarea>
-			   {% endif %}
-				
+				{{ field['field_id'] }} (type {{ field['field_type'] }})
 				</td>
 			   </tr>
 			   {% endfor %}
 			   </table>
 		    <p>&nbsp;</p>
 			   <h3>Enter URIs</h3>
-		 	   <span style="color:#9d9a9a;">
-		 		   <h5>Specify URIs for resources to include in or exclude from your dynamic tag. Wildcards are allowed in the table name. <br><br>
-					   Supported URIs: <br>
-					   bigquery/project/{project_id}/* <br>
-					   bigquery/project/{project_id}/dataset/{dataset}/* <br>
-				       bigquery/project/{project_id}/dataset/{dataset}/{table} <br>
-				       bigquery/project/{project_id}/dataset/{dataset}/{table}/{column} </h5>
+		 	   <span style="color:#9d9a9a;"><h5>
+ 			   Specify a comma-separated list of URIs for file paths to include in and exclude from your entry config. Wildcards are allowed in the path name. <br><br>
+ 					  Supported URIs for GCS files: <br>
+ 					    gs://my-bucket/my-folder/* <br>
+ 				        gs://my-bucket/my-folder/*.parquet <br>
+ 					    gs://my-bucket/my-folderA/my-folderB/* <br></h5>
 				</span>
 			    <table>
 			     <tr>
@@ -118,10 +79,10 @@
  		         </tr>
 		        </table>
 		        <p>&nbsp;</p>
-			   <h3>Choose Scheduling</h3>
+			   <h3>Choose Update Options</h3>
 		 	   <span style="color:#9d9a9a;">
-		 		   <h5>If you choose the AUTO refresh mode, your tags will be scheduled for update based on your specified refresh frequency. <br>
-					   If you choose the ON-DEMAND refresh mode, your tags will <b>not</b> be scheduled for refresh (even if you specify a refresh frequency). <br>This mode is useful when you have tags that don't need to be updated or when you want to trigger the update from the API. <br><br>
+		 		   <h5>If you choose the AUTO refresh mode, your entry config will be scheduled for updates based on your specified refresh frequency.<br>
+					   If you choose the ON-DEMAND refresh mode, your entry config will <b>not</b> be scheduled for updates (even if you specify a refresh frequency). <br>This mode is useful when no new files get added to your dataset on a regular basis or when you want to control the cataloging of new files through the Tag Engine API. <br><br>
 				   </h5>
 				</span>
 			     <table>

@@ -1,48 +1,34 @@
 {
     "template_id": "data_governance_500",
-    "project_id": "tag-engine-vanilla-337221",
+    "project_id": "tag-engine-develop",
     "region": "us-central1",
     "fields": [
         {
             "field_id": "data_domain",
-            "field_type": "enum",
-            "is_required": true,
             "field_value": "GOVERNMENT"
         },
         {
             "field_id": "broad_data_category",
-            "field_type": "enum",
-            "is_required": true,
             "field_value": "CONTENT"
         },
         {
             "field_id": "environment",
-            "field_type": "enum",
-            "is_required": false,
             "field_value": "DEV"
         },
         {
             "field_id": "data_origin",
-            "field_type": "enum",
-            "is_required": false,
             "field_value": "OPEN_DATA"
         },
         {
             "field_id": "data_ownership",
-            "field_type": "enum",
-            "is_required": false,
             "field_value": "OPEN_DATA"
         },
         {
             "field_id": "data_confidentiality",
-            "field_type": "enum",
-            "is_required": false,
             "field_value": "PUBLIC"
         },
         {
             "field_id": "data_retention",
-            "field_type": "enum",
-            "is_required": false,
             "field_value": "30_DAYS"
         }
     ],

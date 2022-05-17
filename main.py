@@ -369,6 +369,8 @@ def view_configs():
     stream_enabled, stream_settings = teu.read_tag_stream_settings()
     
     tag_configs = teu.read_tag_configs(template_id, project_id, region)
+    
+    # TO DO: add logic to calculate most recent job status for each config (if status equals RUNNING or ERROR)
 
     return render_template(
         'view_configs.html',
@@ -429,10 +431,19 @@ def display_selected_action():
             display_tag_history=history_enabled,
             display_tag_stream=stream_enabled)
             
-    else: 
-        # this option is currently hidden as tag propagation is in alpha
+    elif action == "Create Entry Config":
         return render_template(
-            'propagation_tag.html',
+            'entry_config.html',
+            template_id=template_id,
+            project_id=project_id,
+            region=region,
+            fields=template_fields,
+            display_tag_history=history_enabled,
+            display_tag_stream=stream_enabled)
+            
+    elif action == "Create Mapping Config":
+        return render_template(
+            'mapping_config.html',
             template_id=template_id,
             project_id=project_id,
             region=region,
@@ -481,7 +492,6 @@ def update_config():
     
     print("tag_stream: " + str(tag_stream))
 
-    
     if config_type == "STATIC":
         # [END update_tag]
         # [START render_template]
@@ -495,11 +505,38 @@ def update_config():
             current_time=datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
             display_tag_history_option=tag_history,
             display_tag_stream_option=tag_stream)
-    else:
+    
+    if config_type == "DYNAMIC":
         # [END display_action]
         # [START render_template]
         return render_template(
             'update_dynamic_config.html',
+            template_id=template_id,
+            project_id=project_id,
+            region=region,
+            fields=template_fields,
+            tag_config=tag_config,
+            display_tag_history_option=tag_history,
+            display_tag_stream_option=tag_stream)
+            
+    if config_type == "ENTRY":
+        # [END display_action]
+        # [START render_template]
+        return render_template(
+            'update_entry_config.html',
+            template_id=template_id,
+            project_id=project_id,
+            region=region,
+            fields=template_fields,
+            tag_config=tag_config,
+            display_tag_history_option=tag_history,
+            display_tag_stream_option=tag_stream)
+            
+    if config_type == "MAPPING":
+        # [END display_action]
+        # [START render_template]
+        return render_template(
+            'update_mapping_config.html',
             template_id=template_id,
             project_id=project_id,
             region=region,
@@ -519,7 +556,11 @@ def process_update_static_config():
     old_tag_uuid = request.form['tag_uuid']
     included_uris = request.form['included_uris'].rstrip()
     excluded_uris = request.form['excluded_uris'].rstrip()
+    refresh_mode = request.form['refresh_mode']
+    refresh_frequency = request.form['refresh_frequency'].rstrip()
+    refresh_unit = request.form['refresh_unit']
     action = request.form['action']
+    overwrite = True # this option overwrites existing tags
     
     job_creation = constants.SUCCESS
     
@@ -579,7 +620,7 @@ def process_update_static_config():
     
         template_exists, template_uuid = teu.read_tag_template(template_id, project_id, region)
         new_tag_uuid = teu.update_tag_config(old_tag_uuid, 'STATIC', 'PENDING', fields, included_uris, excluded_uris,\
-                                                 template_uuid, None, None, None, tag_history, tag_stream)
+                                                 template_uuid, refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite)
         
         #print('new_tag_uuid: ' + new_tag_uuid)
         
@@ -637,8 +678,8 @@ def process_update_dynamic_config():
         print("selected_fields: " + str(selected_fields))
     
         for selected_field in selected_fields:
-            query_expression = request.form.get(selected_field)
-            print("query_expression: " + query_expression)
+            query_expression = request.form.get(selected_field).replace('\t', '').replace('\r', '').replace('\n', ' ').strip()
+            print('query_expression: ' + query_expression)
             selected_field_type = request.form.get(selected_field + "_datatype")
             print(selected_field + ", " + query_expression + ", " + selected_field_type)
             
@@ -653,7 +694,7 @@ def process_update_dynamic_config():
                 fields.append(field)
                 break
     
-        print('fields: ' + str(fields))
+        #print('fields: ' + str(fields))
         
         tag_history = False
     
@@ -697,6 +738,180 @@ def process_update_dynamic_config():
          tag_configs=tag_configs,
          status=job_creation)  
 
+@app.route('/process_update_entry_config', methods=['POST'])
+def process_update_entry_config():
+    template_id = request.form['template_id']
+    project_id = request.form['project_id']
+    region = request.form['region']
+    old_tag_uuid = request.form['tag_uuid']
+    included_uris = request.form['included_uris'].rstrip()
+    excluded_uris = request.form['excluded_uris'].rstrip()
+    refresh_mode = request.form['refresh_mode']
+    refresh_frequency = request.form['refresh_frequency'].rstrip()
+    refresh_unit = request.form['refresh_unit']
+    action = request.form['action']
+    
+    job_creation = constants.SUCCESS
+    
+    #print('old_tag_uuid: ' + old_tag_uuid)
+    #print("action: " + str(action))
+    
+    dcu = dc.DataCatalogUtils(template_id, project_id, region)
+    template_fields = dcu.get_template()
+    
+    if action == "Submit Changes":
+        
+        fields = []
+    
+        selected_fields = request.form.getlist("selected")
+        print("selected_fields: " + str(selected_fields))
+    
+        for selected_field in selected_fields:
+            selected_field_type = request.form.get(selected_field + "_datatype")
+            print(selected_field + ", " + selected_field_type)
+            
+            for template_field in template_fields:
+                if template_field['field_id'] != selected_field:
+                    continue
+                
+                is_required = template_field['is_required']
+        
+                field = {'field_id': selected_field, 'field_type': selected_field_type, 'is_required': is_required}
+                fields.append(field)
+                break
+    
+        #print('fields: ' + str(fields))
+        
+        tag_history = False
+    
+        if "tag_history" in request.form:
+            tag_history_option = request.form.get("tag_history")
+    
+            if tag_history_option == "selected":
+                tag_history = True
+        
+        tag_stream = False
+                
+        if "tag_stream" in request.form:
+            tag_stream_option = request.form.get("tag_stream")
+    
+            if tag_stream_option == "selected":
+                tag_stream = True
+    
+        template_exists, template_uuid = teu.read_tag_template(template_id, project_id, region)
+        new_tag_uuid = teu.update_tag_config(old_tag_uuid, 'ENTRY', 'PENDING', fields, included_uris, excluded_uris,\
+                                                  template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
+                                                  tag_history, tag_stream)
+        
+        job_uuid = jm.create_job(new_tag_uuid)
+    
+        if job_uuid == None: 
+            job_creation = constants.ERROR
+             
+    template_fields = dcu.get_template()  
+    #print('template_fields: ' + str(template_fields))
+    
+    tag_configs = teu.read_tag_configs(template_id, project_id, region)
+      
+     # [END process_update_dynamic_config]
+     # [START render_template]
+    return render_template(
+         'view_configs.html',
+         template_id=template_id,
+         project_id=project_id,
+         region=region,
+         fields=template_fields,
+         tag_configs=tag_configs,
+         status=job_creation)  
+
+
+@app.route('/process_update_mapping_config', methods=['POST'])
+def process_update_mapping_config():
+    template_id = request.form['template_id']
+    project_id = request.form['project_id']
+    region = request.form['region']
+    old_tag_uuid = request.form['tag_uuid']
+    mapping_table = request.form['mapping_table'].rstrip()
+    included_uris = request.form['included_uris'].rstrip()
+    excluded_uris = request.form['excluded_uris'].rstrip()
+    refresh_mode = request.form['refresh_mode']
+    refresh_frequency = request.form['refresh_frequency'].rstrip()
+    refresh_unit = request.form['refresh_unit']
+    action = request.form['action']
+    overwrite = True
+    job_creation = constants.SUCCESS
+    
+    #print('old_tag_uuid: ' + old_tag_uuid)
+    #print("action: " + str(action))
+    
+    dcu = dc.DataCatalogUtils(template_id, project_id, region)
+    template_fields = dcu.get_template()
+    
+    if action == "Submit Changes":
+        
+        fields = []
+    
+        selected_fields = request.form.getlist("selected")
+        print("selected_fields: " + str(selected_fields))
+    
+        for selected_field in selected_fields:
+            selected_field_type = request.form.get(selected_field + "_datatype")
+            print(selected_field + ", " + selected_field_type)
+            
+            for template_field in template_fields:
+                if template_field['field_id'] != selected_field:
+                    continue
+                
+                is_required = template_field['is_required']
+        
+                field = {'field_id': selected_field, 'field_type': selected_field_type, 'is_required': is_required}
+                fields.append(field)
+                break
+    
+        #print('fields: ' + str(fields))
+        
+        tag_history = False
+    
+        if "tag_history" in request.form:
+            tag_history_option = request.form.get("tag_history")
+    
+            if tag_history_option == "selected":
+                tag_history = True
+        
+        tag_stream = False
+                
+        if "tag_stream" in request.form:
+            tag_stream_option = request.form.get("tag_stream")
+    
+            if tag_stream_option == "selected":
+                tag_stream = True
+    
+        template_exists, template_uuid = teu.read_tag_template(template_id, project_id, region)
+        new_tag_uuid = teu.update_tag_config(old_tag_uuid, 'MAPPING', 'PENDING', fields, included_uris, excluded_uris,\
+                                                  template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
+                                                  tag_history, tag_stream, overwrite, mapping_table)
+        
+        job_uuid = jm.create_job(new_tag_uuid)
+    
+        if job_uuid == None: 
+            job_creation = constants.ERROR
+             
+    template_fields = dcu.get_template()  
+    #print('template_fields: ' + str(template_fields))
+    
+    tag_configs = teu.read_tag_configs(template_id, project_id, region)
+      
+     # [END process_update_dynamic_config]
+     # [START render_template]
+    return render_template(
+         'view_configs.html',
+         template_id=template_id,
+         project_id=project_id,
+         region=region,
+         fields=template_fields,
+         tag_configs=tag_configs,
+         status=job_creation)  
+
 
 @app.route('/process_static_config', methods=['POST'])
 def process_static_config():
@@ -705,6 +920,9 @@ def process_static_config():
     region = request.form['region']
     included_uris = request.form['included_uris'].rstrip()
     excluded_uris = request.form['excluded_uris'].rstrip()
+    refresh_mode = request.form['refresh_mode']
+    refresh_frequency = request.form['refresh_frequency'].rstrip()
+    refresh_unit = request.form['refresh_unit']
     action = request.form['action']
     
     print('included_uris: ' + included_uris)
@@ -752,7 +970,7 @@ def process_static_config():
             fields.append(field)
             break
     
-    print('fields: ' + str(fields))
+    #print('fields: ' + str(fields))
     
     tag_history_option = False
     tag_history_enabled = "OFF"
@@ -775,8 +993,8 @@ def process_static_config():
             tag_stream_enabled = "ON"            
         
     template_uuid = teu.write_tag_template(template_id, project_id, region)
-    tag_uuid, included_uris_hash = teu.write_static_config('PENDING', fields, included_uris, excluded_uris, template_uuid,\
-                                                             tag_history_option, tag_stream_option)
+    tag_uuid, included_uris_hash = teu.write_static_config('PENDING', fields, included_uris, excluded_uris, template_uuid, refresh_mode, \
+                                                            refresh_frequency, refresh_unit, tag_history_option, tag_stream_option)
     
     if isinstance(tag_uuid, str):
         job_uuid = jm.create_job(tag_uuid)
@@ -838,7 +1056,7 @@ def process_dynamic_config():
     #print("selected_fields: " + str(selected_fields))
     
     for selected_field in selected_fields:
-        query_expression = request.form.get(selected_field)
+        query_expression = request.form.get(selected_field).replace('\t', '').replace('\r', '').replace('\n', ' ').strip()
         #print("query_expression: " + query_expression)
         selected_field_type = request.form.get(selected_field + "_datatype")
         #print("selected_field_type: " + selected_field_type)
@@ -911,6 +1129,222 @@ def process_dynamic_config():
     # [END render_template]
 
 
+@app.route('/process_entry_config', methods=['POST'])
+def process_entry_config():
+    template_id = request.form['template_id']
+    project_id = request.form['project_id']
+    region = request.form['region']
+    included_uris = request.form['included_uris'].rstrip()
+    excluded_uris = request.form['excluded_uris'].rstrip()
+    refresh_mode = request.form['refresh_mode']
+    refresh_frequency = request.form['refresh_frequency']
+    refresh_unit = request.form['refresh_unit']
+    action = request.form['action']
+    
+    #print('included_uris: ' + included_uris)
+    #print('excluded_uris: ' + excluded_uris)
+    #print('refresh_mode: ' + refresh_mode)
+    #print('refresh_frequency: ' + refresh_frequency)
+    #print('refresh_unit: ' + refresh_unit)
+    
+    dcu = dc.DataCatalogUtils(template_id, project_id, region)
+    template = dcu.get_template()
+    
+    if action == "Cancel Changes":
+        
+        return render_template(
+            'tag_template.html',
+            template_id=template_id,
+            project_id=project_id,
+            region=region, 
+            fields=template)
+
+    fields = []
+    
+    selected_fields = request.form.getlist("selected")
+    #print("selected_fields: " + str(selected_fields))
+    
+    for selected_field in selected_fields:
+        selected_field_type = request.form.get(selected_field + "_datatype")
+        #print(selected_field + ", " + selected_field_type)
+        
+        for template_field in template:
+            
+            if template_field['field_id'] != selected_field:
+                continue
+        
+            is_required = template_field['is_required']
+            field = {'field_id': selected_field, 'field_type': selected_field_type,\
+                     'is_required': is_required}
+            fields.append(field)
+            break
+    
+    #print('fields: ' + str(fields))
+    
+    tag_history_option = False
+    tag_history_enabled = "OFF"
+    
+    if "tag_history" in request.form:
+        tag_history = request.form.get("tag_history")
+    
+        if tag_history == "selected":
+            tag_history_option = True
+            tag_history_enabled = "ON"
+            
+    tag_stream_option = False
+    tag_stream_enabled = "OFF"
+    
+    if "tag_stream" in request.form:
+        tag_stream = request.form.get("tag_stream")
+    
+        if tag_stream == "selected":
+            tag_stream_option = True
+            tag_stream_enabled = "ON"
+    
+    template_uuid = teu.write_tag_template(template_id, project_id, region)
+    tag_uuid, included_uris_hash = teu.write_entry_config('PENDING', fields, included_uris, excluded_uris, template_uuid,\
+                                                             refresh_mode, refresh_frequency, refresh_unit, \
+                                                             tag_history_option, tag_stream_option)
+    if isinstance(tag_uuid, str): 
+        job_uuid = jm.create_job(tag_uuid)
+    else:
+        job_uuid = None
+    
+    if job_uuid != None: 
+        job_creation = constants.SUCCESS
+    else:
+        job_creation = constants.ERROR
+     
+    # [END process_dynamic_tag]
+    # [START render_template]
+    return render_template(
+        'submitted_entry_config.html',
+        template_id=template_id,
+        project_id=project_id,
+        region=region,
+        fields=fields,
+        included_uris=included_uris,
+        included_uris_hash=included_uris_hash,
+        excluded_uris=excluded_uris,
+        refresh_mode=refresh_mode,
+        refresh_frequency=refresh_frequency,
+        refresh_unit=refresh_unit,
+        tag_history=tag_history_enabled,
+        tag_stream=tag_stream_enabled,
+        status=job_creation)
+    # [END render_template]
+
+
+@app.route('/process_mapping_config', methods=['POST'])
+def process_mapping_config():
+    template_id = request.form['template_id']
+    project_id = request.form['project_id']
+    region = request.form['region']
+    mapping_table = request.form['mapping_table'].rstrip()
+    included_uris = request.form['included_uris'].rstrip()
+    excluded_uris = request.form['excluded_uris'].rstrip()
+    refresh_mode = request.form['refresh_mode']
+    refresh_frequency = request.form['refresh_frequency']
+    refresh_unit = request.form['refresh_unit']
+    overwrite = True # set to true as we are creating a new mapping config
+    action = request.form['action']
+    
+    #print('included_uris: ' + included_uris)
+    #print('excluded_uris: ' + excluded_uris)
+    #print('refresh_mode: ' + refresh_mode)
+    #print('refresh_frequency: ' + refresh_frequency)
+    #print('refresh_unit: ' + refresh_unit)
+    
+    dcu = dc.DataCatalogUtils(template_id, project_id, region)
+    template = dcu.get_template()
+    
+    if action == "Cancel Changes":
+        
+        return render_template(
+            'tag_template.html',
+            template_id=template_id,
+            project_id=project_id,
+            region=region, 
+            fields=template)
+
+    fields = []
+    
+    selected_fields = request.form.getlist("selected")
+    #print("selected_fields: " + str(selected_fields))
+    
+    for selected_field in selected_fields:
+        selected_field_type = request.form.get(selected_field + "_datatype")
+        #print(selected_field + ", " + selected_field_type)
+        
+        for template_field in template:
+            
+            if template_field['field_id'] != selected_field:
+                continue
+        
+            is_required = template_field['is_required']
+            field = {'field_id': selected_field, 'field_type': selected_field_type,\
+                     'is_required': is_required}
+            fields.append(field)
+            break
+    
+    #print('fields: ' + str(fields))
+    
+    tag_history_option = False
+    tag_history_enabled = "OFF"
+    
+    if "tag_history" in request.form:
+        tag_history = request.form.get("tag_history")
+    
+        if tag_history == "selected":
+            tag_history_option = True
+            tag_history_enabled = "ON"
+            
+    tag_stream_option = False
+    tag_stream_enabled = "OFF"
+    
+    if "tag_stream" in request.form:
+        tag_stream = request.form.get("tag_stream")
+    
+        if tag_stream == "selected":
+            tag_stream_option = True
+            tag_stream_enabled = "ON"
+    
+    template_uuid = teu.write_tag_template(template_id, project_id, region)
+
+    tag_uuid, included_uris_hash = teu.write_mapping_config('PENDING', fields, mapping_table, included_uris, excluded_uris, template_uuid,\
+                                                             refresh_mode, refresh_frequency, refresh_unit, \
+                                                             tag_history_option, tag_stream_option, overwrite)
+    if isinstance(tag_uuid, str): 
+        job_uuid = jm.create_job(tag_uuid)
+    else:
+        job_uuid = None
+    
+    if job_uuid != None: 
+        job_creation = constants.SUCCESS
+    else:
+        job_creation = constants.ERROR
+     
+    # [END process_dynamic_tag]
+    # [START render_template]
+    return render_template(
+        'submitted_mapping_config.html',
+        template_id=template_id,
+        project_id=project_id,
+        region=region,
+        fields=fields,
+        mapping_table=mapping_table,
+        included_uris=included_uris,
+        included_uris_hash=included_uris_hash,
+        excluded_uris=excluded_uris,
+        refresh_mode=refresh_mode,
+        refresh_frequency=refresh_frequency,
+        refresh_unit=refresh_unit,
+        tag_history=tag_history_enabled,
+        tag_stream=tag_stream_enabled,
+        status=job_creation)
+    # [END render_template]
+
+
 ##################### API METHODS #################
 
 """
@@ -918,9 +1352,9 @@ Args:
     template_id: tag template to use
     project_id: tag template's Google Cloud project 
     region: tag template's region 
-    included_uris: The included_uris value
-    excluded_uris: The excluded_uris value (optional)
-    fields: list of selected fields containing field name, field type and query expression
+    fields: list of all the template field names to include in the tag (no need to include the field type)
+    included_uris: The paths to the resources (either in BQ or GCS) 
+    excluded_uris: The paths to the resources to exclude (optional)
     refresh_mode: AUTO or ON_DEMAND
     refresh_frequency: positive integer
     refresh_unit: minutes or hours
@@ -944,7 +1378,10 @@ def dynamic_create():
     
     template_uuid = teu.write_tag_template(template_id, project_id, region)
     
-    fields = json['fields']
+    dcu = dc.DataCatalogUtils(template_id, project_id, region)
+    included_fields = json['fields']
+    fields = dcu.get_template(included_fields)
+    
     excluded_uris = json['excluded_uris']
     included_uris = json['included_uris']
     refresh_mode = json['refresh_mode']
@@ -979,9 +1416,12 @@ Args:
     template_id: tag template to use
     project_id: tag template's Google Cloud project 
     region: tag template's region 
-    included_uris: The included_uris value
-    excluded_uris: The excluded_uris value (optional)
-    fields: list of selected fields containing field name, field type and query expression
+    fields: list of all the template field names to include in the tag (no need to include the field type)
+    included_uris: The paths to the resources (either in BQ or GCS) 
+    excluded_uris: The paths to the resources to exclude (optional)
+    refresh_mode: AUTO or ON_DEMAND
+    refresh_frequency: positive integer
+    refresh_unit: minutes or hours
     tag_history: true if tag history is on, false otherwise 
     tag_stream: true if tag stream is on, false otherwise
 Returns:
@@ -1002,22 +1442,188 @@ def static_create():
     
     template_uuid = teu.write_tag_template(template_id, project_id, region)
     
-    fields = json['fields']
+    dcu = dc.DataCatalogUtils(template_id, project_id, region)
+    included_fields = json['fields']
+    fields = dcu.get_template(included_fields)
+    
     excluded_uris = json['excluded_uris']
     included_uris = json['included_uris']
     tag_history = json['tag_history']
     tag_stream = json['tag_stream']
+    refresh_mode = json['refresh_mode']
+    
+    if 'refresh_frequency' in json:
+        refresh_frequency = json['refresh_frequency']
+    else:
+        refresh_frequency = ''
+    
+    if 'refresh_unit' in json:
+        refresh_unit = json['refresh_unit']
+    else:
+        refresh_unit = ''
+    
+    # since we are creating a new config, we are overwriting any previously created tags
+    overwrite = True
     
     tag_uuid, included_uris_hash = teu.write_static_config('PENDING', fields, included_uris, excluded_uris, template_uuid,\
-                                                             tag_history, tag_stream)
+                                                            refresh_mode, refresh_frequency, refresh_unit, \
+                                                            tag_history, tag_stream, overwrite)
      
+    if isinstance(tag_uuid, str): 
+        job_uuid = jm.create_job(tag_uuid)
+    else:
+        job_uuid = None
+
+    return jsonify(job_uuid=job_uuid)
+    
+
+"""
+Args:
+    template_id: file metadata tag template id
+    project_id: tag template's Google Cloud project 
+    region: tag template's region 
+    fields: list of all the template field names to include in the tag (no need to include the field type)
+    included_uris: The paths to the resources (either in BQ or GCS) 
+    excluded_uris: The paths to the resources to exclude (optional)
+    refresh_mode: AUTO or ON_DEMAND
+    refresh_frequency: positive integer
+    refresh_unit: minutes or hours
+    tag_history: true if tag history is on, false otherwise 
+    tag_stream: true if tag stream is on, false otherwise
+Returns:
+    job_uuid 
+"""
+@app.route("/entry_create", methods=['POST'])
+def entry_create():
+    json = request.get_json(force=True) 
+    print('json: ' + str(json))
+       
+    template_id = json['template_id']
+    project_id = json['project_id']
+    region = json['region']
+    
+    print('template_id: ' + template_id)
+    print('project_id: ' + project_id)
+    print('region: ' + region)
+    
+    template_uuid = teu.write_tag_template(template_id, project_id, region)
+    
+    dcu = dc.DataCatalogUtils(template_id, project_id, region)
+    included_fields = json['fields']
+    fields = dcu.get_template(included_fields)
+
+    included_uris = json['included_uris']
+    
+    if 'excluded_uris' in json:
+        excluded_uris = json['excluded_uris']
+    else:
+        excluded_uris = None
+    
+    refresh_mode = json['refresh_mode']
+    
+    if 'refresh_frequency' in json:
+        refresh_frequency = json['refresh_frequency']
+    else:
+        refresh_frequency = ''
+    
+    if 'refresh_unit' in json:
+        refresh_unit = json['refresh_unit']
+    else:
+        refresh_unit = ''
+    
+    tag_history = json['tag_history']
+    tag_stream = json['tag_stream']
+    
+    tag_uuid, included_uris_hash = teu.write_entry_config('PENDING', fields, included_uris, excluded_uris, template_uuid,\
+                                                             refresh_mode, refresh_frequency, refresh_unit, \
+                                                             tag_history, tag_stream)                                                      
+
     if isinstance(tag_uuid, str): 
         job_uuid = jm.create_job(tag_uuid)
     else:
         job_uuid = None
     
     return jsonify(job_uuid=job_uuid)
+
+
+"""
+Args:
+    template_id: enterprise dictionary tag template id
+    project_id: tag template's Google Cloud project 
+    region: tag template's region 
+    fields: list of all the template field names to include in the tag (no need to include the field type)
+    mapping_table: The path to the mapping table in BQ. This is required. 
+    included_uris: The path(s) to the resources (either in BQ or GCS) 
+    excluded_uris: The path(s) to the resources to exclude (optional)
+    refresh_mode: AUTO or ON_DEMAND
+    refresh_frequency: positive integer
+    refresh_unit: minutes or hours
+    tag_history: true if tag history is on, false otherwise 
+    tag_stream: true if tag stream is on, false otherwise
+Returns:
+    job_uuid 
+"""
+@app.route("/mapping_create", methods=['POST'])
+def mapping_create():
+    json = request.get_json(force=True) 
+    print('json: ' + str(json))
+       
+    template_id = json['template_id']
+    project_id = json['project_id']
+    region = json['region']
     
+    print('template_id: ' + template_id)
+    print('project_id: ' + project_id)
+    print('region: ' + region)
+    
+    template_uuid = teu.write_tag_template(template_id, project_id, region)
+    
+    dcu = dc.DataCatalogUtils(template_id, project_id, region)
+    included_fields = json['fields']
+    fields = dcu.get_template(included_fields)
+    
+    # validate mapping_table field
+    if 'mapping_table' in json:
+        mapping_table = json['mapping_table']
+    else:
+        print("mapping_config request doesn't include mapping_table field. This is a required parameter.")
+        resp = jsonify(success=False)
+        return resp
+    
+    included_uris = json['included_uris']
+    
+    if 'excluded_uris' in json:
+        excluded_uris = json['excluded_uris']
+    else:
+        excluded_uris = None
+    
+    refresh_mode = json['refresh_mode']
+    
+    if 'refresh_frequency' in json:
+        refresh_frequency = json['refresh_frequency']
+    else:
+        refresh_frequency = ''
+    
+    if 'refresh_unit' in json:
+        refresh_unit = json['refresh_unit']
+    else:
+        refresh_unit = ''
+    
+    tag_history = json['tag_history']
+    tag_stream = json['tag_stream']
+    overwrite = True
+    
+    tag_uuid, included_uris_hash = teu.write_mapping_config('PENDING', fields, mapping_table, included_uris, excluded_uris, template_uuid,\
+                                                             refresh_mode, refresh_frequency, refresh_unit, \
+                                                             tag_history, tag_stream, overwrite)                                                      
+
+    if isinstance(tag_uuid, str): 
+        job_uuid = jm.create_job(tag_uuid)
+    else:
+        job_uuid = None
+    
+    return jsonify(job_uuid=job_uuid)
+
 
 """
 Args:
@@ -1030,8 +1636,8 @@ Note: caller must provide either the included_uris_hash or included_uris
 Returns:
     job_uuid = unique identifer for job
 """
-@app.route("/dynamic_ondemand_update", methods=['POST'])
-def dynamic_ondemand_update():
+@app.route("/ondemand_updates", methods=['POST'])
+def ondemand_updates():
     json = request.get_json(force=True)    
     template_id = json['template_id']
     project_id = json['project_id']
@@ -1039,6 +1645,7 @@ def dynamic_ondemand_update():
         
     template_exists, template_uuid = teu.read_tag_template(template_id, project_id, region)
     
+    # validate request
     if not template_exists:
         print("tag_template " + template_id + " doesn't exist")
         resp = jsonify(success=False)
@@ -1053,7 +1660,7 @@ def dynamic_ondemand_update():
         success, tag_config = teu.lookup_tag_config_by_included_uris(template_uuid, None, included_uris_hash)
     
     else:
-        resp = jsonify(success=False, message="Request is missing required parameter included_uris or included_uris_hash.")
+        resp = jsonify(success=False, message="Request is missing the required field included_uris or included_uris_hash.")
         return resp
     
     if success != True:
@@ -1061,12 +1668,13 @@ def dynamic_ondemand_update():
         resp = jsonify(success=False, message="Tag config not found.")
         return resp
     
-    # process the update request
+    # validate the matching tag_config, i.e. make sure the scheduling mode is set to ON_DEMAND and not AUTO
     if tag_config['refresh_mode'] == 'AUTO':
-        print("tag config == AUTO" + str(tag_config))
-        resp = jsonify(success=False, message="Tag config has refresh_mode='AUTO'. Update config to refresh_mode='ON-DEMAND' prior to calling this method.")
+        print("tag config == AUTO: " + str(tag_config))
+        resp = jsonify(success=False, message="Tag config has refresh_mode='AUTO'. Update config to refresh_mode='ON_DEMAND' prior to calling this method.")
         return resp
-    
+        
+    # config is valid, create the job
     if isinstance(tag_config['tag_uuid'], str): 
         job_uuid = jm.create_job(tag_config['tag_uuid'])
     else:
@@ -1074,9 +1682,8 @@ def dynamic_ondemand_update():
     
     return jsonify(job_uuid=job_uuid)
     
-    #[END dynamic_ondemand_update]
+    #[END ondemand_updates]
    
-
 """
 Args:
     job_uuid = unique identifer for job
@@ -1094,26 +1701,31 @@ def get_job_status():
     job_uuid = json['job_uuid']
     
     job = jm.get_job_status(job_uuid)
+    print('job: ', job)
     
     if job is None:
         return jsonify(success=False, message="job_uuid " + job_uuid + " cannot be found.")
-    else:
+        
+    elif job['job_status'] == 'COMPLETED':
         return jsonify(success=True, job_status=job['job_status'], task_count=job['task_count'], tasks_ran=job['tasks_ran'],\
+                       tasks_completed=job['tasks_completed'], tasks_failed=job['tasks_failed'])
+    else:
+        return jsonify(job_status=job['job_status'], task_count=job['task_count'], tasks_ran=job['tasks_ran'],\
                        tasks_completed=job['tasks_completed'], tasks_failed=job['tasks_failed'])
     
 
 """
-Method called by Cloud Scheduler entry to update the tags from all active dynamic configs which are set to auto
+Method called by Cloud Scheduler entry to update the tags from all scheduled configs which are set to auto updated
 Args:
     None
 Returns:
     True if the request succeeded, False otherwise
 """ 
-@app.route("/dynamic_auto_update", methods=['POST'])
-def dynamic_auto_update():
+@app.route("/scheduled_auto_updates", methods=['POST'])
+def scheduled_auto_updates():
     
     try:    
-        print('*** enter dynamic_auto_update ***')
+        print('*** enter scheduled_auto_updates ***')
         
         jobs = []
         
@@ -1121,8 +1733,9 @@ def dynamic_auto_update():
         
         for tag_uuid in configs:
         
+            print('ready config: ', tag_uuid)
+            
             if isinstance(tag_uuid, str): 
-                
                 teu.update_config_status(tag_uuid, 'PENDING')
                 teu.increment_version_next_run(tag_uuid)
                 job_uuid = jm.create_job(tag_uuid)
@@ -1132,8 +1745,8 @@ def dynamic_auto_update():
         resp = jsonify(success=True, job_ids=json.dumps(jobs))
     
     except Exception as e:
-        print('failed dynamic_auto_update {}'.format(e))
-        resp = jsonify(success=False, message='failed dynamic_auto_update ' + str(e))
+        print('failed scheduled_auto_updates {}'.format(e))
+        resp = jsonify(success=False, message='failed scheduled_auto_updates ' + str(e))
     
     return resp
 
@@ -1149,8 +1762,15 @@ def _split_work():
     job_uuid = json['job_uuid']
     tag_uuid = json['tag_uuid']
     
+    #print('job_uuid: ' + job_uuid + ', tag_uuid: ' + tag_uuid)
+    
     config = teu.read_tag_config(tag_uuid)
-    uris = list(res.Resources.get_resources(config['included_uris'], config['excluded_uris']))
+    
+    if config == {}:
+       resp = jsonify(success=False)
+       return resp 
+    
+    uris = list(res.Resources.get_resources(config.get('included_uris'), config.get('excluded_uris', None)))
     #print('uris: ' + str(uris))
 
     jm.record_num_tasks(job_uuid, len(uris))
@@ -1174,46 +1794,59 @@ def _run_task():
     shard_uuid = json['shard_uuid']
     task_uuid = json['task_uuid']
     
-    #print('task_uuid: ' + task_uuid)
-    
+    print('tag_uuid: ' + tag_uuid)
     tm.update_task_status(shard_uuid, task_uuid, 'RUNNING')
     
     # retrieve tag config and template
-    tag_config = teu.read_tag_config(tag_uuid)
-    tem_config = teu.read_template_config(tag_config['template_uuid'])
+    config = teu.read_tag_config(tag_uuid)
+    #print('tag_config: ', tag_config)
     
+    if 'template_uuid' not in config:
+        creation_status = constants.ERROR
+        resp = jsonify(success=False)
+        
+    tem_config = teu.read_template_config(config['template_uuid'])
     dcu = dc.DataCatalogUtils(tem_config['template_id'], tem_config['project_id'], tem_config['region'])
     
-    creation_status = constants.ERROR
+    creation_configstatus = constants.ERROR
     
-    if tag_config['config_type'] == 'DYNAMIC':
-
-        creation_status = dcu.create_update_dynamic_configs(tag_config['fields'], None, None, uri, tag_config['tag_uuid'], \
-                                                         tag_config['template_uuid'], tag_config['tag_history'], \
-                                                         tag_config['tag_stream'])
-    if tag_config['config_type'] == 'STATIC':
-        
-        creation_status = dcu.create_update_static_configs(tag_config['fields'], None, None, uri, tag_config['tag_uuid'], \
-                                                        tag_config['template_uuid'], tag_config['tag_history'], \
-                                                        tag_config['tag_stream'])
+    if config['config_type'] == 'DYNAMIC':
+        creation_status = dcu.create_update_dynamic_config(config['fields'], uri, config['tag_uuid'], \
+                                                         config['template_uuid'], config['tag_history'], \
+                                                         config['tag_stream'])
+    if config['config_type'] == 'STATIC':
+        creation_status = dcu.create_update_static_config(config['fields'], uri, config['tag_uuid'], \
+                                                        config['template_uuid'], config['tag_history'], \
+                                                        config['tag_stream'], config['overwrite'])                                                   
+    if config['config_type'] == 'ENTRY':
+        creation_status = dcu.create_update_entry_config(config['fields'], uri, config['tag_uuid'], \
+                                                        config['template_uuid'], config['tag_history'], \
+                                                        config['tag_stream']) 
+    if config['config_type'] == 'MAPPING':
+        creation_status = dcu.create_update_mapping_config(config['fields'], config['mapping_table'], uri, config['tag_uuid'], \
+                                                        config['template_uuid'], config['tag_history'], \
+                                                        config['tag_stream'], config['overwrite'])
+                                                   
     if creation_status == constants.SUCCESS:
         tm.update_task_status(shard_uuid, task_uuid, 'COMPLETED')
-        is_success, is_failed, pct_complete = jm.calculate_job_completion(job_uuid)
-        
-        if is_success:
-            teu.update_config_status(tag_uuid, 'ACTIVE')
-            teu.update_scheduling_status(tag_uuid, 'READY')
-        elif is_failed:
-            teu.update_config_status(tag_uuid, 'ERROR')
-        else:
-            teu.update_config_status(tag_uuid, 'PROCESSING: {}% complete'.format(pct_complete))
-        
-        resp = jsonify(success=True)
     else:
         tm.update_task_status(shard_uuid, task_uuid, 'FAILED')
-        jm.update_job_failed(job_uuid)
+    
+    # fan-in
+    is_success, is_failed, pct_complete = jm.calculate_job_completion(job_uuid)
+        
+    if pct_complete == 100 and is_success:
+        teu.update_config_status(tag_uuid, 'ACTIVE')
+        teu.update_scheduling_status(tag_uuid, 'READY')
+        teu.update_overwrite_flag(tag_uuid)
+        resp = jsonify(success=True)
+    elif pct_complete == 100 and is_failed:
         teu.update_config_status(tag_uuid, 'ERROR')
+        jm.update_job_failed(job_uuid)
         resp = jsonify(success=False)
+    else:
+        teu.update_config_status(tag_uuid, 'PROCESSING: {}% complete'.format(pct_complete))
+        resp = jsonify(success=True)
     
     return resp
 #[END _run_task]

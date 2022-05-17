@@ -13,33 +13,57 @@
 # limitations under the License.
 
 from google.cloud import bigquery
+from google.cloud import storage
 import constants, configparser
 
 class Resources:
     
     bigquery_resource = "bigquery"
     pubsub_resource = "pubsub"
-    gcs_resource = "gs"
+    gcs_resource = "gs:"
             
     @staticmethod
     def get_resources(included_uris, excluded_uris):
         
-        #print("enter get_resources")
-        #print("included_uris: " + included_uris)
+        #print('enter get_resources()')
+        #print('included_uris: ' + included_uris)
         
-        included_resources = Resources.find_resources(included_uris)
-        #print("included_resources: " + str(included_resources))
+        # find out what kind of resource we have
+        included_uris_list = included_uris.split(',')
+        resource_type = included_uris_list[0].strip().split('/')[0]
+        print("resource_type: " + resource_type)
+    
+        if resource_type == Resources.bigquery_resource:
+                    
+            included_resources = Resources.find_bq_resources(included_uris)
+            #print("included_resources: " + str(included_resources))
         
-        if excluded_uris is None or excluded_uris == "" or excluded_uris.isspace():
-            return included_resources
-        else:
-            #print("excluded_uris: " + excluded_uris)
+            if excluded_uris is None or excluded_uris == "" or excluded_uris.isspace():
+                return included_resources
+            else:
+                #print("excluded_uris: " + excluded_uris)
+                excluded_resources = Resources.find_bq_resources(excluded_uris)
+                #print("excluded_resources: " + str(excluded_resources))
+        
+        
+        elif resource_type == Resources.gcs_resource:
             
-            excluded_resources = Resources.find_resources(excluded_uris)
-            #print("excluded_resources: " + str(excluded_resources))
+            included_resources = Resources.find_gcs_resources(included_uris)
         
-            remaining_resources = included_resources.difference(excluded_resources)
-            return remaining_resources
+            if excluded_uris is None or excluded_uris == "" or excluded_uris.isspace():
+                return included_resources
+            else:
+                #print("excluded_uris: " + excluded_uris)
+                excluded_resources = Resources.find_gcs_resources(excluded_uris)
+                #print("excluded_resources: " + str(excluded_resources))
+        
+        else:
+            print('Error: expected to get a bigquery or gcs resource type, but found this: ' + resource_type)
+            return None
+        
+        remaining_resources = included_resources.difference(excluded_resources)
+        
+        return remaining_resources
 
     @staticmethod            
     def format_table_resource(table_resource):
@@ -52,7 +76,7 @@ class Resources:
         return formatted
     
     @staticmethod     
-    def find_resources(uris):
+    def find_bq_resources(uris):
        
         # @input uris: comma-separated list of uri representing a BQ resource
         # BQ resources are specified as:  
@@ -67,13 +91,7 @@ class Resources:
             
             #print("uri: " + uri)
             split_path = uri.strip().split("/")
-            resource_type = split_path[0]
-            #print("resource_type: " + resource_type)
-        
-            if resource_type != Resources.bigquery_resource:
-                print("Error: bigquery is the only resource type currently supported")
-                return None
-        
+
             if split_path[1] != "project":
                 print("Error: invalid URI " + path)
                 return None
@@ -204,15 +222,94 @@ class Resources:
                     resources.add(formatted_table)
         
         return resources      
+                
+    @staticmethod     
+    def find_gcs_resources(uris):
+    
+        gcs_client = storage.Client()
+        resources = set()
+        
+        uris_list = uris.split(',')
+        
+        for uri in uris_list:
+            
+            # remove the 'gs://' prefix from the uri
+            short_uri = uri[5:].strip()
+            #print('short_uri: ' + short_uri)
+            
+            split_uri = short_uri.split('/')
+            bucket_name = split_uri[0]
+            #print('bucket_name: ' + bucket_name)
+            
+            # uri contains a folder
+            # examples: discovery-area/cities_311/* or discovery-area/cities_311/austin_311_service_requests.parquet
+            if len(split_uri) > 2:
+                folder_start_index = len(bucket_name) + 1
+                #print('folder_start_index: ', folder_start_index)
+                
+                # uri points to a folder
+                if short_uri.endswith('/*'):    
+                    folder_end_index = short_uri.index('/*') 
+                    folder = short_uri[folder_start_index:folder_end_index]
+                    #print('folder: ' + folder)
                     
-
+                    for blob in gcs_client.list_blobs(bucket_name, prefix=folder):
+                        if blob.name == folder + '/' or blob.name.endswith('/'):
+                            continue
+                        resources.add((bucket_name, blob.name))
+                        
+                # uri points to a specific file
+                # example: discovery-area/cities_311/austin_311_service_requests.parquet    
+                else:
+                    filename = short_uri[folder_start_index:]
+                    #print('filename: ' + filename) 
+                    bucket = gcs_client.get_bucket(bucket_name)
+                    blob = bucket.blob(filename)
+                    if blob.exists():
+                        resources.add((bucket_name, blob.name))
+            
+            # uri does not contain a folder
+            # examples: discovery-area/* or discovery-area/austin_311_service_requests.parquet  
+            elif len(split_uri) == 2:    
+                
+                if short_uri.endswith('/*'):  
+                    for blob in gcs_client.list_blobs(bucket_name):
+                        if blob.name.endswith('/'):
+                            continue
+                        #print('blob: ' + str(blob.name))
+                        resources.add((bucket_name, blob.name))
+                else:
+                    file_index_start = short_uri.index('/') + 1 
+                    filename = short_uri[file_index_start:]
+                    #print('filename: ' + filename)
+                    bucket = gcs_client.get_bucket(bucket_name)
+                    blob = bucket.blob(filename)
+                    if blob.exists():
+                        if blob.name.endswith('/') == False:
+                            resources.add((bucket_name, blob.name))    
+            else:
+                print('Error: invalid uri provided: ' + uri)
+                
+        return resources        
+        
 
 if __name__ == '__main__':
     
     config = configparser.ConfigParser()
     config.read("tagengine.ini")
+    project_id = config['DEFAULT']['TAG_ENGINE_PROJECT']
     
-    included_uris='bigquery/project/' + config['DEFAULT']['PROJECT'] + '/dataset/hr/FTE_*'
-    excluded_uris=None
-    resources = get_resources(included_uris, excluded_uris)
+    #included_uris='bigquery/project/' + project_id + '/dataset/hr/FTE_*'
+    #excluded_uris=None
+    #resources = Resources.get_bq_resources(included_uris, excluded_uris)
+    
+    included_uris = 'gs://discovery-area/*'
+    #included_uris = 'gs://discovery-area/austin_311_service_requests.parquet'
+    #included_uris = 'gs://discovery-area/cities_311/austin_311_service_requests.parquet', 'gs://discovery-area/cities_311/san_francisco_311_service_requests/*'
+    #excluded_uris = 'gs://discovery-area/cities_311/san_francisco_311_service_requests/000000000003'
+    #included_uris = 'gs://discovery-area/cities_311/*'
+    #included_uris = 'gs://discovery-area/austin_311_service_requests.parquet'
+    #resources = Resources.find_gcs_resources(included_uris)
+
+    resources = Resources.get_resources(included_uris, None)
     print('resources: ' + str(resources))

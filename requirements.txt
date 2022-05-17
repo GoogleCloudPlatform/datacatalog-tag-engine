@@ -1,5 +1,5 @@
 Flask==2.0.3
-google-cloud-datacatalog==3.6.1
+google-cloud-datacatalog==3.7.1
 google-cloud-bigquery
 google-cloud-core
 google-cloud-firestore==2.3.4
@@ -7,3 +7,5 @@ google-cloud-storage
 google-cloud-tasks==2.7.1
 google-cloud-pubsub
 pytz
+pandas
+pyarrow

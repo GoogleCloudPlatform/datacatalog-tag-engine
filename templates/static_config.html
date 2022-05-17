@@ -72,6 +72,15 @@
 				       bigquery/project/{project_id}/dataset/{dataset}/{table} <br>
 				       bigquery/project/{project_id}/dataset/{dataset}/{table}/{column} </h5>
 				</span>
+				
+ 			   <span style="color:#9d9a9a;"><h5>
+ 			   Specify a comma-separated list of URIs for file paths to include in and exclude from your entry config. Wildcards are allowed in the path name. <br><br>
+ 					  Supported URIs for GCS files: <br>
+ 					    gs://my-bucket/my-folder/* <br>
+ 				        gs://my-bucket/my-folder/*.parquet <br>
+ 					    gs://my-bucket/my-folderA/my-folderB/* <br>
+ 				        </h5>
+ 				</span>
 				    <table>
 				     <tr>
 				    <td><span style="color:red;">*</span> Included URIs:&nbsp;&nbsp;
@@ -86,6 +95,33 @@
 				    </td>
 	 		         </tr>
 			    </table>
+				
+  		        <p>&nbsp;</p>
+  			   <h3>Choose Update Options</h3>
+  		 	   <span style="color:#9d9a9a;">
+  		 		   <h5>If you choose the AUTO refresh mode, your static config will be scheduled for updates based on your specified refresh frequency. <br>
+  					   If you choose the ON-DEMAND refresh mode, your static config will <b>not</b> be scheduled for updates (even if you specify a refresh frequency). <br>The AUTO mode is helpful for tagging new tables in BQ or files on GCS on a recurring schedule. It will not re-tag existing tables or files. <br><br>
+  				   </h5>
+  				</span>
+  			     <table>
+  				<tr>	
+  			    <td><span style="color:red;">*</span> Refresh mode:&nbsp;<select name="refresh_mode" style="width: 100px;padding: 3px;">
+    				  				<option value="AUTO" selected>AUTO</option>
+    							   	<option value="ON-DEMAND">ON-DEMAND</option>
+  							  </select>
+  			    </td>
+  		         </tr>
+  			     <tr><td>&nbsp;</td></tr>
+  				<tr>	
+  			    <td><span style="color:red;">*</span> Refresh frequency:&nbsp;<input type="text" value="24" name="refresh_frequency" style="width: 30px;padding: 3px;">&nbsp;
+  				    			  <select name="refresh_unit" style="width: 70px;padding: 3px;">
+									<option value="minutes">minutes</option>
+    				  				<option value="hours" selected>hours</option>
+    							   	<option value="days">days</option>
+  							  </select></td>
+  		         </tr>
+  		        </table>
+				
 			    {% if display_tag_history %}
 			      <p>&nbsp;</p>
 				<h3>Choose Tag History Option</h3>

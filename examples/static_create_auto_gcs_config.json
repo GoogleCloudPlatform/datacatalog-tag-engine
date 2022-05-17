@@ -1,11 +1,11 @@
 {
-    "template_id": "data_governance_50k",
+    "template_id": "data_governance",
     "project_id": "tag-engine-develop",
     "region": "us-central1",
     "fields": [
         {
             "field_id": "data_domain",
-            "field_value": "GOVERNMENT"
+            "field_value": "LOGISTICS"
         },
         {
             "field_id": "broad_data_category",
@@ -13,7 +13,7 @@
         },
         {
             "field_id": "environment",
-            "field_value": "DEV"
+            "field_value": "PROD"
         },
         {
             "field_id": "data_origin",
@@ -30,10 +30,17 @@
         {
             "field_id": "data_retention",
             "field_value": "30_DAYS"
+        },
+        {
+            "field_id": "data_creation",
+            "field_value": "2022-05-08"
         }
     ],
-    "included_uris": "bigquery/project/warehouse-337221/dataset/austin_311_50k/*",
-    "excluded_uris": "",
-    "tag_history": false,
-    "tag_stream": false  
+    "included_uris": "gs://discovery-area/cities_311/*",
+    "excluded_uris": "gs://discovery-area/cities_311/austin_311_service_requests.parquet",
+    "refresh_mode": "AUTO",
+    "refresh_frequency": 60,
+    "refresh_unit": "minutes",
+    "tag_history": true,
+    "tag_stream": false   
 }

@@ -1,0 +1,53 @@
+{
+    "template_id": "file_metadata",
+    "project_id": "tag-engine-develop",
+    "region": "us-central1",
+    "fields": [
+        {
+            "field_id": "name"
+        },
+        {
+            "field_id": "bucket"
+        },
+        {
+            "field_id": "path"
+        },
+        {
+            "field_id": "type"
+        },
+        {
+            "field_id": "size"
+        },
+        {
+            "field_id": "num_rows"
+        },
+        {
+            "field_id": "created_time"
+        },
+        {
+            "field_id": "updated_time"
+        },
+        {
+            "field_id": "storage_class"
+        },
+        {
+            "field_id": "owner"
+        },
+        {
+            "field_id": "content_encoding"
+        },
+        {
+            "field_id": "content_language"
+        },
+        {
+            "field_id": "media_link"
+        }
+    ],
+    "included_uris": "gs://discovery-area/cities_311/*",
+    "excluded_uris": "gs://discovery-area/cities_311/austin_311_service_requests.parquet",
+    "refresh_mode": "AUTO",
+    "refresh_frequency": 30,
+    "refresh_unit": "minutes",
+    "tag_history": true,
+    "tag_stream": false   
+}

@@ -93,6 +93,7 @@ class JobManager:
             job_dict = job.to_dict()
             task_count = job_dict['task_count']
             
+            # job is still running
             if job_dict['task_count'] > tasks_ran:
                 job_ref.update({
                     'tasks_ran': tasks_completed + tasks_failed,
@@ -101,6 +102,7 @@ class JobManager:
                 
                 pct_complete = round(tasks_ran / task_count * 100, 2)
             
+            # job completed
             if job_dict['task_count'] == tasks_ran:
                 
                 if job_dict['tasks_failed'] > 0:
@@ -110,7 +112,7 @@ class JobManager:
                     job_ref.update({
                         'tasks_ran': tasks_completed + tasks_failed,
                         'tasks_completed': tasks_completed,
-                        'job_status': 'FAILED',
+                        'job_status': 'COMPLETED WITH ERRORS',
                         'completion_time': datetime.datetime.utcnow()
                     })
                 

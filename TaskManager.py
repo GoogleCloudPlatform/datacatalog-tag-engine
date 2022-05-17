@@ -64,8 +64,13 @@ class TaskManager:
 
             for uri_index, uri_val in enumerate(uris[task_running_total:], task_running_total):
 
-                # create task
-                task_id_raw = job_uuid + uri_val
+                # create the task
+                if isinstance(uri_val, str):
+                    task_id_raw = job_uuid + uri_val
+                    
+                if isinstance(uri_val, tuple):
+                    task_id_raw = job_uuid + ''.join(uri_val) # uri_val is a tuple when it contains a gcs path
+                
                 task_id = hashlib.md5(task_id_raw.encode()).hexdigest()
             
                 task_uuid = self._record_task(job_uuid, tag_uuid, uri_val, shard_uuid, task_id)
@@ -104,6 +109,7 @@ class TaskManager:
     def _create_shard(self, job_uuid, shard_uuid):
         
         print('*** _create_shard ***')
+        print('job_uuid: ' + job_uuid + ', shard_uuid: ' + shard_uuid)
         
         shard_ref = self.db.collection('shards').document(shard_uuid)
         

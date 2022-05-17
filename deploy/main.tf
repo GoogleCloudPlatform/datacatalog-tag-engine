@@ -81,6 +81,15 @@ resource "google_cloud_tasks_queue" "work_queue" {
   name = "tag-engine-work-queue"
   location = var.app_engine_subregion
   project = var.tag_engine_project
+  
+  rate_limits {
+      max_concurrent_dispatches = 500
+      max_dispatches_per_second = 500
+    }
+
+    retry_config {
+      max_attempts = 1
+    }
 
   stackdriver_logging_config {
     sampling_ratio = 0.9
@@ -91,14 +100,14 @@ resource "google_cloud_tasks_queue" "work_queue" {
 
 
 # Cloud scheduler entries
-resource "google_cloud_scheduler_job" "dynamic_auto_update" {
-  name             = "dynamic_auto_update"
+resource "google_cloud_scheduler_job" "scheduled_auto_updates" {
+  name             = "scheduled_auto_updates"
   schedule         = "*/30 * * * *"
-  description      = "update tags produced by dynamic configs which are set to auto update"
+  description      = "update tags produced by scheduled configs which are set to auto update"
   time_zone        = "CST"
   attempt_deadline = "320s"
-  project 	    = var.tag_engine_project
-  region 		    = var.app_engine_subregion
+  project 	       = var.tag_engine_project
+  region 		   = var.app_engine_subregion
 
   retry_config {
     min_backoff_duration = "5s"
@@ -115,7 +124,7 @@ resource "google_cloud_scheduler_job" "dynamic_auto_update" {
       #instance = "tag-engine-vanilla-335716.uc.r.appspot.com"
     #}
 
-    relative_uri = "/dynamic_auto_update"
+    relative_uri = "/scheduled_auto_updates"
   }
   
   depends_on = [google_project_service.tag_engine_project]
