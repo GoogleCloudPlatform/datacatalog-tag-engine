@@ -9,7 +9,7 @@
 	   <h1>Tag Engine for Data Catalog</h1>
         </div>
 	   <div class="header">
-	   <h2>Create mapping config with {{ template_id }}</h2>
+	   <h2>Create glossary config with {{ template_id }}</h2>
 	   <span style="color:#9d9a9a;">
 	  </span>
 	   </div>
@@ -18,7 +18,7 @@
 	   
 	   Mandatory template fields are marked by <span style="color:red;">*</span> and are already checked for you. 
 	   </h5>
-         <form method="post" action="/process_mapping_config">
+         <form method="post" action="/process_glossary_config">
 		    <table>
 			   {% for dict_field in fields %}
 		        <tr>
@@ -41,18 +41,18 @@
 			   {% endfor %}
 			   </table>
 		    <p>&nbsp;</p>
-		   <h3>Enter Mapping URI</h3>
+		   <h3>Enter Glossary Table</h3>
 	 	   
 		   <span style="color:#9d9a9a;"><h5>
-		   Specify the path to your mapping table in BigQuery. Mapping table must contain the elements source_name and canonical_name.<br><br>
+		   Specify the path to your glossary table in BigQuery. The schema for this table must include these elements: (source_name STRING, canonical_name STRING). The source_name represents the raw element name and the canonical_name represents the canonical name you want to map to. Note that the canonical name should also exist as a field in the tag template. <br><br>
 				  Supported URI format: <br>
 				    bigquery/project/[PROJECT]/dataset/[DATASET]/[TABLE] <br>
 			        </h5>
 			</span>
 			    <table>
 			     <tr>
-			    <td><span style="color:red;">*</span> Mapping Table URI:&nbsp;&nbsp;
-			    	  <input type="text" value="bigquery/project/..." name="mapping_table" style="align-content:left; width: 700px; overflow:auto;"/>
+			    <td><span style="color:red;">*</span> BigQuery Table URI:&nbsp;&nbsp;
+			    	  <input type="text" value="bigquery/project/[PROJECT]/dataset/[DATASET]/[TABLE]" name="mapping_table" style="align-content:left; width: 700px; overflow:auto;"/>
 
 			    	</td>
 			     </tr>
@@ -61,7 +61,7 @@
 			   <h3>Enter Included and Excluded URIs</h3>
 		 	   
 			   <span style="color:#9d9a9a;"><h5>
-			   Specify a comma-separated list of URIs to include in and exclude from your mapping config. URIs must be GCS or BQ paths. Wildcards are allowed in the path name (GCS) or table name (BQ). <br><br>
+			   Specify the URIs to the data assets you want to tag with this config. URIs must be GCS or BQ paths and separated by comma. Wildcards are allowed in the path name (GCS) and table name (BQ). <br><br>
 					  Supported URIs for GCS files: <br>
 					    gs://my-bucket/my-folder/* <br>
 				        gs://my-bucket/my-folder/*.parquet <br>
@@ -134,7 +134,7 @@
 	         <p>&nbsp;</p>
 		        <table>
 		        <tr>
-			   <td><input type="submit" value="Submit Mapping Config" name="action">
+			   <td><input type="submit" value="Submit Glossary Config" name="action">
 			       <input type="submit" value="Cancel Changes" name="action">
 			   </td>
 		        </tr>

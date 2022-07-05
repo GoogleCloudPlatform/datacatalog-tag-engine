@@ -1,5 +1,5 @@
 {
-	"template_id": "enterprise_dictionary_template", 
+	"template_id": "enterprise_glossary", 
 	"project_id": "tag-engine-develop", 
 	"region": "us-central1", 
 	"included_uris": "gs://discovery-area/sample_data/*"

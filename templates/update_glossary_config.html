@@ -9,9 +9,9 @@
 	   <h1>Tag Engine</h1>
         </div>
 	   <div class="header">
-	   <h2>Update mapping config using {{ template_id }}</h2>
+	   <h2>Update glossary config using {{ template_id }}</h2>
  	   <span style="color:#9d9a9a;">
- 		   <h5>Make changes to your mapping config below. A checked box indicates the field is part of the tag. You can add new fields and/or remove existing ones from the tag. <br>You can also edit the mapping URI, included URIs, excluded URIs, refresh frequency, and tag history settings. </h5>
+ 		   <h5>Make changes to your glossary config below. A checked box indicates the field is part of the tag. You can add new fields and/or remove existing ones from the tag. <br>You can also edit the mapping URI, included URIs, excluded URIs, refresh frequency, and tag history settings. </h5>
  	  </span>
 	   </div>
 	  
@@ -23,7 +23,7 @@
 	 	</h5>
 	   </span>
 	   
-         <form method="post" action="/process_update_mapping_config">
+         <form method="post" action="/process_update_glossary_config">
 		    <table>
 			   {% for field in fields %}
 		        <tr>
@@ -57,17 +57,17 @@
 			   {% endfor %}
 			   </table>
 		    <p>&nbsp;</p>
- 		   <h3>Enter Mapping URI</h3>
+ 		   <h3>Enter Glossary Table</h3>
 	 	   
  		   <span style="color:#9d9a9a;"><h5>
- 		   Specify the path to your mapping table in BigQuery. Mapping table must contain the elements source_name and canonical_name.<br><br>
+ 		   Specify the path to your glossary table in BigQuery. The schema for this table must include these elements: (source_name STRING, canonical_name STRING). The source_name represents the raw element name and the canonical_name represents the canonical name you want to map to. Note that the canonical name should also exist as a field in the tag template. <br><br>
  				  Supported URI format: <br>
  				    bigquery/project/[PROJECT]/dataset/[DATASET]/[TABLE] <br>
  			        </h5>
  			</span>
  			    <table>
  			     <tr>
- 			    <td><span style="color:red;">*</span> Mapping Table URI:&nbsp;&nbsp;
+ 			    <td><span style="color:red;">*</span> BigQuery Table URI:&nbsp;&nbsp;
  			    	  <input type="text" value="{{ tag_config['mapping_table'] }}" name="mapping_table" style="align-content:left; width: 700px; overflow:auto;"/>
 
  			    	</td>
@@ -76,7 +76,7 @@
 
 			   <h3>Enter Included and Excluded URIs</h3>
 			   <span style="color:#9d9a9a;"><h5>
-			   Specify a comma-separated list of URIs to include in and exclude from your mapping config. URIs must be GCS or BQ paths. Wildcards are allowed in the path name (GCS) or table name (BQ). <br><br>
+			   Specify the URIs to the data assets you want to tag with this config. URIs must be GCS or BQ paths and separated by comma. Wildcards are allowed in the path name (GCS) and table name (BQ). <br><br>
 					  Supported URIs for GCS files: <br>
 					    gs://my-bucket/my-folder/* <br>
 				        gs://my-bucket/my-folder/*.parquet <br>

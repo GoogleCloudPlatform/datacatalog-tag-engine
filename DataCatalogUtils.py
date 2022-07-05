@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import requests, configparser, time
-from datetime import datetime, date, time
+from datetime import datetime, date
 import pytz
 from operator import itemgetter
 import pandas as pd
@@ -271,11 +271,11 @@ class DataCatalogUtils:
                 
                 if len(field_value) == 10:
                     d = date(int(field_value[0:4]), int(field_value[5:7]), int(field_value[8:10]))
-                    dt = datetime.combine(d, time(00, 00)) # when no time is supplied, default to 12:00:00 AM UTC  
+                    dt = datetime.combine(d, datetime.time(00, 00)) # when no time is supplied, default to 12:00:00 AM UTC  
                 else:
                     # raw timestamp format: 2022-05-11 21:18:20
                     d = date(int(field_value[0:4]), int(field_value[5:7]), int(field_value[8:10]))
-                    t = time(int(field_value[11:13]), int(field_value[14:16]))
+                    t = datetime.time(int(field_value[11:13]), int(field_value[14:16]))
                     dt = datetime.combine(d, t)
                     
                 timestamp = utc.localize(dt)
@@ -283,7 +283,7 @@ class DataCatalogUtils:
                 datetime_field = datacatalog.TagField()
                 datetime_field.timestamp_value = timestamp
                 tag.fields[field_id] = datetime_field
-                field['field_value'] = timestamp # store this value back in the field, so it can be exported
+                field['field_value'] = timestamp  # store this value back in the field, so it can be exported
                 
         if column != "":
             tag.column = column
@@ -312,7 +312,7 @@ class DataCatalogUtils:
             try:
                 response = self.client.create_tag(parent=entry.name, tag=tag)
             except Exception as e:
-                msg = 'Error occurred during tag create: ' + str(e) + '. Failed tag request = ' + tag
+                msg = 'Error occurred during tag create: ' + str(e) + '. Failed tag request = ' + str(tag)
                 store.write_tag_op_error(constants.TAG_CREATED, uri, column, tag_uuid, template_uuid, msg)
                 
                 # sleep and retry write
@@ -659,9 +659,9 @@ class DataCatalogUtils:
         return entry_group.name
            
 
-    def create_update_mapping_config(self, fields, mapping_table, uri, tag_uuid, template_uuid, tag_history, tag_stream, overwrite=False):
+    def create_update_glossary_config(self, fields, mapping_table, uri, tag_uuid, template_uuid, tag_history, tag_stream, overwrite=False):
         
-        print('** enter create_update_mapping_config **')
+        print('** enter create_update_glossary_config **')
  
         # uri is either a BQ table/view path or GCS file path
         store = te.TagEngineUtils()        
@@ -717,7 +717,7 @@ class DataCatalogUtils:
             creation_status = constants.SUCCESS
             return creation_status
          
-        # entry exists while mapping tag does not
+        # entry exists while glossary tag does not
         if entry.schema == None:
             #print('Error: entry ' + entry.name + ' does not have a schema in the catalog.')
             creation_status = constants.ERROR
@@ -729,7 +729,7 @@ class DataCatalogUtils:
                 
         mapping_table_formatted = mapping_table.replace('bigquery/project/', '').replace('/dataset/', '.').replace('/', '.')
                 
-        query_str = 'select cannonical_name from `' + mapping_table_formatted + '` where source_name in (' + column_schema_str[0:-1] + ')'
+        query_str = 'select canonical_name from `' + mapping_table_formatted + '` where source_name in (' + column_schema_str[0:-1] + ')'
         #print('query_str: ', query_str)
         
         # run query against mapping table
@@ -740,14 +740,14 @@ class DataCatalogUtils:
         tag.template = self.template_path
         
         for row in rows:
-            cannonical_name = row['cannonical_name']
-            #print('cannonical_name: ', cannonical_name)
+            canonical_name = row['canonical_name']
+            #print('canonical_name: ', canonical_name)
         
             for field in fields:
-                if field['field_id'] == cannonical_name:
+                if field['field_id'] == canonical_name:
                     bool_field = datacatalog.TagField()
                     bool_field.bool_value = True
-                    tag.fields[cannonical_name] = bool_field
+                    tag.fields[canonical_name] = bool_field
                     field['field_value'] = True
                     break
                         
@@ -780,7 +780,7 @@ class DataCatalogUtils:
             try:
                 response = self.client.create_tag(parent=entry.name, tag=tag)
             except Exception as e:
-                msg = 'Error occurred during tag create: ' + str(e) + '. Failed tag request = ' + tag
+                msg = 'Error occurred during tag create: ' + str(e) + '. Failed tag request = ' + str(tag)
                 store.write_tag_op_error(constants.TAG_CREATED, uri, column, tag_uuid, template_uuid, msg)
                 
                 # sleep and retry write
@@ -810,8 +810,272 @@ class DataCatalogUtils:
                 psu.copy_tag(self.template_id, uri, column, fields)
            
         return creation_status
+      
                  
+    def create_update_sensitive_config(self, fields, dlp_dataset, mapping_table, uri, create_policy_tags, taxonomy_id, \
+                                       tag_uuid, template_uuid, tag_history, tag_stream, overwrite=False):
         
+        print('** enter create_update_sensitive_config **')
+        #print('uri: ', uri)
+        
+        if create_policy_tags:
+            ptm_client = datacatalog.PolicyTagManagerClient()
+            
+            request = datacatalog.ListPolicyTagsRequest(
+                parent=taxonomy_id
+            )
+
+            try:
+                page_result = ptm_client.list_policy_tags(request=request)
+            except Exception as e:
+                print('Unable to retrieve the policy tag taxonomy for taxonomy_id ' + taxonomy_id + '. Error message: ', e)
+                creation_status = constants.ERROR
+                return creation_status    
+
+            policy_tag_names = [] # list of fully qualified policy tag names and sensitive categories
+
+            for response in page_result:
+                policy_tag_names.append((response.name, response.display_name))
+        
+            #print('policy_tag_names: ', policy_tag_names)
+            
+            policy_tag_requests = [] # to store the list of fully qualified policy tag names and table column names, 
+                                     # so that we can create the policy tags on the various columns
+ 
+        # uri is either a BQ table/view path or GCS file path
+        store = te.TagEngineUtils()        
+        creation_status = constants.SUCCESS
+        column = ''
+        
+        is_gcs = False
+        is_bq = False
+        
+        # look up the entry based on the resource type
+        if isinstance(uri, list):
+            is_gcs = True
+            bucket = uri[0].replace('-', '_')
+            filename = uri[1].split('.')[0].replace('/', '_') # extract the filename without the extension, replace '/' with '_'
+            gcs_resource = '//datacatalog.googleapis.com/projects/' + self.project_id + '/locations/' + self.region + '/entryGroups/' + bucket + '/entries/' + filename
+            #print('gcs_resource: ', gcs_resource)
+            request = datacatalog.LookupEntryRequest()
+            request.linked_resource=gcs_resource
+            
+            try:
+                entry = self.client.lookup_entry(request)
+            except Exception as e:
+                print('Unable to find entry in the catalog. Entry ' + gcs_resource + ' does not exist.')
+                creation_status = constants.ERROR
+                return creation_status
+                #print('entry found: ', entry)
+        
+        if isinstance(uri, str):
+            is_bq = True
+            if "/column/" in uri:
+                # we have a column tag
+                split_resource = uri.split("/column/")
+                uri = split_resource[0]
+                column = split_resource[1]
+        
+            bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
+            print("uri: ", uri)
+            #print("bigquery_resource: ", bigquery_resource)
+        
+            request = datacatalog.LookupEntryRequest()
+            request.linked_resource=bigquery_resource
+            entry = self.client.lookup_entry(request)
+        
+        # entry is GCS and create_policy_tags == True
+        if is_gcs and create_policy_tags:
+            #print('Error: policy tags cannot be created on GCS resources')
+            creation_status = constants.ERROR
+            return creation_status
+        
+        # entry does not have a schema
+        if entry.schema == None:
+            #print('Error: entry ' + entry.name + ' does not have a schema in the catalog.')
+            creation_status = constants.ERROR
+            return creation_status
+             
+        dlp_dataset = dlp_dataset.replace('bigquery/project/', '').replace('/dataset/', '.').replace('/', '.')        
+        mapping_table = mapping_table.replace('bigquery/project/', '').replace('/dataset/', '.').replace('/', '.')
+        dlp_table = dlp_dataset + '.' + uri.split('/')[4]
+        
+        #print('dlp_dataset: ', dlp_dataset)
+        #print('mapping_table: ', mapping_table)
+        #print('dlp_table: ', dlp_table)
+                
+        category_subquery = '(select infotype, category, rank from ' + mapping_table + ')'  
+        dlp_subquery = ('(select distinct info_type.name as infotype, l.record_location.field_id.name as column_name '  
+                           'from ' + dlp_table + ', UNNEST(location.content_locations) as l)')
+          
+        rank_subquery = ('(select column_name, category, rank() over (partition by column_name order by rank desc) as category_rank '
+                    'from ' + category_subquery + ' as c join ' + dlp_subquery + ' as d ' 
+                    'on c.infotype = d.infotype)')
+                    
+        query = ('select column_name, category from ' + rank_subquery + ' where category_rank = 1')
+        #print('query: ', query)
+        
+        # run the query to get the list of column names and sensitive categories for this table
+        bq_client = bigquery.Client()
+        
+        try:
+            rows = bq_client.query(query).result()
+        except Exception as e:
+            print('Error querying the mapping table using ' + query + '. Error message: ', e)
+            creation_status = constants.ERROR
+            return creation_status
+        
+        tag = datacatalog.Tag()
+        tag.template = self.template_path
+        
+        # each row from this query represents a unique sensitive column that needs to be tagged
+        for row in rows:
+            column = row['column_name']
+            category = row['category']
+            
+            #print('column: ', column)
+            #print('category: ', category)
+        
+            for field in fields:
+                if 'sensitive_field' in field['field_id']:
+                    bool_field = datacatalog.TagField()
+                    bool_field.bool_value = True
+                    tag.fields['sensitive_field'] = bool_field
+                    field['field_value'] = True
+                
+                if 'sensitive_type' in field['field_id']:
+                    enum_field = datacatalog.TagField()
+                    enum_field.enum_value.display_name = category
+                    tag.fields['sensitive_type'] = enum_field
+           
+            tag.column = column
+            #print('tag.column: ', column)
+            
+            # check if a tag already exists on this column
+            try:    
+                tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
+        
+            except Exception as e:
+                print('Error during check_if_exists: ', e)
+                creation_status = constants.ERROR
+                return creation_status   
+            
+            # tag already exists    
+            if tag_exists:
+                
+                if overwrite == False:
+                    # skip this sensitive column because it is already tagged
+                    continue
+                
+                tag.name = tag_id
+            
+                try:
+                    #print('tag update request: ', tag)
+                    
+                    response = self.client.update_tag(tag=tag)
+                
+                    #print('response: ', response)
+                    
+                except Exception as e:
+                    msg = 'Error occurred during tag update: ' + str(e) + '. Failed tag request = ' + str(tag)
+                    store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, msg)
+                
+                    # sleep and retry the tag update
+                    if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
+                        print('sleep for 3 minutes due to ' + str(e))
+                        time.sleep(180)
+                    
+                        try:
+                            response = self.client.update_tag(tag=tag)
+                        except Exception as e:
+                            msg = 'Error occurred during tag update after sleep: ' + str(e)
+                            store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, msg)
+            else:
+                try:
+                    #print('tag create request: ', tag)
+                    
+                    response = self.client.create_tag(parent=entry.name, tag=tag)
+                    
+                    #print('response: ', response)
+                
+                except Exception as e:
+                    msg = 'Error occurred during tag create: ' + str(e) + '. Failed tag request = ' + str(tag)
+                    store.write_tag_op_error(constants.TAG_CREATED, uri, column, tag_uuid, template_uuid, msg)
+                
+                    # sleep and retry write
+                    if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
+                        print('sleep for 3 minutes due to ' + str(e))
+                        time.sleep(180)
+                    
+                        try:
+                            response = self.client.create_tag(parent=entry.name, tag=tag)
+                        except Exception as e:
+                            msg = 'Error occurred during tag create after sleep: ' + str(e)
+                            store.write_tag_op_error(constants.TAG_UPDATED, uri, column, tag_uuid, template_uuid, msg)
+                    
+            if create_policy_tags:
+                # add the column name and policy tag name to a list
+                for policy_tag_name, policy_tag_category in policy_tag_names:
+                    if policy_tag_category == category:
+                        policy_tag_requests.append((column, policy_tag_name))
+                    
+                            
+            if tag_history:
+                bqu = bq.BigQueryUtils()
+                template_fields = self.get_template()
+                if is_gcs:
+                    bqu.copy_tag(self.template_id, template_fields, '/'.join(uri), None, fields)
+                if is_bq:
+                    bqu.copy_tag(self.template_id, template_fields, uri, column, fields)
+        
+            if tag_stream:
+                psu = ps.PubSubUtils()
+                if is_gcs:
+                    bqu.copy_tag(self.template_id, '/'.join(uri), None, fields)
+                if is_bq:
+                    psu.copy_tag(self.template_id, uri, column, fields)
+        
+        
+        # Once we have created the regular tags, we create/update the policy tags
+        if create_policy_tags and len(policy_tag_requests) > 0:
+            self.create_update_policy_tags(uri, policy_tag_requests)
+            
+           
+        return creation_status
+
+    
+    def create_update_policy_tags(self, uri, policy_tag_requests):
+        
+        print('enter create_update_policy_tags')
+
+        bq_client = bigquery.Client()
+
+        table_id = uri.replace('/datasets/', '.').replace('/tables/', '.')
+        table = bq_client.get_table(table_id) 
+        schema = table.schema
+
+        new_schema = []
+        
+        for field in schema:
+            
+            field_match = False
+            
+            for column, policy_tag_name in policy_tag_requests:
+                
+                if field.name == column:
+                    
+                    policy = bigquery.schema.PolicyTagList(names=[policy_tag_name,])
+                    new_schema.append(bigquery.schema.SchemaField(field.name, field.field_type, field.mode, policy_tags=policy)) 
+                    field_match = True
+                    break
+        
+            if field_match == False:    
+                new_schema.append(field)
+                
+        table.schema = new_schema
+        table = bq_client.update_table(table, ["schema"])  
+
+       
     def search_catalog(self, bq_project, bq_dataset):
         
         linked_resources = {}
@@ -1058,7 +1322,7 @@ class DataCatalogUtils:
                 if len(str(field_value)) == 10:
                     utc = pytz.timezone('UTC')
                     d = date(int(field_value[0:4]), int(field_value[5:7]), int(field_value[8:10]))
-                    dt = datetime.combine(d, time(00, 00)) # when no time is supplied, default to 12:00:00 AM UTC
+                    dt = datetime.combine(d, datetime.time(00, 00)) # when no time is supplied, default to 12:00:00 AM UTC
                     timestamp = utc.localize(dt)
                 else:
                     timestamp_value = field_value.isoformat()
@@ -1167,4 +1431,4 @@ if __name__ == '__main__':
     
     uri = ['discovery-area', 'sample_data/farm.parquet']
     #uri = ['discovery-area', 'sample_data/usa.parquet']
-    dcu.create_update_mapping_config(fields, mapping_table, uri, tag_uuid=None, template_uuid=None, tag_history=False, tag_stream=False, overwrite=False)
+    dcu.create_update_glossary_config(fields, mapping_table, uri, tag_uuid=None, template_uuid=None, tag_history=False, tag_stream=False, overwrite=False)

@@ -21,7 +21,7 @@
         },
         {
             "field_id": "data_ownership",
-            "field_value": "OPEN_DATA"
+            "field_value": "THIRD_PARTY"
         },
         {
             "field_id": "data_confidentiality",
@@ -33,7 +33,11 @@
         },
         {
             "field_id": "data_creation",
-            "field_value": "2022-05-08"
+            "field_value": "2022-06-17"
+        },
+	    {
+	        "field_id": "data_asset_documentation",
+            "field_value": "https://support.datasf.org/help/311-case-data-faq"
         }
     ],
     "included_uris": "bigquery/project/warehouse-337221/dataset/cities_311/*",
