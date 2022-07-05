@@ -441,9 +441,19 @@ def display_selected_action():
             display_tag_history=history_enabled,
             display_tag_stream=stream_enabled)
             
-    elif action == "Create Mapping Config":
+    elif action == "Create Glossary Config":
         return render_template(
-            'mapping_config.html',
+            'glossary_config.html',
+            template_id=template_id,
+            project_id=project_id,
+            region=region,
+            fields=template_fields,
+            display_tag_history=history_enabled,
+            display_tag_stream=stream_enabled)
+    
+    elif action == "Create Sensitive Config":
+        return render_template(
+            'sensitive_config.html',
             template_id=template_id,
             project_id=project_id,
             region=region,
@@ -532,11 +542,11 @@ def update_config():
             display_tag_history_option=tag_history,
             display_tag_stream_option=tag_stream)
             
-    if config_type == "MAPPING":
+    if config_type == "GLOSSARY":
         # [END display_action]
         # [START render_template]
         return render_template(
-            'update_mapping_config.html',
+            'update_glossary_config.html',
             template_id=template_id,
             project_id=project_id,
             region=region,
@@ -825,8 +835,8 @@ def process_update_entry_config():
          status=job_creation)  
 
 
-@app.route('/process_update_mapping_config', methods=['POST'])
-def process_update_mapping_config():
+@app.route('/process_update_glossary_config', methods=['POST'])
+def process_update_glossary_config():
     template_id = request.form['template_id']
     project_id = request.form['project_id']
     region = request.form['region']
@@ -887,7 +897,7 @@ def process_update_mapping_config():
                 tag_stream = True
     
         template_exists, template_uuid = teu.read_tag_template(template_id, project_id, region)
-        new_tag_uuid = teu.update_tag_config(old_tag_uuid, 'MAPPING', 'PENDING', fields, included_uris, excluded_uris,\
+        new_tag_uuid = teu.update_tag_config(old_tag_uuid, 'GLOSSARY', 'PENDING', fields, included_uris, excluded_uris,\
                                                   template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
                                                   tag_history, tag_stream, overwrite, mapping_table)
         
@@ -1235,8 +1245,8 @@ def process_entry_config():
     # [END render_template]
 
 
-@app.route('/process_mapping_config', methods=['POST'])
-def process_mapping_config():
+@app.route('/process_glossary_config', methods=['POST'])
+def process_glossary_config():
     template_id = request.form['template_id']
     project_id = request.form['project_id']
     region = request.form['region']
@@ -1246,7 +1256,7 @@ def process_mapping_config():
     refresh_mode = request.form['refresh_mode']
     refresh_frequency = request.form['refresh_frequency']
     refresh_unit = request.form['refresh_unit']
-    overwrite = True # set to true as we are creating a new mapping config
+    overwrite = True # set to true as we are creating a new glossary config
     action = request.form['action']
     
     #print('included_uris: ' + included_uris)
@@ -1311,7 +1321,7 @@ def process_mapping_config():
     
     template_uuid = teu.write_tag_template(template_id, project_id, region)
 
-    tag_uuid, included_uris_hash = teu.write_mapping_config('PENDING', fields, mapping_table, included_uris, excluded_uris, template_uuid,\
+    tag_uuid, included_uris_hash = teu.write_glossary_config('PENDING', fields, mapping_table, included_uris, excluded_uris, template_uuid,\
                                                              refresh_mode, refresh_frequency, refresh_unit, \
                                                              tag_history_option, tag_stream_option, overwrite)
     if isinstance(tag_uuid, str): 
@@ -1327,7 +1337,7 @@ def process_mapping_config():
     # [END process_dynamic_tag]
     # [START render_template]
     return render_template(
-        'submitted_mapping_config.html',
+        'submitted_glossary_config.html',
         template_id=template_id,
         project_id=project_id,
         region=region,
@@ -1344,6 +1354,158 @@ def process_mapping_config():
         status=job_creation)
     # [END render_template]
 
+
+@app.route('/process_sensitive_config', methods=['POST'])
+def process_sensitive_config():
+    template_id = request.form['template_id']
+    project_id = request.form['project_id']
+    region = request.form['region']
+    dlp_dataset = request.form['dlp_dataset'].rstrip()
+    mapping_table = request.form['mapping_table'].rstrip()
+    included_uris = request.form['included_uris'].rstrip()
+    excluded_uris = request.form['excluded_uris'].rstrip()
+    
+    # policy tag inputs
+    policy_tags = request.form['policy_tags']
+    if policy_tags == "true":
+        create_policy_tags = True
+        taxonomy_id = request.form['taxonomy_id'].rstrip()
+    else:
+        create_policy_tags = False
+        taxonomy_id = None
+    
+    refresh_mode = request.form['refresh_mode']
+    refresh_frequency = request.form['refresh_frequency']
+    refresh_unit = request.form['refresh_unit']
+    overwrite = True # set to true as we are creating a new sensitive config
+    action = request.form['action']
+    
+    #print('included_uris: ' + included_uris)
+    #print('excluded_uris: ' + excluded_uris)
+    #print('refresh_mode: ' + refresh_mode)
+    #print('refresh_frequency: ' + refresh_frequency)
+    #print('refresh_unit: ' + refresh_unit)
+    
+    dcu = dc.DataCatalogUtils(template_id, project_id, region)
+    template = dcu.get_template()
+    
+    if action == "Cancel Changes":
+        
+        return render_template(
+            'tag_template.html',
+            template_id=template_id,
+            project_id=project_id,
+            region=region, 
+            fields=template)
+
+    fields = []
+    
+    selected_fields = request.form.getlist("selected")
+    #print("selected_fields: " + str(selected_fields))
+    
+    for selected_field in selected_fields:
+        selected_field_type = request.form.get(selected_field + "_datatype")
+        #print(selected_field + ", " + selected_field_type)
+        
+        for template_field in template:
+            
+            if template_field['field_id'] != selected_field:
+                continue
+        
+            is_required = template_field['is_required']
+            field = {'field_id': selected_field, 'field_type': selected_field_type,\
+                     'is_required': is_required}
+            fields.append(field)
+            break
+    
+    #print('fields: ' + str(fields))
+    
+    tag_history_option = False
+    tag_history_enabled = "OFF"
+    
+    if "tag_history" in request.form:
+        tag_history = request.form.get("tag_history")
+    
+        if tag_history == "selected":
+            tag_history_option = True
+            tag_history_enabled = "ON"
+            
+    tag_stream_option = False
+    tag_stream_enabled = "OFF"
+    
+    if "tag_stream" in request.form:
+        tag_stream = request.form.get("tag_stream")
+    
+        if tag_stream == "selected":
+            tag_stream_option = True
+            tag_stream_enabled = "ON"
+    
+    template_uuid = teu.write_tag_template(template_id, project_id, region)
+
+    tag_uuid, included_uris_hash = teu.write_sensitive_config('PENDING', fields, dlp_dataset, mapping_table, included_uris, excluded_uris, \
+                                                              create_policy_tags, taxonomy_id, \
+                                                              template_uuid, \
+                                                              refresh_mode, refresh_frequency, refresh_unit, \
+                                                              tag_history_option, tag_stream_option, overwrite)
+    if isinstance(tag_uuid, str): 
+        job_uuid = jm.create_job(tag_uuid)
+    else:
+        job_uuid = None
+    
+    if job_uuid != None: 
+        job_creation = constants.SUCCESS
+    else:
+        job_creation = constants.ERROR
+     
+    # [END process_dynamic_tag]
+    # [START render_template]
+    return render_template(
+        'submitted_sensitive_config.html',
+        template_id=template_id,
+        project_id=project_id,
+        region=region,
+        fields=fields,
+        dlp_dataset=dlp_dataset,
+        mapping_table=mapping_table,
+        included_uris=included_uris,
+        included_uris_hash=included_uris_hash,
+        excluded_uris=excluded_uris,
+        policy_tags=policy_tags,
+        taxonomy_id=taxonomy_id,
+        refresh_mode=refresh_mode,
+        refresh_frequency=refresh_frequency,
+        refresh_unit=refresh_unit,
+        tag_history=tag_history_enabled,
+        tag_stream=tag_stream_enabled,
+        status=job_creation)
+    # [END render_template]
+
+
+##################### INTERNAL METHODS #################
+
+def get_refresh_parameters(json):
+    
+    refresh_mode = json['refresh_mode']
+    refresh_frequency = ''
+    refresh_unit = ''
+    
+    if refresh_mode == 'AUTO':
+        if 'refresh_frequency' in json:
+            refresh_frequency = json['refresh_frequency']
+        else:
+            print("config request must include a refresh_frequency when refresh_mode is set to AUTO. This is a required parameter.")
+            resp = jsonify(success=False)
+            return resp
+    
+    if refresh_mode == 'AUTO':
+        if 'refresh_unit' in json:
+            refresh_unit = json['refresh_unit']
+        else:
+            print("config request must include a refresh_unit when refresh_mode is set to AUTO. This is a required parameter.")
+            resp = jsonify(success=False)
+            return resp
+    
+    return refresh_mode, refresh_frequency, refresh_unit
 
 ##################### API METHODS #################
 
@@ -1384,17 +1546,8 @@ def dynamic_create():
     
     excluded_uris = json['excluded_uris']
     included_uris = json['included_uris']
-    refresh_mode = json['refresh_mode']
     
-    if 'refresh_frequency' in json:
-        refresh_frequency = json['refresh_frequency']
-    else:
-        refresh_frequency = ''
-    
-    if 'refresh_unit' in json:
-        refresh_unit = json['refresh_unit']
-    else:
-        refresh_unit = ''
+    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
     
     tag_history = json['tag_history']
     tag_stream = json['tag_stream']
@@ -1450,17 +1603,8 @@ def static_create():
     included_uris = json['included_uris']
     tag_history = json['tag_history']
     tag_stream = json['tag_stream']
-    refresh_mode = json['refresh_mode']
     
-    if 'refresh_frequency' in json:
-        refresh_frequency = json['refresh_frequency']
-    else:
-        refresh_frequency = ''
-    
-    if 'refresh_unit' in json:
-        refresh_unit = json['refresh_unit']
-    else:
-        refresh_unit = ''
+    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
     
     # since we are creating a new config, we are overwriting any previously created tags
     overwrite = True
@@ -1519,17 +1663,7 @@ def entry_create():
     else:
         excluded_uris = None
     
-    refresh_mode = json['refresh_mode']
-    
-    if 'refresh_frequency' in json:
-        refresh_frequency = json['refresh_frequency']
-    else:
-        refresh_frequency = ''
-    
-    if 'refresh_unit' in json:
-        refresh_unit = json['refresh_unit']
-    else:
-        refresh_unit = ''
+    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
     
     tag_history = json['tag_history']
     tag_stream = json['tag_stream']
@@ -1563,8 +1697,8 @@ Args:
 Returns:
     job_uuid 
 """
-@app.route("/mapping_create", methods=['POST'])
-def mapping_create():
+@app.route("/glossary_create", methods=['POST'])
+def glossary_create():
     json = request.get_json(force=True) 
     print('json: ' + str(json))
        
@@ -1586,7 +1720,7 @@ def mapping_create():
     if 'mapping_table' in json:
         mapping_table = json['mapping_table']
     else:
-        print("mapping_config request doesn't include mapping_table field. This is a required parameter.")
+        print("glossary_config request doesn't include mapping_table field. This is a required parameter.")
         resp = jsonify(success=False)
         return resp
     
@@ -1597,23 +1731,110 @@ def mapping_create():
     else:
         excluded_uris = None
     
-    refresh_mode = json['refresh_mode']
-    
-    if 'refresh_frequency' in json:
-        refresh_frequency = json['refresh_frequency']
-    else:
-        refresh_frequency = ''
-    
-    if 'refresh_unit' in json:
-        refresh_unit = json['refresh_unit']
-    else:
-        refresh_unit = ''
+    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
     
     tag_history = json['tag_history']
     tag_stream = json['tag_stream']
     overwrite = True
     
-    tag_uuid, included_uris_hash = teu.write_mapping_config('PENDING', fields, mapping_table, included_uris, excluded_uris, template_uuid,\
+    tag_uuid, included_uris_hash = teu.write_glossary_config('PENDING', fields, mapping_table, included_uris, excluded_uris, template_uuid,\
+                                                             refresh_mode, refresh_frequency, refresh_unit, \
+                                                             tag_history, tag_stream, overwrite)                                                      
+
+    if isinstance(tag_uuid, str): 
+        job_uuid = jm.create_job(tag_uuid)
+    else:
+        job_uuid = None
+    
+    return jsonify(job_uuid=job_uuid)
+
+
+"""
+Args:
+    template_id: data attribute tag template id
+    project_id: tag template's Google Cloud project 
+    region: tag template's region 
+    fields: list of all the template field names to include in the tag (no need to include the field type)
+    dlp_dataset: The path to the dataset in BQ in which the DLP findings tables are stored
+    mapping_table: The path to the mapping table in BQ. This is required. 
+    included_uris: The path(s) to the resources (either in BQ or GCS) 
+    excluded_uris: The path(s) to the resources to exclude (optional)
+    create_policy_tags: true if this request should also create the policy tags on the sensitive columns, false otherwise
+    taxonomy_id: The fully-qualified path to the policy tag taxonomy (projects/[PROJECT]/locations/[REGION]/taxonomies/[TAXONOMY_ID])
+    refresh_mode: AUTO or ON_DEMAND
+    refresh_frequency: positive integer
+    refresh_unit: minutes or hours
+    tag_history: true if tag history is on, false otherwise 
+    tag_stream: true if tag stream is on, false otherwise
+Returns:
+    job_uuid 
+"""
+@app.route("/sensitive_create", methods=['POST'])
+def sensitive_create():
+    json = request.get_json(force=True) 
+    print('json: ' + str(json))
+       
+    template_id = json['template_id']
+    project_id = json['project_id']
+    region = json['region']
+    
+    print('template_id: ' + template_id)
+    print('project_id: ' + project_id)
+    print('region: ' + region)
+    
+    template_uuid = teu.write_tag_template(template_id, project_id, region)
+    
+    dcu = dc.DataCatalogUtils(template_id, project_id, region)
+    included_fields = json['fields']
+    fields = dcu.get_template(included_fields)
+
+    # validate dlp_dataset parameter
+    if 'dlp_dataset' in json:
+        dlp_dataset = json['dlp_dataset']
+    else:
+        print("sensitive_config request doesn't include a dlp_dataset field. This is a required parameter.")
+        resp = jsonify(success=False)
+        return resp
+            
+    # validate mapping_table parameter
+    if 'mapping_table' in json:
+        mapping_table = json['mapping_table']
+    else:
+        print("sensitive_config request doesn't include a mapping_table field. This is a required parameter.")
+        resp = jsonify(success=False)
+        return resp
+    
+    included_uris = json['included_uris']
+    
+    if 'excluded_uris' in json:
+        excluded_uris = json['excluded_uris']
+    else:
+        excluded_uris = None
+    
+    # validate create_policy_tags parameter
+    if 'create_policy_tags' in json:
+        create_policy_tags = json['create_policy_tags']
+    else:
+        print("sensitive_config request doesn't include a create_policy_tags field. This is a required parameter.")
+        resp = jsonify(success=False)
+        return resp
+        
+    if create_policy_tags:
+        if 'taxonomy_id' in json:
+            taxonomy_id = json['taxonomy_id']
+        else:
+            print("sensitive_config request must include a taxonomy_id when the create_policy_tags field is true. This is a required parameter.")
+            resp = jsonify(success=False)
+            return resp
+        
+    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
+            
+    tag_history = json['tag_history']
+    tag_stream = json['tag_stream']
+    overwrite = True
+    
+    tag_uuid, included_uris_hash = teu.write_sensitive_config('PENDING', fields, dlp_dataset, mapping_table, included_uris, excluded_uris, \
+                                                             create_policy_tags, taxonomy_id, template_uuid, \
                                                              refresh_mode, refresh_frequency, refresh_unit, \
                                                              tag_history, tag_stream, overwrite)                                                      
 
@@ -1791,10 +2012,11 @@ def _run_task():
     job_uuid = json['job_uuid']
     tag_uuid = json['tag_uuid']
     uri = json['uri']
+    #print('uri: ', uri)
     shard_uuid = json['shard_uuid']
     task_uuid = json['task_uuid']
     
-    print('tag_uuid: ' + tag_uuid)
+    #print('tag_uuid: ' + tag_uuid)
     tm.update_task_status(shard_uuid, task_uuid, 'RUNNING')
     
     # retrieve tag config and template
@@ -1822,10 +2044,16 @@ def _run_task():
         creation_status = dcu.create_update_entry_config(config['fields'], uri, config['tag_uuid'], \
                                                         config['template_uuid'], config['tag_history'], \
                                                         config['tag_stream']) 
-    if config['config_type'] == 'MAPPING':
-        creation_status = dcu.create_update_mapping_config(config['fields'], config['mapping_table'], uri, config['tag_uuid'], \
+    if config['config_type'] == 'GLOSSARY':
+        creation_status = dcu.create_update_glossary_config(config['fields'], config['mapping_table'], uri, config['tag_uuid'], \
                                                         config['template_uuid'], config['tag_history'], \
                                                         config['tag_stream'], config['overwrite'])
+    if config['config_type'] == 'SENSITIVE':
+        creation_status = dcu.create_update_sensitive_config(config['fields'], config['dlp_dataset'], config['mapping_table'], \
+                                                        uri, config['create_policy_tags'], config['taxonomy_id'], config['tag_uuid'], \
+                                                        config['template_uuid'], config['tag_history'], \
+                                                        config['tag_stream'], config['overwrite'])
+    
                                                    
     if creation_status == constants.SUCCESS:
         tm.update_task_status(shard_uuid, task_uuid, 'COMPLETED')

@@ -1,5 +1,5 @@
 {
-    "template_id": "enterprise_dictionary_template",
+    "template_id": "enterprise_glossary",
     "project_id": "tag-engine-develop",
     "region": "us-central1",
     "fields": [
@@ -70,9 +70,11 @@
             "field_id": "company_url"
         }
     ],
-	"mapping_table": "bigquery/project/tag-engine-develop/dataset/dictionary/mapping",
+	"mapping_table": "bigquery/project/tag-engine-develop/dataset/enterprise_glossary/mapping",
     "included_uris": "gs://discovery-area/sample_data/*",
-    "refresh_mode": "ON_DEMAND",
+    "refresh_mode": "AUTO",
+    "refresh_frequency": 24,
+    "refresh_unit": "hours",
     "tag_history": true,
     "tag_stream": false   
 }
