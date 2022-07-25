@@ -28,7 +28,7 @@ git clone https://github.com/GoogleCloudPlatform/datacatalog-tag-engine.git
 
 #### Step 4: Set the input variables:
 `datacatalog-tag-engine/deploy/variables.tf`: is used to define GCP projects, regions, and Google Cloud APIs, which are used during the deployment process.  
-`datacatalog-tag-engine/tagengine.ini`: is used to define the Cloud Task queues, which are used to process tag write and update requests. 
+`datacatalog-tag-engine/tagengine.ini`: is used to define the Cloud Task queues, which are used to process tag write and update requests. <br><br>
 
 
 #### Step 5: Create the database and deploy the application:
@@ -36,7 +36,6 @@ git clone https://github.com/GoogleCloudPlatform/datacatalog-tag-engine.git
 gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --region=$TAG_ENGINE_REGION     
 gcloud app create --project=$TAG_ENGINE_PROJECT --region=$TAG_ENGINE_REGION
 gcloud app deploy datacatalog-tag-engine/app.yaml
-
 ```
 
 #### Step 6: Create a service account for running the Terraform scripts:
@@ -63,7 +62,7 @@ rm /tmp/key.json
 
 #### Step 9: Start using Tag Engine:
 
-Read [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog) to start using Tag Engine. 
+Read [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog) to start using Tag Engine. <br><br>
 
 
 #### Helpful Commands:
