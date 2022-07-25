@@ -72,7 +72,7 @@ Bring up the UI:<br>
 `gcloud app browse`
 
 Create a static config through the API:<br>
-`curl -X POST [TAG ENGINE URL]/static_create -d @examples/dynamic_configs/static_create_ondemand.json`
+`curl -X POST [TAG ENGINE URL]/static_create -d @examples/static_configs/static_create_ondemand.json`
 
 Create a dynamic config through the API:<br>
 `curl -X POST [TAG ENGINE URL]/dynamic_create -d @examples/dynamic_configs/dynamic_create_auto.json`
