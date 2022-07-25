@@ -1,5 +1,5 @@
 ## Tag Engine
-This repository contains the Tag Engine application, which is described in [this guide](Use Tag Engine to create bulk tags in Data Catalog). 
+This repository contains the Tag Engine application, which is described in [this guide](https://cloud.google.com/architecture/tag-engine-and-data-catalog). 
 
 ### Usage
 
@@ -63,16 +63,14 @@ rm /tmp/key.json
 
 #### Step 9: Start using Tag Engine:
 
-Read [this tutorial](Use Tag Engine to create bulk tags in Data Catalog) to start using Tag Engine. 
+Read [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog) to start using Tag Engine. 
 
 
 #### Helpful Commands:
 
 Bring up the UI:
-```
-gcloud auth login
-gcloud app browse
-```
+`gcloud auth login`
+`gcloud app browse`
 
 Create a static config through the API:
 `curl -X POST [TAG ENGINE URL]/static_create -d @examples/dynamic_configs/static_create_ondemand.json`
@@ -84,7 +82,5 @@ Get the job status through the API:
 `curl -X POST [TAG ENGINE URL]/get_job_status -d '{"job_uuid":"47aa9460fbac11ecb1a0190a014149c1"}'`
 
 Consult the App Engine logs if you encounter an error while using Tag Engine:
-```
-gcloud app logs tail -s default
-```
+`gcloud app logs tail -s default`
 
