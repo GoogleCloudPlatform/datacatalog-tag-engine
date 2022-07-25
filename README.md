@@ -1,10 +1,9 @@
-Tag Engine is a self-service tool that makes it easier for Data Stewards to create bulk metadata in Google Cloud’s [Data Catalog](https://cloud.google.com/data-catalog/docs/concepts/overview). It enables them to create tags for their BigQuery tables, views and columns based on simple <b>SQL expressions</b> and <b>file path expressions</b>. It also keeps their tags up-to-date in accordance to a schedule. 
-<br><br>
-The tool comes with a UI and API. Data Stewards normally use the UI because it gives them the agility and autonomy to tag at scale whereas Data Engineers prefer to interact with Tag Engine through the API. The screenshot below shows the creation of a simple dynamic config using the UI.  
-<br><br>
-![](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/screenshot.png)
+## Tag Engine
+This repository contains the Tag Engine application, which is described in [this guide](Use Tag Engine to create bulk tags in Data Catalog). 
 
-### Follow the steps below to deploy Tag Engine on Google Cloud. 
+### Usage
+
+Follow the steps below to deploy Tag Engine on Google Cloud: 
 
 #### Step 1: Set the required environment variables:
 ```
@@ -62,16 +61,29 @@ gcloud iam service-accounts delete $TERRAFORM_SA
 rm /tmp/key.json
 ```
 
-#### Step 9: Launch the Tag Engine UI:
+#### Step 9: Start using Tag Engine:
+
+Read [this tutorial](Use Tag Engine to create bulk tags in Data Catalog) to start using Tag Engine. 
+
+
+#### Helpful Commands:
+
+Bring up the UI:
 ```
 gcloud auth login
 gcloud app browse
 ```
 
-#### Troubleshooting:
+Create a static config through the API:
+`curl -X POST [TAG ENGINE URL]/static_create -d @examples/dynamic_configs/static_create_ondemand.json`
 
-Consult the App Engine logs if you encounter an error while running Tag Engine:
+Create a dynamic config through the API:
+`curl -X POST [TAG ENGINE URL]/dynamic_create -d @examples/dynamic_configs/dynamic_create_auto.json`
 
+Get the job status through the API:
+`curl -X POST [TAG ENGINE URL]/get_job_status -d '{"job_uuid":"47aa9460fbac11ecb1a0190a014149c1"}'`
+
+Consult the App Engine logs if you encounter an error while using Tag Engine:
 ```
 gcloud app logs tail -s default
 ```
