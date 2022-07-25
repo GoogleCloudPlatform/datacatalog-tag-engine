@@ -68,19 +68,19 @@ Read [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-c
 
 #### Helpful Commands:
 
-Bring up the UI:
-`gcloud auth login`
+Bring up the UI:<br>
+`gcloud auth login`<br>
 `gcloud app browse`
 
-Create a static config through the API:
+Create a static config through the API:<br>
 `curl -X POST [TAG ENGINE URL]/static_create -d @examples/dynamic_configs/static_create_ondemand.json`
 
-Create a dynamic config through the API:
+Create a dynamic config through the API:<br>
 `curl -X POST [TAG ENGINE URL]/dynamic_create -d @examples/dynamic_configs/dynamic_create_auto.json`
 
-Get the job status through the API:
+Get the job status through the API:<br>
 `curl -X POST [TAG ENGINE URL]/get_job_status -d '{"job_uuid":"47aa9460fbac11ecb1a0190a014149c1"}'`
 
-Consult the App Engine logs if you encounter an error while using Tag Engine:
+Consult the App Engine logs if you encounter an error while using Tag Engine:<br>
 `gcloud app logs tail -s default`
 
