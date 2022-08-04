@@ -1,0 +1,34 @@
+curl --request POST 'https://datacatalog.googleapis.com/v1/projects/dgtoolkit/locations/us:exportMetadata' \
+--header "X-Goog-User-Project: dgtookit" \
+--header "Authorization: Bearer $(gcloud auth print-access-token)" \
+--header 'Accept: application/json' \
+--header 'Content-Type: application/json' \
+--data '{"bucket":"tag-exports","notifyTopic":"projects/dgtoolkit/topics/tag-exports"}' \
+--compressed
+
+****
+
+curl --request POST 'https://datacatalog.googleapis.com/v1/projects/data-mesh-343422/locations/us-central1:exportMetadata' \
+--header "X-Goog-User-Project: data-mesh-343422" \
+--header "Authorization: Bearer $(gcloud auth print-access-token)" \
+--header 'Accept: application/json' \
+--header 'Content-Type: application/json' \
+--data '{"bucket":"catalog-tag-exports","notifyTopic":"projects/data-mesh-343422/topics/catalog-tag-exports"}' \
+--compressed
+
+(tag_eng) $ curl --request POST 'https://datacatalog.googleapis.com/v1/projects/data-mesh-343422/locations/us-central1:exportMetadata' --header "X-Goog-User-Project: data-mesh-343422" --header "Authorization: Bearer $(gcloud auth print-access-token)" --header 'Accept: application/json' --header 'Content-Type: application/json' --data '{"bucket":"catalog-tag-exports","notifyTopic":"projects/data-mesh-343422/topics/catalog-tag-exports"}' --compressed
+{
+  "name": "projects/data-mesh-343422/locations/us-central1/operations/9c324ebb_6c92b3b2_fc8c9c10_bcdcd7b4_34a466a3"
+}
+(tag_eng) $
+
+******************************************
+
+curl --request POST 'https://datacatalog.googleapis.com/v1/projects/tag-engine-develop/locations/us-central1:exportMetadata' \
+--header "X-Goog-User-Project: tag-engine-develop" \
+--header "Authorization: Bearer $(gcloud auth print-access-token)" \
+--header 'Accept: application/json' \
+--header 'Content-Type: application/json' \
+--data '{"bucket":"catalog_metadata_exports","notifyTopic":"projects/tag-engine-develop/topics/catalog_metadata_exports"}' \
+--compressed
+

@@ -43,12 +43,13 @@ class JobManager:
 
 ##################### API METHODS #################
 
-    def create_job(self, tag_uuid):
+    def create_job(self, config_uuid, config_type):
         
         print('*** enter create_job ***')
+        print('config_uuid: ', config_uuid, ', config_type: ', config_type)
         
-        job_uuid = self._create_job_record(tag_uuid)
-        resp = self._create_job_task(job_uuid, tag_uuid)
+        job_uuid = self._create_job_record(config_uuid, config_type)
+        resp = self._create_job_task(job_uuid, config_uuid, config_type)
         
         return job_uuid 
         
@@ -174,7 +175,7 @@ class JobManager:
 
 ################ INTERNAL PROCESSING METHODS #################
 
-    def _create_job_record(self, tag_uuid):
+    def _create_job_record(self, config_uuid, config_type):
         
         print('*** _create_job_record ***')
         
@@ -184,7 +185,8 @@ class JobManager:
 
         job_ref.set({
             'job_uuid': job_uuid,
-            'tag_uuid': tag_uuid,
+            'config_uuid': config_uuid,
+            'config_type': config_type,
             'job_status':  'PENDING',
             'task_count': 0,
             'tasks_ran': 0,
@@ -198,9 +200,9 @@ class JobManager:
         return job_uuid
 
     
-    def _create_job_task(self, job_uuid, tag_uuid):
+    def _create_job_task(self, job_uuid, config_uuid, config_type):
         
-        print('*** enter _create_cloud_task ***')
+        #print('*** enter _create_cloud_task ***')
 
         client = tasks_v2.CloudTasksClient()
         parent = client.queue_path(self.tag_engine_project, self.queue_region, self.queue_name)
@@ -213,20 +215,20 @@ class JobManager:
         }
         
         task['app_engine_http_request']['headers'] = {'Content-type': 'application/json'}
-        payload = {'job_uuid': job_uuid, 'tag_uuid': tag_uuid}
+        payload = {'job_uuid': job_uuid, 'config_uuid': config_uuid, 'config_type': config_type}
         print('payload: ' + str(payload))
         
         payload_utf8 = json.dumps(payload).encode()
         task['app_engine_http_request']['body'] = payload_utf8
 
         resp = client.create_task(parent=parent, task=task)
-        print('resp: ' + str(resp))
+        #print('resp: ' + str(resp))
         
         return resp
         
     def _get_task_count(job_uuid):
         
-        print('*** enter _get_task_count ***')
+        #print('*** enter _get_task_count ***')
         
         job = self.db.collection('jobs').document(job_uuid).get()
 
@@ -270,8 +272,8 @@ if __name__ == '__main__':
     app_engine_uri = '/_split_work'
     jm = JobManager(project, region, queue_name, app_engine_uri)
     
-    tag_uuid = '1f1b4720839c11eca541e1ad551502cb'
-    jm.create_async_job(tag_uuid)
+    config_uuid = '1f1b4720839c11eca541e1ad551502cb'
+    jm.create_async_job(config_uuid)
     
     print('done')
 

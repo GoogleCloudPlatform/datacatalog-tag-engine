@@ -10,20 +10,20 @@
         </div>
 	   <div class="header">
 	   
-	   {% if propagated_tag_config['config_status'] == 'ACTIVE' %}
+	   {% if propagated_config['config_status'] == 'ACTIVE' %}
 	   	<h2>Override propagated tag on view {{ view_res }}</h2>
-	   {% elif propagated_tag_config['config_status'] == 'FORKED' %}
+	   {% elif propagated_config['config_status'] == 'FORKED' %}
 	     <h2>Change propagated tag on view {{ view_res }}</h2>
-	   {% elif propagated_tag_config['config_status'] == 'CONFLICT' %}
+	   {% elif propagated_config['config_status'] == 'CONFLICT' %}
 	     <h2>Resolve tag conflict on view {{ view_res }}</h2>
 	   {% endif %}	
 		
  	      <span style="color:#9d9a9a;"><h5>
-	   {% if propagated_tag_config['config_status'] == 'ACTIVE': %}		 
+	   {% if propagated_config['config_status'] == 'ACTIVE': %}		 
 			 <span style="color:red">Warning: this is potentially a destructive action, you will not be able to go back. </span>  Once you make changes to this tag, it will be permanently forked from its original tag(s) attached to {{ source_res }}.
-	   {% elif propagated_tag_config['config_status'] == 'FORKED': %}
+	   {% elif propagated_config['config_status'] == 'FORKED': %}
 	          <span style="color:#f1c232;">Warning:</span> this tag has been forked from {{ source_res }}. It is not being kept in sync with its original tag(s). 
-        {% elif propagated_tag_config['config_status'] == 'CONFLICT': %}
+        {% elif propagated_config['config_status'] == 'CONFLICT': %}
           <span style="color:#f1c232;">Warning:</span> this tag will be forked from {{ source_res }} and will not be kept in sync with its original tag(s).
 	   {% endif %}
 		 </h5></span> 
@@ -40,7 +40,7 @@
 		          <td>   
 				   {% set ns = namespace(found=false) %}
 				   
-				   {% for current_field in propagated_tag_config['fields']  %}
+				   {% for current_field in propagated_config['fields']  %}
 				      {% if current_field['field_id'] == field['field_id'] %}
 					      
 						 {% set ns.found = true %}
@@ -70,7 +70,7 @@
 				
 		        {% set ns = namespace(found=false) %}
 		      
-			   {% for current_field in propagated_tag_config['fields'] %}
+			   {% for current_field in propagated_config['fields'] %}
 			   
 			      {% if current_field['field_id'] == field['field_id'] %}
 		           {% set ns.found = true %}
@@ -98,7 +98,7 @@
  				    <select name= "{{ field['field_id'] }}" style="width: 80px;padding: 3px;">
  				      {% set ns = namespace(found=false) %}
 				      
- 					 {% for current_field in propagated_tag_config['fields'] %}
+ 					 {% for current_field in propagated_config['fields'] %}
 					   
  					   {% if current_field['field_id'] == field['field_id'] %}
  				           {% set ns.found = true %}
@@ -126,7 +126,7 @@
  				{% elif field['field_type'] == "datetime": %}
  			        {% set ns = namespace(found=false) %}
 			      
- 				   {% for current_field in propagated_tag_config['fields'] %}
+ 				   {% for current_field in propagated_config['fields'] %}
 				   
  				      {% if current_field['field_id'] == field['field_id'] %}
  			           {% set ns.found = true %}
@@ -143,7 +143,7 @@
  				{% else: %}
   			        {% set ns = namespace(found=false) %}
 			      
-  				   {% for current_field in propagated_tag_config['fields'] %}
+  				   {% for current_field in propagated_config['fields'] %}
 				   
   				      {% if current_field['field_id'] == field['field_id'] %}
   			           {% set ns.found = true %}
@@ -175,9 +175,9 @@
 		        <table>
 		        <tr>
 			   <td>
-			   {% if propagated_tag_config['config_status'] == 'ACTIVE' %}
+			   {% if propagated_config['config_status'] == 'ACTIVE' %}
 				 <input type="submit" value="I understand, submit my changes" name="action" style="color:red;font-weight:bold;font-size:16px;width:300px;padding:3px;">&nbsp;
-			   {% elif propagated_tag_config['config_status'] == 'CONFLICT' %}
+			   {% elif propagated_config['config_status'] == 'CONFLICT' %}
 			   	  <input type="submit" value="Fork Tag and Save Changes" name="action">
 			   {% else %}
 				   <input type="submit" value="Save Changes" name="action">
@@ -187,7 +187,7 @@
 			   <input type="hidden" name="template_id" value="{{ template_id }}">
 			   <input type="hidden" name="project_id" value="{{ project_id }}">
 			   <input type="hidden" name="region" value="{{ region }}">
-			   <input type="hidden" name="tag_uuid" value="{{ propagated_tag_config['view_tag_uuid'] }}">
+			   <input type="hidden" name="tag_uuid" value="{{ propagated_config['view_tag_uuid'] }}">
 			   
 			   {% for field in fields %}
 			   	<input type="hidden" name="{{ field['field_id'] }}_datatype" value="{{ field['field_type'] }}">

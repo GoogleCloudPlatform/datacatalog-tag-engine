@@ -14,12 +14,12 @@
 	    <span style="color:#9d9a9a;">
 	    <h5>&nbsp;Mandatory template fields are marked by <span style="color:red;">*</span>. </h5>
          </span>  
-		    {% for tag_config in tag_configs %}
+		    {% for config in configs %}
 		    <table style="background-color:#f1eeee" width="1000">
 		   
-		    <th>&nbsp;{{ tag_config['tag_type'].title() }} tag using {{ tag_config['template_id'] }}</th> 
+		    <th>&nbsp;{{ config['tag_type'].title() }} tag using {{ config['template_id'] }}</th> 
 			<tr><td>&nbsp;<span style="color:#0b5394;">Tagged Fields:</span></td></tr>
-			{% for field in tag_config['fields'] %}
+			{% for field in config['fields'] %}
 	          <tr>
 		     <td>&nbsp;
 				   {% if field['is_required'] == True %}
@@ -29,10 +29,10 @@
 				   {% endif %}
 				
 				{{ field['field_id'] }} (<span style="color:green;">{{ field['field_type'] }}</span>): 
-				{% if tag_config['tag_type'] == 'STATIC' %}
+				{% if config['tag_type'] == 'STATIC' %}
 				  {{ field['field_value'] }}
 				{% endif %}
-				{% if tag_config['tag_type'] == 'DYNAMIC' %}
+				{% if config['tag_type'] == 'DYNAMIC' %}
 				  {{ field['query_expression'] }}
 				{% endif %}
 			</td>
@@ -42,21 +42,21 @@
 		    <td>&nbsp;<span style="color:#0b5394;">Included URIs:</span></td>
 	         </tr>
 		    <tr>
-		    <td>&nbsp;&nbsp;{{ tag_config['included_uris'] }}</td>
+		    <td>&nbsp;&nbsp;{{ config['included_uris'] }}</td>
 	         </tr>
 		    <tr>
 		    <td>&nbsp;<span style="color:#0b5394;">Excluded URIs:</span></td>
 	         </tr>
 		    <tr>
-		    <td>&nbsp;&nbsp;{{ tag_config['excluded_uris'] }}</td>
+		    <td>&nbsp;&nbsp;{{ config['excluded_uris'] }}</td>
 	         </tr>
 	        
-		    {% if tag_config['tag_type'] == 'DYNAMIC' %}
+		    {% if config['tag_type'] == 'DYNAMIC' %}
 		    <tr>
 		    <td>&nbsp;<span style="color:#0b5394;">Refresh frequency:</span></td>
 	         </tr>
 		    <tr>
-		    <td>&nbsp;&nbsp;{{ tag_config['refresh_frequency'] }} hours
+		    <td>&nbsp;&nbsp;{{ config['refresh_frequency'] }} hours
 		    </td>
 		    </tr>
 		    {% endif %}

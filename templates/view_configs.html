@@ -19,7 +19,7 @@
 	   </div>
 	    <span style="color:#9d9a9a;">
 	    <h5>
-		   {% if tag_configs|length > 0 %} 
+		   {% if configs|length > 0 %} 
 		    	&nbsp;Click on Edit Tag Config to update the rules of a config.<br><br>
 				&nbsp;Mandatory tag template fields are marked by <span style="color:red;">*</span>. 
 		   {% else %}
@@ -27,23 +27,23 @@
 		   {% endif %}
 	    </h5>
          </span>  
-		    {% for tag_config in tag_configs %}
+		    {% for config in configs %}
 		    <table style="background-color:#f1eeee" width="800">
 		    
 			<form method="post" action="/update_config">
 		    
 			<th>&nbsp;<input type="submit" value="Edit Tag Config" name="submit"></th>
-			<tr><td>&nbsp;<span style="color:#0b5394;">Config Status:</span> {{ tag_config['config_status'] }}
-			{% if tag_config['config_status'] != 'ACTIVE' and tag_config['config_status'] != 'ERROR' %}
+			<tr><td>&nbsp;<span style="color:#0b5394;">Config Status:</span> {{ config['config_status'] }}
+			{% if config['config_status'] != 'ACTIVE' and config['config_status'] != 'ERROR' %}
 				<a href="{{ url_for('view_configs',template_id=template_id,project_id=project_id,region=region) }}">refresh</a>
 			{% endif %}
 			</td></tr> 
-			<tr><td>&nbsp;<span style="color:#0b5394;">Config Type:</span> {{ tag_config['config_type'].title() }}</td></tr>
+			<tr><td>&nbsp;<span style="color:#0b5394;">Config Type:</span> {{ config['config_type'].title() }}</td></tr>
 			<tr><td>&nbsp;</td></tr>
 			<tr><td>&nbsp;<span style="color:#0b5394;">Tag Template Fields:</span></td></tr>
 		    </table>
 			<table style="background-color:#f1eeee" width="800">
-			{% for field in tag_config['fields'] %}
+			{% for field in config['fields'] %}
 	          <tr>
 		     <td>&nbsp;
 				 {% if field['is_required'] == True %}
@@ -55,10 +55,10 @@
 				{{ field['field_id'] }} (<span style="color:green;">{{ field['field_type'] }}</span>): 
 			 </td>
 		     <td style="width: 450px;">
-				{% if tag_config['config_type'] == 'STATIC' %}
+				{% if config['config_type'] == 'STATIC' %}
 				  {{ field['field_value'] }}
 				{% endif %}
-				{% if tag_config['config_type'] == 'DYNAMIC' %}
+				{% if config['config_type'] == 'DYNAMIC' %}
 				  {{ field['query_expression'] }}
 				{% endif %}
 			 </td>
@@ -68,13 +68,13 @@
 		  </table>
 		
 		
-	    {% if tag_config['config_type'] == 'MAPPING' %}
+	    {% if config['config_type'] == 'MAPPING' %}
 		  <table style="background-color:#f1eeee" width="800">  
 	       <tr>
 	       <td>&nbsp;<span style="color:#0b5394;">Mapping Table URI:</span></td>
             </tr>
 	       <tr>
-	       <td>&nbsp;&nbsp;{{ tag_config['mapping_table'] }}</td>
+	       <td>&nbsp;&nbsp;{{ config['mapping_table'] }}</td>
             </tr>
 			</table>
 	    {% endif %}
@@ -86,14 +86,14 @@
 		    <td>&nbsp;<span style="color:#0b5394;">Included URIs:</span></td>
 	         </tr>
 		    <tr>
-		    <td>&nbsp;&nbsp;{{ tag_config['included_uris'] }}</td>
+		    <td>&nbsp;&nbsp;{{ config['included_uris'] }}</td>
 	         </tr>
-		    {% if tag_config['config_type'] == 'DYNAMIC' %}
+		    {% if config['config_type'] == 'DYNAMIC' %}
 		       <tr>
 		       <td>&nbsp;<span style="color:#0b5394;">Included URIs Hash:</span></td>
 	            </tr>
 		       <tr>
-		       <td>&nbsp;&nbsp;{{ tag_config['included_uris_hash'] }}</td>
+		       <td>&nbsp;&nbsp;{{ config['included_uris_hash'] }}</td>
 	            </tr>
 		    {% endif %}
 		    <tr>
@@ -101,9 +101,9 @@
 	         </tr>
 		    </table>
 			<table style="background-color:#f1eeee" width="800">
-		    {% if tag_config['excluded_uris'] != '' %}
+		    {% if config['excluded_uris'] != '' %}
 		    <tr>
-		    <td>&nbsp;&nbsp;{{ tag_config['excluded_uris'] }}</td>
+		    <td>&nbsp;&nbsp;{{ config['excluded_uris'] }}</td>
 	         </tr>
 		    {% else %}
 		    <tr>
@@ -115,31 +115,31 @@
 		    
 			
 			<table style="background-color:#f1eeee" width="800">
-		    {% if 'refresh_mode' in tag_config %}
+		    {% if 'refresh_mode' in config %}
 		    <tr>
 		    <td>&nbsp;<span style="color:#0b5394;">Refresh Mode:</span>
-			    &nbsp;{{ tag_config['refresh_mode'] }}</td>
+			    &nbsp;{{ config['refresh_mode'] }}</td>
 	         </tr>
 		    {% endif %}
 		    
-		    {% if 'refresh_frequency' in tag_config %}
+		    {% if 'refresh_frequency' in config %}
 		    <tr>
 		    <td>&nbsp;<span style="color:#0b5394;">Refresh Frequency:</span>
-			    &nbsp;{{ tag_config['refresh_frequency'] }}&nbsp;{{ tag_config['refresh_unit'] }}</td>
+			    &nbsp;{{ config['refresh_frequency'] }}&nbsp;{{ config['refresh_unit'] }}</td>
 	         </tr>
 		    {% endif %} 
 		    
-		    {% if 'tag_history' in tag_config %}
+		    {% if 'tag_history' in config %}
 		    <tr>
 		    <td>&nbsp;<span style="color:#0b5394;">Tag History:</span>
-		        &nbsp;{{ tag_config['tag_history'] }}</td>
+		        &nbsp;{{ config['tag_history'] }}</td>
 	         </tr>
 		    {% endif %}
 		    
-		    {% if 'tag_stream' in tag_config %}
+		    {% if 'tag_stream' in config %}
 		    <tr>
 		    <td>&nbsp;<span style="color:#0b5394;">Tag Stream:</span>
-		        &nbsp;{{ tag_config['tag_stream'] }}</td>
+		        &nbsp;{{ config['tag_stream'] }}</td>
 	         </tr>
 		    {% endif %}
 		    
@@ -148,8 +148,8 @@
 		   <input type="hidden" name="template_id" value="{{ template_id }}">
 		   <input type="hidden" name="project_id" value="{{ project_id }}">
 		   <input type="hidden" name="region" value="{{ region }}">
-		   <input type="hidden" name="tag_uuid" value="{{ tag_config['tag_uuid'] }}">
-		   <input type="hidden" name="config_type" value="{{ tag_config['config_type'] }}">
+		   <input type="hidden" name="config_uuid" value="{{ config['config_uuid'] }}">
+		   <input type="hidden" name="config_type" value="{{ config['config_type'] }}">
 		   </form>
 		   {% endfor %}
 		   <p>&nbsp;</p>
