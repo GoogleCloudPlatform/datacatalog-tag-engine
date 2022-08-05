@@ -134,7 +134,7 @@ class DataCatalogUtils:
         return sorted(fields, key=itemgetter('order'), reverse=True)
     
         
-    def check_if_exists(self, parent, column):
+    def check_if_exists(self, parent, column=''):
         
         #print('enter check_if_exists')
         #print('input parent: ' + parent)
@@ -204,6 +204,7 @@ class DataCatalogUtils:
             #print('gcs_resource: ', gcs_resource)
             request = datacatalog.LookupEntryRequest()
             request.linked_resource=gcs_resource
+            uri = '/'.join(uri)
             
             try:
                 entry = self.client.lookup_entry(request)
@@ -242,120 +243,9 @@ class DataCatalogUtils:
             #print('Tag already exists and overwrite set to False')
             creation_status = constants.SUCCESS
             return creation_status
-            
-        tag = datacatalog.Tag()
-        tag.template = self.template_path
         
-        for field in fields:
-            field_id = field['field_id']
-            field_type = field['field_type']
-            field_value = field['field_value']
-
-            if field_type == "bool":
-                bool_field = datacatalog.TagField()
-                
-                if isinstance(field_value, str):
-                    if field_value.lower() == 'true':
-                        bool_field.bool_value = True
-                    else:
-                        bool_field.bool_value = False
-                else:
-                    bool_field.bool_value = field_value
-                
-                tag.fields[field_id] = bool_field
-
-            if field_type == "string":
-                string_field = datacatalog.TagField()
-                string_field.string_value = str(field_value)
-                tag.fields[field_id] = string_field
-            if field_type == "double":
-                float_field = datacatalog.TagField()
-                float_field.double_value = float(field_value)
-                tag.fields[field_id] = float_field
-            if field_type == "enum":
-                enum_field = datacatalog.TagField()
-                enum_field.enum_value.display_name = field_value
-                tag.fields[field_id] = enum_field
-            if field_type == "datetime": 
-                # field_value could be a date value e.g. "2022-05-08" or a datetime value e.g. "2022-05-08 15:00:00"
-                utc = pytz.timezone('UTC')
-                
-                if len(field_value) == 10:
-                    d = date(int(field_value[0:4]), int(field_value[5:7]), int(field_value[8:10]))
-                    dt = datetime.combine(d, dtime(00, 00)) # when no time is supplied, default to 12:00:00 AM UTC  
-                else:
-                    # raw timestamp format: 2022-05-11 21:18:20
-                    d = date(int(field_value[0:4]), int(field_value[5:7]), int(field_value[8:10]))
-                    t = dtime(int(field_value[11:13]), int(field_value[14:16]))
-                    dt = datetime.combine(d, t)
-                    
-                timestamp = utc.localize(dt)
-                #print('timestamp: ', timestamp)    
-                datetime_field = datacatalog.TagField()
-                datetime_field.timestamp_value = timestamp
-                tag.fields[field_id] = datetime_field
-                field['field_value'] = timestamp  # store this value back in the field, so it can be exported
-                
-        if column != "":
-            tag.column = column
-            #print('tag.column == ' + column)   
-                
-        if tag_exists == True:
-            tag.name = tag_id
-            
-            try:
-                print('INFO: update tag')
-                response = self.client.update_tag(tag=tag)
-            except Exception as e:
-                msg = 'Error occurred during tag update: ' + str(e)
-                store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'STATIC', msg)
-                
-                # sleep and retry the tag update
-                if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
-                    print('sleep for 3 minutes due to ' + str(e))
-                    time.sleep(180)
-                    
-                    try:
-                        print('INFO: retry update tag')
-                        response = self.client.update_tag(tag=tag)
-                    except Exception as e:
-                        msg = 'Error occurred during tag update after sleep: ' + str(e)
-                        store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'STATIC', msg)
-        else:
-            try:
-                print('INFO: create tag')
-                response = self.client.create_tag(parent=entry.name, tag=tag)
-            except Exception as e:
-                msg = 'Error occurred during tag create: ' + str(e) + '. Failed tag request = ' + str(tag)
-                store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'STATIC', msg)
-                
-                # sleep and retry write
-                if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
-                    print('sleep for 3 minutes due to ' + str(e))
-                    time.sleep(180)
-                    
-                    try:
-                        print('INFO: retry create tag')
-                        response = self.client.create_tag(parent=entry.name, tag=tag)
-                    except Exception as e:
-                        msg = 'Error occurred during tag create after sleep: ' + str(e)
-                        store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'STATIC', msg)
-                    
-        if tag_history:
-            bqu = bq.BigQueryUtils()
-            template_fields = self.get_template()
-            if is_gcs:
-                bqu.copy_tag(self.template_id, template_fields, '/'.join(uri), None, fields)
-            if is_bq:
-                bqu.copy_tag(self.template_id, template_fields, uri, column, fields)
-        
-        if tag_stream:
-            psu = ps.PubSubUtils()
-            if is_gcs:
-                bqu.copy_tag(self.template_id, '/'.join(uri), None, fields)
-            if is_bq:
-                psu.copy_tag(self.template_id, uri, column, fields)
-           
+        creation_status = self.create_update_tag(fields, tag_exists, tag_id, config_uuid, 'STATIC', tag_history, tag_stream, entry, column)    
+                   
         return creation_status
 
 
@@ -1098,16 +988,16 @@ class DataCatalogUtils:
         table = bq_client.update_table(table, ["schema"])  
 
 
-    def apply_restore_config(self, config_uuid, source_template_id, source_template_project, source_template_region, target_template_id, target_template_project, \
-                             target_template_region, tag_extract, tag_history, tag_stream, overwrite=False):
+    def apply_restore_config(self, config_uuid, tag_extract, tag_history, tag_stream, overwrite=False):
         
         print('** enter apply_restore_config **')
+        #print('tag_extract: ', tag_extract)
         
         store = te.TagEngineUtils()        
         creation_status = constants.SUCCESS
         
         for json_obj in tag_extract:
-            #print('json_obj: ', json_obj)
+            print('json_obj: ', json_obj)
         
             entry_group = json_obj['entryGroupId']
             entry_id = json_obj['id']
@@ -1117,7 +1007,19 @@ class DataCatalogUtils:
             print('entry_group: ', entry_group)
             print('entry_id: ', entry_id)
         
+            entry_name = 'projects/' + project_id + '/locations/' + location_id + '/entryGroups/' + entry_group + '/entries/' + entry_id
+            print('entry_name: ', entry_name)
+    
+            try:
+                entry = self.client.get_entry(name=entry_name)
+                
+            except Exception as e:
+                print("Error: couldn't find the entry: ", e)
+                creation_status = constants.ERROR
+                return creation_status
+            
             if 'columns' in json_obj:
+                # column-level tag
                 json_columns = json_obj['columns']
                 print('json_columns: ', json_columns)
                 
@@ -1126,23 +1028,7 @@ class DataCatalogUtils:
                     column_name = column_obj['name'].split(':')[1]
                     column_tags = column_obj['tags']
                     fields = column_tags[0]['fields']
-                    
-                    #print('column_obj: ', column_obj)
-                    #print('column_name: ', column_name)
-                    #print('column_tags: ', column_tags)
-                    #print('fields: ', fields)
-                        
-                    entry_name = 'projects/' + project_id + '/locations/' + location_id + '/entryGroups/' + entry_group + '/entries/' + entry_id
-                    print('entry_name: ', entry_name)
-            
-                    try:
-                        entry = self.client.get_entry(name=entry_name)
-                
-                    except Exception as e:
-                        print("Error: couldn't find the entry: ", e)
-                        creation_status = constants.ERROR
-                        return creation_status
-                
+                                     
                     try:    
                         tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column_name)
         
@@ -1156,120 +1042,173 @@ class DataCatalogUtils:
                         creation_status = constants.SUCCESS
                         return creation_status
             
-                    tag = datacatalog.Tag()
-                    tag.template = self.template_path
-        
-                    for field in fields:
-                        field_id = field['name']
-                        field_type = field['type']
-                        field_value = field['value']
-        
-                        if field_type == 'BOOL':
-                            bool_field = datacatalog.TagField()
+                    # create or update column-level tag
+                    uri = entry.linked_resource.replace('//bigquery.googleapis.com/projects/', '') + '/column/' + column_name
+                    creation_status = self.create_update_tag(fields, tag_exists, tag_id, config_uuid, 'RESTORE', tag_history, tag_stream, \
+                                                             entry, uri, column_name)
             
-                            if isinstance(field_value, str):
-                                if field_value == 'TRUE':
-                                    bool_field.bool_value = True
-                                else:
-                                    bool_field.bool_value = False
-                            else:
-                                bool_field.bool_value = field_value
-            
-                            tag.fields[field_id] = bool_field
+            if 'tags' in json_obj:
+                # table-level tag
+                json_tags = json_obj['tags'] 
+                fields = json_tags[0]['fields']
+                print('fields: ', fields)  
+                
+                try:    
+                    tag_exists, tag_id = self.check_if_exists(parent=entry.name, column='')
+    
+                except Exception as e:
+                    print('Error during check_if_exists: ', e)
+                    creation_status = constants.ERROR
+                    return creation_status
 
-                        if field_type == 'STRING':
-                            string_field = datacatalog.TagField()
-                            string_field.string_value = str(field_value)
-                            tag.fields[field_id] = string_field
-                        if field_type == 'DOUBLE':
-                            float_field = datacatalog.TagField()
-                            float_field.double_value = float(field_value)
-                            tag.fields[field_id] = float_field
-                        if field_type == 'ENUM':
-                            enum_field = datacatalog.TagField()
-                            enum_field.enum_value.display_name = field_value
-                            tag.fields[field_id] = enum_field
-                        if field_type == 'DATETIME': 
-                            # field_value could be a date value e.g. "2022-05-08" or a datetime value e.g. "2022-05-08 15:00:00"
-                            utc = pytz.timezone('UTC')
-            
-                            if len(field_value) == 10:
-                                d = date(int(field_value[0:4]), int(field_value[5:7]), int(field_value[8:10]))
-                                dt = datetime.combine(d, dtime(00, 00)) # when no time is supplied, default to 12:00:00 AM UTC  
-                            else:
-                                # raw timestamp format: 2022-05-11 21:18:20
-                                d = date(int(field_value[0:4]), int(field_value[5:7]), int(field_value[8:10]))
-                                t = dtime(int(field_value[11:13]), int(field_value[14:16]))
-                                dt = datetime.combine(d, t)
+                if tag_exists and overwrite == False:
+                    print('Tag already exists and overwrite flag is False')
+                    creation_status = constants.SUCCESS
+                    return creation_status
                 
-                            timestamp = utc.localize(dt)
-                            #print('timestamp: ', timestamp)    
-                            datetime_field = datacatalog.TagField()
-                            datetime_field.timestamp_value = timestamp
-                            tag.fields[field_id] = datetime_field
-                            field['field_value'] = timestamp  # store this value back in the field, so it can be exported
-                
-                    if column_name != "":
-                        tag.column = column_name
-                        #print('tag.column == ' + column)   
-                
-                    if tag_exists == True:
-                        tag.name = tag_id
-            
-                        try:
-                            print('tag update: ', tag)
-                            response = self.client.update_tag(tag=tag)
-                        except Exception as e:
-                            msg = 'Error occurred during tag update: ' + str(e)
-                            store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'RESTORE', msg)
-                
-                            # sleep and retry the tag update
-                            if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
-                                print('sleep for 3 minutes due to ' + str(e))
-                                time.sleep(180)
+                # create or update table-level tag
+                uri = entry.linked_resource.replace('//bigquery.googleapis.com/projects/', '')
+                creation_status = self.create_update_tag(fields, tag_exists, tag_id, config_uuid, 'RESTORE', tag_history, \
+                                                         tag_stream, entry, uri)                     
                     
-                                try:
-                                    response = self.client.update_tag(tag=tag)
-                                except Exception as e:
-                                    msg = 'Error occurred during tag update after sleep: ' + str(e)
-                                    store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'RESTORE', msg)
-                    else:
-                        try:
-                            print('tag create: ', tag)
-                            response = self.client.create_tag(parent=entry.name, tag=tag)
-                        except Exception as e:
-                            msg = 'Error occurred during tag create: ' + str(e) + '. Failed tag request = ' + str(tag)
-                            store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'RESTORE', msg)
-                
-                            # sleep and retry write
-                            if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
-                                print('sleep for 3 minutes due to ' + str(e))
-                                time.sleep(180)
-                    
-                                try:
-                                    response = self.client.create_tag(parent=entry.name, tag=tag)
-                                except Exception as e:
-                                    msg = 'Error occurred during tag create after sleep: ' + str(e)
-                                    store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'RESTORE', msg)
-                    
-                    if tag_history:
-                        bqu = bq.BigQueryUtils()
-                        template_fields = self.get_template()
-                        if is_gcs:
-                            bqu.copy_tag(self.template_id, template_fields, '/'.join(uri), None, fields)
-                        if is_bq:
-                            bqu.copy_tag(self.template_id, template_fields, uri, column, fields)
-        
-                    if tag_stream:
-                        psu = ps.PubSubUtils()
-                        if is_gcs:
-                            bqu.copy_tag(self.template_id, '/'.join(uri), None, fields)
-                        if is_bq:
-                            psu.copy_tag(self.template_id, uri, column, fields)
            
         return creation_status
         
- 
+    def create_update_tag(self, fields, tag_exists, tag_id, config_uuid, config_type, tag_history, tag_stream, entry, uri, column_name=''):
+        
+        creation_status = constants.SUCCESS
+        store = te.TagEngineUtils() 
+        tag = datacatalog.Tag()
+        tag.template = self.template_path
+
+        for field in fields:
+            
+            if 'name' in field:
+                field_id = field['name']
+                field_type = field['type']
+                field_value = field['value']
+                
+                # rename the keys, which will be used by tag history
+                if tag_history:
+                    field['field_id'] = field['name']
+                    field['field_type'] = field['type']
+                    field['field_value'] = field['value']
+                    del field['name']
+                    del field['type']
+                    del field['value']
+                
+            elif 'field_id' in field:
+                field_id = field['field_id']
+                field_type = field['field_type'].upper()
+                field_value = field['field_value']
+                
+            else:
+                # export file can contain invalid fields, so need this check for processing restores
+                continue
+            
+            if field_type == 'BOOL':
+                bool_field = datacatalog.TagField()
+
+                if isinstance(field_value, str):
+                    if field_value == 'TRUE':
+                        bool_field.bool_value = True
+                    else:
+                        bool_field.bool_value = False
+                else:
+                    bool_field.bool_value = field_value
+
+                tag.fields[field_id] = bool_field
+
+            if field_type == 'STRING':
+                string_field = datacatalog.TagField()
+                string_field.string_value = str(field_value)
+                tag.fields[field_id] = string_field
+            if field_type == 'DOUBLE':
+                float_field = datacatalog.TagField()
+                float_field.double_value = float(field_value)
+                tag.fields[field_id] = float_field
+            if field_type == 'ENUM':
+                enum_field = datacatalog.TagField()
+                enum_field.enum_value.display_name = field_value
+                tag.fields[field_id] = enum_field
+            if field_type == 'DATETIME' or field_type == 'TIMESTAMP': 
+                # field_value could be a date value e.g. "2022-05-08" or a datetime value e.g. "2022-05-08 15:00:00"
+                utc = pytz.timezone('UTC')
+
+                if len(field_value) == 10:
+                    d = date(int(field_value[0:4]), int(field_value[5:7]), int(field_value[8:10]))
+                    dt = datetime.combine(d, dtime(00, 00)) # when no time is supplied, default to 12:00:00 AM UTC  
+                else:
+                    # raw timestamp format: 2022-05-11 21:18:20
+                    d = date(int(field_value[0:4]), int(field_value[5:7]), int(field_value[8:10]))
+                    t = dtime(int(field_value[11:13]), int(field_value[14:16]))
+                    dt = datetime.combine(d, t)
+    
+                timestamp = utc.localize(dt)
+                #print('timestamp: ', timestamp)    
+                datetime_field = datacatalog.TagField()
+                datetime_field.timestamp_value = timestamp
+                tag.fields[field_id] = datetime_field
+                field['field_value'] = timestamp  # store this value back in the field, so it can be exported
+    
+        if column_name != '':
+            tag.column = column_name
+            #print('tag.column == ' + column)   
+    
+        if tag_exists == True:
+            tag.name = tag_id
+
+            try:
+                print('tag update: ', tag)
+                response = self.client.update_tag(tag=tag)
+            except Exception as e:
+                msg = 'Error occurred during tag update: ' + str(e)
+                store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'RESTORE', msg)
+                
+                # sleep and retry the tag update
+                if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
+                    print('sleep for 3 minutes due to ' + str(e))
+                    time.sleep(180)
+        
+                    try:
+                        response = self.client.update_tag(tag=tag)
+                    except Exception as e:
+                        msg = 'Error occurred during tag update after sleep: ' + str(e)
+                        store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, config_type, msg)
+                        creation_status = constants.ERROR
+                        return creation_status
+        else:
+            try:
+                print('tag create: ', tag)
+                response = self.client.create_tag(parent=entry.name, tag=tag)
+            except Exception as e:
+                msg = 'Error occurred during tag create: ' + str(e) + '. Failed tag request = ' + str(tag)
+                store.write_tag_op_error(constants.TAG_CREATED, config_uuid, config_type, msg)
+    
+                # sleep and retry write
+                if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
+                    print('sleep for 3 minutes due to ' + str(e))
+                    time.sleep(180)
+        
+                    try:
+                        response = self.client.create_tag(parent=entry.name, tag=tag)
+                    except Exception as e:
+                        msg = 'Error occurred during tag create after sleep: ' + str(e)
+                        store.write_tag_op_error(constants.TAG_CREATED, config_uuid, config_type, msg)
+                        creation_status = constants.ERROR
+                        return creation_status
+        
+        if tag_history:
+            bqu = bq.BigQueryUtils()
+            template_fields = self.get_template()
+            bqu.copy_tag(self.template_id, template_fields, uri, column_name, fields)
+
+        if tag_stream:
+            psu = ps.PubSubUtils()
+            psu.copy_tag(self.template_id, uri, column_name, fields)
+       
+        return creation_status
+        
        
     def search_catalog(self, bq_project, bq_dataset):
         
@@ -1612,41 +1551,16 @@ if __name__ == '__main__':
     
     te_config = configparser.ConfigParser()
     te_config.read("tagengine.ini")
-
-    source_template_id = 'data_attribute_v1'
-    source_template_project = 'tag-engine-develop'
-    source_template_region = 'us-central1'
-    target_template_id = 'data_attribute_v2'
-    target_template_project = 'tag-engine-develop'
-    target_template_region = 'us-central1'
-
-    ###### restore config section ######
+    template_project=config['DEFAULT']['TAG_ENGINE_PROJECT']
+    template_region=config['DEFAULT']['QUEUE_REGION']
     
-    config_uuid = '275f708c12b211ed9a2a5748afe69904'
-    tag_extract = [{'columns': [{'name': 'column:contact_suffix', 'tags': [{'fields': [{'name': 'sensitive_type', 'type': 'ENUM', 'value': 'SENSITIVE_PERSONAL_DATA'}, {'name': 'sensitive_field', 'type': 'BOOL', 'value': 'FALSE'}], 'projectId': 'tag-engine-develop', 'templateId': 'data_attribute_v1'}]}, {'name': 'column:cust_key', 'tags': [{'fields': [{'name': 'sensitive_type', 'type': 'ENUM', 'value': 'PERSONAL_IDENTIFIABLE_INFORMATION'}, {'name': 'sensitive_field', 'type': 'BOOL', 'value': 'TRUE'}], 'projectId': 'tag-engine-develop', 'templateId': 'data_attribute_v1'}]}], 'entryGroupId': '@bigquery', 'id': 'cHJvamVjdHMvdGFnLWVuZ2luZS1kZXZlbG9wL2RhdGFzZXRzL2RhdGFfc291cmNlX3VzL3RhYmxlcy9mYXJt', 'locationId': 'us', 'projectId': 'tag-engine-develop', 'system': 'BIGQUERY', 'type': 'TABLE'}, {'columns': [{'name': 'column:companyname', 'tags': [{'fields': [{'name': 'sensitive_type', 'type': 'ENUM', 'value': 'CRITICAL_DATA_ELEMENT'}, {'name': 'sensitive_field', 'type': 'BOOL', 'value': 'TRUE'}], 'projectId': 'tag-engine-develop', 'templateId': 'data_attribute_v1'}]}, {'name': 'column:phone', 'tags': [{'fields': [{'name': 'sensitive_field', 'type': 'BOOL', 'value': 'FALSE'}], 'projectId': 'tag-engine-develop', 'templateId': 'data_attribute_v1'}]}], 'entryGroupId': '@bigquery', 'id': 'cHJvamVjdHMvdGFnLWVuZ2luZS1kZXZlbG9wL2RhdGFzZXRzL2RhdGFfc291cmNlX3VzL3RhYmxlcy91c2E', 'locationId': 'us', 'projectId': 'tag-engine-develop', 'system': 'BIGQUERY', 'type': 'TABLE'}]
+    dcu = DataCatalogUtils(template_id='data_resource_v2', project_id=template_project, region=template_region);
+    tag_extract = [{'entryGroupId': '@bigquery', 'id': 'cHJvamVjdHMvdGFnLWVuZ2luZS1kZXZlbG9wL2RhdGFzZXRzL2RhdGFfc291cmNlX3VzL3RhYmxlcy9mYXJt', 'locationId': 'us', 'projectId': 'tag-engine-develop', 'system': 'BIGQUERY', 'tags': [{'fields': [{'name': 'data_confidentiality', 'type': 'ENUM', 'value': 'UNKNOWN'}, {'name': 'num_fields', 'type': 'DOUBLE', 'value': '10.000000'}, {'name': 'global_id_location', 'type': 'BOOL', 'value': 'FALSE'}, {'name': 'num_records', 'type': 'DOUBLE', 'value': '15.000000'}, {'name': 'global_id_customer', 'type': 'BOOL', 'value': 'FALSE'}, {'name': 'recent_data_update', 'type': 'TIMESTAMP', 'value': '2022-08-01T05:00:00+00:00'}, {'name': 'global_id_account', 'type': 'BOOL', 'value': 'FALSE'}, {'name': 'global_id_product', 'type': 'BOOL', 'value': 'TRUE'}, {'name': 'size', 'type': 'DOUBLE', 'value': '3.000000'}, {'type': 'BOOL', 'value': 'FALSE'}, {'type': 'BOOL', 'value': 'TRUE'}, {'type': 'BOOL', 'value': 'FALSE'}, {'type': 'ENUM'}, {'type': 'DOUBLE', 'value': '1.000000'}, {'type': 'BOOL', 'value': 'FALSE'}, {'type': 'DOUBLE', 'value': '12.000000'}, {'type': 'TIMESTAMP', 'value': '2022-07-13T05:00:00+00:00'}, {'type': 'DOUBLE', 'value': '43.000000'}], 'projectId': 'data-mesh-344315', 'templateId': 'data_resource'}], 'type': 'TABLE'}, {'entryGroupId': '@bigquery', 'id': 'cHJvamVjdHMvdGFnLWVuZ2luZS1kZXZlbG9wL2RhdGFzZXRzL2RhdGFfc291cmNlX3VzL3RhYmxlcy91c2E', 'locationId': 'us', 'projectId': 'tag-engine-develop', 'system': 'BIGQUERY', 'tags': [{'fields': [{'name': 'data_confidentiality', 'type': 'ENUM', 'value': 'PUBLIC'}, {'name': 'num_fields', 'type': 'DOUBLE', 'value': '5.000000'}, {'name': 'global_id_location', 'type': 'BOOL', 'value': 'FALSE'}, {'name': 'num_records', 'type': 'DOUBLE', 'value': '3.000000'}, {'name': 'global_id_customer', 'type': 'BOOL', 'value': 'TRUE'}, {'name': 'recent_data_update', 'type': 'TIMESTAMP', 'value': '2022-08-03T05:00:00+00:00'}, {'name': 'global_id_account', 'type': 'BOOL', 'value': 'FALSE'}, {'name': 'global_id_product', 'type': 'BOOL', 'value': 'FALSE'}, {'name': 'size', 'type': 'DOUBLE', 'value': '10.000000'}], 'projectId': 'data-mesh-344315', 'templateId': 'data_resource'}], 'type': 'TABLE'}]
+    dcu.apply_restore_config(config_uuid, tag_extract, tag_history=False, tag_stream=False, overwrite=True)
     
-    dcu = DataCatalogUtils(template_id=target_template_id, project_id=target_template_project, region=target_template_region);
-    dcu.apply_restore_config(config_uuid, source_template_id, source_template_project, source_template_region, target_template_id, target_template_project, \
-                             target_template_region, tag_extract, tag_history=False, tag_stream=False, overwrite=True)
+    dcu = DataCatalogUtils(template_id='cities_311', project_id=template_project, region=template_region);
+    dcu.apply_dynamic_config(fields, uri, config_uuid, template_uuid, tag_history=False, tag_stream=False)
     
-    ###### dynamic config section ######
-    
-    '''fields = [{'is_required': True, 'query_expression': 'select count(*) from $table', 'field_id': 'sum_total_requests', 'field_type': 'double'}, {'field_type': 'datetime', 'is_required': True, 'field_id': 'tag_snapshot_time', 'query_expression': 'select current_datetime'}]
-    uri =  'warehouse-337221/datasets/cities_311/tables/new_york_311_service_requests'
-    config_uuid = '02f83fda129411edbfe5d7ffaeb66252'
-    template_uuid = '0cd7a7b6126c11edbf537d43ff29b318'
-    
-    dcu = DataCatalogUtils(template_id='cities_311', project_id='tag-engine-develop', region='us-central1');
-    dcu.apply_dynamic_config(fields, uri, config_uuid, template_uuid, tag_history=False, tag_stream=False)'''
-    
-    ###### static config section ######
-    
-    '''fields = [{'field_id': 'data_domain', 'field_type': 'enum', 'field_value': 'ENG', 'is_required': True}, {'field_id': 'broad_data_category', 'field_type': 'enum', 'field_value': 'CONTENT', 'is_required': True}, {'field_type': 'enum', 'is_required': False, 'field_id': 'environment', 'field_value': 'PROD'}, {'field_value': 'WORKDAY', 'is_required': False, 'field_id': 'data_origin', 'field_type': 'enum'}, {'field_type': 'datetime', 'field_value': '2022-08-02 21:22:08', 'is_required': False, 'field_id': 'data_creation'}, {'is_required': False, 'field_id': 'data_ownership', 'field_value': 'HR', 'field_type': 'enum'}, {'field_type': 'enum', 'field_id': 'data_confidentiality', 'field_value': 'PUBLIC', 'is_required': False}, {'field_id': 'data_retention', 'field_type': 'enum', 'is_required': False, 'field_value': '30_DAYS'}]
-    uri = 'warehouse-337221/datasets/cities_311/tables/new_york_311_service_requests'
-    config_uuid = '91e415e412a711eda71963492cb0febb'
-    template_uuid = '8d2e6f380e8b11edad80f79da9be0145'
-    overwrite = True
-    
-    dcu = DataCatalogUtils(template_id='data_governance', project_id='tag-engine-develop', region='us-central1')
-    dcu.apply_static_config(fields, uri, config_uuid, template_uuid, tag_history=False, tag_stream=False, overwrite=True)'''
+    dcu = DataCatalogUtils(template_id='data_governance', project_id=template_project, region=template_region)
+    dcu.apply_static_config(fields, uri, config_uuid, template_uuid, tag_history=False, tag_stream=False, overwrite=True)
     

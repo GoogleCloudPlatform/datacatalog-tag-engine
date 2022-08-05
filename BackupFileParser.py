@@ -28,8 +28,8 @@ class BackupFileParser:
         tag_template = "'templateId': '{}'".format(source_template_id)
         project_id = "'projectId': '{}'".format(source_template_project)
         
-        print('tag_template: ', tag_template)
-        print('project_id: ', project_id)
+        #print('tag_template: ', tag_template)
+        #print('project_id: ', project_id)
         
         if tag_template in str(json_obj) and project_id in str(json_obj):
             is_match = True
@@ -66,7 +66,7 @@ class BackupFileParser:
                 for k, v in obj.items():
                     #print('** key: ', k, ', value: ', v)
             
-                    if k == columns and BackupFileParser.match_template_id(v, source_template_id) == True:
+                    if k == columns and BackupFileParser.match_template_id_project(v, source_template_id, source_template_project) == True:
                         #print('$$$$ column ', v)
                 
                         columns_copy = v.copy()
@@ -76,11 +76,11 @@ class BackupFileParser:
                             if BackupFileParser.match_template_id(element, source_template_id) == False:
                                v.remove(element)
             
-                    if k == columns and BackupFileParser.match_template_id(v, source_template_id) == False:
+                    if k == columns and BackupFileParser.match_template_id_project(v, source_template_id, source_template_project) == False:
                         #print('added ', k, ' to unwanted_keys')
                         unwanted_keys.append(k)
             
-                    if k == tags and BackupFileParser.match_template_id(v, source_template_id) == True:
+                    if k == tags and BackupFileParser.match_template_id_project(v, source_template_id, source_template_project) == True:
                 
                         tags_copy = v.copy()
                 
@@ -92,7 +92,7 @@ class BackupFileParser:
                        
                         #print('#### we are left with: ', v)
                     
-                    if k == tags and BackupFileParser.match_template_id(v, source_template_id) == False:
+                    if k == tags and BackupFileParser.match_template_id_project(v, source_template_id, source_template_project) == False:
                         #print('added ', k, ' to unwanted_keys')
                         unwanted_keys.append(k)
                     
@@ -105,11 +105,19 @@ class BackupFileParser:
                     del obj[k]
         
                 if BackupFileParser.match_template_id_project(obj, source_template_id, source_template_project):
-                    #print('final obj: ', obj)
                     extracted_tags.append(obj)
             
                 index = index + 1
         
         return extracted_tags
     
+if __name__ == '__main__':
     
+    bkp_file = ('catalog_metadata_exports', 'Exported_Metadata_Project_tag-engine-develop_2022-08-04T15-23-28Z_UTC.jsonl')
+    extracted_tags = BackupFileParser.extract_tags('data_resource', 'data-mesh-344315', bkp_file)
+    print('extracted_tags: ', extracted_tags)
+    
+    bkp_file = ('catalog_metadata_exports', 'Exported_Metadata_Project_tag-engine-develop_2022-08-02T22-09-14Z_UTC.jsonl')
+    extracted_tags = BackupFileParser.extract_tags('data_attribute', 'data-mesh-344315', bkp_file)
+    print('extracted_tags: ', extracted_tags)
+        

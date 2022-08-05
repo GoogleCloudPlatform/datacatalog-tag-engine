@@ -6,6 +6,6 @@
     "target_template_project": "tag-engine-develop",
     "target_template_region": "us-central1",
     "backup_files": "gs://catalog_metadata_exports/Exported_Metadata_Project_tag-engine-develop_2022-08-02T22-09-14Z_UTC.jsonl",
-    "tag_history": false, 
+    "tag_history": true, 
     "tag_stream": false   
 }

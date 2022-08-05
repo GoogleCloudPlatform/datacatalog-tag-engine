@@ -2068,7 +2068,7 @@ def _split_work():
         for bkp_file in bkp_files:
             extracted_tags.append(bfp.BackupFileParser.extract_tags(config.get('source_template_id'), config.get('source_template_project'), \
                                                                     bkp_file))
-        #print('extracted_tags: ', extracted_tags)
+        print('extracted_tags: ', extracted_tags)
         
         # no tags were extracted from the backup files
         if extracted_tags == [[]]:
@@ -2159,12 +2159,9 @@ def _run_task():
                                                      uri, config['create_policy_tags'], config['taxonomy_id'], config['config_uuid'], \
                                                      config['template_uuid'], config['tag_history'], \
                                                      config['tag_stream'], config['overwrite'])
-    
     if config_type == 'RESTORE':
-        creation_status = dcu.apply_restore_config(config['config_uuid'], config['source_template_id'], config['source_template_project'], \
-                                                   config['source_template_region'], config['target_template_id'], \
-                                                   config['target_template_project'], config['target_template_region'], \
-                                                   tag_extract, config['tag_history'], config['tag_stream'], config['overwrite']) 
+        creation_status = dcu.apply_restore_config(config['config_uuid'], tag_extract, \
+                                                   config['tag_history'], config['tag_stream'], config['overwrite']) 
     
                                               
     if creation_status == constants.SUCCESS:
