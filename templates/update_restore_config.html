@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+  <head>
+    <title>Tag Engine</title>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+  </head>  
+    <body>
+	   <div class="pagetitle">
+	   <h1>Tag Engine</h1>
+        </div>
+	   <div class="header">
+	   <h2>Update restore config using {{ template_id }}</h2>
+ 	   <span style="color:#9d9a9a;">
+ 		   <h5>Make changes to your restore config below. You can also edit the mapping URI, included URIs, excluded URIs, refresh frequency, and tag history settings. </h5>
+ 	  </span>
+	   </div>
+	  
+         <form method="post" action="/process_update_restore_config">
+			<h3>Source Details</h3>	
+			<table>
+			<tr>
+		    <td>&nbsp;<span style="color:red;">*</span>&nbsp;Source tag template id:&nbsp;</td>
+		    <td>
+			<input type="text" name="source_template_id" value="{{ config['source_template_id'] }}" style="width: 150px;padding: 3px;"/>			 
+		    </td>
+		    </tr>
+			<tr>
+		    <td>&nbsp;<span style="color:red;">*</span>&nbsp;Source tag template project:&nbsp;</td>
+			<td>
+		    	  <input type="text" name="source_template_project" value="{{ config['source_template_project'] }}" style="width: 150px;padding: 3px;"/>			 
+		    </td>
+		    </tr>
+			<tr>
+		    <td>&nbsp;<span style="color:red;">*</span>&nbsp;Source tag template region:&nbsp;</td>
+			<td>
+		    	  <input type="text" name="source_template_region" value="{{ config['source_template_region'] }}" style="width: 150px;padding: 3px;"/>			 
+		    </td>
+		    </tr>
+		    </table>
+			   <p>&nbsp;</p>
+			   <h3>Destination Details</h3>
+		   	<table> 
+		   	<tr>
+		       <td>&nbsp;<span style="color:red;">*</span>&nbsp;Target tag template id:&nbsp;</td>
+			   <td>
+		       	  <input type="text" name="target_template_id" value="{{ config['target_template_id'] }}" style="width: 150px;padding: 3px;"/>			 
+		       </td>
+		       </tr>
+		   	<tr>
+		       <td>&nbsp;<span style="color:red;">*</span>&nbsp;Target tag template project:&nbsp;</td>
+			   <td>
+		       	  <input type="text" name="target_template_project" value="{{ config['target_template_project'] }}" style="width: 150px;padding: 3px;"/>			 
+		       </td>
+		       </tr>
+		   	<tr>
+		       <td>&nbsp;<span style="color:red;">*</span>&nbsp;Target tag template region:&nbsp;</td>
+			   <td>
+		       	  <input type="text" name="target_template_region" value="{{ config['target_template_region'] }}" style="width: 150px;padding: 3px;"/>			 
+		       </td>
+		       </tr>
+		       </table>
+				<p>&nbsp;</p>
+				<h3>Enter GCS Path to Export Files</h3>
+		 	   
+							    <table>
+						     <tr>
+						    <td><span style="color:red;">*</span>&nbsp;Location of metadata export file(s):&nbsp;&nbsp;
+						    	  <input type="text" name="metadata_export_location" value="{{ config['metadata_export_location'] }}" style="align-content:left; width: 700px; overflow:auto;"/>
+
+						    	</td>
+						     </tr>
+					    </table>	   
+ 		   	
+			{% if display_tag_history_option == 1 %}
+			      <p>&nbsp;</p>
+				<h3>Choose Tag History Option</h3>
+			    <table>
+			    <tr><td>
+				    {% if config['tag_history'] == True %} 
+				    		<input type="checkbox" class="form-control move-left" name="tag_history" value="selected" checked>
+				    {% else %}
+				         	<input type="checkbox" class="form-control move-left" name="tag_history" value="selected">
+				    {% endif %}
+				    Save tag values to BigQuery history table&nbsp;&nbsp;
+			    </td></tr>
+			    </table>
+			    {% endif %}
+			    {% if display_tag_stream_option == 1 %}
+			      <p>&nbsp;</p>
+				<h3>Choose Tag Stream Option</h3>
+			    <table>
+			    <tr><td>
+				    {% if config['tag_stream'] == True %} 
+				    		<input type="checkbox" class="form-control move-left" name="tag_stream" value="selected" checked>
+				    {% else %}
+				         	<input type="checkbox" class="form-control move-left" name="tag_stream" value="selected">
+				    {% endif %}
+				    Save tag values to Pub/Sub tag stream topic&nbsp;&nbsp;
+			    </td></tr>
+			    </table>
+			    {% endif %}
+	         <p>&nbsp;</p>
+		        <table>
+		        <tr>
+			   <td><input type="submit" value="Submit Changes" name="action">&nbsp;<input type="submit" value="Cancel Changes" name="action"></td>
+			   </table>
+			   <input type="hidden" name="template_id" value="{{ target_template_id }}">
+			   <input type="hidden" name="project_id" value="{{ target_template_project }}">
+			   <input type="hidden" name="region" value="{{ target_template_region }}">
+			   <input type="hidden" name="config_uuid" value="{{ config['config_uuid'] }}">
+
+         </form>
+    </body>
+</html>

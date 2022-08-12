@@ -462,7 +462,7 @@ resource "google_firestore_index" "index-20" {
     collection = "restore_configs"
 
     fields {
-      field_path = "template_uuid"
+      field_path = "target_template_uuid"
       order      = "ASCENDING"
     }
 

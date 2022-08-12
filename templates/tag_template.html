@@ -9,7 +9,7 @@
 	   <h1>Tag Engine for Data Catalog</h1>
         </div>
 	   <div class="header">
-	   <h3>&nbsp;{{ template_id }} tag template details</h3>
+	   <h3>&nbsp;Tag template details for: {{ template_id }}</h3>
 	   </div>
 	   <span style="color:#9d9a9a;">
 		   <h5>&nbsp;&nbsp;Mandatory tag template fields are marked by <span style="color:red;">*</span></h5>
@@ -41,7 +41,7 @@
 			    {% endfor %}
 			   </table>
 		    <p>&nbsp;</p>
-			   <h3>Choose Action</h2>
+			   <h3>Choose a bulk tagging method</h3>
 			    <table>
 			     <tr>
 			    <td><input type="submit" value="Create Static Config" name="action"></td>
@@ -49,9 +49,17 @@
 			    <td><input type="submit" value="Create Entry Config" name="action"></td>
 				<td><input type="submit" value="Create Glossary Config" name="action"></td> 
 				<td><input type="submit" value="Create Sensitive Config" name="action"></td>
-			    <td><input type="submit" value="View and Edit Configs" name="action"></td>
+				<td><input type="submit" value="Create Restore Config" name="action"></td>
+				</tr>
+			    <tr>
+				</table>
+				<p>&nbsp;</p>
+				<h3>Have an existing config for {{ template_id }}?</h3>
+				<table>
+				<td><input type="submit" value="View and Edit Configs" name="action"></td>
 		         </tr>
 		        </table>
+			   <p>&nbsp;</p>
 			   <p>&nbsp;<a href="/">Switch tag templates / Homepage</a></p>
 			   <input type="hidden" name="template_id" value="{{ template_id }}">
 			   <input type="hidden" name="project_id" value="{{ project_id }}">

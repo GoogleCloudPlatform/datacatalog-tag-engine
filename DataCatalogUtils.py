@@ -997,18 +997,18 @@ class DataCatalogUtils:
         creation_status = constants.SUCCESS
         
         for json_obj in tag_extract:
-            print('json_obj: ', json_obj)
+            #print('json_obj: ', json_obj)
         
             entry_group = json_obj['entryGroupId']
             entry_id = json_obj['id']
             location_id = json_obj['locationId']
             project_id = json_obj['projectId']
     
-            print('entry_group: ', entry_group)
-            print('entry_id: ', entry_id)
+            #print('entry_group: ', entry_group)
+            #print('entry_id: ', entry_id)
         
             entry_name = 'projects/' + project_id + '/locations/' + location_id + '/entryGroups/' + entry_group + '/entries/' + entry_id
-            print('entry_name: ', entry_name)
+            #print('entry_name: ', entry_name)
     
             try:
                 entry = self.client.get_entry(name=entry_name)
@@ -1021,7 +1021,7 @@ class DataCatalogUtils:
             if 'columns' in json_obj:
                 # column-level tag
                 json_columns = json_obj['columns']
-                print('json_columns: ', json_columns)
+                #print('json_columns: ', json_columns)
                 
                 for column_obj in json_columns:
                 
@@ -1051,7 +1051,7 @@ class DataCatalogUtils:
                 # table-level tag
                 json_tags = json_obj['tags'] 
                 fields = json_tags[0]['fields']
-                print('fields: ', fields)  
+                #print('fields: ', fields)  
                 
                 try:    
                     tag_exists, tag_id = self.check_if_exists(parent=entry.name, column='')
@@ -1077,6 +1077,7 @@ class DataCatalogUtils:
     def create_update_tag(self, fields, tag_exists, tag_id, config_uuid, config_type, tag_history, tag_stream, entry, uri, column_name=''):
         
         creation_status = constants.SUCCESS
+        valid_field = False
         store = te.TagEngineUtils() 
         tag = datacatalog.Tag()
         tag.template = self.template_path
@@ -1084,6 +1085,7 @@ class DataCatalogUtils:
         for field in fields:
             
             if 'name' in field:
+                valid_field = True
                 field_id = field['name']
                 field_type = field['type']
                 field_value = field['value']
@@ -1098,12 +1100,13 @@ class DataCatalogUtils:
                     del field['value']
                 
             elif 'field_id' in field:
+                valid_field = True
                 field_id = field['field_id']
                 field_type = field['field_type'].upper()
                 field_value = field['field_value']
                 
             else:
-                # export file can contain invalid fields, so need this check for processing restores
+                # export file contains invalid tags (e.g. a tagged field without a name)
                 continue
             
             if field_type == 'BOOL':
@@ -1151,6 +1154,11 @@ class DataCatalogUtils:
                 tag.fields[field_id] = datetime_field
                 field['field_value'] = timestamp  # store this value back in the field, so it can be exported
     
+        # export file can have invalid tags, skip tag creation if that's the case 
+        if valid_field == False:
+            creation_status = constants.ERROR
+            return creation_status
+        
         if column_name != '':
             tag.column = column_name
             #print('tag.column == ' + column)   
@@ -1159,7 +1167,7 @@ class DataCatalogUtils:
             tag.name = tag_id
 
             try:
-                print('tag update: ', tag)
+                #print('tag update: ', tag)
                 response = self.client.update_tag(tag=tag)
             except Exception as e:
                 msg = 'Error occurred during tag update: ' + str(e)
@@ -1179,7 +1187,7 @@ class DataCatalogUtils:
                         return creation_status
         else:
             try:
-                print('tag create: ', tag)
+                #print('tag create: ', tag)
                 response = self.client.create_tag(parent=entry.name, tag=tag)
             except Exception as e:
                 msg = 'Error occurred during tag create: ' + str(e) + '. Failed tag request = ' + str(tag)

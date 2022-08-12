@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+  <head>
+    <title>Tag Engine for Data Catalog</title>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+  </head>  
+    <body>
+	   <div class="pagetitle">
+	   <h1>Tag Engine for Data Catalog</h1>
+        </div>
+	   <div class="header">
+	   <h2>Create restore config using {{ template_id }}</h2>
+	   <span style="color:#9d9a9a;">
+		   <h5>&nbsp;&nbsp;Mandatory fields are marked by <span style="color:red;">*</span></h5>
+	   </span>
+	   </div>
+	   <form method="post" action="/process_restore_config"> 
+	   <h3>Source Details</h3>	
+	<table>
+
+	<tr>
+    <td>&nbsp;<span style="color:red;">*</span>&nbsp;Source tag template id:&nbsp;</td>
+    <td>
+	<input type="text" name="source_template_id" style="width: 150px;padding: 3px;"/>			 
+    </td>
+    </tr>
+	<tr>
+    <td>&nbsp;<span style="color:red;">*</span>&nbsp;Source tag template project:&nbsp;</td>
+	<td>
+    	  <input type="text" name="source_template_project" style="width: 150px;padding: 3px;"/>			 
+    </td>
+    </tr>
+	<tr>
+    <td>&nbsp;<span style="color:red;">*</span>&nbsp;Source tag template region:&nbsp;</td>
+	<td>
+    	  <input type="text" name="source_template_region" style="width: 150px;padding: 3px;"/>			 
+    </td>
+    </tr>
+    </table>
+	   <p>&nbsp;</p>
+	   <h3>Destination Details</h3>
+   	<table> 
+   	<tr>
+       <td>&nbsp;<span style="color:red;">*</span>&nbsp;Target tag template id:&nbsp;</td>
+	   <td>
+       	  <input type="text" name="target_template_id" value="{{ template_id }}" style="width: 150px;padding: 3px;"/>			 
+       </td>
+       </tr>
+   	<tr>
+       <td>&nbsp;<span style="color:red;">*</span>&nbsp;Target tag template project:&nbsp;</td>
+	   <td>
+       	  <input type="text" name="target_template_project" value="{{ project_id }}" style="width: 150px;padding: 3px;"/>			 
+       </td>
+       </tr>
+   	<tr>
+       <td>&nbsp;<span style="color:red;">*</span>&nbsp;Target tag template region:&nbsp;</td>
+	   <td>
+       	  <input type="text" name="target_template_region" value="{{ region }}" style="width: 150px;padding: 3px;"/>			 
+       </td>
+       </tr>
+       </table>
+		<p>&nbsp;</p>
+		<h3>Enter GCS Path to Export Files</h3>
+		 	   
+					    <table>
+				     <tr>
+				    <td><span style="color:red;">*</span>&nbsp;Location of metadata export file(s):&nbsp;&nbsp;
+				    	  <input type="text" value="gs://" name="metadata_export_location" style="align-content:left; width: 700px; overflow:auto;"/>
+
+				    	</td>
+				     </tr>
+			    </table>
+				
+				
+			    {% if display_tag_history %}
+			      <p>&nbsp;</p>
+				<h3>Choose Tag History Option</h3>
+			    <table>
+			    <tr><td><input type="checkbox" class="form-control move-left" name="tag_history" value="selected" checked>
+				    Save tag values from this config to BigQuery tag history table.&nbsp;&nbsp;
+			    </td></tr>
+			    </table>
+			    {% endif %}
+			    {% if display_tag_stream %}
+			      <p>&nbsp;</p>
+				<h3>Choose Tag Stream Option</h3>
+			    <table>
+			    <tr><td><input type="checkbox" class="form-control move-left" name="tag_stream" value="selected" checked>
+				    Publish tag values from this config to Pub/Sub tag stream topic.&nbsp;&nbsp;
+			    </td></tr>
+			    </table>
+			    {% endif %}
+	         <p>&nbsp;</p>
+		        <table>
+		        <tr>
+			   <td><input type="submit" value="Submit Config" name="action">
+			       <input type="submit" value="Cancel Changes" name="action">
+			   </td>
+		        </tr>
+			   </table>
+			   <input type="hidden" name="template_id" value="{{ template_id }}">
+			   <input type="hidden" name="project_id" value="{{ project_id }}">
+			   <input type="hidden" name="region" value="{{ region }}">
+			   
+			   {% for dict_field in fields %}
+			   	<input type="hidden" name="{{ dict_field['field_id'] }}_datatype" value="{{ dict_field['field_type'] }}">
+			    {% endfor %}	   
+         </form>
+    </body>
+</html>

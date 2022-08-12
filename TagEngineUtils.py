@@ -751,8 +751,8 @@ class TagEngineUtils:
 
     
     def write_restore_config(self, config_status, source_template_uuid, source_template_id, source_template_project, source_template_region, \
-                                    target_template_uuid, target_template_id, target_template_project, target_template_region, \
-                                    backup_files, tag_history, tag_stream, overwrite=False):
+                             target_template_uuid, target_template_id, target_template_project, target_template_region, \
+                             metadata_export_location, tag_history, tag_stream, overwrite=False):
                                     
         print('** write_restore_config **')
         
@@ -790,7 +790,7 @@ class TagEngineUtils:
             'target_template_id': target_template_id,
             'target_template_project': target_template_project,
             'target_template_region': target_template_region,
-            'backup_files': backup_files,
+            'metadata_export_location': metadata_export_location,
             'tag_history': tag_history,
             'tag_stream': tag_stream,
             'overwrite': overwrite
@@ -875,8 +875,12 @@ class TagEngineUtils:
         
         for coll_name in colls:
             configs_ref = self.db.collection(coll_name)
-            docs = configs_ref.where('template_uuid', '==', template_uuid).where('config_status', '!=', 'INACTIVE').stream()
-        
+            
+            if coll_name == 'restore_configs':
+                docs = configs_ref.where('target_template_uuid', '==', template_uuid).where('config_status', '!=', 'INACTIVE').stream()
+            else:
+                docs = configs_ref.where('template_uuid', '==', template_uuid).where('config_status', '!=', 'INACTIVE').stream()
+                
             for doc in docs:
                 config = doc.to_dict()
                 config_results.append(config)  
@@ -889,12 +893,12 @@ class TagEngineUtils:
                 
         config_result = {}
         coll_name = self.get_config_collection(config_type)
+        
         config_ref = self.db.collection(coll_name).document(config_uuid)
         doc = config_ref.get()
         
         if doc.exists:
             config_result = doc.to_dict()
-            #print(str(config_result))
             
         return config_result
         
@@ -949,7 +953,7 @@ class TagEngineUtils:
         
     
     def update_config(self, old_config_uuid, config_type, config_status, fields, included_uris, excluded_uris, template_uuid, \
-                          refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite=False, mapping_table=None):
+                      refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite=False, mapping_table=None):
         
         coll_name = self.get_config_collection(config_type)
         self.db.collection(coll_name).document(old_config_uuid).update({
@@ -978,6 +982,39 @@ class TagEngineUtils:
             
         return new_config_uuid
     
+
+    def update_sensitive_config(self, old_config_uuid, config_status, dlp_dataset, mapping_table, included_uris, excluded_uris, 
+                                create_policy_tags, taxonomy_id, template_uuid, refresh_mode, refresh_frequency, refresh_unit, 
+                                tag_history, tag_stream, overwrite):
+        
+        self.db.collection('sensitive_configs').document(old_config_uuid).update({
+            'config_status' : "INACTIVE"
+        })
+        
+        config = self.read_config(old_config_uuid, 'SENSITIVE')
+        
+        new_config_uuid, included_uris_hash = self.write_sensitive_config(config_status, config['fields'], dlp_dataset, mapping_table, included_uris, excluded_uris, \
+                                                                          create_policy_tags, taxonomy_id, template_uuid, \
+                                                                          refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite)
+        
+        
+        return new_config_uuid
+                     
+
+    def update_restore_config(self, old_config_uuid, config_status, source_template_uuid, source_template_id, source_template_project, 
+                              source_template_region, target_template_uuid, target_template_id, target_template_project, \
+                              target_template_region, metadata_export_location, tag_history, tag_stream, overwrite=False):
+        
+        self.db.collection('restore_configs').document(old_config_uuid).update({
+            'config_status' : "INACTIVE"
+        })
+        
+        new_config_uuid = self.write_restore_config(config_status, source_template_uuid, source_template_id, source_template_project, \
+                                                    source_template_region, target_template_uuid, target_template_id, \
+                                                    target_template_project, target_template_region, \
+                                                    metadata_export_location, tag_history, tag_stream, overwrite=False)
+                    
+        return new_config_uuid
     
 ##### ##### ##### ##### ##### ##### ##### #####      
 #####  Tag Propagation Methods  #####  
