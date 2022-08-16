@@ -228,27 +228,29 @@ class TagEngineUtils:
         return summary_report, detailed_report
       
       
-    def update_config_status(self, tag_uuid, status):
+    def update_config_status(self, config_uuid, config_type, status):
     
-        self.db.collection('tag_config').document(tag_uuid).update({
+        coll_name = self.get_config_collection(config_type)
+        self.db.collection(coll_name).document(config_uuid).update({
             'config_status': status
         })
     
-    def update_scheduling_status(self, tag_uuid, status):
+    def update_scheduling_status(self, config_uuid, config_type, status):
     
-        config_ref = self.db.collection('tag_config').document(tag_uuid)
+        coll_name = self.get_config_collection(config_type)
+        config_ref = self.db.collection(coll_name).document(config_uuid)
         doc = config_ref.get()
         
         if doc.exists:
-            tag_config = doc.to_dict()
+            config = doc.to_dict()
             
-            if 'scheduling_status' in tag_config:
+            if 'scheduling_status' in config:
                 config_ref.update({'scheduling_status': status})
                          
     
-    def increment_version_next_run(self, tag_uuid):
+    def increment_version_next_run(self, config_uuid, config_type):
         
-        config = self.read_tag_config(tag_uuid)
+        config = self.read_config(config_uuid, config_type)
         
         version = config.get('version', 0) + 1
         delta = config.get('refresh_frequency', 24)
@@ -261,27 +263,27 @@ class TagEngineUtils:
         if unit == 'days':
             next_run = datetime.utcnow() + timedelta(days=delta)
         
-        self.db.collection('tag_config').document(tag_uuid).update({
+        coll_name = self.get_config_collection(config_type)
+        self.db.collection(coll_name).document(config_uuid).update({
             'version': version,
             'next_run' : next_run
         })
             
-    def update_overwrite_flag(self, tag_uuid):
+    def update_overwrite_flag(self, config_uuid, config_type):
         
-        self.db.collection('tag_config').document(tag_uuid).update({
+        coll_name = self.get_config_collection(config_type)
+        self.db.collection(coll_name).document(config_uuid).update({
             'overwrite': False
         })
                                                                              
     def read_template_config(self, template_uuid):
                 
-        tag_config = {}
-        
-        template_ref = self.db.collection('tag_template').document(template_uuid)
+        template_ref = self.db.collection('tag_templates').document(template_uuid)
         doc = template_ref.get()
         
         if doc.exists:
             template_config = doc.to_dict()
-            #print(str(tag_config))
+            #print(str(config))
             
         return template_config
     
@@ -292,7 +294,7 @@ class TagEngineUtils:
         template_uuid = ""
         
         # check to see if this template already exists
-        template_ref = self.db.collection('tag_template')
+        template_ref = self.db.collection('tag_templates')
         query = template_ref.where('template_id', '==', template_id).where('project_id', '==', project_id).where('region', '==', region)
         
         matches = query.get()
@@ -316,7 +318,7 @@ class TagEngineUtils:
              
             template_uuid = uuid.uuid1().hex
                      
-            doc_ref = self.db.collection('tag_template').document(template_uuid)
+            doc_ref = self.db.collection('tag_templates').document(template_uuid)
             doc_ref.set({
                 'template_uuid': template_uuid, 
                 'template_id': template_id,
@@ -334,33 +336,33 @@ class TagEngineUtils:
         included_uris_hash = hashlib.md5(included_uris.encode()).hexdigest()
         
         # check to see if this static config already exists
-        tag_ref = self.db.collection('tag_config')
-        query = tag_ref.where('template_uuid', '==', template_uuid).where('included_uris_hash', '==',\
+        configs_ref = self.db.collection('static_configs')
+        query = configs_ref.where('template_uuid', '==', template_uuid).where('included_uris_hash', '==',\
                             included_uris_hash).where('config_type', '==', 'STATIC').where('config_status', '!=', 'INACTIVE')
        
         matches = query.get()
        
         for match in matches:
             if match.exists:
-                tag_uuid_match = match.id
-                #print('Static config already exists. Tag_uuid: ' + str(tag_uuid_match))
+                config_uuid_match = match.id
+                #print('Static config already exists. Config_uuid: ' + str(config_uuid_match))
                 
                 # update status to INACTIVE 
-                self.db.collection('tag_config').document(tag_uuid_match).update({
+                self.db.collection('static_configs').document(config_uuid_match).update({
                     'config_status' : "INACTIVE"
                 })
-                #print('Updated status to INACTIVE.')
+                #print('Updated config status to INACTIVE.')
         
-        tag_uuid = uuid.uuid1().hex
+        config_uuid = uuid.uuid1().hex
         
         if refresh_mode == 'AUTO':
             
             delta, next_run = self.validate_auto_refresh(refresh_frequency, refresh_unit)
        
-            tag_config = self.db.collection('tag_config')
-            doc_ref = tag_config.document(tag_uuid)
+            config = self.db.collection('static_configs')
+            doc_ref = config.document(config_uuid)
             doc_ref.set({
-                'tag_uuid': tag_uuid,
+                'config_uuid': config_uuid,
                 'config_type': 'STATIC',
                 'config_status': config_status, 
                 'creation_time': datetime.utcnow(), 
@@ -382,10 +384,10 @@ class TagEngineUtils:
             
         else:
             
-            tag_config = self.db.collection('tag_config')
-            doc_ref = tag_config.document(tag_uuid)
+            config = self.db.collection('static_configs')
+            doc_ref = config.document(config_uuid)
             doc_ref.set({
-                'tag_uuid': tag_uuid,
+                'config_uuid': config_uuid,
                 'config_type': 'STATIC',
                 'config_status': config_status, 
                 'creation_time': datetime.utcnow(), 
@@ -402,7 +404,7 @@ class TagEngineUtils:
                 'overwrite': overwrite
             })
         
-        return tag_uuid, included_uris_hash
+        return config_uuid, included_uris_hash
     
     
     def write_dynamic_config(self, config_status, fields, included_uris, excluded_uris, template_uuid, refresh_mode,\
@@ -411,32 +413,32 @@ class TagEngineUtils:
         included_uris_hash = hashlib.md5(included_uris.encode()).hexdigest()
         
         # check to see if this config already exists
-        tag_ref = self.db.collection('tag_config')
-        query = tag_ref.where('template_uuid', '==', template_uuid).where('included_uris_hash', '==', included_uris_hash).where('config_type', '==', 'DYNAMIC').where('config_status', '!=', 'INACTIVE')
+        configs_ref = self.db.collection('dynamic_configs')
+        query = configs_ref.where('template_uuid', '==', template_uuid).where('included_uris_hash', '==', included_uris_hash).where('config_type', '==', 'DYNAMIC').where('config_status', '!=', 'INACTIVE')
        
         matches = query.get()
        
         for match in matches:
             if match.exists:
-                tag_uuid_match = match.id
-                #print('Tag config already exists. Tag_uuid: ' + str(tag_uuid_match))
+                config_uuid_match = match.id
+                #print('Config already exists. Config_uuid: ' + str(config_uuid_match))
                 
                 # update status to INACTIVE 
-                self.db.collection('tag_config').document(tag_uuid_match).update({
+                self.db.collection('dynamic_configs').document(config_uuid_match).update({
                     'config_status' : "INACTIVE"
                 })
                 print('Updated status to INACTIVE.')
        
-        tag_uuid = uuid.uuid1().hex
-        tag_config = self.db.collection('tag_config')
-        doc_ref = tag_config.document(tag_uuid)
+        config_uuid = uuid.uuid1().hex
+        config = self.db.collection('dynamic_configs')
+        doc_ref = config.document(config_uuid)
         
         if refresh_mode == 'AUTO':
             
             delta, next_run = self.validate_auto_refresh(refresh_frequency, refresh_unit)
             
             doc_ref.set({
-                'tag_uuid': tag_uuid,
+                'config_uuid': config_uuid,
                 'config_type': 'DYNAMIC',
                 'config_status': config_status, 
                 'creation_time': datetime.utcnow(), 
@@ -457,7 +459,7 @@ class TagEngineUtils:
             
         else:
             doc_ref.set({
-                'tag_uuid': tag_uuid,
+                'config_uuid': config_uuid,
                 'config_type': 'DYNAMIC',
                 'config_status': config_status, 
                 'creation_time': datetime.utcnow(), 
@@ -475,7 +477,7 @@ class TagEngineUtils:
         
         print('Created new dynamic config.')
         
-        return tag_uuid, included_uris_hash
+        return config_uuid, included_uris_hash
   
         
     def validate_auto_refresh(self, refresh_frequency, refresh_unit):
@@ -515,32 +517,32 @@ class TagEngineUtils:
         included_uris_hash = hashlib.md5(included_uris.encode()).hexdigest()
         
         # check to see if this config already exists
-        tag_ref = self.db.collection('tag_config')
-        query = tag_ref.where('template_uuid', '==', template_uuid).where('included_uris_hash', '==', included_uris_hash).where('config_type', '==', 'ENTRY').where('config_status', '!=', 'INACTIVE')
+        configs_ref = self.db.collection('entry_configs')
+        query = configs_ref.where('template_uuid', '==', template_uuid).where('included_uris_hash', '==', included_uris_hash).where('config_type', '==', 'ENTRY').where('config_status', '!=', 'INACTIVE')
        
         matches = query.get()
        
         for match in matches:
             if match.exists:
-                tag_uuid_match = match.id
-                #print('Tag config already exists. Tag_uuid: ' + str(tag_uuid_match))
+                config_uuid_match = match.id
+                #print('Tag config already exists. Tag_uuid: ' + str(config_uuid_match))
                 
                 # update status to INACTIVE 
-                self.db.collection('tag_config').document(tag_uuid_match).update({
+                self.db.collection('entry_configs').document(config_uuid_match).update({
                     'config_status' : "INACTIVE"
                 })
                 print('Updated status to INACTIVE.')
        
-        tag_uuid = uuid.uuid1().hex
-        tag_config = self.db.collection('tag_config')
-        doc_ref = tag_config.document(tag_uuid)
+        config_uuid = uuid.uuid1().hex
+        config = self.db.collection('entry_configs')
+        doc_ref = config.document(config_uuid)
         
         if refresh_mode == 'AUTO':
             
             delta, next_run = self.validate_auto_refresh(refresh_frequency, refresh_unit)
             
             doc_ref.set({
-                'tag_uuid': tag_uuid,
+                'config_uuid': config_uuid,
                 'config_type': 'ENTRY',
                 'config_status': config_status, 
                 'creation_time': datetime.utcnow(), 
@@ -561,7 +563,7 @@ class TagEngineUtils:
             
         else:
             doc_ref.set({
-                'tag_uuid': tag_uuid,
+                'config_uuid': config_uuid,
                 'config_type': 'ENTRY',
                 'config_status': config_status, 
                 'creation_time': datetime.utcnow(), 
@@ -579,7 +581,7 @@ class TagEngineUtils:
         
         print('Created new entry config.')
         
-        return tag_uuid, included_uris_hash
+        return config_uuid, included_uris_hash
 
     
     def write_glossary_config(self, config_status, fields, mapping_table, included_uris, excluded_uris, template_uuid, \
@@ -590,32 +592,32 @@ class TagEngineUtils:
         included_uris_hash = hashlib.md5(included_uris.encode()).hexdigest()
         
         # check to see if this config already exists
-        tag_ref = self.db.collection('tag_config')
-        query = tag_ref.where('template_uuid', '==', template_uuid).where('included_uris_hash', '==', included_uris_hash).where('config_type', '==', 'GLOSSARY').where('config_status', '!=', 'INACTIVE')
+        configs_ref = self.db.collection('glossary_configs')
+        query = configs_ref.where('template_uuid', '==', template_uuid).where('included_uris_hash', '==', included_uris_hash).where('config_type', '==', 'GLOSSARY').where('config_status', '!=', 'INACTIVE')
        
         matches = query.get()
        
         for match in matches:
             if match.exists:
-                tag_uuid_match = match.id
-                #print('Mapping config already exists. Found tag_uuid: ' + str(tag_uuid_match))
+                config_uuid_match = match.id
+                #print('config already exists. Found config_uuid: ' + str(config_uuid_match))
                 
                 # update status to INACTIVE 
-                self.db.collection('tag_config').document(tag_uuid_match).update({
+                self.db.collection('glossary_configs').document(config_uuid_match).update({
                     'config_status' : "INACTIVE"
                 })
                 print('Updated status to INACTIVE.')
        
-        tag_uuid = uuid.uuid1().hex
-        tag_config = self.db.collection('tag_config')
-        doc_ref = tag_config.document(tag_uuid)
+        config_uuid = uuid.uuid1().hex
+        config = self.db.collection('glossary_configs')
+        doc_ref = config.document(config_uuid)
         
         if refresh_mode == 'AUTO':
             
             delta, next_run = self.validate_auto_refresh(refresh_frequency, refresh_unit)
             
             doc_ref.set({
-                'tag_uuid': tag_uuid,
+                'config_uuid': config_uuid,
                 'config_type': 'GLOSSARY',
                 'config_status': config_status, 
                 'creation_time': datetime.utcnow(), 
@@ -638,7 +640,7 @@ class TagEngineUtils:
             
         else:
             doc_ref.set({
-                'tag_uuid': tag_uuid,
+                'config_uuid': config_uuid,
                 'config_type': 'GLOSSARY',
                 'config_status': config_status, 
                 'creation_time': datetime.utcnow(), 
@@ -658,7 +660,7 @@ class TagEngineUtils:
         
         print('Created new glossary config.')
         
-        return tag_uuid, included_uris_hash
+        return config_uuid, included_uris_hash
 
 
     def write_sensitive_config(self, config_status, fields, dlp_dataset, mapping_table, included_uris, excluded_uris, \
@@ -671,32 +673,32 @@ class TagEngineUtils:
         included_uris_hash = hashlib.md5(included_uris.encode()).hexdigest()
         
         # check to see if this config already exists
-        tag_ref = self.db.collection('tag_config')
-        query = tag_ref.where('template_uuid', '==', template_uuid).where('included_uris_hash', '==', included_uris_hash).where('config_type', '==', 'SENSITIVE').where('config_status', '!=', 'INACTIVE')
+        configs_ref = self.db.collection('sensitive_configs')
+        query = configs_ref.where('template_uuid', '==', template_uuid).where('included_uris_hash', '==', included_uris_hash).where('config_type', '==', 'SENSITIVE').where('config_status', '!=', 'INACTIVE')
        
         matches = query.get()
        
         for match in matches:
             if match.exists:
-                tag_uuid_match = match.id
-                #print('Mapping config already exists. Found tag_uuid: ' + str(tag_uuid_match))
+                config_uuid_match = match.id
+                #print('config already exists. Found config_uuid: ' + str(config_uuid_match))
                 
                 # update status to INACTIVE 
-                self.db.collection('tag_config').document(tag_uuid_match).update({
+                self.db.collection('sensitive_configs').document(config_uuid_match).update({
                     'config_status' : "INACTIVE"
                 })
                 print('Updated status to INACTIVE.')
        
-        tag_uuid = uuid.uuid1().hex
-        tag_config = self.db.collection('tag_config')
-        doc_ref = tag_config.document(tag_uuid)
+        config_uuid = uuid.uuid1().hex
+        configs = self.db.collection('sensitive_configs')
+        doc_ref = configs.document(config_uuid)
         
         if refresh_mode == 'AUTO':
             
             delta, next_run = self.validate_auto_refresh(refresh_frequency, refresh_unit)
             
             doc_ref.set({
-                'tag_uuid': tag_uuid,
+                'config_uuid': config_uuid,
                 'config_type': 'SENSITIVE',
                 'config_status': config_status, 
                 'creation_time': datetime.utcnow(), 
@@ -722,7 +724,7 @@ class TagEngineUtils:
             
         else:
             doc_ref.set({
-                'tag_uuid': tag_uuid,
+                'config_uuid': config_uuid,
                 'config_type': 'SENSITIVE',
                 'config_status': config_status, 
                 'creation_time': datetime.utcnow(), 
@@ -745,10 +747,59 @@ class TagEngineUtils:
         
         print('Created new sensitive config.')
         
-        return tag_uuid, included_uris_hash
+        return config_uuid, included_uris_hash
 
-          
-    def write_log_entry(self, dc_op, resource_type, resource, column, config_type, tag_uuid, tag_id, template_uuid):
+    
+    def write_restore_config(self, config_status, source_template_uuid, source_template_id, source_template_project, source_template_region, \
+                             target_template_uuid, target_template_id, target_template_project, target_template_region, \
+                             metadata_export_location, tag_history, tag_stream, overwrite=False):
+                                    
+        print('** write_restore_config **')
+        
+        # check to see if this config already exists
+        configs_ref = self.db.collection('restore_configs')
+        query = configs_ref.where('source_template_uuid', '==', source_template_uuid).where('target_template_uuid', '==', target_template_uuid).where('config_status', '!=', 'INACTIVE')
+       
+        matches = query.get()
+       
+        for match in matches:
+            if match.exists:
+                config_uuid_match = match.id
+                print('config already exists. Found config_uuid: ' + str(config_uuid_match))
+                
+                # update status to INACTIVE 
+                self.db.collection('restore_configs').document(config_uuid_match).update({
+                    'config_status' : "INACTIVE"
+                })
+                print('Updated status to INACTIVE.')
+       
+        config_uuid = uuid.uuid1().hex
+        configs = self.db.collection('restore_configs')
+        doc_ref = configs.document(config_uuid)
+        
+        doc_ref.set({
+            'config_uuid': config_uuid,
+            'config_type': 'RESTORE',
+            'config_status': config_status, 
+            'creation_time': datetime.utcnow(), 
+            'source_template_uuid': source_template_uuid,
+            'source_template_id': source_template_id, 
+            'source_template_project': source_template_project,
+            'source_template_region': source_template_region,
+            'target_template_uuid': target_template_uuid,
+            'target_template_id': target_template_id,
+            'target_template_project': target_template_project,
+            'target_template_region': target_template_region,
+            'metadata_export_location': metadata_export_location,
+            'tag_history': tag_history,
+            'tag_stream': tag_stream,
+            'overwrite': overwrite
+        })
+        
+        return config_uuid
+        
+               
+    def write_log_entry(self, dc_op, resource_type, resource, column, config_type, config_uuid, tag_id, template_uuid):
                     
         log_entry = {}
         log_entry['ts'] = datetime.utcnow()
@@ -761,7 +812,7 @@ class TagEngineUtils:
             log_entry['col'] = column
         
         log_entry['config_type'] = config_type
-        log_entry['tag_uuid'] = tag_uuid
+        log_entry['config_uuid'] = config_uuid
         log_entry['dc_tag_id'] = tag_id
         log_entry['template_uuid'] = template_uuid
 
@@ -769,15 +820,13 @@ class TagEngineUtils:
         #print('Wrote log entry.')
         
     
-    def write_tag_op_error(self, op, uri, col, tag_uuid, template_uuid, msg):
+    def write_tag_op_error(self, op, config_uuid, config_type, msg):
                     
         error = {}
         error['ts'] = datetime.utcnow()
         error['op'] = op
-        error['uri'] = uri
-        error['col'] = col
-        error['tag_uuid'] = tag_uuid
-        error['template_uuid'] = template_uuid
+        error['config_uuid'] = config_uuid
+        error['config_type'] = config_type
         error['msg'] = msg
         
         self.db.collection('tag_op_error').add(error)
@@ -794,112 +843,178 @@ class TagEngineUtils:
         #print('Wrote error entry.')    
     
     
-    def read_tag_configs(self, template_id, project_id, region):
+    def get_config_collection(self, config_type):
         
-        tag_configs = []
+        if config_type == 'STATIC':
+            coll = 'static_configs'
+        if config_type == 'DYNAMIC':
+            coll = 'dynamic_configs'   
+        if config_type == 'ENTRY':
+            coll = 'entry_configs' 
+        if config_type == 'GLOSSARY':
+            coll = 'glossary_configs'
+        if config_type == 'SENSITIVE':
+            coll = 'sensitive_configs'
+        if config_type == 'RESTORE':
+            coll = 'restore_configs'
+        
+        return coll
+    
+    
+    def read_configs(self, template_id, project_id, region, config_type='ALL'):
+        
+        colls = []
+        config_results = []
+        
+        if config_type == 'ALL':
+            colls = ['dynamic_configs', 'static_configs', 'entry_configs', 'glossary_configs', 'sensitive_configs', 'restore_configs']
+        else:
+            colls.append(self.get_config_collection(config_type))
         
         template_exists, template_uuid = self.read_tag_template(template_id, project_id, region)
         
-        tag_ref = self.db.collection('tag_config')
-        docs = tag_ref.where('template_uuid', '==', template_uuid).where('config_status', '!=', 'INACTIVE').stream()
-        
-        for doc in docs:
-            tag_config = doc.to_dict()
-            tag_configs.append(tag_config)  
+        for coll_name in colls:
+            configs_ref = self.db.collection(coll_name)
+            
+            if coll_name == 'restore_configs':
+                docs = configs_ref.where('target_template_uuid', '==', template_uuid).where('config_status', '!=', 'INACTIVE').stream()
+            else:
+                docs = configs_ref.where('template_uuid', '==', template_uuid).where('config_status', '!=', 'INACTIVE').stream()
                 
-        #print(str(tag_configs))
-        return tag_configs
+            for doc in docs:
+                config = doc.to_dict()
+                config_results.append(config)  
+                
+        #print(str(configs))
+        return config_results
         
     
-    def read_tag_config(self, tag_uuid):
+    def read_config(self, config_uuid, config_type):
                 
-        tag_config = {}
+        config_result = {}
+        coll_name = self.get_config_collection(config_type)
         
-        tag_ref = self.db.collection('tag_config').document(tag_uuid)
-        doc = tag_ref.get()
+        config_ref = self.db.collection(coll_name).document(config_uuid)
+        doc = config_ref.get()
         
         if doc.exists:
-            tag_config = doc.to_dict()
-            #print(str(tag_config))
+            config_result = doc.to_dict()
             
-        return tag_config
+        return config_result
         
       
     def read_ready_configs(self):
         
-        tag_uuids = []
+        ready_configs = []
+        colls = ['static_configs', 'dynamic_configs', 'entry_configs', 'glossary_configs']
         
-        config_ref = self.db.collection('tag_config')
-        config_ref = config_ref.where("refresh_mode", "==", "AUTO")
-        config_ref = config_ref.where("scheduling_status", "==", "READY")
-        config_ref = config_ref.where("config_status", "==", "ACTIVE")
-        config_ref = config_ref.where("next_run", "<=", datetime.utcnow())
+        for coll_name in colls:
+            config_ref = self.db.collection(coll_name)
+            config_ref = config_ref.where("refresh_mode", "==", "AUTO")
+            config_ref = config_ref.where("scheduling_status", "==", "READY")
+            config_ref = config_ref.where("config_status", "==", "ACTIVE")
+            config_ref = config_ref.where("next_run", "<=", datetime.utcnow())
         
-        ready_configs = list(config_ref.stream())
+            config_stream = list(config_ref.stream())
         
-        for ready_config in ready_configs:
+            for ready_config in config_stream:
             
-            config = ready_config.to_dict()
-            tag_uuids.append(config['tag_uuid'])
+                config_dict = ready_config.to_dict()
+                ready_configs.append((config_dict['config_uuid'], config_dict['config_type']))
             
-        return tag_uuids  
+        return ready_configs  
         
         
-    def lookup_tag_config_by_included_uris(self, template_uuid, included_uris, included_uris_hash):
+    def lookup_config_by_included_uris(self, template_uuid, included_uris, included_uris_hash):
         
         success = False
-        tag_config = {}
+        config_result = {}
         
-        tag_ref = self.db.collection('tag_config')
+        colls = ['dynamic_configs', 'static_configs', 'entry_configs', 'glossary_configs', 'sensitive_configs']
         
-        if included_uris is not None:
-            docs = tag_ref.where('template_uuid', '==', template_uuid).where('config_status', '==', 'ACTIVE')\
-            .where('included_uris', '==', included_uris).stream()
-        if included_uris_hash is not None:
-            docs = tag_ref.where('template_uuid', '==', template_uuid).where('config_status', '==', 'ACTIVE')\
-            .where('included_uris_hash', '==', included_uris_hash).stream()
+        for coll_name in colls:
+            
+            config_ref = self.db.collection(coll_name)
         
-        for doc in docs:
-            tag_config = doc.to_dict()
-            break
+            if included_uris is not None:
+                docs = config_ref.where('template_uuid', '==', template_uuid).where('config_status', '==', 'ACTIVE')\
+                .where('included_uris', '==', included_uris).stream()
+            if included_uris_hash is not None:
+                docs = config_ref.where('template_uuid', '==', template_uuid).where('config_status', '==', 'ACTIVE')\
+                .where('included_uris_hash', '==', included_uris_hash).stream()
         
-        print('tag_config: ' + str(tag_config))
+            for doc in docs:
+                config_result = doc.to_dict()
+                success = True
+                return success, config_result
+                
         
-        if tag_config:
-            success = True     
-
-        return success, tag_config
+        return success, config_result
         
     
-    def update_tag_config(self, old_tag_uuid, config_type, config_status, fields, included_uris, excluded_uris, template_uuid, \
-                          refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite=False, mapping_table=None):
+    def update_config(self, old_config_uuid, config_type, config_status, fields, included_uris, excluded_uris, template_uuid, \
+                      refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite=False, mapping_table=None):
         
-        self.db.collection('tag_config').document(old_tag_uuid).update({
+        coll_name = self.get_config_collection(config_type)
+        self.db.collection(coll_name).document(old_config_uuid).update({
             'config_status' : "INACTIVE"
         })
         
         if config_type == 'STATIC':
-            new_tag_uuid, included_uris_hash = self.write_static_config(config_status, fields, included_uris, excluded_uris, template_uuid, \
-                                                                        refresh_mode, refresh_frequency, refresh_unit, \
-                                                                        tag_history, tag_stream, overwrite)
+            new_config_uuid, included_uris_hash = self.write_static_config(config_status, fields, included_uris, excluded_uris, template_uuid, \
+                                                                           refresh_mode, refresh_frequency, refresh_unit, \
+                                                                           tag_history, tag_stream, overwrite)
         
         if config_type == 'DYNAMIC':
-            new_tag_uuid, included_uris_hash = self.write_dynamic_config(config_status, fields, included_uris, excluded_uris, \
-                                                                     template_uuid, refresh_mode, refresh_frequency, refresh_unit,\
-                                                                     tag_history, tag_stream)
+            new_config_uuid, included_uris_hash = self.write_dynamic_config(config_status, fields, included_uris, excluded_uris, \
+                                                                            template_uuid, refresh_mode, refresh_frequency, refresh_unit,\
+                                                                            tag_history, tag_stream)
         if config_type == 'ENTRY':
-            new_tag_uuid, included_uris_hash = self.write_entry_config(config_status, fields, included_uris, excluded_uris, \
-                                                                     template_uuid, refresh_mode, refresh_frequency, refresh_unit,\
-                                                                     tag_history, tag_stream)
+            new_config_uuid, included_uris_hash = self.write_entry_config(config_status, fields, included_uris, excluded_uris, \
+                                                                          template_uuid, refresh_mode, refresh_frequency, refresh_unit,\
+                                                                          tag_history, tag_stream)
                                                                      
         if config_type == 'GLOSSARY':
-            new_tag_uuid, included_uris_hash = self.write_glossary_config(config_status, fields, mapping_table, included_uris, excluded_uris, \
-                                                                     template_uuid, refresh_mode, refresh_frequency, refresh_unit,\
-                                                                     tag_history, tag_stream, overwrite)
+            new_config_uuid, included_uris_hash = self.write_glossary_config(config_status, fields, mapping_table, included_uris, excluded_uris, \
+                                                                            template_uuid, refresh_mode, refresh_frequency, refresh_unit,\
+                                                                            tag_history, tag_stream, overwrite)
         # note: no need to return the included_uris_hash
             
-        return new_tag_uuid
+        return new_config_uuid
     
+
+    def update_sensitive_config(self, old_config_uuid, config_status, dlp_dataset, mapping_table, included_uris, excluded_uris, 
+                                create_policy_tags, taxonomy_id, template_uuid, refresh_mode, refresh_frequency, refresh_unit, 
+                                tag_history, tag_stream, overwrite):
+        
+        self.db.collection('sensitive_configs').document(old_config_uuid).update({
+            'config_status' : "INACTIVE"
+        })
+        
+        config = self.read_config(old_config_uuid, 'SENSITIVE')
+        
+        new_config_uuid, included_uris_hash = self.write_sensitive_config(config_status, config['fields'], dlp_dataset, mapping_table, included_uris, excluded_uris, \
+                                                                          create_policy_tags, taxonomy_id, template_uuid, \
+                                                                          refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite)
+        
+        
+        return new_config_uuid
+                     
+
+    def update_restore_config(self, old_config_uuid, config_status, source_template_uuid, source_template_id, source_template_project, 
+                              source_template_region, target_template_uuid, target_template_id, target_template_project, \
+                              target_template_region, metadata_export_location, tag_history, tag_stream, overwrite=False):
+        
+        self.db.collection('restore_configs').document(old_config_uuid).update({
+            'config_status' : "INACTIVE"
+        })
+        
+        new_config_uuid = self.write_restore_config(config_status, source_template_uuid, source_template_id, source_template_project, \
+                                                    source_template_region, target_template_uuid, target_template_id, \
+                                                    target_template_project, target_template_region, \
+                                                    metadata_export_location, tag_history, tag_stream, overwrite=False)
+                    
+        return new_config_uuid
     
 ##### ##### ##### ##### ##### ##### ##### #####      
 #####  Tag Propagation Methods  #####  
@@ -932,17 +1047,17 @@ class TagEngineUtils:
         
         print('Saved tag propagation settings.')
     
-    def read_propagated_tag_config(self, tag_uuid):
+    def read_propagated_config(self, config_uuid):
                 
-        propagated_tag_config = {}
+        propagated_config = {}
         
-        propagated_tag_ref = self.db.collection('propagated_config').document(tag_uuid)
-        doc = propagated_tag_ref.get()
+        propagated_configs_ref = self.db.collection('propagated_config').document(config_uuid)
+        doc = propagated_configs_ref.get()
         
         if doc.exists:
-            propagated_tag_config = doc.to_dict()
+            propagated_config = doc.to_dict()
             
-        return propagated_tag_config
+        return propagated_config
   
     
     def run_propagation_job(self, source_project_ids, dest_project_ids, excluded_datasets):
@@ -1008,13 +1123,13 @@ class TagEngineUtils:
                      source_res = source_project + '/datasets/' + source_dataset + '/tables/' + source_table
                      print('source_res: ' + source_res)
                                      
-                     tag_configs = self.read_tag_configs_on_res(source_res)
+                     configs = self.read_configs_on_res(source_res)
                      
-                     if len(tag_configs) == 0:
+                     if len(configs) == 0:
                          self.write_unpropagated_log_entry(source_res, view_res, 'PROPAGATED', 'NONE', '')
                      else:
-                         self.add_source_to_configs(tag_configs, source_res)
-                         view_source_tables_configs.append(tag_configs)
+                         self.add_source_to_configs(configs, source_res)
+                         view_source_tables_configs.append(configs)
                  
                  # end for source in source tables
 
@@ -1024,12 +1139,12 @@ class TagEngineUtils:
                  else:
                      # go through all tags attached to this view's source tables and triage them
                      # returns list of configs which are tagged as CONFLICT or AGREE
-                     reconciled_configs = self.triage_tag_configs(view_res, view_source_tables_configs)
+                     reconciled_configs = self.triage_configs(view_res, view_source_tables_configs)
                          
                  for config in reconciled_configs:
                      
                      config_status = config['config_status']
-                     source_tag_uuid = config['tag_uuid']
+                     source_config_uuid = config['config_uuid']
                      source_res = config['source_res']
                      
                      if isinstance(source_res, list) == False:
@@ -1040,8 +1155,8 @@ class TagEngineUtils:
                      included_uris = config['included_uris']
                      template_uuid = config['template_uuid']
                      
-                     print('source_res: ' + str(source_res))
-                     print('fields: ' + str(fields))
+                     #print('source_res: ' + str(source_res))
+                     #print('fields: ' + str(fields))
                      
                      # check if tag has been forked, we don't want to override it, if it has
                      if self.is_forked_tag(template_uuid, source_res, view_res):
@@ -1059,23 +1174,23 @@ class TagEngineUtils:
                      #print('columns: ' + str(columns))
                      
                      # create or update propagated_config 
-                     view_tag_uuid = self.create_or_update_propagated_config(source_tag_uuid, source_res, view_res, config_status, columns, view_def, \
+                     view_config_uuid = self.create_or_update_propagated_config(source_config_uuid, source_res, view_res, config_status, columns, view_def, \
                                          config_type, fields, template_uuid)
                      
                      if config_status == 'CONFLICT':
                          self.write_unpropagated_log_entry(source_res, view_res, 'PROPAGATED', config_status, template_uuid)
                      elif config_status == 'PROPAGATED':
                          if config_type == "STATIC":
-                             dcu.create_update_static_propagated_tag('PROPAGATED', source_res, view_res, columns, fields, source_tag_uuid, view_tag_uuid,\
+                             dcu.create_update_static_propagated_tag('PROPAGATED', source_res, view_res, columns, fields, source_config_uuid, view_config_uuid,\
                                   template_uuid)
                          
                          if config_type == "DYNAMIC":
-                             dcu.create_update_dynamic_propagated_tag('PROPAGATED', source_res, view_res, columns, fields, source_tag_uuid, view_tag_uuid,\
+                             dcu.create_update_dynamic_propagated_tag('PROPAGATED', source_res, view_res, columns, fields, source_config_uuid, view_config_uuid,\
                                   template_uuid)
  
     def is_forked_tag(self, template_uuid, source_res, view_res):
         
-        config_ref = self.db.collection('propagated_config')
+        config_ref = self.db.collection('propagated_configs')
         query = config_ref.where('template_uuid', '==', template_uuid).where('source_res', '==', source_res).where('view_res', '==', view_res).where('config_status', 'in', ['PROPAGATED AND FORKED', 'CONFLICT AND FORKED'])
         
         results = query.stream()
@@ -1087,14 +1202,14 @@ class TagEngineUtils:
         return False
         
 
-    def create_or_update_propagated_config(self, source_tag_uuid, source_res, view_res, config_status, columns, view_def, config_type, fields,\
+    def create_or_update_propagated_config(self, source_config_uuid, source_res, view_res, config_status, columns, view_def, config_type, fields,\
                                            template_uuid):
         
         #print('enter create_or_update_propagated_config')
         
         # check to see if we have an active config 
-        tag_ref = self.db.collection('propagated_config')
-        query = tag_ref.where('template_uuid', '==', template_uuid).where('view_res', '==', view_res).where('source_res', 'array_contains_any', source_res)
+        configs_ref = self.db.collection('propagated_configs')
+        query = configs_ref.where('template_uuid', '==', template_uuid).where('view_res', '==', view_res).where('source_res', 'array_contains_any', source_res)
         results = query.stream()
         
         doc_exists = False
@@ -1114,35 +1229,35 @@ class TagEngineUtils:
                 if doc_exists == False:
                     break
                     
-                view_tag_uuid = doc.id
-                print('Config already exists. Tag_uuid: ' + str(view_tag_uuid))
+                view_config_uuid = doc.id
+                print('Config already exists. Tag_uuid: ' + str(view_config_uuid))
                 
                 if prop_config['config_status'] == 'FORKED':
-                    return view_tag_uuid
+                    return view_config_uuid
                 
                 if prop_config['fields'] != fields:
-                    self.db.collection('propagated_config').document(view_tag_uuid).update({
+                    self.db.collection('propagated_configs').document(view_config_uuid).update({
                      'config_status' : config_status,
                      'fields' : fields,
                      'last_modified_time' : datetime.utcnow()
                  })
                     print('Updated propagated_config.')
                 else:
-                    self.db.collection('propagated_config').document(view_tag_uuid).update({
+                    self.db.collection('propagated_configs').document(view_config_uuid).update({
                         'last_modified_time' : datetime.utcnow()
                     })
                     
                     print('Propagated config fields are equal, updated last_modified_time only.')
                 
         if doc_exists == False:
-            view_tag_uuid = uuid.uuid1().hex
+            view_config_uuid = uuid.uuid1().hex
        
-            prop_config = self.db.collection('propagated_config')
-            doc_ref = prop_config.document(view_tag_uuid)
+            prop_config = self.db.collection('propagated_configs')
+            doc_ref = prop_config.document(view_config_uuid)
             
             doc = {
-                'view_tag_uuid': view_tag_uuid,
-                'source_tag_uuid': source_tag_uuid,
+                'view_config_uuid': view_config_uuid,
+                'source_config_uuid': source_config_uuid,
                 'config_type': config_type,
                 'config_status': config_status, 
                 'creation_time': datetime.utcnow(), 
@@ -1158,10 +1273,10 @@ class TagEngineUtils:
             doc_ref.set(doc)
             print('Created new propagated tag config.')
         
-        return view_tag_uuid
+        return view_config_uuid
           
 
-    def write_propagated_log_entry(self, config_status, dc_op, res_type, source_res, view_res, column, config_type, source_tag_uuid, view_tag_uuid, tag_id, template_uuid):
+    def write_propagated_log_entry(self, config_status, dc_op, res_type, source_res, view_res, column, config_type, source_config_uuid, view_config_uuid, tag_id, template_uuid):
         
         log_entry = {}
         log_entry['ts'] = datetime.utcnow()
@@ -1177,8 +1292,8 @@ class TagEngineUtils:
            log_entry['col'] = column 
         
         log_entry['config_type'] = config_type
-        log_entry['source_tag_uuid'] = source_tag_uuid
-        log_entry['view_tag_uuid'] = view_tag_uuid
+        log_entry['source_config_uuid'] = source_config_uuid
+        log_entry['view_config_uuid'] = view_config_uuid
         log_entry['dc_tag_id'] = tag_id
         log_entry['template_uuid'] = template_uuid
 
@@ -1208,7 +1323,7 @@ class TagEngineUtils:
         last_run = None
         source_view_set = set()
         
-        prop_configs = self.db.collection('propagated_config').stream()
+        prop_configs = self.db.collection('propagated_configs').stream()
 
         for config in prop_configs:  
                       
@@ -1274,13 +1389,13 @@ class TagEngineUtils:
     
     def read_propagated_configs_on_res(self, source_res, view_res, template_id):
             
-        tag_config_results = []
+        config_results = []
         
         view_res_full = view_res.replace('.', '/datasets/', 1).replace('.', '/tables/', 1)
         print('view_res_full: ' + view_res_full)
         
-        prop_config_ref = self.db.collection('propagated_config')
-        tag_config_ref = self.db.collection('tag_config')
+        prop_config_ref = self.db.collection('propagated_configs')
+        config_ref = self.db.collection('configs')
          
         log_ref = self.db.collection('logs')
         query1 = log_ref.where('template_uuid', '==', template_uuid).where('source_res', '==', source_res_full).where('view_res', '==',\
@@ -1290,14 +1405,14 @@ class TagEngineUtils:
         for prop_record in prop_results:
             print('found prop log id ' + prop_record.id)
             record = prop_record.to_dict()
-            view_tag_uuid = record['tag_uuid']
+            view_config_uuid = record['config_uuid']
              
-            view_config = prop_config_ref.document(view_tag_uuid)         
+            view_config = prop_config_ref.document(view_config_uuid)         
             if view_config.exists:
                 view_record = view_config.to_dict()
                 
-            # get tag_config for parent
-            source_config = self.read_tag_configs_on_res(source_res)
+            # get config for parent
+            source_config = self.read_configs_on_res(source_res)
         
         return view_config, source_config, template_id
     
@@ -1321,11 +1436,11 @@ class TagEngineUtils:
         return source_tables
     
     
-    def read_propagated_config(self, tag_uuid):
+    def read_propagated_config(self, config_uuid):
                 
         propagated_config = {}
         
-        propagated_ref = self.db.collection('propagated_config').document(tag_uuid)
+        propagated_ref = self.db.collection('propagated_configs').document(config_uuid)
         doc = propagated_ref.get()
         
         if doc.exists:
@@ -1335,10 +1450,10 @@ class TagEngineUtils:
         return propagated_config
 
     
-    def fork_propagated_tag(self, tag_uuid, config_status, fields, refresh_frequency):
+    def fork_propagated_tag(self, config_uuid, config_status, fields, refresh_frequency):
         
         transaction = self.db.transaction()
-        config_ref = self.db.collection('propagated_config').document(tag_uuid)
+        config_ref = self.db.collection('propagated_configs').document(config_uuid)
 
         self.update_in_transaction(transaction, config_ref, config_status, fields, refresh_frequency)
         updated_config = config_ref.get().to_dict()
@@ -1361,39 +1476,39 @@ class TagEngineUtils:
                 'config_status': config_status
             })
                 
-    def triage_tag_configs(self, view_res, source_tables_tag_configs):
+    def triage_configs(self, view_res, source_tables_configs):
         
-        #print('enter triage_tag_configs')
+        #print('enter triage_configs')
         #print('view_res: ' + view_res)
-        #print('source_tables_tag_configs: ' + str(source_tables_tag_configs))
+        #print('source_tables_configs: ' + str(source_tables_configs))
         
         reconciled_tags = [] # tracks configs which conflict or/and agree  
         overlapping_tags = [] # tracks configs which overlap and still need to be reconciled   
-        template_tag_mapping = {} # key == tag_template_uuid, val == [tag_uuid]
+        template_tag_mapping = {} # key == tag_template_uuid, val == [config_uuid]
 
-        for source_table_tag_configs in source_tables_tag_configs:
+        for source_table_configs in source_tables_configs:
             
-            for tag_config in source_table_tag_configs:
+            for config in source_table_configs:
             
-                print('tag_config: ' + str(tag_config))
+                #print('config: ' + str(config))
                 
-                template_uuid = tag_config['template_uuid']
-                tag_uuid = tag_config['tag_uuid']
+                template_uuid = config['template_uuid']
+                config_uuid = config['config_uuid']
                     
                 if template_uuid in template_tag_mapping:
-                    tag_uuid_list = template_tag_mapping[template_uuid]
-                    tag_uuid_list.append(tag_uuid)
+                    config_uuid_list = template_tag_mapping[template_uuid]
+                    config_uuid_list.append(config_uuid)
                     
                     reconciled_tags, overlapping_tags = self.swap_elements(template_uuid, reconciled_tags, overlapping_tags)
-                    tag_config['config_status'] = 'OVERLAP'
-                    overlapping_tags.append(tag_config)
+                    config['config_status'] = 'OVERLAP'
+                    overlapping_tags.append(config)
 
                 else:
-                    tag_uuid_list = []
-                    tag_uuid_list.append(tag_uuid)
-                    template_tag_mapping[template_uuid] = tag_uuid_list
-                    tag_config['config_status'] = 'PROPAGATED'
-                    reconciled_tags.append(tag_config)
+                    config_uuid_list = []
+                    config_uuid_list.append(config_uuid)
+                    template_tag_mapping[template_uuid] = config_uuid_list
+                    config['config_status'] = 'PROPAGATED'
+                    reconciled_tags.append(config)
 
         
         if len(overlapping_tags) == 0:
@@ -1402,20 +1517,20 @@ class TagEngineUtils:
             return reconciled_tags
         
         # we have some overlapping tags    
-        tag_uuid_lists = template_tag_mapping.values()
+        config_uuid_lists = template_tag_mapping.values()
             
-        for tag_uuid_list in tag_uuid_lists:
+        for config_uuid_list in config_uuid_lists:
             
-            if len(tag_uuid_list) > 1:
+            if len(config_uuid_list) > 1:
                 
-                agreeing_tag, conflicting_tag = self.run_diff(tag_uuid_list, overlapping_tags)
+                agreeing_tag, conflicting_tag = self.run_diff(config_uuid_list, overlapping_tags)
     
                 if len(conflicting_tag) > 0:
                     
                     print('we have a conflicting tag')
                     print('conflictings_tag: ' + str(conflicting_tag))
                     conflicting_tag['config_status'] = 'CONFLICT'
-                    conflicting_tag['tag_uuid'] = tag_uuid_list
+                    conflicting_tag['config_uuid'] = config_uuid_list
                     
                     reconciled_tags.append(conflicting_tag)
                                         
@@ -1424,7 +1539,7 @@ class TagEngineUtils:
                     print('we have an agreeing tag')
                     print('agreeing_tag: ' + str(agreeing_tag))
                     agreeing_tag['config_status'] = 'PROPAGATED'
-                    agreeing_tag['tag_uuid'] = tag_uuid_list
+                    agreeing_tag['config_uuid'] = config_uuid_list
                      
                     reconciled_tags.append(agreeing_tag)
                 
@@ -1433,48 +1548,48 @@ class TagEngineUtils:
         return reconciled_tags
     
     
-    def add_source_to_configs(self, tag_configs, source_res):
+    def add_source_to_configs(self, configs, source_res):
         
-        for tag_config in tag_configs:
+        for config in configs:
             
-            tag_config['source_res'] = source_res
+            config['source_res'] = source_res
             
     
-    def extract_source_res_list(self, tag_configs):
+    def extract_source_res_list(self, configs):
         
         source_res_list = []
         
-        for tag_config in tag_configs:
-            source_res_list.append(tag_config['source_res'])
+        for config in configs:
+            source_res_list.append(config['source_res'])
             
         return source_res_list  
             
     
     def swap_elements(self, template_uuid, reconciled_tags, overlapping_tags):
         
-        purge_tag_configs = []
+        purge_configs = []
         
         # reconciled_tags and overlapping_tags may both contain more than one config
         
-        for tag_config in reconciled_tags:
-            if template_uuid in tag_config['template_uuid']:
-                overlapping_tags.append(tag_config)
-                purge_tag_configs.append(tag_config)
+        for config in reconciled_tags:
+            if template_uuid in config['template_uuid']:
+                overlapping_tags.append(config)
+                purge_configs.append(config)
                 
-        for purge_config in purge_tag_configs:
+        for purge_config in purge_configs:
             reconciled_tags.remove(purge_config)
             
-        for tag_config in reconciled_tags:
-            if template_uuid in tag_config['template_uuid']:
-                tag_config['config_status'] = 'OVERLAP'
+        for config in reconciled_tags:
+            if template_uuid in config['template_uuid']:
+                config['config_status'] = 'OVERLAP'
             
         return reconciled_tags, overlapping_tags
         
      
-    def run_diff(self, tag_uuid_list, overlapping_tags):
+    def run_diff(self, config_uuid_list, overlapping_tags):
         
         #print('enter run_diff')
-        #print('tag_uuid_list: ' + str(tag_uuid_list))
+        #print('config_uuid_list: ' + str(config_uuid_list))
         #print('overlapping_tags: ' + str(overlapping_tags)) 
         
         # get template fields
@@ -1607,13 +1722,12 @@ class TagEngineUtils:
         return column_exists
         
 
-    def read_tag_configs_on_res(self, res):
+    def read_configs_on_res(self, res):
         
-        #print("*** enter read_tag_configs_on_res ***")
+        #print("*** enter read_configs_on_res ***")
             
         template_uuid_set = set()
-        
-        tag_config_results = []
+        config_results = []
         
         table_path_full = res.replace('.', '/datasets/', 1).replace('.', '/tables/', 1)
         #print('table_path_full: ' + table_path_full)
@@ -1631,17 +1745,17 @@ class TagEngineUtils:
             if template_uuid not in template_uuid_set:
                 template_uuid_set.add(template_uuid) 
                 
-                tag_uuid = entry['tag_uuid']
-                tag_config = self.read_tag_config(tag_uuid)
+                config_uuid = entry['config_uuid']
+                config = self.read_config(config_uuid)
                 
                 template_config = self.read_template_config(template_uuid)
-                tag_config['template_id'] = template_config['template_id']
+                config['template_id'] = template_config['template_id']
                 
-                tag_config_results.append(tag_config)
+                config_results.append(config)
             else:
                 continue
                 
-        return tag_config_results
+        return config_results
 
     
 if __name__ == '__main__':

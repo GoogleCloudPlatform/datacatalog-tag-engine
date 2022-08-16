@@ -9,3 +9,4 @@ google-cloud-pubsub
 pytz
 pandas
 pyarrow
+jsonlines

@@ -30,7 +30,7 @@
 		          <td>   
 				   {% set ns = namespace(found=false) %}
 				   
-				   {% for current_field in tag_config['fields']  %}
+				   {% for current_field in config['fields']  %}
 				      {% if current_field['field_id'] == field['field_id'] %}
 					      
 						 {% set ns.found = true %}
@@ -68,13 +68,13 @@
 			    <table>
 			     <tr>
 			    <td><span style="color:red;">*</span>Included URIs:&nbsp;&nbsp;
-					<input type="text" value="{{ tag_config['included_uris'] }}" name="included_uris" style="align-content:left; width: 700px; overflow:auto;"/>
+					<input type="text" value="{{ config['included_uris'] }}" name="included_uris" style="align-content:left; width: 700px; overflow:auto;"/>
 			     </td>
 			     </tr>
 			     <tr><td>&nbsp;</td></tr>
  				<tr>
  			    <td>&nbsp;Excluded URIs:&nbsp;&nbsp;
-					<input type="text" value="{{ tag_config['excluded_uris'] }}" name="excluded_uris" style="align-content:left; width: 700px; overflow:auto;"/>	
+					<input type="text" value="{{ config['excluded_uris'] }}" name="excluded_uris" style="align-content:left; width: 700px; overflow:auto;"/>	
 			    </td>
  		         </tr>
 		        </table>
@@ -88,7 +88,7 @@
 			     <table>
  				<tr>	
  			    <td>Refresh mode:&nbsp;<select name="refresh_mode">
-				    			{% if tag_config['refresh_mode'] == 'AUTO' %}
+				    			{% if config['refresh_mode'] == 'AUTO' %}
    				  				<option value="AUTO" selected>AUTO</option>
    							   	<option value="ON-DEMAND">ON-DEMAND</option>
 							{% else %}
@@ -101,12 +101,12 @@
  		         </tr>
  			     <tr><td>&nbsp;</td></tr>
 				<tr>	
-			    <td>Refresh frequency: <input type="text" value="{{ tag_config['refresh_frequency'] }}" name="refresh_frequency" style="width: 30px;padding: 3px;"> &nbsp;<select name="refresh_unit" style="width: 70px;padding: 3px;">
-	  						{% if tag_config['refresh_unit'] == 'minutes' %}
+			    <td>Refresh frequency: <input type="text" value="{{ config['refresh_frequency'] }}" name="refresh_frequency" style="width: 30px;padding: 3px;"> &nbsp;<select name="refresh_unit" style="width: 70px;padding: 3px;">
+	  						{% if config['refresh_unit'] == 'minutes' %}
 	     				  			<option value="minutes" selected>minutes</option>
 									<option value="hours">hours</option>
 	     							<option value="days">days</option>
-  				    		{% elif tag_config['refresh_unit'] == 'hours' %}
+  				    		{% elif config['refresh_unit'] == 'hours' %}
      				  				<option value="minutes">minutes</option>
 									<option value="hours" selected>hours</option>
      							   	<option value="days">days</option>
@@ -123,7 +123,7 @@
 				<h3>Choose Tag History Option</h3>
 			    <table>
 			    <tr><td>
-				    {% if tag_config['tag_history'] == True %} 
+				    {% if config['tag_history'] == True %} 
 				    		<input type="checkbox" class="form-control move-left" name="tag_history" value="selected" checked>
 				    {% else %}
 				         	<input type="checkbox" class="form-control move-left" name="tag_history" value="selected">
@@ -137,7 +137,7 @@
 				<h3>Choose Tag Stream Option</h3>
 			    <table>
 			    <tr><td>
-				    {% if tag_config['tag_stream'] == True %} 
+				    {% if config['tag_stream'] == True %} 
 				    		<input type="checkbox" class="form-control move-left" name="tag_stream" value="selected" checked>
 				    {% else %}
 				         	<input type="checkbox" class="form-control move-left" name="tag_stream" value="selected">
@@ -154,7 +154,7 @@
 			   <input type="hidden" name="template_id" value="{{ template_id }}">
 			   <input type="hidden" name="project_id" value="{{ project_id }}">
 			   <input type="hidden" name="region" value="{{ region }}">
-			   <input type="hidden" name="tag_uuid" value="{{ tag_config['tag_uuid'] }}">
+			   <input type="hidden" name="config_uuid" value="{{ config['config_uuid'] }}">
 			   
 			   {% for field in fields %}
 			   	<input type="hidden" name="{{ field['field_id'] }}_datatype" value="{{ field['field_type'] }}">

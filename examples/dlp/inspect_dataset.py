@@ -18,10 +18,10 @@ from google.cloud import bigquery
 region = 'us-central1'
 bq_project = 'data-mesh-343422'
 # tpcdi dataset: 'sales', 'finance', 'hr', 'oltp', 'crm'
-bq_dataset = 'finance'
+bq_dataset = 'hr'
 
 dlp_project = 'data-mesh-343422'
-dlp_dataset = 'finance_dlp'
+dlp_dataset = 'hr_dlp'
 
 bq_client = bigquery.Client(project=bq_project)
 dlp_client = dlp.DlpServiceClient()

@@ -1,0 +1,11 @@
+{
+    "source_template_id": "data_resource",
+    "source_template_project": "data-mesh-344315",
+    "source_template_region": "us-central1",
+    "target_template_id": "data_resource_v2",
+    "target_template_project": "tag-engine-develop",
+    "target_template_region": "us-central1",
+    "export_metadata_location": "gs://catalog_metadata_exports/Exported_Metadata_Project_tag-engine-develop_2022-08-04T15-23-28Z_UTC.jsonl",
+    "tag_history": true, 
+    "tag_stream": false   
+}

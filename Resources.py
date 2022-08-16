@@ -31,7 +31,7 @@ class Resources:
         # find out what kind of resource we have
         included_uris_list = included_uris.split(',')
         resource_type = included_uris_list[0].strip().split('/')[0]
-        print("resource_type: " + resource_type)
+        #print("resource_type: " + resource_type)
     
         if resource_type == Resources.bigquery_resource:
                     

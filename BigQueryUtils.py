@@ -125,7 +125,6 @@ class BigQueryUtils:
                 row[tagged_value['field_id']]= tagged_value['field_value']
     
         #print('insert row: ' + str(row))
-        
         row_to_insert = [row,]
 
         try:

@@ -9,32 +9,32 @@
  	   <h1>Tag Engine</h1>
          </div>
  	   <div class="header">
-	    <h2>Propagated tag config on {{ view_res }}</h2>
+	    <h2>Propagated config on {{ view_res }}</h2>
 	   </div>
 	    <span style="color:#9d9a9a;">
 	    <h5>&nbsp;Mandatory template fields are marked by <span style="color:red;">*</span>. </h5>
          </span>  
 		    
 		    <table style="background-color:#f1eeee" width="1105">
-		    <th>&nbsp;{{ propagated_tag_config['tag_type'].title() }} tag using {{ template_id }}</th>	    
+		    <th>&nbsp;{{ propagated_config['tag_type'].title() }} tag using {{ template_id }}</th>	    
 		    <tr>
 		    <td>&nbsp;<span style="color:#0b5394;">Config Status:</span></td>
 	         </tr>
 		    <tr>
 		    <td>
-		    {% if propagated_tag_config['config_status'] == 'CONFLICT' %}
+		    {% if propagated_config['config_status'] == 'CONFLICT' %}
 		       <span style="color:red;">	    
 			    &nbsp;&nbsp;Tag Conflict
 		       </span>
-		    {% elif propagated_tag_config['config_status'] == 'PROPAGATED' %}
+		    {% elif propagated_config['config_status'] == 'PROPAGATED' %}
 		       <span style="color:green;">	    
 			    &nbsp;&nbsp;Propagated
 		       </span>
-		    {% elif propagated_tag_config['config_status'] == 'PROPAGATED AND FORKED' %}
+		    {% elif propagated_config['config_status'] == 'PROPAGATED AND FORKED' %}
 		       <span style="color:#f1c232;">	    
 			    &nbsp;&nbsp; Propagated and Forked
 		       </span>
-		    {% elif propagated_tag_config['config_status'] == 'CONFLICT AND FORKED' %}
+		    {% elif propagated_config['config_status'] == 'CONFLICT AND FORKED' %}
 		       <span style="color:#f1c232;">	    
 			    &nbsp;&nbsp; Conflict Resolved and Forked
 		       </span>
@@ -64,7 +64,7 @@
 	         </tr>
 		    
 			<tr><td>&nbsp;<span style="color:#0b5394;">Tagged Fields:</span></td></tr>
-			{% for field in propagated_tag_config['fields'] %}
+			{% for field in propagated_config['fields'] %}
 	          <tr>
 		     <td>&nbsp;
 				   {% if field['is_required'] == True %}
@@ -74,7 +74,7 @@
 				   {% endif %}
 				
 				{{ field['field_id'] }} (<span style="color:green;">{{ field['field_type'] }}</span>): 
-				{% if propagated_tag_config['tag_type'] == 'STATIC' %}
+				{% if propagated_config['tag_type'] == 'STATIC' %}
 				  {% if field['status'] == 'CONFLICT' %}
 				   <span style="color:red;">
 			       {% else %}
@@ -83,7 +83,7 @@
 				    {{ field['field_value'] }}
 				   </span>
 				{% endif %}
-				{% if propagated_tag_config['tag_type'] == 'DYNAMIC' %}
+				{% if propagated_config['tag_type'] == 'DYNAMIC' %}
 				  {% if field['status'] == 'CONFLICT' %}
 				   <span style="color:red;">
 			       {% else %}
@@ -105,27 +105,27 @@
 		    <td>&nbsp;<span style="color:#0b5394;">View Definition:</span></td>
 	         </tr>
 		    <tr>
-		    <td>&nbsp;&nbsp;{{ propagated_tag_config['view_def'] }}</td>
+		    <td>&nbsp;&nbsp;{{ propagated_config['view_def'] }}</td>
 	         </tr>
 	         </table>
 		    <p>
 		    
 		    <form method="post" action="/update_propagated_tag">
 		    
-		    {% if propagated_tag_config['config_status'] == 'PROPAGATED': %}
+		    {% if propagated_config['config_status'] == 'PROPAGATED': %}
 		    	  <table style="border: 1px solid red;" width="1105">
 		       <tr style="color:black;font-weight: bold;"><td>&nbsp;Danger Zone</td></tr>
 		       <tr style="color:black;"><td>&nbsp;Manually override tag on target view. There is no going back, please be certain. 
 			  <input type="submit" value="Override Propagated Tag" name="submit"  
 			   style="color:red;font-weight:bold;font-size:16px;width:220px;padding:3px;">&nbsp;</td></tr>
 	            </table>
-		    {% elif propagated_tag_config['config_status'] == 'PROPAGATED AND FORKED' or propagated_tag_config['config_status'] == 'CONFLICT AND FORKED': %}
+		    {% elif propagated_config['config_status'] == 'PROPAGATED AND FORKED' or propagated_config['config_status'] == 'CONFLICT AND FORKED': %}
 		    	  <table style="border: 1px solid #0784f3;background-color:#f2ead1;" width="1105">
 		       <tr style="color:black;font-weight: bold;"><td>&nbsp;Make more changes to tag</td></tr>
 		       <tr style="color:black;"><td>&nbsp;This tag has already been forked and is not being kept in sync with its source tag(s).&nbsp;&nbsp;  
 			  <input type="submit" value="Edit Forked Tag" name="submit" style="color:black;font-size:15px;width:125px;padding:4px;">&nbsp;</td></tr>
 	            </table>
- 		    {% elif propagated_tag_config['config_status'] == 'CONFLICT': %}
+ 		    {% elif propagated_config['config_status'] == 'CONFLICT': %}
  		    	  <table style="border: 1px solid red;" width="1105">
  		       <tr style="color:black;font-weight: bold;"><td>&nbsp;Resolve tag conflict</td></tr>
  		       <tr style="color:black;"><td>&nbsp;This tag won't be created on the target view until you manually choose a value for each conflicting field.  
@@ -133,9 +133,9 @@
  	            </table>
 		    {% endif %}
 		   
-		   <input type="hidden" name="template_uuid" value="{{ propagated_tag_config['template_uuid'] }}">
-		   <input type="hidden" name="tag_uuid" value="{{ propagated_tag_config['view_tag_uuid'] }}">
-		   <input type="hidden" name="tag_type" value="{{ propagated_tag_config['tag_type'] }}">
+		   <input type="hidden" name="template_uuid" value="{{ propagated_config['template_uuid'] }}">
+		   <input type="hidden" name="tag_uuid" value="{{ propagated_config['view_tag_uuid'] }}">
+		   <input type="hidden" name="tag_type" value="{{ propagated_config['tag_type'] }}">
 	        </form>
 		   <br>
 		          
