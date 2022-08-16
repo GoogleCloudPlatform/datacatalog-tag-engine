@@ -1,10 +1,9 @@
-Tag Engine is a self-service tool that makes it easier for Data Stewards to create bulk metadata in Google Cloud’s [Data Catalog](https://cloud.google.com/data-catalog/docs/concepts/overview). It enables them to create tags for their BigQuery tables, views and columns based on simple <b>SQL expressions</b> and <b>file path expressions</b>. It also keeps their tags up-to-date in accordance to a schedule. 
-<br><br>
-The tool comes with a UI and API. Data Stewards normally use the UI because it gives them the agility and autonomy to tag at scale whereas Data Engineers prefer to interact with Tag Engine through the API. The screenshot below shows the creation of a simple dynamic config using the UI.  
-<br><br>
-![](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/screenshot.png)
+## Tag Engine
+This repository contains the Tag Engine application, which is described in [this guide](https://cloud.google.com/architecture/tag-engine-and-data-catalog). 
 
-### Follow the steps below to deploy Tag Engine on Google Cloud. 
+### Usage
+
+Follow the steps below to deploy Tag Engine on Google Cloud: 
 
 #### Step 1: Set the required environment variables:
 ```
@@ -29,7 +28,7 @@ git clone https://github.com/GoogleCloudPlatform/datacatalog-tag-engine.git
 
 #### Step 4: Set the input variables:
 `datacatalog-tag-engine/deploy/variables.tf`: is used to define GCP projects, regions, and Google Cloud APIs, which are used during the deployment process.  
-`datacatalog-tag-engine/tagengine.ini`: is used to define the Cloud Task queues, which are used to process tag write and update requests. 
+`datacatalog-tag-engine/tagengine.ini`: is used to define the Cloud Task queues, which are used to process tag write and update requests. <br><br>
 
 
 #### Step 5: Create the database and deploy the application:
@@ -37,7 +36,6 @@ git clone https://github.com/GoogleCloudPlatform/datacatalog-tag-engine.git
 gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --region=$TAG_ENGINE_REGION     
 gcloud app create --project=$TAG_ENGINE_PROJECT --region=$TAG_ENGINE_REGION
 gcloud app deploy datacatalog-tag-engine/app.yaml
-
 ```
 
 #### Step 6: Create a service account for running the Terraform scripts:
@@ -62,17 +60,26 @@ gcloud iam service-accounts delete $TERRAFORM_SA
 rm /tmp/key.json
 ```
 
-#### Step 9: Launch the Tag Engine UI:
-```
-gcloud auth login
-gcloud app browse
-```
+#### Step 9: Start using Tag Engine:
 
-#### Troubleshooting:
+Read [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog) to start using Tag Engine. <br><br>
 
-Consult the App Engine logs if you encounter an error while running Tag Engine:
 
-```
-gcloud app logs tail -s default
-```
+#### Helpful Commands:
+
+Bring up the UI:<br>
+`gcloud auth login`<br>
+`gcloud app browse`
+
+Create a static config through the API:<br>
+`curl -X POST [TAG ENGINE URL]/static_create -d @examples/static_configs/static_create_ondemand.json`
+
+Create a dynamic config through the API:<br>
+`curl -X POST [TAG ENGINE URL]/dynamic_create -d @examples/dynamic_configs/dynamic_create_auto.json`
+
+Get the job status through the API:<br>
+`curl -X POST [TAG ENGINE URL]/get_job_status -d '{"job_uuid":"47aa9460fbac11ecb1a0190a014149c1"}'`
+
+Consult the App Engine logs if you encounter an error while using Tag Engine:<br>
+`gcloud app logs tail -s default`
 
