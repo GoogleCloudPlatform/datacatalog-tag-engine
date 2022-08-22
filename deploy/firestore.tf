@@ -478,3 +478,21 @@ resource "google_firestore_index" "index-20" {
 
   depends_on = [google_firestore_index.index-19]
 }
+
+resource "google_firestore_index" "index-21" {
+    project = var.tag_engine_project
+
+    collection = "import_configs"
+
+    fields {
+      field_path = "template_uuid"
+      order      = "ASCENDING"
+    }
+	
+    fields {
+      field_path = "config_status"
+      order      = "ASCENDING"
+    }
+
+  depends_on = [google_firestore_index.index-20]
+}

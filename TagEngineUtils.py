@@ -913,7 +913,7 @@ class TagEngineUtils:
         config_results = []
         
         if config_type == 'ALL':
-            colls = ['dynamic_configs', 'static_configs', 'entry_configs', 'glossary_configs', 'sensitive_configs', 'restore_configs']
+            colls = ['dynamic_configs', 'static_configs', 'entry_configs', 'glossary_configs', 'sensitive_configs', 'restore_configs', 'import_configs']
         else:
             colls.append(self.get_config_collection(config_type))
         

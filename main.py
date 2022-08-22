@@ -475,6 +475,16 @@ def display_selected_action():
             display_tag_history=history_enabled,
             display_tag_stream=stream_enabled)
             
+    elif action == "Create Import Config":
+        return render_template(
+            'import_config.html',
+            template_id=template_id,
+            project_id=project_id,
+            region=region,
+            fields=template_fields,
+            display_tag_history=history_enabled,
+            display_tag_stream=stream_enabled)
+            
     # [END render_template]
 
 @app.route('/update_config', methods=['POST'])
@@ -1760,6 +1770,86 @@ def process_restore_config():
         target_template_project=target_template_project,
         target_template_region=target_template_region,
         metadata_export_location=metadata_export_location,
+        tag_history=tag_history_enabled,
+        tag_stream=tag_stream_enabled,
+        status=job_creation)
+    # [END render_template]
+
+
+@app.route('/process_import_config', methods=['POST'])
+def process_import_config():
+    
+    #template_id = request.form['template_id']
+    #project_id = request.form['project_id']
+    #region = request.form['region']
+    
+    template_id = request.form['template_id']
+    template_project = request.form['template_project']
+    template_region = request.form['template_region']
+
+    metadata_import_location = request.form['metadata_import_location']
+    
+    action = request.form['action']
+    
+    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
+    template = dcu.get_template()
+    
+    if action == "Cancel Changes":
+        
+        return render_template(
+            'tag_template.html',
+            template_id=template_id,
+            project_id=template_project,
+            region=template_region, 
+            fields=template)
+    
+    tag_history_option = False
+    tag_history_enabled = "OFF"
+    
+    if "tag_history" in request.form:
+        tag_history = request.form.get("tag_history")
+    
+        if tag_history == "selected":
+            tag_history_option = True
+            tag_history_enabled = "ON"
+            
+    tag_stream_option = False
+    tag_stream_enabled = "OFF"
+    
+    if "tag_stream" in request.form:
+        tag_stream = request.form.get("tag_stream")
+    
+        if tag_stream == "selected":
+            tag_stream_option = True
+            tag_stream_enabled = "ON"            
+        
+    template_uuid = teu.write_tag_template(template_id, template_project, template_region)
+  
+    overwrite = True
+    
+    config_uuid = teu.write_import_config('PENDING', template_uuid, template_id, template_project, template_region, \
+                                           metadata_import_location, \
+                                           tag_history_option, tag_stream_option, overwrite)                                                      
+
+    if isinstance(config_uuid, str): 
+        job_uuid = jm.create_job(config_uuid, 'IMPORT')
+    else:
+        job_uuid = None
+    
+        
+    if job_uuid != None: 
+        job_creation = constants.SUCCESS
+    else:
+        job_creation = constants.ERROR
+           
+    # [END process_restore_tag]
+    # [START render_template]
+    return render_template(
+        'submitted_import_config.html',
+        template_id=template_id,
+        template_project=template_project,
+        template_region=template_region,
+        metadata_import_location=metadata_import_location,
         tag_history=tag_history_enabled,
         tag_stream=tag_stream_enabled,
         status=job_creation)
