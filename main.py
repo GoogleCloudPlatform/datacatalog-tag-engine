@@ -19,6 +19,7 @@ import DataCatalogUtils as dc
 import TagEngineUtils as te
 import Resources as res
 import BackupFileParser as bfp
+import CsvParser as cp
 import constants
 
 import JobManager as jobm
@@ -2144,8 +2145,8 @@ Args:
 Returns:
     job_uuid 
 """
-@app.route("/restore", methods=['POST'])
-def restore():
+@app.route("/restore_create", methods=['POST'])
+def restore_create():
     json = request.get_json(force=True) 
     print('json: ' + str(json))
        
@@ -2168,8 +2169,13 @@ def restore():
     source_template_uuid = teu.write_tag_template(source_template_id, source_template_project, source_template_region)
     target_template_uuid = teu.write_tag_template(target_template_id, target_template_project, target_template_region)
     
-    metadata_export_location = json['metadata_export_location']
-           
+    if 'metadata_export_location' in json:
+        metadata_export_location = json['metadata_export_location']
+    else:
+        print("restore config type requires the metadata_export_location parameter. Please this parameter to the json object.")
+        resp = jsonify(success=False)
+        return resp
+
     tag_history = json['tag_history']
     tag_stream = json['tag_stream']
     overwrite = True
@@ -2181,6 +2187,45 @@ def restore():
 
     if isinstance(config_uuid, str): 
         job_uuid = jm.create_job(config_uuid, 'RESTORE')
+    else:
+        job_uuid = None
+    
+    return jsonify(job_uuid=job_uuid)
+
+
+@app.route("/import_create", methods=['POST'])
+def import_create():
+    json = request.get_json(force=True) 
+    print('json: ' + str(json))
+       
+    template_id = json['template_id']
+    template_project = json['template_project']
+    template_region = json['template_region']
+    
+    print('template_id: ', template_id)
+    print('template_project: ', template_project)
+    print('template_region: ', template_region)
+    
+    template_uuid = teu.write_tag_template(template_id, template_project, template_region)
+
+    if 'metadata_import_location' in json:
+        metadata_export_location = json['metadata_import_location']
+    else:
+        print("import config type requires the metadata_import_location parameter. Please add this parameter to the json object.")
+        resp = jsonify(success=False)
+        return resp
+        
+    metadata_import_location = json['metadata_import_location']
+           
+    tag_history = json['tag_history']
+    tag_stream = json['tag_stream']
+    overwrite = True
+    
+    config_uuid = teu.write_import_config('PENDING', template_uuid, template_id, template_project, template_region, \
+                                           metadata_import_location, tag_history, tag_stream, overwrite)                                                      
+
+    if isinstance(config_uuid, str): 
+        job_uuid = jm.create_job(config_uuid, 'IMPORT')
     else:
         job_uuid = None
     
@@ -2341,26 +2386,36 @@ def _split_work():
         jm.update_job_running(job_uuid) 
         tm.create_config_uuid_tasks(job_uuid, config_uuid, config_type, uris)
     
-    if 'metadata_export_location' in config:
+    if config_type == 'RESTORE':
         bkp_files = list(res.Resources.get_resources(config.get('metadata_export_location'), None))
         
         #print('bkp_files: ', bkp_files)
-        
         extracted_tags = []
         
         for bkp_file in bkp_files:
             extracted_tags.append(bfp.BackupFileParser.extract_tags(config.get('source_template_id'), config.get('source_template_project'), \
                                                                     bkp_file))
-        #print('extracted_tags: ', extracted_tags)
+                
+    if config_type == 'IMPORT':
+        csv_files = list(res.Resources.get_resources(config.get('metadata_import_location'), None))
+        #print('csv_files: ', csv_files)
         
-        # no tags were extracted from the backup files
+        extracted_tags = []
+        
+        for csv_file in csv_files:
+            extracted_tags.extend(cp.CsvParser.extract_tags(csv_file))
+             
+    if config_type == 'RESTORE' or config_type == 'IMPORT':
+        
+        # no tags were extracted from the CSV files
         if extracted_tags == [[]]:
            resp = jsonify(success=False)
-           return resp 
+           return resp
         
         jm.record_num_tasks(job_uuid, len(extracted_tags))
         jm.update_job_running(job_uuid) 
         tm.create_tag_extract_tasks(job_uuid, config_uuid, config_type, extracted_tags)
+    
     
     teu.update_config_status(config_uuid, config_type, 'RUNNING')
     
@@ -2399,7 +2454,7 @@ def _run_task():
     
     # retrieve config 
     config = teu.read_config(config_uuid, config_type)
-    print('read config: ', config)
+    #print('read config: ', config)
     
     # validate config
     if config_type == 'RESTORE':
@@ -2416,6 +2471,8 @@ def _run_task():
         
     if config_type == 'RESTORE':
         dcu = dc.DataCatalogUtils(config['target_template_id'], config['target_template_project'], config['target_template_region'])
+    elif config_type == 'IMPORT':
+        dcu = dc.DataCatalogUtils(config['template_id'], config['template_project'], config['template_region'])
     else:
         tem_config = teu.read_template_config(config['template_uuid'])
         dcu = dc.DataCatalogUtils(tem_config['template_id'], tem_config['project_id'], tem_config['region'])
@@ -2445,6 +2502,10 @@ def _run_task():
     if config_type == 'RESTORE':
         creation_status = dcu.apply_restore_config(config['config_uuid'], tag_extract, \
                                                    config['tag_history'], config['tag_stream'], config['overwrite']) 
+    
+    if config_type == 'IMPORT':
+        creation_status = dcu.apply_import_config(config['config_uuid'], tag_extract, \
+                                                  config['tag_history'], config['tag_stream'], config['overwrite'])
     
                                               
     if creation_status == constants.SUCCESS:

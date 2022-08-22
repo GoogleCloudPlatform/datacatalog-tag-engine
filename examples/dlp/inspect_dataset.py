@@ -16,12 +16,11 @@ from google.cloud import dlp
 from google.cloud import bigquery
 
 region = 'us-central1'
-bq_project = 'data-mesh-343422'
-# tpcdi dataset: 'sales', 'finance', 'hr', 'oltp', 'crm'
-bq_dataset = 'hr'
+bq_project = 'tag-engine-develop'
+bq_dataset = 'finwire'
 
-dlp_project = 'data-mesh-343422'
-dlp_dataset = 'hr_dlp'
+dlp_project = 'tag-engine-develop'
+dlp_dataset = 'finwire_dlp'
 
 bq_client = bigquery.Client(project=bq_project)
 dlp_client = dlp.DlpServiceClient()
@@ -46,7 +45,7 @@ def start_job(bq_dataset, table):
                     'dataset_id': bq_dataset,
                     'table_id': table
                 },
-                'rows_limit':50000,
+                'rows_limit':100000,
                 'sample_method':'RANDOM_START',
             },
         },

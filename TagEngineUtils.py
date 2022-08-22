@@ -798,7 +798,51 @@ class TagEngineUtils:
         
         return config_uuid
         
-               
+
+    def write_import_config(self, config_status, template_uuid, template_id, template_project, template_region, \
+                            metadata_import_location, tag_history, tag_stream, overwrite=False):
+                                    
+        print('** write_import_config **')
+        
+        # check to see if this config already exists
+        configs_ref = self.db.collection('import_configs')
+        query = configs_ref.where('template_uuid', '==', template_uuid).where('metadata_import_location', '==', metadata_import_location).where('config_status', '!=', 'INACTIVE')
+       
+        matches = query.get()
+       
+        for match in matches:
+            if match.exists:
+                config_uuid_match = match.id
+                print('config already exists. Found config_uuid: ' + str(config_uuid_match))
+                
+                # update status to INACTIVE 
+                self.db.collection('import_configs').document(config_uuid_match).update({
+                    'config_status' : "INACTIVE"
+                })
+                print('Updated status to INACTIVE.')
+       
+        config_uuid = uuid.uuid1().hex
+        configs = self.db.collection('import_configs')
+        doc_ref = configs.document(config_uuid)
+        
+        doc_ref.set({
+            'config_uuid': config_uuid,
+            'config_type': 'IMPORT',
+            'config_status': config_status, 
+            'creation_time': datetime.utcnow(), 
+            'template_uuid': template_uuid,
+            'template_id': template_id, 
+            'template_project': template_project,
+            'template_region': template_region,
+            'metadata_import_location': metadata_import_location,
+            'tag_history': tag_history,
+            'tag_stream': tag_stream,
+            'overwrite': overwrite
+        })
+        
+        return config_uuid
+
+         
     def write_log_entry(self, dc_op, resource_type, resource, column, config_type, config_uuid, tag_id, template_uuid):
                     
         log_entry = {}
@@ -857,6 +901,8 @@ class TagEngineUtils:
             coll = 'sensitive_configs'
         if config_type == 'RESTORE':
             coll = 'restore_configs'
+        if config_type == 'IMPORT':
+            coll = 'import_configs'
         
         return coll
     

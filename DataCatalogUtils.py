@@ -158,7 +158,7 @@ class DataCatalogUtils:
             tagged_template_location = tag_instance.template.split('/')[3]
             tagged_template_id = tag_instance.template.split('/')[5]
             
-            if column == "":
+            if column == "" or column == None:
                 # looking for a table-level tag
                 if tagged_template_id == self.template_id and tagged_template_project == self.project_id and \
                     tagged_template_location == self.region and tagged_column == "":
@@ -258,7 +258,7 @@ class DataCatalogUtils:
         
         creation_status = constants.SUCCESS
   
-        #print('uri: ' + uri)
+        print('uri: ' + uri)
         
         error_exists = False
         
@@ -270,6 +270,9 @@ class DataCatalogUtils:
             column = split_resource[1]
             
         bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
+        
+        print('bigquery_resource: ', bigquery_resource)
+        
         request = datacatalog.LookupEntryRequest()
         request.linked_resource=bigquery_resource
         entry = self.client.lookup_entry(request)
@@ -292,8 +295,10 @@ class DataCatalogUtils:
             #print('query_str: ' + query_str)
             
             field_value, error_exists = self.run_query(bq_client, query_str, batch_mode, store)
+            print('field_value: ', field_value)
+            #print('error_exists: ', error_exists)
     
-            if error_exists:
+            if error_exists or field_value == None:
                 continue
     
             tag, error_exists = self.populate_tag_field(tag, field_id, field_type, field_value, store)
@@ -859,6 +864,7 @@ class DataCatalogUtils:
                     enum_field = datacatalog.TagField()
                     enum_field.enum_value.display_name = category
                     tag.fields['sensitive_type'] = enum_field
+                    field['field_value'] = category
            
             tag.column = column
             #print('tag.column: ', column)
@@ -882,8 +888,7 @@ class DataCatalogUtils:
                 tag.name = tag_id
             
                 try:
-                    #print('tag update request: ', tag)
-                    
+                    print('tag update request: ', tag)
                     response = self.client.update_tag(tag=tag)
                 
                     #print('response: ', response)
@@ -905,7 +910,7 @@ class DataCatalogUtils:
                             store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'SENSITIVE', msg)
             else:
                 try:
-                    #print('tag create request: ', tag)
+                    print('tag create request: ', tag)
                     response = self.client.create_tag(parent=entry.name, tag=tag)
 
                 except Exception as e:
@@ -1071,9 +1076,84 @@ class DataCatalogUtils:
                 creation_status = self.create_update_tag(fields, tag_exists, tag_id, config_uuid, 'RESTORE', tag_history, \
                                                          tag_stream, entry, uri)                     
                     
-           
         return creation_status
         
+    
+    def apply_import_config(self, config_uuid, tag_dict, tag_history, tag_stream, overwrite=False):
+        
+        print('** enter apply_import_config **')
+        #print('tag_dict: ', tag_dict)
+        
+        store = te.TagEngineUtils()        
+        creation_status = constants.SUCCESS
+        
+        project = tag_dict['project']
+        dataset = tag_dict['dataset']
+        table = tag_dict['table']
+
+        bigquery_resource = '//bigquery.googleapis.com/projects/' + project + '/datasets/' + dataset + '/tables/' + table
+
+        request = datacatalog.LookupEntryRequest()
+        request.linked_resource=bigquery_resource
+        
+        try:
+            entry = self.client.lookup_entry(request)
+        except Exception as e:
+            print("Error: could not find the entry for ", bigquery_resource, ". Error: ", e)
+            creation_status = constants.ERROR
+            return creation_status
+
+        if 'column' in tag_dict:
+            column_name = tag_dict['column']
+            uri = entry.linked_resource.replace('//bigquery.googleapis.com/projects/', '') + '/column/' + column_name
+        else:
+            column_name = None
+            uri = entry.linked_resource.replace('//bigquery.googleapis.com/projects/', '')
+            
+        try:    
+            tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column_name)
+
+        except Exception as e:
+            print('Error during check_if_exists: ', e)
+            creation_status = constants.ERROR
+            return creation_status
+
+        if tag_exists and overwrite == False:
+            print('Tag already exists and overwrite flag is False')
+            creation_status = constants.SUCCESS
+            return creation_status
+        
+        tag_fields = []
+        template_fields = self.get_template()
+        
+        for field_name in tag_dict:
+           
+            if field_name == 'project' or field_name == 'dataset' or field_name == 'table' or field_name == 'column':
+                continue
+        
+            field_type = None
+            field_value = tag_dict[field_name]
+            
+            for template_field in template_fields:
+                if template_field['field_id'] == field_name:
+                    field_type = template_field['field_type']
+                    break
+    
+            if field_type == None:
+                print('Error while preparing the tag. The field ', field_name, ' was not found in the tag template ', self.template_id)
+                creation_status = constants.ERROR
+                return creation_status
+    
+            field = {'field_id': field_name, 'field_type': field_type, 'field_value': field_value}    
+            tag_fields.append(field)
+            
+        
+        creation_status = self.create_update_tag(tag_fields, tag_exists, tag_id, config_uuid, 'IMPORT', tag_history, tag_stream, \
+                                                 entry, uri, column_name)
+                                
+        return creation_status
+    
+
     def create_update_tag(self, fields, tag_exists, tag_id, config_uuid, config_type, tag_history, tag_stream, entry, uri, column_name=''):
         
         creation_status = constants.SUCCESS
@@ -1167,7 +1247,7 @@ class DataCatalogUtils:
             tag.name = tag_id
 
             try:
-                #print('tag update: ', tag)
+                print('tag update: ', tag)
                 response = self.client.update_tag(tag=tag)
             except Exception as e:
                 msg = 'Error occurred during tag update: ' + str(e)
@@ -1187,7 +1267,7 @@ class DataCatalogUtils:
                         return creation_status
         else:
             try:
-                #print('tag create: ', tag)
+                print('tag create: ', tag)
                 response = self.client.create_tag(parent=entry.name, tag=tag)
             except Exception as e:
                 msg = 'Error occurred during tag create: ' + str(e) + '. Failed tag request = ' + str(tag)
@@ -1410,6 +1490,7 @@ class DataCatalogUtils:
             
             else:
                 rows = bq_client.query(query_str).result()
+                #print('rows: ', rows)
             
             # if query expression is well-formed, there should only be a single row returned with a single field_value
             # However, user may mistakenly run a query that returns a list of rows. In that case, grab only the top row.  
@@ -1424,7 +1505,7 @@ class DataCatalogUtils:
             # check row_count
             if row_count == 0:
                 # SQL query returned nothing, log error in Firestore
-                error_exists = True
+                #error_exists = True
                 print('query_str returned nothing, writing error entry')
                 store.write_tag_value_error('sql returned nothing: ' + query_str)
         
@@ -1559,16 +1640,20 @@ if __name__ == '__main__':
     
     te_config = configparser.ConfigParser()
     te_config.read("tagengine.ini")
-    template_project=config['DEFAULT']['TAG_ENGINE_PROJECT']
-    template_region=config['DEFAULT']['QUEUE_REGION']
-    
-    dcu = DataCatalogUtils(template_id='data_resource_v2', project_id=template_project, region=template_region);
+    template_project=te_config['DEFAULT']['TAG_ENGINE_PROJECT']
+    template_region=te_config['DEFAULT']['QUEUE_REGION']
+    '''
+    dcu = DataCatalogUtils(template_id='data_resource_v2', project_id=template_project, region=template_region)
     tag_extract = [{'entryGroupId': '@bigquery', 'id': 'cHJvamVjdHMvdGFnLWVuZ2luZS1kZXZlbG9wL2RhdGFzZXRzL2RhdGFfc291cmNlX3VzL3RhYmxlcy9mYXJt', 'locationId': 'us', 'projectId': 'tag-engine-develop', 'system': 'BIGQUERY', 'tags': [{'fields': [{'name': 'data_confidentiality', 'type': 'ENUM', 'value': 'UNKNOWN'}, {'name': 'num_fields', 'type': 'DOUBLE', 'value': '10.000000'}, {'name': 'global_id_location', 'type': 'BOOL', 'value': 'FALSE'}, {'name': 'num_records', 'type': 'DOUBLE', 'value': '15.000000'}, {'name': 'global_id_customer', 'type': 'BOOL', 'value': 'FALSE'}, {'name': 'recent_data_update', 'type': 'TIMESTAMP', 'value': '2022-08-01T05:00:00+00:00'}, {'name': 'global_id_account', 'type': 'BOOL', 'value': 'FALSE'}, {'name': 'global_id_product', 'type': 'BOOL', 'value': 'TRUE'}, {'name': 'size', 'type': 'DOUBLE', 'value': '3.000000'}, {'type': 'BOOL', 'value': 'FALSE'}, {'type': 'BOOL', 'value': 'TRUE'}, {'type': 'BOOL', 'value': 'FALSE'}, {'type': 'ENUM'}, {'type': 'DOUBLE', 'value': '1.000000'}, {'type': 'BOOL', 'value': 'FALSE'}, {'type': 'DOUBLE', 'value': '12.000000'}, {'type': 'TIMESTAMP', 'value': '2022-07-13T05:00:00+00:00'}, {'type': 'DOUBLE', 'value': '43.000000'}], 'projectId': 'data-mesh-344315', 'templateId': 'data_resource'}], 'type': 'TABLE'}, {'entryGroupId': '@bigquery', 'id': 'cHJvamVjdHMvdGFnLWVuZ2luZS1kZXZlbG9wL2RhdGFzZXRzL2RhdGFfc291cmNlX3VzL3RhYmxlcy91c2E', 'locationId': 'us', 'projectId': 'tag-engine-develop', 'system': 'BIGQUERY', 'tags': [{'fields': [{'name': 'data_confidentiality', 'type': 'ENUM', 'value': 'PUBLIC'}, {'name': 'num_fields', 'type': 'DOUBLE', 'value': '5.000000'}, {'name': 'global_id_location', 'type': 'BOOL', 'value': 'FALSE'}, {'name': 'num_records', 'type': 'DOUBLE', 'value': '3.000000'}, {'name': 'global_id_customer', 'type': 'BOOL', 'value': 'TRUE'}, {'name': 'recent_data_update', 'type': 'TIMESTAMP', 'value': '2022-08-03T05:00:00+00:00'}, {'name': 'global_id_account', 'type': 'BOOL', 'value': 'FALSE'}, {'name': 'global_id_product', 'type': 'BOOL', 'value': 'FALSE'}, {'name': 'size', 'type': 'DOUBLE', 'value': '10.000000'}], 'projectId': 'data-mesh-344315', 'templateId': 'data_resource'}], 'type': 'TABLE'}]
     dcu.apply_restore_config(config_uuid, tag_extract, tag_history=False, tag_stream=False, overwrite=True)
     
-    dcu = DataCatalogUtils(template_id='cities_311', project_id=template_project, region=template_region);
+    dcu = DataCatalogUtils(template_id='cities_311', project_id=template_project, region=template_region)
     dcu.apply_dynamic_config(fields, uri, config_uuid, template_uuid, tag_history=False, tag_stream=False)
     
     dcu = DataCatalogUtils(template_id='data_governance', project_id=template_project, region=template_region)
     dcu.apply_static_config(fields, uri, config_uuid, template_uuid, tag_history=False, tag_stream=False, overwrite=True)
-    
+    '''
+    dcu = DataCatalogUtils(template_id='data_resource', project_id=template_project, region=template_region)
+    config_uuid = '37af26e01e7d11ed8f31b5dca4029d3e'
+    tag_dict = {'project': 'tag-engine-develop', 'dataset': 'finwire', 'table': 'FINWIRE1976Q1_FIN', 'data_confidentiality': 'SENSITIVE', 'num_fields': '19', 'num_records': '105', 'size': '0.1', 'recent_data_update': '2022-08-10', 'global_id_customer': 'FALSE', 'global_id_account': 'TRUE'}
+    dcu.apply_import_config(config_uuid, tag_dict, tag_history=False, tag_stream=False, overwrite=True)

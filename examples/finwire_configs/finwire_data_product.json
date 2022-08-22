@@ -1,0 +1,76 @@
+{
+    "template_id": "data_product",
+    "project_id": "tag-engine-develop",
+    "region": "us-central1",
+    "fields": [
+        {
+            "field_id": "data_domain",
+            "field_value": "Finance"
+        },
+        {
+            "field_id": "data_subdomain",
+            "field_value": "Financial_Insights"
+        },
+        {
+            "field_id": "data_product_name",
+            "field_value": "Finwire archives"
+        },
+        {
+            "field_id": "Data product description",
+            "field_value": "This dataset contains financial information about companies and securities obtained from a financial newswire service that has been archived over an extended period of time."
+        },
+        {
+            "field_id": "Data confidentiality",
+            "field_value": "Public"
+        },
+        {
+            "field_id": "business_criticality",
+            "field_value": "Medium"
+        },
+        {
+            "field_id": "business_owner",
+            "field_value": "John Williams"
+        },
+        {
+            "field_id": "technical_owner",
+            "field_value": "Emily Doe"
+        },
+        {
+            "field_id": "number_data_resources",
+            "field_value": "409"
+        },
+        {
+            "field_id": "storage_location",
+            "field_value": "us-central1"
+        },
+        {
+            "field_id": "data_retention_period",
+            "field_value": "7_years"
+        },
+        {
+            "field_id": "data_latency_slo",
+            "field_value": "quarterly"
+        },
+        {
+            "field_id": "documentation_link",
+            "field_value": "https://www.tpc.org/tpc_documents_current_versions/pdf/tpc-di_v1.1.0.pdf "
+        },
+        {
+            "field_id": "access_request_link",
+            "field_value": "go/sphinx/finwire-archive"
+        },
+	    {
+	        "field_id": "data_product_status",
+            "field_value": "RELEASED"
+        },
+	    {
+	        "field_id": "last_modified_date",
+            "field_value": "2022-08-21"
+        }
+    ],
+    "included_uris": "bigquery/project/tag-engine-develop/dataset/finwire",
+    "excluded_uris": "",
+    "refresh_mode": "ON_DEMAND",
+    "tag_history": true,
+    "tag_stream": false   
+}

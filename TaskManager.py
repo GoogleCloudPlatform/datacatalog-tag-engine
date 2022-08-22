@@ -92,10 +92,11 @@ class TaskManager:
     def create_tag_extract_tasks(self, job_uuid, config_uuid, config_type, tag_extract_list):
         
         print('*** enter create_tag_extract_tasks ***')
+        #print('len(tag_extract_list): ', len(tag_extract_list))
         
         # create shards of 5000 records
         if len(tag_extract_list) > self.tasks_per_shard:
-            shards = math.ceil(len(uris) / self.tasks_per_shard)
+            shards = math.ceil(len(tag_extract_list) / self.tasks_per_shard)
         else:
             shards = 1
             
@@ -109,8 +110,10 @@ class TaskManager:
             self._create_shard(job_uuid, shard_uuid)
 
             for extract_index, extract_val in enumerate(tag_extract_list[task_running_total:], task_running_total):
-
-                #print('extract_val: ', extract_val)
+                
+                print('task_running_total: ', task_running_total)
+                print('extract_index: ', extract_index)
+                print('extract_val: ', extract_val)
                 
                 # create the task
                 task_id_raw = job_uuid + ''.join(str(extract_val))
@@ -259,7 +262,7 @@ class TaskManager:
         
     def _create_tag_extract_task(self, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, extract):
         
-        print('*** enter _create_task ***')
+        print('*** enter _create_tag_extract_task ***')
  
         client = tasks_v2.CloudTasksClient()
         parent = client.queue_path(self.tag_engine_project, self.queue_region, self.queue_name)
