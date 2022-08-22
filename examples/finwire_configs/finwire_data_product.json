@@ -16,11 +16,11 @@
             "field_value": "Finwire archives"
         },
         {
-            "field_id": "Data product description",
+            "field_id": "data_product_description",
             "field_value": "This dataset contains financial information about companies and securities obtained from a financial newswire service that has been archived over an extended period of time."
         },
         {
-            "field_id": "Data confidentiality",
+            "field_id": "data_confidentiality",
             "field_value": "Public"
         },
         {
