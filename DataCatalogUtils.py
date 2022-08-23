@@ -252,6 +252,7 @@ class DataCatalogUtils:
     def apply_dynamic_config(self, fields, uri, config_uuid, template_uuid, tag_history, tag_stream, batch_mode=False):
         
         print('*** apply_dynamic_config ***')
+        #print('fields: ', fields) 
                 
         store = te.TagEngineUtils()
         bq_client = bigquery.Client()
@@ -292,11 +293,11 @@ class DataCatalogUtils:
 
             # parse and run query in BQ
             query_str = self.parse_query_expression(uri, query_expression)
-            #print('query_str: ' + query_str)
+            print('returned query_str: ' + query_str)
             
             field_value, error_exists = self.run_query(bq_client, query_str, batch_mode, store)
             print('field_value: ', field_value)
-            #print('error_exists: ', error_exists)
+            print('error_exists: ', error_exists)
     
             if error_exists or field_value == None:
                 continue
@@ -1407,7 +1408,7 @@ class DataCatalogUtils:
          
     def parse_query_expression(self, uri, query_expression):
         
-        #print("*** enter parse_query_expression ***")
+        print("*** enter parse_query_expression ***")
         #print("uri: " + uri)
         #print("query_expression: " + query_expression)
         
@@ -1422,17 +1423,21 @@ class DataCatalogUtils:
         from_clause_table_index = query_expression.rfind(" from $table", 0)
         column_index = query_expression.rfind("$column", 0)
         
+        #print('table_index: ', table_index)
+        
         if project_index != -1:
             project_end = uri.find('/') 
             project = uri[0:project_end]
-            print('project: ' + project)
+            #print('project: ' + project)
+            #print('project_index: ', project_index)
             
         if dataset_index != -1:
             dataset_start = uri.find('/datasets/') + 10
             dataset_string = uri[dataset_start:]
             dataset_end = dataset_string.find('/') 
             dataset = dataset_string[0:dataset_end]
-            print('dataset: ' + dataset)
+            #print('dataset: ' + dataset)
+            #print('dataset_index: ', dataset_index)
         
         # $table referenced in from clause, use fully qualified table
         if from_clause_table_index != -1:
@@ -1442,23 +1447,37 @@ class DataCatalogUtils:
              query_str = query_expression.replace('$table', qualified_table)
              
         # $table is referenced somewhere in the expression, replace $table with actual table name
-        if from_clause_table_index == -1 and table_index != -1:
-            #print('$table referenced somewhere, but not in the from clause')
-            table_index = uri.rfind('/') + 1
-            table_name = uri[table_index:]
-            #print('table_name: ' + table_name)
-            query_str = query_expression.replace('$table', table_name)
+        if from_clause_table_index == -1:
+        
+            if table_index != -1:
+                #print('$table referenced somewhere, but not in the from clause')
+                table_index = uri.rfind('/') + 1
+                table_name = uri[table_index:]
+                #print('table_name: ' + table_name)
+                query_str = query_expression.replace('$table', table_name)
             
             # $project referenced in where clause too
             if project_index > -1:
-                query_str = query_str.replace('$project', project)
+                
+                if query_str == None:
+                    query_str = query_expression.replace('$project', project)
+                else:
+                    query_str = query_str.replace('$project', project)
+                
+                #print('query_str: ', query_str)
             
             # $dataset referenced in where clause too    
             if dataset_index > -1:
-                query_str = query_str.replace('$dataset', dataset)
+
+                if query_str == None:
+                    query_str = query_expression.replace('$dataset', dataset)
+                else:
+                    query_str = query_str.replace('$dataset', dataset)
+                    
+                #print('query_str: ', query_str)
             
         # table not in query expression (e.g. select 'string')
-        if table_index == -1:
+        if table_index == -1 and query_str == None:
             query_str = query_expression
             
         if column_index != -1:
@@ -1466,7 +1485,10 @@ class DataCatalogUtils:
             
         return query_str
     
+    
     def run_query(self, bq_client, query_str, batch_mode, store):
+        
+        print('*** enter run_query ***')
         
         field_value = None
         error_exists = False
@@ -1490,7 +1512,7 @@ class DataCatalogUtils:
             
             else:
                 rows = bq_client.query(query_str).result()
-                #print('rows: ', rows)
+                print('rows: ', rows)
             
             # if query expression is well-formed, there should only be a single row returned with a single field_value
             # However, user may mistakenly run a query that returns a list of rows. In that case, grab only the top row.  
@@ -1511,9 +1533,10 @@ class DataCatalogUtils:
         
         except Exception as e:
             error_exists = True
+            print('Error occurred during run_query: ', e)
             store.write_tag_value_error('invalid query parameter(s): ' + query_str + ' produced error ' + str(e))
         
-        #print('field_value: ' + str(field_value))
+        print('field_value: ' + str(field_value))
         
         return field_value, error_exists
         
