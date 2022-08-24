@@ -272,7 +272,7 @@ class DataCatalogUtils:
             
         bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
         
-        print('bigquery_resource: ', bigquery_resource)
+        #print('bigquery_resource: ', bigquery_resource)
         
         request = datacatalog.LookupEntryRequest()
         request.linked_resource=bigquery_resource
@@ -293,11 +293,11 @@ class DataCatalogUtils:
 
             # parse and run query in BQ
             query_str = self.parse_query_expression(uri, query_expression)
-            print('returned query_str: ' + query_str)
+            #print('returned query_str: ' + query_str)
             
             field_value, error_exists = self.run_query(bq_client, query_str, batch_mode, store)
-            print('field_value: ', field_value)
-            print('error_exists: ', error_exists)
+            #print('field_value: ', field_value)
+            #print('error_exists: ', error_exists)
     
             if error_exists or field_value == None:
                 continue
@@ -1408,7 +1408,7 @@ class DataCatalogUtils:
          
     def parse_query_expression(self, uri, query_expression):
         
-        print("*** enter parse_query_expression ***")
+        #print("*** enter parse_query_expression ***")
         #print("uri: " + uri)
         #print("query_expression: " + query_expression)
         
@@ -1488,7 +1488,7 @@ class DataCatalogUtils:
     
     def run_query(self, bq_client, query_str, batch_mode, store):
         
-        print('*** enter run_query ***')
+        #print('*** enter run_query ***')
         
         field_value = None
         error_exists = False
@@ -1512,7 +1512,7 @@ class DataCatalogUtils:
             
             else:
                 rows = bq_client.query(query_str).result()
-                print('rows: ', rows)
+                #print('rows: ', rows)
             
             # if query expression is well-formed, there should only be a single row returned with a single field_value
             # However, user may mistakenly run a query that returns a list of rows. In that case, grab only the top row.  
@@ -1536,7 +1536,7 @@ class DataCatalogUtils:
             print('Error occurred during run_query: ', e)
             store.write_tag_value_error('invalid query parameter(s): ' + query_str + ' produced error ' + str(e))
         
-        print('field_value: ' + str(field_value))
+        #print('field_value: ', field_value)
         
         return field_value, error_exists
         
@@ -1587,78 +1587,7 @@ class DataCatalogUtils:
         
         return tag, error_exists
     
-    def apply_dynamic_propagated_tag(self, config_status, source_res, view_res, columns, fields, source_config_uuid, view_config_uuid,\
-                                     template_uuid, batch_mode=False):
         
-        #print('*** enter apply_dynamic_propagated_tag ***')
-        
-        store = te.TagEngineUtils()
-        bq_client = bigquery.Client() 
-        view_res = view_res.replace('/views/', '/tables/')       
-        bigquery_resource = '//bigquery.googleapis.com/projects/' + view_res
-        
-        request = datacatalog.LookupEntryRequest()
-        request.linked_resource=bigquery_resource
-        entry = self.client.lookup_entry(request)
-         
-        creation_status = constants.SUCCESS
-        
-        try:    
-                
-            if len(columns) == 0:
-                columns.append("")
-            
-            for column in columns:
-            
-                tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
-                print('tag_exists == ' + str(tag_exists))
-    
-                tag = datacatalog.Tag()
-                tag.template = self.template_path
-    
-                for field in fields:
-                    field_id = field['field_id']
-                    field_type = field['field_type']
-                    query_expression = field['query_expression']
-    
-                    # parse and run query in BQ
-                    query_str = self.parse_query_expression(view_res, query_expression)
-                    field_value, error_exists = self.run_query(bq_client, query_str, batch_mode, store)
-                    
-                    if error_exists:
-                        continue
-                    
-                    tag, error_exists = self.populate_tag_field(tag, field_id, field_type, field_value, store)
-                    
-                    if error_exists:
-                        continue
-    
-                if column != "":
-                    tag.column = column
-                    print('tag.column == ' + column)             
-    
-                if tag_exists == True:
-                    print('tag exists')
-                    tag.name = tag_id
-                    response = self.client.update_tag(tag=tag)
-                    store.write_propagated_log_entry(config_status, constants.TAG_UPDATED, constants.BQ_RES, source_res, view_res, column, "DYNAMIC",\
-                                                    source_config_uuid, view_config_uuid, tag_id, template_uuid)
-                else:
-                    print('tag doesn''t exists')
-                    response = self.client.create_tag(parent=entry.name, tag=tag)
-                    tag_id = response.name
-                    store.write_propagated_log_entry(config_status, constants.TAG_CREATED, constants.BQ_RES, source_res, view_res, column, "DYNAMIC",\
-                                                    source_config_uuid, view_config_uuid, tag_id, template_uuid)
-        
-            #print("response: " + str(response))
-
-        except ValueError:
-            print("ValueError: apply_propagated_dynamic_tags failed due to invalid parameters.")
-            creation_status = constants.ERROR
-
-        return creation_status
-    
-
 if __name__ == '__main__':
     
     te_config = configparser.ConfigParser()

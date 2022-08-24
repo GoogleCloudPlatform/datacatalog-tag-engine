@@ -180,7 +180,7 @@ class TaskManager:
 
     def _record_config_uuid_task(self, job_uuid, shard_uuid, task_id, config_uuid, config_type, uri):
         
-        print('*** _record_config_uuid_task ***')
+        #print('*** _record_config_uuid_task ***')
         
         task_uuid = uuid.uuid1().hex
         

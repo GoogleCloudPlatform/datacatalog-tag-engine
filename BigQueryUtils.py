@@ -128,15 +128,14 @@ class BigQueryUtils:
         row_to_insert = [row,]
 
         try:
-            errors = self.client.insert_rows_json(table_id, row_to_insert)  
+            self.client.insert_rows_json(table_id, row_to_insert)  
         except Exception as e:
             if 'NotFound: 404' in str(e):
                 # table isn't quite ready to be written to
                 time.sleep(3)
                 errors = self.client.insert_rows_json(table_id, row_to_insert)  
-                
-        if errors != []:
-            print("encountered errors while inserting row into BQ history table: {}".format(errors))
+            else:    
+                print("Error while inserting row into BQ history table: {}", e)
         
     # used by tag history feature
     def copy_tag(self, table_name, table_fields, tagged_table, tagged_column, tagged_values):
