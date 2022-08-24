@@ -19,6 +19,7 @@ import DataCatalogUtils as dc
 import TagEngineUtils as te
 import Resources as res
 import BackupFileParser as bfp
+import CsvParser as cp
 import constants
 
 import JobManager as jobm
@@ -467,6 +468,16 @@ def display_selected_action():
     elif action == "Create Restore Config":
         return render_template(
             'restore_config.html',
+            template_id=template_id,
+            project_id=project_id,
+            region=region,
+            fields=template_fields,
+            display_tag_history=history_enabled,
+            display_tag_stream=stream_enabled)
+            
+    elif action == "Create Import Config":
+        return render_template(
+            'import_config.html',
             template_id=template_id,
             project_id=project_id,
             region=region,
@@ -1765,6 +1776,86 @@ def process_restore_config():
     # [END render_template]
 
 
+@app.route('/process_import_config', methods=['POST'])
+def process_import_config():
+    
+    #template_id = request.form['template_id']
+    #project_id = request.form['project_id']
+    #region = request.form['region']
+    
+    template_id = request.form['template_id']
+    template_project = request.form['template_project']
+    template_region = request.form['template_region']
+
+    metadata_import_location = request.form['metadata_import_location']
+    
+    action = request.form['action']
+    
+    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
+    template = dcu.get_template()
+    
+    if action == "Cancel Changes":
+        
+        return render_template(
+            'tag_template.html',
+            template_id=template_id,
+            project_id=template_project,
+            region=template_region, 
+            fields=template)
+    
+    tag_history_option = False
+    tag_history_enabled = "OFF"
+    
+    if "tag_history" in request.form:
+        tag_history = request.form.get("tag_history")
+    
+        if tag_history == "selected":
+            tag_history_option = True
+            tag_history_enabled = "ON"
+            
+    tag_stream_option = False
+    tag_stream_enabled = "OFF"
+    
+    if "tag_stream" in request.form:
+        tag_stream = request.form.get("tag_stream")
+    
+        if tag_stream == "selected":
+            tag_stream_option = True
+            tag_stream_enabled = "ON"            
+        
+    template_uuid = teu.write_tag_template(template_id, template_project, template_region)
+  
+    overwrite = True
+    
+    config_uuid = teu.write_import_config('PENDING', template_uuid, template_id, template_project, template_region, \
+                                           metadata_import_location, \
+                                           tag_history_option, tag_stream_option, overwrite)                                                      
+
+    if isinstance(config_uuid, str): 
+        job_uuid = jm.create_job(config_uuid, 'IMPORT')
+    else:
+        job_uuid = None
+    
+        
+    if job_uuid != None: 
+        job_creation = constants.SUCCESS
+    else:
+        job_creation = constants.ERROR
+           
+    # [END process_restore_tag]
+    # [START render_template]
+    return render_template(
+        'submitted_import_config.html',
+        template_id=template_id,
+        template_project=template_project,
+        template_region=template_region,
+        metadata_import_location=metadata_import_location,
+        tag_history=tag_history_enabled,
+        tag_stream=tag_stream_enabled,
+        status=job_creation)
+    # [END render_template]
+
+
 ##################### INTERNAL METHODS #################
 
 def get_refresh_parameters(json):
@@ -2144,8 +2235,8 @@ Args:
 Returns:
     job_uuid 
 """
-@app.route("/restore", methods=['POST'])
-def restore():
+@app.route("/restore_create", methods=['POST'])
+def restore_create():
     json = request.get_json(force=True) 
     print('json: ' + str(json))
        
@@ -2168,8 +2259,13 @@ def restore():
     source_template_uuid = teu.write_tag_template(source_template_id, source_template_project, source_template_region)
     target_template_uuid = teu.write_tag_template(target_template_id, target_template_project, target_template_region)
     
-    metadata_export_location = json['metadata_export_location']
-           
+    if 'metadata_export_location' in json:
+        metadata_export_location = json['metadata_export_location']
+    else:
+        print("restore config type requires the metadata_export_location parameter. Please this parameter to the json object.")
+        resp = jsonify(success=False)
+        return resp
+
     tag_history = json['tag_history']
     tag_stream = json['tag_stream']
     overwrite = True
@@ -2181,6 +2277,45 @@ def restore():
 
     if isinstance(config_uuid, str): 
         job_uuid = jm.create_job(config_uuid, 'RESTORE')
+    else:
+        job_uuid = None
+    
+    return jsonify(job_uuid=job_uuid)
+
+
+@app.route("/import_create", methods=['POST'])
+def import_create():
+    json = request.get_json(force=True) 
+    print('json: ' + str(json))
+       
+    template_id = json['template_id']
+    template_project = json['template_project']
+    template_region = json['template_region']
+    
+    print('template_id: ', template_id)
+    print('template_project: ', template_project)
+    print('template_region: ', template_region)
+    
+    template_uuid = teu.write_tag_template(template_id, template_project, template_region)
+
+    if 'metadata_import_location' in json:
+        metadata_export_location = json['metadata_import_location']
+    else:
+        print("import config type requires the metadata_import_location parameter. Please add this parameter to the json object.")
+        resp = jsonify(success=False)
+        return resp
+        
+    metadata_import_location = json['metadata_import_location']
+           
+    tag_history = json['tag_history']
+    tag_stream = json['tag_stream']
+    overwrite = True
+    
+    config_uuid = teu.write_import_config('PENDING', template_uuid, template_id, template_project, template_region, \
+                                           metadata_import_location, tag_history, tag_stream, overwrite)                                                      
+
+    if isinstance(config_uuid, str): 
+        job_uuid = jm.create_job(config_uuid, 'IMPORT')
     else:
         job_uuid = None
     
@@ -2341,26 +2476,36 @@ def _split_work():
         jm.update_job_running(job_uuid) 
         tm.create_config_uuid_tasks(job_uuid, config_uuid, config_type, uris)
     
-    if 'metadata_export_location' in config:
+    if config_type == 'RESTORE':
         bkp_files = list(res.Resources.get_resources(config.get('metadata_export_location'), None))
         
         #print('bkp_files: ', bkp_files)
-        
         extracted_tags = []
         
         for bkp_file in bkp_files:
             extracted_tags.append(bfp.BackupFileParser.extract_tags(config.get('source_template_id'), config.get('source_template_project'), \
                                                                     bkp_file))
-        #print('extracted_tags: ', extracted_tags)
+                
+    if config_type == 'IMPORT':
+        csv_files = list(res.Resources.get_resources(config.get('metadata_import_location'), None))
+        #print('csv_files: ', csv_files)
         
-        # no tags were extracted from the backup files
+        extracted_tags = []
+        
+        for csv_file in csv_files:
+            extracted_tags.extend(cp.CsvParser.extract_tags(csv_file))
+             
+    if config_type == 'RESTORE' or config_type == 'IMPORT':
+        
+        # no tags were extracted from the CSV files
         if extracted_tags == [[]]:
            resp = jsonify(success=False)
-           return resp 
+           return resp
         
         jm.record_num_tasks(job_uuid, len(extracted_tags))
         jm.update_job_running(job_uuid) 
         tm.create_tag_extract_tasks(job_uuid, config_uuid, config_type, extracted_tags)
+    
     
     teu.update_config_status(config_uuid, config_type, 'RUNNING')
     
@@ -2399,7 +2544,7 @@ def _run_task():
     
     # retrieve config 
     config = teu.read_config(config_uuid, config_type)
-    print('read config: ', config)
+    #print('read config: ', config)
     
     # validate config
     if config_type == 'RESTORE':
@@ -2416,6 +2561,8 @@ def _run_task():
         
     if config_type == 'RESTORE':
         dcu = dc.DataCatalogUtils(config['target_template_id'], config['target_template_project'], config['target_template_region'])
+    elif config_type == 'IMPORT':
+        dcu = dc.DataCatalogUtils(config['template_id'], config['template_project'], config['template_region'])
     else:
         tem_config = teu.read_template_config(config['template_uuid'])
         dcu = dc.DataCatalogUtils(tem_config['template_id'], tem_config['project_id'], tem_config['region'])
@@ -2446,6 +2593,10 @@ def _run_task():
         creation_status = dcu.apply_restore_config(config['config_uuid'], tag_extract, \
                                                    config['tag_history'], config['tag_stream'], config['overwrite']) 
     
+    if config_type == 'IMPORT':
+        creation_status = dcu.apply_import_config(config['config_uuid'], tag_extract, \
+                                                  config['tag_history'], config['tag_stream'], config['overwrite'])
+    
                                               
     if creation_status == constants.SUCCESS:
         tm.update_task_status(shard_uuid, task_uuid, 'COMPLETED')
@@ -2471,415 +2622,7 @@ def _run_task():
     return resp
 #[END _run_task]
     
-  
-################ TAG PROPAGATION METHODS #################
- 
-@app.route("/propagation_settings<int:saved>")
-def propagation_settings(saved):
-    
-    exists, settings = teu.read_propagation_settings()
-    
-    if exists:
-        source_project_ids = settings['source_project_ids']
-        dest_project_ids = settings['dest_project_ids']
-        excluded_datasets = settings['excluded_datasets']
-        job_frequency = settings['job_frequency']
-    else:
-        source_project_ids = "{projectA}, {projectB}, {projectC}"
-        dest_project_ids = "{projectD}, {projectE}, {projectF}"
-        excluded_datasets = "{projectA}.{dataset1}, {projectB}.{dataset2}"
-        job_frequency = "24"
-    
-    # [END propagation_settings]
-    # [START render_template]
-    return render_template(
-        'propagation_settings.html',
-        source_project_ids=source_project_ids,
-        dest_project_ids=dest_project_ids,
-        excluded_datasets=excluded_datasets,
-        job_frequency=job_frequency,
-        settings=saved)
-    # [END render_template]
-  
-    
-@app.route("/set_propagation", methods=['POST'])
-def set_propagation():
-    
-    source_project_ids = request.form['source_project_ids'].rstrip()
-    dest_project_ids = request.form['dest_project_ids'].rstrip()
-    excluded_datasets = request.form['excluded_datasets'].rstrip()
-    job_frequency = request.form['job_frequency'].rstrip()
-    
-    if source_project_ids == "{projectA}, {projectB}, {projectC}":
-        source_project_ids = None
-    if dest_project_ids == "{projectD}, {projectE}, {projectF}":
-        dest_project_ids = None
-    if excluded_datasets == "{projectA}.{dataset1}, {projectB}.{dataset2}":
-        dest_project_ids = None
-    
-    if source_project_ids != None or dest_project_ids != None:
-        teu.write_propagation_settings(source_project_ids, dest_project_ids, excluded_datasets, job_frequency)
-        
-    return propagation_settings(1)  
-  
-@app.route("/propagation_report", methods=['GET', 'POST'])
-def propagation_report():
-    
-    exists, settings = teu.read_propagation_settings()
-    method = request.method
-    
-    if method == 'POST':
-       run_propagation() 
-    
-    if exists == True:
-        source_project_ids = settings['source_project_ids']
-        dest_project_ids = settings['dest_project_ids']
-        excluded_datasets = settings['excluded_datasets']
-        project_ids = source_project_ids
-        
-        project_list = dest_project_ids.split(",")
-        for dest_project in project_list:
-            if dest_project not in project_ids:
-                project_ids = project_ids + ", " + dest_project
-        
-        report_data, last_run = teu.generate_propagation_report() 
-        
-        if last_run is not None:
-            last_run = last_run.strftime('%Y-%m-%d %H:%M:%S')
-            #print('last_run: ' + str(last_run))
-        else:
-            last_run = 'Never'
-            
-        return render_template(
-           "propagation_report.html",
-            project_ids=project_ids,
-            report_data=report_data, 
-            last_run=last_run)
-    else:
-        
-        return render_template(
-           "propagation_settings.html")
-
-
-@app.route("/run_propagation", methods=['POST'])
-def run_propagation():
-    
-    exists, settings = teu.read_propagation_settings()
-    
-    if exists == True:
-        source_project_ids = settings['source_project_ids']
-        dest_project_ids = settings['dest_project_ids']
-        excluded_datasets = settings['excluded_datasets']
-        
-        teu.run_propagation_job(source_project_ids, dest_project_ids, excluded_datasets) 
-        
-        resp = jsonify(success=True)
-        
-    else:
-        resp = jsonify(success=False)
-    
-    return resp
-     
-        
-@app.route("/propagated_details", methods=['POST'])
-def propagated_details():
-    
-    template_uuid = request.form['template_uuid']
-    view_config_uuid = request.form['view_config_uuid']
-    source_res = request.form['source_res']
-    view_res = request.form['view_res']
-    
-    print("template_uuid: " + template_uuid)
-    print("view_config_uuid: " + view_config_uuid)
-
-    propagated_config = teu.read_propagated_config(view_config_uuid)
-    template_config = teu.read_template_config(template_uuid)
-    
-    source_res_list = propagated_config['source_res']
-    source_res_full = ','.join(source_res_list)
-    
-    view_res_full = propagated_config['view_res']
-    
-    # construct included_uris from propagated_config
-    if 'cols' in propagated_config.keys():
-        included_uris = ""
-        for col in propagated_config['cols']:
-            if col != "":
-                included_uris = included_uris + view_res + "/" + col + ", "
-            else:
-                included_uris = included_uris + view_res + ", "
-    
-        included_uris = included_uris[0:-2]
-        print("included_uris: " + included_uris)
-    else:
-        included_uris = 'bigquery/project/' + propagated_config['view_res']
-    print("included_uris: " + included_uris)
-    
-    return render_template(
-        'view_propagated_tag_on_res.html',
-        source_res_full=source_res_full,
-        view_res_full=view_res_full,
-        template_id=template_config['template_id'],
-        propagated_config=propagated_config, 
-        included_uris=included_uris)
-
-@app.route('/update_propagated_tag', methods=['POST']) 
-def update_propagated_tag():
-    template_uuid = request.form['template_uuid']
-    config_uuid = request.form['config_uuid']
-    config_type = request.form['config_type']
-    
-    #print("template_uuid: " + str(template_uuid))
-    #print("config_uuid: " + str(config_uuid))
-    #print("config_type: " + str(config_type))
-    
-    propagated_config = teu.read_propagated_config(config_uuid)
-    #print("propagated_config: " + str(propagated_config))
-    
-    view_res = propagated_config['view_res'].replace('/datasets', '').replace('/tables', '')
-    source_res_list = propagated_config['source_res']
-    source_res = ','.join(source_res_list)
-    source_res = source_res.replace('/datasets', '').replace('/tables', '')
-    
-    # construct included_uris from propagated_config
-    if 'cols' in propagated_config.keys():
-        included_uris = ""
-        for col in propagated_config['cols']:
-            if col != "":
-                included_uris = included_uris + view_res + "/" + col + ", "
-            else:
-                included_uris = included_uris + view_res + ", "
-    
-        included_uris = included_uris[0:-2]
-        print("included_uris: " + included_uris)
-    else:
-        included_uris = 'bigquery/project/' + propagated_config['view_res'] 
-    
-    template_config = teu.read_template_config(template_uuid)
-    template_id = template_config['template_id']
-    project_id = template_config['project_id']
-    region = template_config['region']
-    dcu = dc.DataCatalogUtils(template_id, project_id, region)
-    template_fields = dcu.get_template()
-    #print("fields: " + str(template_fields))    
-        
-    if config_type == "STATIC":
-        # [END update_tag]
-        # [START render_template]
-        return render_template(
-            'override_static_config.html',
-            template_id=template_id,
-            project_id=project_id,
-            region=region,
-            view_res=view_res,
-            source_res=source_res,
-            fields=template_fields,
-            propagated_config=propagated_config, 
-            included_uris=included_uris,
-            current_time=datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
-    else:
-        # [END display_action]
-        # [START render_template]
-        return render_template(
-            'override_dynamic_config.html',
-            template_id=template_id,
-            project_id=project_id,
-            region=region,
-            view_res=view_res,
-            source_res=source_res,
-            fields=template_fields,
-            propagated_config=propagated_config,
-            included_uris=included_uris)
-    # [END render_template]
-
-
-@app.route('/override_propagated_dynamic_tag', methods=['POST'])
-def override_propagated_dynamic_tag():
-    template_id = request.form['template_id']
-    project_id = request.form['project_id']
-    region = request.form['region']
-    config_uuid = request.form['config_uuid']
-    included_uris = request.form['included_uris'].rstrip()
-    refresh_frequency = request.form['refresh_frequency'].rstrip()
-    action = request.form['action']
-    
-    #print('config_uuid: ' + config_uuid)
-    #print("action: " + str(action))
-    
-    dcu = dc.DataCatalogUtils(template_id, project_id, region)
-    template_fields = dcu.get_template()
-    
-    if action != "Cancel Changes":
-        
-        fields = []
-    
-        selected_fields = request.form.getlist("selected")
-        #print("selected_fields: " + str(selected_fields))
-    
-        for selected_field in selected_fields:
-            query_expression = request.form.get(selected_field)
-            #print("query_expression: " + query_expression)
-            selected_field_type = request.form.get(selected_field + "_datatype")
-            print(selected_field + ", " + query_expression + ", " + selected_field_type)
-            
-            for template_field in template_fields:
-                if template_field['field_id'] != selected_field:
-                    continue
-                
-                is_required = template_field['is_required']
-        
-                field = {'field_id': selected_field, 'query_expression': query_expression, 'field_type': selected_field_type, 'is_required': is_required}
-                fields.append(field)
-                break
-    
-        #print('fields: ' + str(fields))
-    
-        template_exists, template_uuid = teu.read_tag_template(template_id, project_id, region)
-        
-        # TO DO: process included_uris changes
-        # for now, assume columns is empty
-        columns = []
-        
-        if action == 'Fork Tag and Save Changes':
-            config_status = 'CONFLICT AND FORKED'
-        else:
-            config_status = 'PROPAGATED AND FORKED'
-        
-        propagated_config = teu.fork_propagated_tag(config_uuid, config_status, fields, refresh_frequency)
-        
-        source_res = propagated_config['source_res']
-        view_res = propagated_config['view_res']
-        fields = propagated_config['fields']
-        source_config_uuid = propagated_config['source_config_uuid']
-        view_config_uuid = propagated_config['view_config_uuid']
-        template_uuid = propagated_config['template_uuid']
-        
-        print('source_res: ' + str(source_res))
-        print('view_res: ' + view_res)
-        print('fields: ' + str(fields))
-        print('source_config_uuid: ' + str(source_config_uuid))
-        print('view_config_uuid: ' + view_config_uuid)
-        print('template_uuid: ' + template_uuid)
-    
-        update_status = dcu.apply_dynamic_propagated_tag(config_status, source_res, view_res, columns, fields, source_config_uuid, view_config_uuid, template_uuid)
-    
-        if update_status == constants.SUCCESS:
-            print('override_propagated_dynamic_tags SUCCEEDED.')
-        else:
-            print('override_propagated_dynamic_tags FAILED.')
-             
-    else:
-    
-        propagated_config = teu.read_propagated_config(config_uuid)
-    
-    view_res = propagated_config['view_res'].replace('/datasets', '').replace('/tables', '')
-    included_uris = 'bigquery/project/' + propagated_config['view_res']
-    
-    source_res_list = propagated_config['source_res']
-    source_res_full = ','.join(source_res_list)
-    source_res_full = source_res_full.replace('/datasets', '').replace('/tables', '') 
-      
-     # [END override_propagated_dynamic_tag]
-     # [START render_template]
-    return render_template(
-        'view_propagated_tag_on_res.html',
-        source_res_full=source_res_full,
-        view_res=view_res,
-        included_uris=included_uris,
-        template_id=template_id,
-        propagated_config=propagated_config) 
-
-
-@app.route('/override_propagated_static_tag', methods=['POST'])
-def override_propagated_static_tag():
-    template_id = request.form['template_id']
-    project_id = request.form['project_id']
-    region = request.form['region']
-    config_uuid = request.form['config_uuid']
-    included_uris = request.form['included_uris'].rstrip()
-    action = request.form['action']
-    
-    #print('config_uuid: ' + config_uuid)
-    #print("action: " + str(action))
-    
-    dcu = dc.DataCatalogUtils(template_id, project_id, region)
-    template_fields = dcu.get_template()
-    
-    if action != "Cancel Changes": 
-        
-        fields = []
-    
-        selected_fields = request.form.getlist("selected")
-        print("selected_fields: " + str(selected_fields))
-    
-        for selected_field in selected_fields:
-            selected_value = request.form.get(selected_field)
-            selected_type = request.form.get(selected_field + "_datatype")
-            print(selected_field + ", " + selected_value + ", " + selected_type)
-            
-            for template_field in template_fields:
-                if template_field['field_id'] != selected_field:
-                    continue
-                
-                is_required = template_field['is_required']
-        
-                field = {'field_id': selected_field, 'field_value': selected_value, 'field_type': selected_type, 'is_required': is_required}
-                fields.append(field)
-                break
-    
-        #print('fields: ' + str(fields))
-    
-        template_exists, template_uuid = teu.read_tag_template(template_id, project_id, region)
-        
-        # TO DO: process included_uris changes (compare values to cols)
-        # for now assume that columns is empty
-        columns = []
-        
-        if action == 'Fork Tag and Save Changes':
-            config_status = 'CONFLICT AND FORKED'
-        else:
-            config_status = 'PROPAGATED AND FORKED'
-        
-        propagated_config = teu.fork_propagated_tag(config_uuid, config_status, fields, refresh_frequency=None)
-        
-        source_res = propagated_config['source_res']
-        view_res = propagated_config['view_res']
-        fields = propagated_config['fields']
-        source_config_uuid = propagated_config['source_config_uuid']
-        view_config_uuid = propagated_config['view_config_uuid']
-        template_uuid = propagated_config['template_uuid']
-        
-        update_status = dcu.apply_static_propagated_tag(config_status, source_res, view_res, columns, fields, source_config_uuid, view_config_uuid, template_uuid)
-    
-        if update_status == constants.SUCCESS:
-            print('override_propagated_static_tags SUCCEEDED.')
-        else:
-            print('override_propagated_static_tags FAILED.')
-             
-    else:
-    
-        propagated_config = teu.read_propagated_config(config_uuid)
-    
-    
-    view_res = propagated_config['view_res'].replace('/datasets', '').replace('/tables', '')
-    included_uris = 'bigquery/project/' + propagated_config['view_res']
-    
-    source_res_list = propagated_config['source_res']
-    source_res_full = ','.join(source_res_list)
-    source_res_full = source_res_full.replace('/datasets', '').replace('/tables', '')
-    
-     # [END override_propagated_static_tag]
-     # [START render_template]
-    return render_template(
-        'view_propagated_tag_on_res.html',
-        source_res_full=source_res_full,
-        view_res=view_res,
-        included_uris=included_uris,
-        template_id=template_id,
-        propagated_config=propagated_config) 
-
-
-###########################################################  
+####################### TEST METHOD ####################################  
     
 @app.route("/ping", methods=['GET'])
 def ping():

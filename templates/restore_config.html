@@ -101,10 +101,7 @@
 			   <input type="hidden" name="template_id" value="{{ template_id }}">
 			   <input type="hidden" name="project_id" value="{{ project_id }}">
 			   <input type="hidden" name="region" value="{{ region }}">
-			   
-			   {% for dict_field in fields %}
-			   	<input type="hidden" name="{{ dict_field['field_id'] }}_datatype" value="{{ dict_field['field_type'] }}">
-			    {% endfor %}	   
+			      
          </form>
     </body>
 </html>

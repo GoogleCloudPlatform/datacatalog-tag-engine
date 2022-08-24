@@ -1,0 +1,52 @@
+{
+    "template_id": "data_resource",
+    "project_id": "tag-engine-develop",
+    "region": "us-central1",
+    "fields": [
+        {
+            "field_id": "data_sensitivity",
+            "query_expression": "select sensitive_type from tag-engine-develop.tag_history.data_sensitivity ds join tag-engine-develop.reference.SensitiveCategory sc on ds.sensitive_type = sc.category where starts_with(asset_name, '$project/dataset/$dataset/table/$table/') order by rank desc limit 1"
+        },
+        {
+            "field_id": "num_fields",
+            "query_expression": "select count(*) from $project.$dataset.INFORMATION_SCHEMA.COLUMNS where table_name = '$table'"
+        },
+		{
+            "field_id": "num_records",
+            "query_expression": "select row_count from `$project.$dataset.__TABLES__` where table_id = '$table'"
+        },
+        {
+            "field_id": "size",
+            "query_expression": "select round(size_bytes/1048576, 2) from `$project.$dataset.__TABLES__` where table_id = '$table'"
+        },
+        {
+            "field_id": "recent_data_update",
+            "query_expression": "select cast(timestamp_millis(last_modified_time) as datetime) from `$project.$dataset.__TABLES__` where table_id = '$table'"
+        },
+        {
+            "field_id": "actual_data_latency",
+            "query_expression": "select timestamp_diff(max(start_time), min(start_time), second) / (count(distinct(start_time)) - 1) from `$project`.`region-us-central1`.INFORMATION_SCHEMA.JOBS j1, unnest(referenced_tables) as r where statement_type in ('INSERT', 'UPDATE', 'DELETE') and r.project_id = '$project' and r.dataset_id = '$dataset' and r.table_id = '$table'"
+        }, 
+        {
+            "field_id": "global_id_customer",
+            "query_expression": "select False"
+        },
+        {
+            "field_id": "global_id_account",
+            "query_expression": "select False"
+        },
+        {
+            "field_id": "global_id_location",
+            "query_expression": "select False"
+        },
+        {
+            "field_id": "global_id_product",
+            "query_expression": "select False"
+        }
+    ],
+    "included_uris": "bigquery/project/tag-engine-develop/dataset/finwire/*",
+    "excluded_uris": "",
+    "refresh_mode": "ON_DEMAND",
+    "tag_history": true,
+    "tag_stream": false  
+}

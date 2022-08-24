@@ -1,0 +1,25 @@
+project,dataset,table,data_domain,data_confidentiality,business_owner,technical_owner,storage_location,data_retention_period,data_latency_slo
+tag-engine-develop,finwire,FINWIRE1976Q1_FIN ,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1976Q1_SEC,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1976Q1_CMP,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1976Q2_FIN,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1976Q2_SEC,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1976Q2_CMP,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1976Q3_FIN,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1976Q3_SEC,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1976Q3_CMP,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1976Q4_FIN,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1976Q4_SEC,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1976Q4_CMP,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1977Q1_FIN,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1977Q1_SEC,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1977Q1_CMP,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1977Q2_FIN,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1977Q2_SEC,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1977Q2_CMP,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1977Q3_FIN,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1977Q3_SEC,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1977Q3_CMP,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1977Q4_FIN,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1977Q4_SEC,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly
+tag-engine-develop,finwire,FINWIRE1977Q4_CMP,Finance,Public,John Williams,Emily Doe,us-central1,7_years,quarterly

@@ -73,6 +73,27 @@
  	           </tr>
 			   <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
 			   </table>
+		{% elif config['config_type'] == 'IMPORT' %}
+	       <table style="background-color:#f1eeee" width="1000">
+		   <tr>
+	          <td>&nbsp;<span style="color:#0b5394;">Template id:</span>
+	           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{ config['template_id'] }}</td>
+           </tr>
+	       <tr>
+	          <td>&nbsp;<span style="color:#0b5394;">Template project:</span>
+	             &nbsp;&nbsp;{{ config['source_template_project'] }}</td>
+           </tr>
+	       <tr>
+	          <td>&nbsp;<span style="color:#0b5394;">Template region:</span>
+	           &nbsp;&nbsp;&nbsp;{{ config['source_template_region'] }}</td>
+           </tr>
+		   <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+	       <tr>
+	          <td>&nbsp;<span style="color:#0b5394;">Metadata import location:</span>
+	           &nbsp;&nbsp;{{ config['metadata_import_location'] }}</td>
+           </tr>
+		   <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+		   </table>
 			{% else %}
 				<tr><td>&nbsp;<span style="color:#0b5394;">Tag Template Fields:</span></td></tr>
 			    </table>
@@ -223,10 +244,13 @@
 		     <tr>
 		    <td>&nbsp;<input type="submit" value="Create Static Config" name="action"></td>
 		    <td>&nbsp;<input type="submit" value="Create Dynamic Config" name="action"></td>
-			<td>&nbsp;<input type="submit" value="Create Entry Config" name="action"></td>
 			<td>&nbsp;<input type="submit" value="Create Glossary Config" name="action"></td>
 			<td>&nbsp;<input type="submit" value="Create Sensitive Config" name="action"></td>
+			<td>&nbsp;<input type="submit" value="Create Entry Config" name="action"></td>
+			</tr>
+			<tr>
 			<td>&nbsp;<input type="submit" value="Create Restore Config" name="action"></td>
+			<td>&nbsp;<input type="submit" value="Create Import Config" name="action"></td>
 	         </tr>
 	        </table>
 		   {% if config['config_type'] == 'RESTORE' %}
