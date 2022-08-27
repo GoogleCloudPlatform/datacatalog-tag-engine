@@ -96,7 +96,7 @@ rm /tmp/key.json
 gcloud app browse
 ```
 
-Read [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog) to get started with Tag Engine. <br><br>
+Hint: read [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog) to learn about Tag Engine's static and dynamic tagging configurations. <br><br>
 
 
 #### Common Commands:
