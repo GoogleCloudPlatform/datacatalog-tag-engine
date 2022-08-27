@@ -11,7 +11,7 @@
 * `import_create`: create an import tag configuration
 * `scheduled_auto_updates`: run a tag configuration that is set to auto refresh 
 * `ondemand_updates`: run a tag configuration that is set to on-demand refresh 
-* `get_job_status`: get the status of a job
+* `get_job_status`: get the status of a job, an execution of a tag configuration
 
 #### static_create
 
