@@ -1,6 +1,6 @@
-### Tag Engine Upgrade Instructions 
+### Tag Engine Upgrade Guide
 
-Context: In August 2022, a number of changes have been made to Tag Engine's data model which are not backwards compatible. These changes were needed to support additional tagging configuration types which have unique attributes and shouldn't be stored in the same Firestore collection. The following instructions are meant for users who are currently running on an older version of Tag Engine (prior to Aug 2022) and who want to upgrade to the latest code base. Note that this upgrade destroys your existing static and dynamic tag configurations. If you want to keep them, you will need to recreate them after the upgrade. 
+Context: In August 2022, a number of changes have been made to Tag Engine's data model which are not backwards compatible. These changes were needed in order to support additional tagging configuration types which have unique attributes and shouldn't be stored in the same Firestore collection. The following instructions are meant for users who are currently running on an older version of Tag Engine (prior to Aug 2022) and who want to upgrade to the latest code base. Note that this upgrade destroys your existing static and dynamic tag configurations. If you want to keep them, you will need to recreate them after the upgrade. 
 
 #### 1. Pull down the latest code from this repo:
 
