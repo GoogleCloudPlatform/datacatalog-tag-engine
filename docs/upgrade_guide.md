@@ -1,6 +1,8 @@
 ### Tag Engine Upgrade Guide
 
-Context: In August 2022, a number of changes have been made to Tag Engine's data model which are not backwards compatible. These changes were needed in order to support additional tagging configuration types which have unique attributes and shouldn't be stored in the same Firestore collection. The following instructions are meant for users who are currently running on an older version of Tag Engine (prior to Aug 2022) and who want to upgrade to the latest code base. Note that this upgrade destroys your existing static and dynamic tag configurations. If you want to keep them, you will need to recreate them after the upgrade. 
+Context: In August 2022, a number of changes were made to Tag Engine's data model, which are not backwards compatible. These changes were needed in order to add support for additional tagging configuration types (e.g. restore, import), which have different properties from the earlier types (e.g. static, dynamic, etc.).  
+
+The following instructions are meant for users who are running on an older version of Tag Engine (prior to Aug 2022) and who want to upgrade to the latest code base. Note that this upgrade destroys your existing static and dynamic tag configurations. If you want to have them after the upgrade, you will need to recreate them through the Tag Engine UI and API. 
 
 #### 1. Pull down the latest code from this repo:
 
@@ -32,17 +34,17 @@ EOL
 
 #### 4. Delete the Firestore indexes:
 
-Open the Firestore console in your Tag Engine project and manually delete all the Firestore indexes. 
+* Open the Firestore console in your Tag Engine project and manually delete all the Firestore indexes. 
 
-Note: this is to avoid any "index already exists" errors when running Terraform. <br><br>
+* Note: this is to avoid any "index already exists" errors when running Terraform. <br><br>
 
 
 
 #### 5. Delete Firestore collections:
 
-Open the Firestore console in your Tag Engine project and manually delete all the Firestore collections. 
+* Open the Firestore console in your Tag Engine project and manually delete all the Firestore collections. 
 
-Note: this will remove all your existing static and dynamic tag configurations. If you want to recreate them, you'll need to record the details before deleting the collections. This will <b>not</b> delete your Data Catalog tags, only your tag configurations in Tag Engine.  <br><br>
+* Note: this will remove all your existing static and dynamic tag configurations. If you want to recreate them, you'll need to record the details before deleting the collections. This will <b>not</b> delete your Data Catalog tags, only your tag configurations in Tag Engine.  <br><br>
 
 
 
