@@ -5,7 +5,7 @@ This repository contains the Tag Engine application, which is an open-source ext
 
 * If you are new to Tag Engine, start with [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog). 
 * To learn about Tag Engine's API methods, read the [API reference guide](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/api_reference.md). 
-* To learn about Tag Engine's UI features, read the [UI reference guide](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/ui_reference.md). 
+* To learn about Tag Engine's UI features, read the [UI guide](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/ui_guide.md). 
 * To upgrade your existing Tag Engine installation, read the [upgrade guide](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/upgrade_guide.md). 
 
 ### Deployment Procedure
