@@ -30,7 +30,7 @@ A static tag configuration creates one or more tags in Data Catalog based on the
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/static_2.png" alt="static" width="600"/>
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/static_3.png" alt="static" width="600"/>
 
-In the `included URIs` field, you specify either a BQ path or a GCS path, depending on which type of asset you want to tag. In BQ, you can tag columns, tables, views and datasets. In GCS, you can tag buckets, folders and files.
+The `included URIs` field can be set to either a BQ path or a GCS path, depending on which type of asset you want to tag. In BQ, you can tag columns, tables, views and datasets. In GCS, you can tag buckets, folders and files.
 
 The `refresh_mode` field is either set to `AUTO` or `ON-DEMAND`. `AUTO` refresh means that any new assets that match the `included_URIs` field will get auto-tagged on a schedule. Note that in the context of a static tag configuration, `AUTO` does not update any existing tags. Assets that have already been tagged do not get retagged. `ON-DEMAND` means that Tag Engine does not schedule any tag updates, you will call the `ondemand_updates` method to trigger an update.  
 
@@ -43,5 +43,17 @@ A dynamic tag configuration creates one or more tags in Data Catalog based on th
 
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/dynamic_1.png" alt="static" width="600"/>
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/dynamic_2.png" alt="static" width="600"/>
+
+In the SQL expression fields, you have access to a number of special variables: 
+* $project = the project id of the asset being tagged
+* $dataset = the dataset name of the asset being tagged
+* $table = the table name of the asset being tagged
+* $column = the field name of the asset being tagged. This variable is only available when you are creating field-level tags. 
+
+The `included URIs` field must be set to a BQ path. You can tag columns, tables, views and datasets. 
+
+The `refresh_mode` field is either set to `AUTO` or `ON-DEMAND`. `AUTO` refresh means that any new assets that match the `included_URIs` field will get auto-tagged on a schedule. Note that in the context of a static tag configuration, `AUTO` does not update any existing tags. Assets that have already been tagged do not get retagged. `ON-DEMAND` means that Tag Engine does not schedule any tag updates, you will call the `ondemand_updates` method to trigger an update.  
+
+Upon clicking the submit button, you will be directed to a confirmation page. You can click on the `here` link to see status of your bulk tagging request. 
 
 
