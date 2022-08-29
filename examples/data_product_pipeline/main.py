@@ -28,15 +28,55 @@ def process_pending_status_event(event, context):
     print('data_domain: ', data_domain)
     print('data_product: ', data_product)
     
-    payload = sensitive_config(data_domain, data_product)
-    job_complete(payload, prev_tasks_ran=0)
-    payload = dynamic_config(data_domain, data_product)
+    payload = create_data_standardization_tags(data_domain, data_product)
     job_complete(payload, prev_tasks_ran=0)
     
+    payload = create_data_sensitivity_tags(data_domain, data_product)
+    job_complete(payload, prev_tasks_ran=0)
+    
+    payload = create_data_resource_tags(data_domain, data_product)
+    job_complete(payload, prev_tasks_ran=0)
+        
     return "OK" 
  
 
-def get_config(file_name):
+def create_data_standardization_tags(data_domain, data_product):
+    
+    file_name = data_domain + '/' + data_product + '/' + 'data_standardization.json'
+    payload = get_tag_config(file_name)
+    
+    url = 'https://tag-engine-develop.uc.r.appspot.com/dynamic_create'
+    res = requests.post(url, json=payload)
+    print('res: ', res.text)
+    config_res = json.loads(res.text)
+    return config_res
+
+
+def create_data_sensitivity_tags(data_domain, data_product):
+    
+    file_name = data_domain + '/' + data_product + '/' + 'data_sensitivity.json'
+    payload = get_tag_config(file_name)
+
+    url = 'https://tag-engine-develop.uc.r.appspot.com/sensitive_create'
+    res = requests.post(url, json=payload)
+    print('res: ', res.text)
+    config_res = json.loads(res.text)
+    return config_res
+
+
+def create_data_resource_tags(data_domain, data_product):
+    
+    file_name = data_domain + '/' + data_product + '/' + 'data_resource.json'
+    payload = get_tag_config(file_name)
+    
+    url = 'https://tag-engine-develop.uc.r.appspot.com/dynamic_create'
+    res = requests.post(url, json=payload)
+    print('res: ', res.text)
+    config_res = json.loads(res.text)
+    return config_res
+    
+
+def get_tag_config(file_name):
     
     print('file_name: ', file_name)
     storage_client = storage.Client()
@@ -45,18 +85,6 @@ def get_config(file_name):
     blob_data = blob.download_as_string()
     json_dict = json.loads(blob_data) 
     return json_dict
-
-
-def sensitive_config(data_domain, data_product):
-    
-    file_name = data_domain + '/' + data_product + '/' + 'sensitive_create_ondemand.json'
-    payload = get_config(file_name)
-
-    url = 'https://tag-engine-develop.uc.r.appspot.com/sensitive_create'
-    res = requests.post(url, json=payload)
-    print('res: ', res.text)
-    config_res = json.loads(res.text)
-    return config_res
 
 
 def job_complete(payload, prev_tasks_ran):
@@ -77,13 +105,4 @@ def job_complete(payload, prev_tasks_ran):
         job_complete(payload, cur_tasks_ran)
 
 
-def dynamic_config(data_domain, data_product):
-    
-    file_name = data_domain + '/' + data_product + '/' + 'dynamic_create_ondemand.json'
-    payload = get_config(file_name)
-    
-    url = 'https://tag-engine-develop.uc.r.appspot.com/dynamic_create'
-    res = requests.post(url, json=payload)
-    print('res: ', res.text)
-    config_res = json.loads(res.text)
-    return config_res
+

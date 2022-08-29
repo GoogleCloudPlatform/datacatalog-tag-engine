@@ -4,14 +4,14 @@
     "region": "us-central1",
     "fields": [
         {
-            "field_id": "data_confidentiality",
-            "query_expression": "select case when count > 0 then 'SENSITIVE' else 'SHARED_INTERNALLY' end as data_confidentiality from (select count(*) as count from tag-engine-develop.tag_history.data_attribute where starts_with(asset_name, '$project/dataset/$dataset/table/$table/'))"
+            "field_id": "data_sensitivity",
+            "query_expression": "select sensitive_type from tag-engine-develop.tag_history.data_sensitivity ds join $project.reference.SensitiveCategory sc on ds.sensitive_type = sc.category where starts_with(asset_name, '$project/dataset/$dataset/table/$table/') order by rank desc limit 1"
         },
         {
             "field_id": "num_fields",
             "query_expression": "select count(*) from $project.$dataset.INFORMATION_SCHEMA.COLUMNS where table_name = '$table'"
         },
-		{
+        {
             "field_id": "num_records",
             "query_expression": "select row_count from `$project.$dataset.__TABLES__` where table_id = '$table'"
         },
@@ -23,6 +23,10 @@
             "field_id": "recent_data_update",
             "query_expression": "select cast(timestamp_millis(last_modified_time) as datetime) from `$project.$dataset.__TABLES__` where table_id = '$table'"
         },
+        {
+            "field_id": "actual_data_latency",
+            "query_expression": "select timestamp_diff(max(start_time), min(start_time), second) / (count(distinct(start_time)) - 1) from `$project`.`region-us-central1`.INFORMATION_SCHEMA.JOBS j1, unnest(referenced_tables) as r where statement_type in ('INSERT', 'UPDATE', 'DELETE') and r.project_id = '$project' and r.dataset_id = '$dataset' and r.table_id = '$table'"
+        }, 
         {
             "field_id": "global_id_customer",
             "query_expression": "select False"
@@ -40,7 +44,7 @@
             "query_expression": "select False"
         }
     ],
-    "included_uris": "bigquery/project/data-mesh-343422/dataset/oltp/*",
+    "included_uris": "bigquery/project/data-mesh-343422/dataset/finance/*",
     "excluded_uris": "",
     "refresh_mode": "ON_DEMAND",
     "tag_history": true,

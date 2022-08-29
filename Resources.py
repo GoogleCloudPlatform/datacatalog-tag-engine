@@ -329,7 +329,8 @@ if __name__ == '__main__':
     #excluded_uris=None
     #resources = Resources.get_bq_resources(included_uris, excluded_uris)
     
-    included_uris = 'bigquery/project/tag-engine-develop/dataset/finwire/FINWIRE*_CMP/industryID'
+    #included_uris = 'bigquery/project/tag-engine-develop/dataset/finwire/FINWIRE*_CMP/industryID'
+    included_uris = 'bigquery/project/data-mesh-343422/dataset/oltp/Account/ca_st_id'
     #included_uris = 'gs://discovery-area/austin_311_service_requests.parquet'
     #included_uris = 'gs://discovery-area/cities_311/austin_311_service_requests.parquet', 'gs://discovery-area/cities_311/san_francisco_311_service_requests/*'
     #excluded_uris = 'gs://discovery-area/cities_311/san_francisco_311_service_requests/000000000003'

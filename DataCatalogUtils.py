@@ -259,7 +259,7 @@ class DataCatalogUtils:
         
         creation_status = constants.SUCCESS
   
-        print('uri: ' + uri)
+        #print('uri: ' + uri)
         
         error_exists = False
         
@@ -292,7 +292,10 @@ class DataCatalogUtils:
             query_expression = field['query_expression']
 
             # parse and run query in BQ
-            query_str = self.parse_query_expression(uri, query_expression)
+            if column != "":
+                query_str = self.parse_query_expression(uri, query_expression, column)
+            else:
+                query_str = self.parse_query_expression(uri, query_expression)
             #print('returned query_str: ' + query_str)
             
             field_value, error_exists = self.run_query(bq_client, query_str, batch_mode, store)
@@ -1406,7 +1409,7 @@ class DataCatalogUtils:
         return creation_status
      
          
-    def parse_query_expression(self, uri, query_expression):
+    def parse_query_expression(self, uri, query_expression, column=None):
         
         #print("*** enter parse_query_expression ***")
         #print("uri: " + uri)
@@ -1424,6 +1427,7 @@ class DataCatalogUtils:
         column_index = query_expression.rfind("$column", 0)
         
         #print('table_index: ', table_index)
+        #print('column_index: ', column_index)
         
         if project_index != -1:
             project_end = uri.find('/') 
@@ -1481,8 +1485,12 @@ class DataCatalogUtils:
             query_str = query_expression
             
         if column_index != -1:
-            query_str = query_str.replace('$column', column)
             
+            if query_str == None:
+                query_str = query_expression.replace('$column', column)
+            else:
+                query_str = query_str.replace('$column', column)
+                    
         return query_str
     
     
