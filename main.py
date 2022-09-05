@@ -2472,6 +2472,9 @@ def _split_work():
     
     if 'included_uris' in config:
         uris = list(res.Resources.get_resources(config.get('included_uris'), config.get('excluded_uris', None)))
+        
+        print('inside _split_work() uris: ', uris)
+        
         jm.record_num_tasks(job_uuid, len(uris))
         jm.update_job_running(job_uuid) 
         tm.create_config_uuid_tasks(job_uuid, config_uuid, config_type, uris)

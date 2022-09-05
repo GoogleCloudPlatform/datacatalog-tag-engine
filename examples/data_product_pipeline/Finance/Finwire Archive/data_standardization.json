@@ -1,0 +1,17 @@
+{
+    "template_id": "data_standardization",
+    "project_id": "data-mesh-344315",
+    "region": "us-central1",
+    "fields": [
+        {
+            "field_id": "degree",
+            "query_expression": "with finwire_unmatches as (select count(*) umatched_counts from $project.$dataset.$table f1 where $column not in (select in_id from $project.reference.Industry)), finwire_total as (select count(*) as total_counts from $project.$dataset.$table) select round(safe_divide((total_counts - umatched_counts), total_counts) * 100) as degree from finwire_unmatches, finwire_total"
+        }
+    ],
+    "included_uris": "bigquery/project/data-mesh-343422/dataset/finance/FINWIRE*_CMP/industryID",
+    "excluded_uris": "",
+    "refresh_mode": "ON_DEMAND",
+    "tag_history": true,
+    "tag_stream": false  
+}
+

@@ -36,7 +36,7 @@
             "stringValue": "This product contains the OLTP data from a financial system. The data was generated from the TPCDI benchmark."
           },
           "data_product_name": {
-            "stringValue": "Finwire Archive"
+            "stringValue": "Trade Transactions"
           },
           "data_product_status": {
             "enumValue": {
