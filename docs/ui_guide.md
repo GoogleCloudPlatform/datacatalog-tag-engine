@@ -57,3 +57,12 @@ The `refresh_mode` field is either set to `AUTO` or `ON-DEMAND`. `AUTO` refresh 
 Upon clicking the submit button, you will be directed to a confirmation page. You can click on the `here` link to see status of your bulk tagging request. 
 
 
+#### Entry configuration
+
+An entry configuration creates one or more FILESET entries in Data Catalog that represent parquet files stored on GCS. Each entry is tagged with a [file metadata](https://github.com/GoogleCloudPlatform/datacatalog-templates/blob/master/file_template.yaml) template that includes the number of rows in the file. This configuration can be extended to other file types. 
+
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/entry_1.png" alt="static" width="600"/>
+
+###### Sample output
+
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/entry_2.png" alt="static" width="600"/>
