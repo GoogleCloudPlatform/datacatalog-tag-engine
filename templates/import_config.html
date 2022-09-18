@@ -11,12 +11,23 @@
 	   <div class="header">
 	   <h2>Create import config using {{ template_id }}</h2>
 	   <span style="color:#9d9a9a;">
-		   <h5>&nbsp;&nbsp;Mandatory fields are marked by <span style="color:red;">*</span></h5>
+		   <h5>
+  			   &nbsp;The top list of the CSV file is reserved for column headers. These headers must be:<br>
+  			   &nbsp;&nbsp;- <b>project</b> The GCP project of the data asset you want to tag.<br>
+  			   &nbsp;&nbsp;- <b>dataset</b> The BQ dataset of the data asset you want to tag.<br>
+  			   &nbsp;&nbsp;- <b>table</b> The name of the data asset you want to tag. This is typically a BQ table, but it can also be a BQ view. <br>
+  			   &nbsp;&nbsp;- <b>column</b> The name of the BQ column you want to tag. This field is only mandatory if you are creating a column-level tag. <br>
+			   <br>
+			   &nbsp;The remaining headers are for the fields from the tag template that you want to include in your tag. Note: all the fields in a CSV must be from the same tag template. 
+			   <br>
+			   &nbsp;Example CSV files: <a href="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/develop/examples/import_configs/sakila_table_tags.csv">table-level tags</a>, <a href="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/develop/examples/import_configs/sakila_column_tags.csv">column-level tags</a>
+			    <br><br>
+			   
+			   &nbsp;&nbsp;Mandatory fields are marked by <span style="color:red;">*</span></h5>
 	   </span>
 	   </div>
 	   <form method="post" action="/process_import_config"> 
 
-	   <p>&nbsp;</p>
 	   <h3>Tag Template Details</h3>
    	<table> 
    	<tr>
@@ -40,8 +51,12 @@
        </table>
 		<p>&nbsp;</p>
 		<h3>Enter GCS Path to CSV Files</h3>
-		 	   <h5>&nbsp;&nbsp;If you have multiple files to upload, use a "," to separate them. Example: gs://my-bucket/my-folder/my-tags-1.csv, 
-			   gs://my-bucket/my-folder/my-tags-2.csv, gs://my-bucket/my-folder/my-tags-3.csv</h5>
+		 	   <h5>		   
+  			  
+			   &nbsp;&nbsp;If you have multiple files to upload, use a comma-separated list. Example: gs://bucket/folder/tags1.csv, 
+			   			   gs://bucket/folder/tags2.csv, etc.
+
+		   		</h5>
 					    <table>
 				     <tr>
 				    <td><span style="color:red;">*</span>&nbsp;Location of metadata import file(s):&nbsp;&nbsp;

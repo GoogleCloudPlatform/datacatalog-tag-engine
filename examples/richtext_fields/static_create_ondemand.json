@@ -1,0 +1,32 @@
+{
+    "template_id": "data_sharing_agreement",
+    "project_id": "tag-engine-develop",
+    "region": "us-central1",
+    "fields": [
+        {
+            "field_id": "data_owner_name",
+            "field_value": "Homer Simpson"
+        },
+        {
+            "field_id": "data_owner_email",
+            "field_value": "simpson@email.com"
+        },
+        {
+            "field_id": "uses",
+            "field_value": "Analytics, Direct Marketing"
+        },
+        {
+            "field_id": "sharing_scope_legal_entity",
+            "field_value": "Google Cloud EMEA Limited, Google LLC"
+        },
+        {
+            "field_id": "sharing_scope_geography",
+            "field_value": "EU, US"
+        }
+    ],
+    "included_uris": "bigquery/project/tag-engine-develop/dataset/finwire/FINWIRE1967Q1_CMP",
+    "excluded_uris": "",
+    "refresh_mode": "ON_DEMAND",
+    "tag_history": true,
+    "tag_stream": false   
+}

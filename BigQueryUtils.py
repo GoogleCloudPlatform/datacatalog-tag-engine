@@ -124,7 +124,7 @@ class BigQueryUtils:
                 row[tagged_value['field_id']]= json.dumps(tagged_value['field_value'], default=str)
                 row[tagged_value['field_id']]= tagged_value['field_value']
     
-        #print('insert row: ' + str(row))
+        print('insert row: ' + str(row))
         row_to_insert = [row,]
 
         try:

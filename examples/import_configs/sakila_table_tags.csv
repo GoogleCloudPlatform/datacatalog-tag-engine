@@ -1,0 +1,17 @@
+project,dataset,table,data_domain,broad_data_category,environment,data_origin,data_creation,data_ownership,data_asset_owner,data_confidentiality,data_retention,data_asset_documentation
+dgtoolkit,sakila_dw,actor,MARKETING,CONTENT,DEV,OPEN_DATA, 2021-10-13,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+dgtoolkit,sakila_dw,address,MARKETING,CONTENT,DEV,OPEN_DATA, 2021-10-13,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+dgtoolkit,sakila_dw,category,MARKETING,CONTENT,DEV,OPEN_DATA, 2021-10-13,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+dgtoolkit,sakila_dw,city,MARKETING,CONTENT,DEV,OPEN_DATA, 2021-10-13,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+dgtoolkit,sakila_dw,country,MARKETING,CONTENT,DEV,OPEN_DATA, 2021-10-13,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+dgtoolkit,sakila_dw,customer,MARKETING,CONTENT,DEV,OPEN_DATA, 2021-10-13,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+dgtoolkit,sakila_dw,film,MARKETING,CONTENT,DEV,OPEN_DATA, 2021-10-13,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+dgtoolkit,sakila_dw,film_actor,MARKETING,CONTENT,DEV,OPEN_DATA, 2021-10-13,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+dgtoolkit,sakila_dw,film_category,MARKETING,CONTENT,DEV,OPEN_DATA, 2021-10-13,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+dgtoolkit,sakila_dw,film_text,MARKETING,CONTENT,DEV,OPEN_DATA, 2021-10-13,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+dgtoolkit,sakila_dw,inventory,MARKETING,CONTENT,DEV,OPEN_DATA, 2021-10-13,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+dgtoolkit,sakila_dw,language,MARKETING,CONTENT,DEV,OPEN_DATA, 2021-10-13,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+dgtoolkit,sakila_dw,payment,MARKETING,CONTENT,DEV,OPEN_DATA, 2021-10-13,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+dgtoolkit,sakila_dw,rental,MARKETING,CONTENT,DEV,OPEN_DATA, 2021-10-13,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+dgtoolkit,sakila_dw,staff,MARKETING,CONTENT,DEV,OPEN_DATA, 2021-10-13,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+dgtoolkit,sakila_dw,store,MARKETING,CONTENT,DEV,OPEN_DATA, 2021-10-13,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html

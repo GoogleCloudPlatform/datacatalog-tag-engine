@@ -100,9 +100,11 @@ class DataCatalogUtils:
                 field_type = "bool"
             if field_value.type_.primitive_type == datacatalog.FieldType.PrimitiveType.TIMESTAMP:
                 field_type = "datetime"
+            if field_value.type_.primitive_type == datacatalog.FieldType.PrimitiveType.RICHTEXT:
+                field_type = "richtext"
             if field_value.type_.primitive_type == datacatalog.FieldType.PrimitiveType.PRIMITIVE_TYPE_UNSPECIFIED:
-                field_type = "enum"   
-                     
+                field_type = "enum"
+                       
                 index = 0
                 enum_values_long = str(field_value.type_).split(":") 
                 for long_value in enum_values_long:
@@ -244,8 +246,8 @@ class DataCatalogUtils:
             creation_status = constants.SUCCESS
             return creation_status
         
-        creation_status = self.create_update_tag(fields, tag_exists, tag_id, config_uuid, 'STATIC', tag_history, tag_stream, entry, column)    
-                   
+        creation_status = self.create_update_tag(fields, tag_exists, tag_id, config_uuid, 'STATIC', tag_history, tag_stream, entry, uri, column)    
+           
         return creation_status
 
 
@@ -298,13 +300,14 @@ class DataCatalogUtils:
                 query_str = self.parse_query_expression(uri, query_expression)
             #print('returned query_str: ' + query_str)
             
-            field_value, error_exists = self.run_query(bq_client, query_str, batch_mode, store)
+            # note: field_value is of type list
+            field_value, error_exists = self.run_query(bq_client, query_str, field_type, batch_mode, store)
             #print('field_value: ', field_value)
             #print('error_exists: ', error_exists)
     
-            if error_exists or field_value == None:
+            if error_exists or field_value == []:
                 continue
-    
+            
             tag, error_exists = self.populate_tag_field(tag, field_id, field_type, field_value, store)
     
             if error_exists:
@@ -315,7 +318,12 @@ class DataCatalogUtils:
             
             # store the value back in the dict, so that it can be accessed by the exporter
             #print('field_value: ' + str(field_value))
-            field['field_value'] = field_value
+            if field_type == 'richtext':
+                formatted_value = ', '.join(str(v) for v in field_value)
+            else:
+                formatted_value = field_value[0]
+                
+            field['field_value'] = formatted_value
             
         # for loop ends here
                 
@@ -1136,7 +1144,7 @@ class DataCatalogUtils:
                 continue
         
             field_type = None
-            field_value = tag_dict[field_name]
+            field_value = tag_dict[field_name].strip()
             
             for template_field in template_fields:
                 if template_field['field_id'] == field_name:
@@ -1214,6 +1222,14 @@ class DataCatalogUtils:
                 float_field = datacatalog.TagField()
                 float_field.double_value = float(field_value)
                 tag.fields[field_id] = float_field
+            if field_type == 'RICHTEXT':
+                richtext_field = datacatalog.TagField()
+                richtext_field.richtext_value = field_value.replace(',', '<br>')
+                tag.fields[field_id] = richtext_field
+                
+                # For richtext values, replace '<br>' with ',' when exporting to BQ
+                field['field_value'] = field_value.replace('<br>', ', ')
+                
             if field_type == 'ENUM':
                 enum_field = datacatalog.TagField()
                 enum_field.enum_value.display_name = field_value
@@ -1293,6 +1309,7 @@ class DataCatalogUtils:
         if tag_history:
             bqu = bq.BigQueryUtils()
             template_fields = self.get_template()
+            print('before copy_tag, uri: ', uri)
             bqu.copy_tag(self.template_id, template_fields, uri, column_name, fields)
 
         if tag_stream:
@@ -1331,84 +1348,7 @@ class DataCatalogUtils:
             
         return linked_resources
 
-
-################### Propagation Methods ##########################
-
-    def apply_static_propagated_tag(self, config_status, source_res, view_res, columns, fields, source_config_uuid, view_config_uuid, template_uuid):
-        
-        store = te.TagEngineUtils()        
-        bigquery_resource = '//bigquery.googleapis.com/projects/' + view_res
-        print("bigquery_resource: " + bigquery_resource)
-        
-        request = datacatalog.LookupEntryRequest()
-        request.linked_resource=bigquery_resource
-        entry = self.client.lookup_entry(request)
-       
-        creation_status = constants.SUCCESS
-            
-        try:    
-            
-            if len(columns) == 0:
-                columns.append("")
-            
-            for column in columns:
-            
-                tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
-                #print('tag_exists: ' + str(tag_exists))
-            
-                tag = datacatalog.Tag()
-                tag.template = self.template_path
-            
-                for field in fields:
-                    field_id = field['field_id']
-                    field_type = field['field_type']
-                    field_value = field['field_value']
-            
-                    if field_type == "bool":
-                        bool_field = datacatalog.TagField()
-                        bool_field.bool_value = bool(field_value)
-                        tag.fields[field_id] = bool_field    
-                    if field_type == "string":
-                        string_field = datacatalog.TagField()
-                        string_field.string_value = str(field_value)
-                        tag.fields[field_id] = string_field
-                    if field_type == "double":
-                        float_field = datacatalog.TagField()
-                        float_field.double_value = float(field_value)
-                        tag.fields[field_id] = float_field
-                    if field_type == "enum":
-                        enum_field = datacatalog.TagField()
-                        enum_field.enum_value.display_name = field_value
-                        tag.fields[field_id] = enum_field
-                    if field_type == "datetime":
-                        datetime_field = datacatalog.TagField()
-                        split_datetime = field_value.split(" ")
-                        datetime_value = split_datetime[0] + "T" + split_datetime[1] + "Z"
-                        print("datetime_value: " + datetime_value)
-                        tag.fields[field_id].timestamp_value.FromJsonString(datetime_value)
-                            
-                if column != "":
-                    tag.column = column
-                    print('tag.column == ' + column)   
-            
-                if tag_exists == True:
-                    tag.name = tag_id
-                    response = self.client.update_tag(tag=tag)
-                    store.write_propagated_log_entry(config_status, constants.TAG_UPDATED, constants.BQ_RES, source_res, view_res, column, "STATIC", source_config_uuid, view_config_uuid, tag_id, template_uuid)
-                else:
-                    response = self.client.create_tag(parent=entry.name, tag=tag)
-                    tag_id = response.name
-                    store.write_propagated_log_entry(config_status, constants.TAG_CREATED, constants.BQ_RES, source_res, view_res, column, "STATIC", source_config_uuid, view_config_uuid, tag_id, template_uuid)
-            
-                #print("response: " + str(response))
-        
-        except ValueError:
-            print("ValueError: create_static_tags failed due to invalid parameters.")
-            creation_status = constants.ERROR
-            
-        return creation_status
-     
-         
+  
     def parse_query_expression(self, uri, query_expression, column=None):
         
         #print("*** enter parse_query_expression ***")
@@ -1494,11 +1434,11 @@ class DataCatalogUtils:
         return query_str
     
     
-    def run_query(self, bq_client, query_str, batch_mode, store):
+    def run_query(self, bq_client, query_str, field_type, batch_mode, store):
         
         #print('*** enter run_query ***')
         
-        field_value = None
+        field_values = []
         error_exists = False
             
         try:
@@ -1525,12 +1465,13 @@ class DataCatalogUtils:
             # if query expression is well-formed, there should only be a single row returned with a single field_value
             # However, user may mistakenly run a query that returns a list of rows. In that case, grab only the top row.  
             row_count = 0
+
             for row in rows:
                 row_count = row_count + 1
-                field_value = row[0]
+                field_values.append(row[0])
             
-                if row_count > 1:
-                    break
+                if field_type != 'richtext' and row_count == 1:
+                    return field_values, error_exists
         
             # check row_count
             if row_count == 0:
@@ -1544,9 +1485,9 @@ class DataCatalogUtils:
             print('Error occurred during run_query: ', e)
             store.write_tag_value_error('invalid query parameter(s): ' + query_str + ' produced error ' + str(e))
         
-        #print('field_value: ', field_value)
+        #print('field_values: ', field_values)
         
-        return field_value, error_exists
+        return field_values, error_exists
         
 
     def populate_tag_field(self, tag, field_id, field_type, field_value, store):
@@ -1556,19 +1497,24 @@ class DataCatalogUtils:
         try:             
             if field_type == "bool":
                 bool_field = datacatalog.TagField()
-                bool_field.bool_value = bool(field_value)
+                bool_field.bool_value = bool(field_value[0])
                 tag.fields[field_id] = bool_field
             if field_type == "string":
                 string_field = datacatalog.TagField()
-                string_field.string_value = str(field_value)
+                string_field.string_value = str(field_value[0])
                 tag.fields[field_id] = string_field
+            if field_type == "richtext":
+                richtext_field = datacatalog.TagField()
+                formatted_value = '<br>'.join(str(v) for v in field_value)
+                richtext_field.richtext_value = str(formatted_value)
+                tag.fields[field_id] = richtext_field
             if field_type == "double":
                 float_field = datacatalog.TagField()
-                float_field.double_value = float(field_value)
+                float_field.double_value = float(field_value[0])
                 tag.fields[field_id] = float_field
             if field_type == "enum":
                 enum_field = datacatalog.TagField()
-                enum_field.enum_value.display_name = field_value
+                enum_field.enum_value.display_name = field_value[0]
                 tag.fields[field_id] = enum_field
             if field_type == "datetime":
                 # timestamp value gets stored in DC, expected format: 2020-12-02T16:34:14Z
@@ -1582,7 +1528,7 @@ class DataCatalogUtils:
                     timestamp_value = field_value.isoformat()
                     field_value = timestamp_value[0:19] + timestamp_value[26:32] + "Z"
                     timestamp = Timestamp()
-                    timestamp.FromJsonString(field_value)
+                    timestamp.FromJsonString(field_value[0])
                 
                 datetime_field = datacatalog.TagField()
                 datetime_field.timestamp_value = timestamp

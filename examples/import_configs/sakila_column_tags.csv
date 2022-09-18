@@ -1,0 +1,14 @@
+project,dataset,table,column,sensitive_field,sensitive_type
+dgtoolkit,sakila_dw,actor,first_name,TRUE,Personal_Identifiable_Information
+dgtoolkit,sakila_dw,actor,last_name,TRUE,Personal_Identifiable_Information
+dgtoolkit,sakila_dw,address,address,TRUE,Personal_Identifiable_Information
+dgtoolkit,sakila_dw,address,phone,TRUE,Personal_Identifiable_Information
+dgtoolkit,sakila_dw,customer,first_name,TRUE,Personal_Identifiable_Information
+dgtoolkit,sakila_dw,customer,last_name,TRUE,Personal_Identifiable_Information
+dgtoolkit,sakila_dw,customer,email,TRUE,Personal_Identifiable_Information
+dgtoolkit,sakila_dw,staff,first_name,TRUE,Personal_Identifiable_Information
+dgtoolkit,sakila_dw,staff,last_name,TRUE,Personal_Identifiable_Information
+dgtoolkit,sakila_dw,staff,picture,TRUE,Personal_Identifiable_Information
+dgtoolkit,sakila_dw,staff,email,TRUE,Personal_Identifiable_Information
+dgtoolkit,sakila_dw,staff,username,TRUE,Sensitive_Personal_Data
+dgtoolkit,sakila_dw,staff,password,TRUE,Sensitive_Personal_Data
