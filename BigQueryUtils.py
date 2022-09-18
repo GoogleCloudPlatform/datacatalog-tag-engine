@@ -124,7 +124,7 @@ class BigQueryUtils:
                 row[tagged_value['field_id']]= json.dumps(tagged_value['field_value'], default=str)
                 row[tagged_value['field_id']]= tagged_value['field_value']
     
-        #print('insert row: ' + str(row))
+        print('insert row: ' + str(row))
         row_to_insert = [row,]
 
         try:
@@ -140,12 +140,12 @@ class BigQueryUtils:
     # used by tag history feature
     def copy_tag(self, table_name, table_fields, tagged_table, tagged_column, tagged_values):
         
-        #print("*** inside BigQueryUtils.copy_tag() ***")
-        #print("table_name: " + table_name)
-        #print("table_fields: " + str(table_fields))
-        #print("tagged_table: " + tagged_table)
-        #print("tagged_column: " + tagged_column)
-        #print("tagged_values: " + str(tagged_values))
+        print("*** inside BigQueryUtils.copy_tag() ***")
+        print("table_name: " + table_name)
+        print("table_fields: " + str(table_fields))
+        print("tagged_table: " + tagged_table)
+        print("tagged_column: " + tagged_column)
+        print("tagged_values: " + str(tagged_values))
         
         exists, table_id, settings = self.table_exists(table_name)
         
