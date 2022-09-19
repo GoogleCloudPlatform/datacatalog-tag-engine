@@ -73,9 +73,9 @@ An entry configuration creates one or more FILESET entries in Data Catalog, each
 
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/entry_1.png" alt="static" width="700"/><br>
 
-###### Sample Data Catalog entry and tag 
+###### Sample entry and file metadata tag in Data Catalog
 
-Below is a sample entry and tag produced by the entry configuration in Tag Engine. 
+Below is a sample entry and tag produced by an entry configuration in Tag Engine. 
 
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/entry_2.png" alt="static" width="650"/>
 
@@ -86,3 +86,17 @@ The sensitive tag configuration annotates sensitive tables columns in BQ with th
 
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/data_sensitivity_1.png" alt="static" width="750"/>
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/data_sensitivity_2.png" alt="static" width="750"/>
+
+###### Sample mapping table in BQ (input to the sensitive tag configuration)
+
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/mapping_table.png" alt="static" width="500"/>
+
+###### Sample policy tag taxonomy in Data Catalog (input to the sensitive tag configuration)
+
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/policy_tag_taxonomy.png" alt="static" width="400"/>
+
+###### Sample sensitive tags in Data Catalog
+
+Below are sensitive tags (metadata and policy) produced by a sensitive tag configuration in Tag Engine: 
+
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/sensitive_tags.png" alt="static" width="500"/>
