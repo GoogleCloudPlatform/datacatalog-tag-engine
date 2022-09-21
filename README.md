@@ -10,7 +10,9 @@ This repository contains the Tag Engine application, which is an open-source ext
 
 ### Deployment Procedure
 
-Tag Engine requires both Google App Engine and Firestore. It also assumes that you will be tagging assets in BigQuery or Google Cloud Storage. Follow the steps below to deploy the Tag Engine application.  
+Tag Engine requires both Google App Engine and Firestore. It also assumes that you will be tagging assets in BigQuery or Google Cloud Storage. Follow the steps below to deploy the Tag Engine application in your Google Cloud project.
+
+Note: In the deployment procedure below, we use one GCP project for running Tag Engine and Data Catalog and another project for storing data assets in BigQuery. If this is your first time running Tag Engine, you may want to keep everything in one project for simplicity. 
 
 #### Step 1: Set the required environment variables
 ```
