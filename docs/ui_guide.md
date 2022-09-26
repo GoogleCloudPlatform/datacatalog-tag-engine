@@ -8,6 +8,7 @@ This is a user guide for the Tag Engine UI.
 *  Static tag configuration [link](#static)
 *  Dynamic tag configuration [link](#dynamic)
 *  Entry configuration [link](#entry)
+*  Glossary tag configuration
 *  Sensitive tag configuration [link](#sensitive)
 *  Restore tag configuration
 *  Import tag configuration
