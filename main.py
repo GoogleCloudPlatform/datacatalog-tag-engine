@@ -2077,7 +2077,7 @@ def dynamic_table_tags():
         resp = jsonify(success=False)
         return resp
     
-    if json['excluded_tables_uris']:
+    if 'excluded_tables_uris' in:
         excluded_tables_uris = json['excluded_tables_uris']
     else:
         excluded_tables_uris = None
@@ -2161,7 +2161,7 @@ def dynamic_column_tags():
         resp = jsonify(success=False)
         return resp
     
-    if json['excluded_tables_uris']:
+    if 'excluded_tables_uris' in json:
         excluded_tables_uris = json['excluded_tables_uris']
     else:
         excluded_tables_uris = None
