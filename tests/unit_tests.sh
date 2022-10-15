@@ -2,6 +2,10 @@ export TAG_ENGINE_URL=https://tag-engine-develop.uc.r.appspot.com
 
 ####### BQ section #######
 
+# static asset tags on BQ tables
+
+curl -X POST $TAG_ENGINE_URL/static_asset_tags -d @examples/static_asset_configs/static_asset_create_auto_bq.json
+
 # dynamic table tags
 
 curl -X POST $TAG_ENGINE_URL/dynamic_table_tags -d @examples/dynamic_table_configs/dynamic_table_create_auto.json
@@ -9,10 +13,6 @@ curl -X POST $TAG_ENGINE_URL/dynamic_table_tags -d @examples/dynamic_table_confi
 # dynamic column tags
 
 curl -X POST $TAG_ENGINE_URL/dynamic_column_tags -d @examples/dynamic_column_configs/dynamic_column_create_auto.json
-
-# static asset tags on BQ tables
-
-curl -X POST $TAG_ENGINE_URL/static_asset_tags -d @examples/static_asset_configs/static_asset_create_auto_bq.json
 
 # sensitive column tags on BQ tables
 
