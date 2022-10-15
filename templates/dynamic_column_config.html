@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+  <head>
+    <title>Tag Engine for Data Catalog</title>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+  </head>  
+    <body>
+	   <div class="pagetitle">
+	   <h1>Tag Engine for Data Catalog</h1>
+        </div>
+	   <div class="header">
+	   <h2>Config for creating dynamic column tags using {{ template_id }}</h2>
+	   </div>
+	   <h3>&nbsp;Query Expressions</h3>
+ 	   
+ 		   <h5 style="width: 800px;">&nbsp;To include a field in your tag, click on the checkbox next to the field and enter a query expression in the text box. <br>
+ 			   <br>
+ 			   &nbsp;The query expression must be a <i>valid</i> select statement in BigQuery. It may contain filter, aggregate functions, joins, groupings, subqueries, etc. as long as it's a valid select statement.<br>
+ 			   <br>
+ 			   &nbsp;In addition, the query expressions may reference these variables:<br>
+ 			   - <b>$column</b> refers to the BQ table column being tagged<br>
+			   - <b>$table</b> refers to the BQ table (or view) being tagged<br>
+ 			   - <b>$dataset</b> refers to the BQ dataset of the table (or view) being tagged<br>
+ 			   - <b>$project</b> refers to the BQ project of the table (or view) being tagged<br>
+ 			   <br>
+ 			   &nbsp;Here are some examples: <br>
+ 			   &nbsp;&nbsp;select count(*) from $table where $column is null<br>
+ 			   &nbsp;&nbsp;select count(distinct($column)) from $table <br>
+ 			   &nbsp;&nbsp;select count(*) > 1 from $table where $column is null<br>
+ 			   &nbsp;&nbsp;select rating from dw-project.quality.scores where table = '$table' and dataset = '$dataset' and project = '$project'<br>
+ 			   &nbsp;&nbsp;select '30-DAYS'<br>
+ 			    <br>
+ 			   &nbsp;Note: The result of the query expression must satisfy the type requirements of the field in the tag template. <br>
+ 			   &nbsp;For example, if the tag template field is of type string, the query expression must return a string type.
+			   
+ 		    <br><br>&nbsp;Mandatory tag template fields are marked by <span style="color:red;">*</span> and are already checked for you.
+ 		    </h5>
+
+         <form method="post" action="/process_dynamic_column_config">
+		    <table>
+			   {% for dict_field in fields %}
+		        <tr>
+		          <td>
+				{% if dict_field['is_required'] == True %}
+                    <input type="checkbox" class="form-control move-left" name="selected" value="{{ dict_field['field_id'] }}" checked>
+				{% else: %}
+                    <input type="checkbox" class="form-control move-left" name="selected" value="{{ dict_field['field_id'] }}">
+				{% endif %}
+				</td>
+				<td>
+				{% if dict_field['is_required'] == True %}
+				<span style="color:red;">*</span>
+				{% else: %}
+				&nbsp;
+				{% endif %}
+				{{ dict_field['field_id'] }} (type {{ dict_field['field_type'] }}):
+				</td>
+				<td>
+				<textarea name="{{ dict_field['field_id'] }}" style="align-content:left; width: 600px; overflow:auto;">select ...
+				</textarea>
+				</td>
+			   </tr>
+			   {% endfor %}
+			   </table>
+		   <p>&nbsp;</p>
+		   <h3>BigQuery Columns</h3>   
+	 	  
+	 		   <h5>Provide a BigQuery query that returns the set of columns you want to tag.</h5>
+	
+			<td>
+			<td><span style="color:red;">*</span> Included columns query:&nbsp;&nbsp;
+			<textarea name="included_columns_query" style="align-content:left; width: 600px; overflow:auto;">select ...
+			</textarea>
+			</td>
+			   
+			   <p>&nbsp;</p>
+			   <h3>BigQuery Tables</h3>
+		 	   
+		 		   <h5>Specify the URIs for the assets you want to tag. Wildcards are allowed in the table name. <br><br>
+					  Supported URI syntax: <br>
+					  bigquery/project/[PROJECT]/* <br>
+					  bigquery/project/[PROJECT]/dataset/[DATASET]/* <br>
+				      bigquery/project/[PROJECT]/dataset/[DATASET]/[TABLE] <br>
+				  </h5>
+			
+			    <table>
+			     <tr>
+			    <td><span style="color:red;">*</span> Included tables URIs:&nbsp;&nbsp;
+			    	  <input type="text" value="bigquery/project/[PROJECT]/dataset/[DATASET]/*" name="included_tables_uris" style="align-content:left; width: 700px; overflow:auto;"/>
+
+			    	</td>
+			     </tr>
+			     <tr><td>&nbsp;</td></tr>
+ 				<tr>
+ 			    <td>&nbsp;&nbsp;Excluded tables URIs:&nbsp;
+			    	  <input type="text" name="excluded_tables_uris" style="align-content:left; width: 700px; overflow:auto;"/>			 
+			    </td>
+ 		         </tr>
+		    </table>
+		        <p>&nbsp;</p>
+			   <h3>Scheduling Options</h3>
+		 	   
+		 		   <h5>If you choose the AUTO refresh mode, your tags will be scheduled for update based on your specified refresh frequency. <br>
+					   If you choose the ON-DEMAND refresh mode, your tags will <b>not</b> be scheduled for refresh (even if you specify a refresh frequency). <br>This mode is useful when you have tags that don't need to be updated or when you want to trigger the update from the API. <br><br>
+				   </h5>
+				
+			     <table>
+				<tr>	
+			    <td><span style="color:red;">*</span> Refresh mode:&nbsp;<select name="refresh_mode" style="width: 100px;padding: 3px;">
+  				  				<option value="AUTO" selected>AUTO</option>
+  							   	<option value="ON-DEMAND">ON-DEMAND</option>
+							  </select>
+			    </td>
+		         </tr>
+			     <tr><td>&nbsp;</td></tr>
+				<tr>	
+			    <td><span style="color:red;">*</span> Refresh frequency:&nbsp;<input type="text" value="24" name="refresh_frequency" style="width: 30px;padding: 3px;">&nbsp;
+				    			  <select name="refresh_unit" style="width: 70px;padding: 3px;">
+								<option value="minutes">minutes</option>
+  				  				<option value="hours" selected>hours</option>
+  							   	<option value="days">days</option>
+							  </select></td>
+		         </tr>
+		        </table>
+			    {% if display_tag_history %}
+			      <p>&nbsp;</p>
+				<h3>Tag History Option</h3>
+			    <table>
+			    <tr><td><span style="color:red;">*</span> <input type="checkbox" class="form-control move-left" name="tag_history" value="selected" checked>
+				    Save tag values from this config to BigQuery tag history table.&nbsp;&nbsp;
+			    </td></tr>
+			    </table>
+			    {% endif %}
+			    {% if display_tag_stream %}
+			      <p>&nbsp;</p>
+				<h3>Tag Stream Option</h3>
+			    <table>
+			    <tr><td><span style="color:red;">*</span> <input type="checkbox" class="form-control move-left" name="tag_stream" value="selected" checked>
+				    Publish tag values from this config to Pub/Sub tag stream topic.&nbsp;&nbsp;
+			    </td></tr>
+			    </table>
+			    {% endif %}
+	         <p>&nbsp;</p>
+		        <table>
+		        <tr>
+			   <td><input type="submit" value="Submit Tag Config" name="action">
+			       <input type="submit" value="Cancel Changes" name="action">
+			   </td>
+		        </tr>
+			   </table>
+			   <input type="hidden" name ="template_id" value="{{ template_id }}">
+			   <input type="hidden" name ="template_project" value="{{ template_project }}">
+			   <input type="hidden" name ="template_region" value="{{ template_region }}">
+
+			   {% for dict_field in fields %}
+			   	<input type="hidden" name="{{ dict_field['field_id'] }}_datatype" value="{{ dict_field['field_type'] }}">
+			    {% endfor %}	
+
+         </form>
+    </body>
+</html>

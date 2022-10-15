@@ -39,19 +39,18 @@
 		     </tr>
 			{% endfor %}
 		    <tr>
-		    <td>&nbsp;<span style="color:#0b5394;">Included URIs:</span></td>
+		    <td>&nbsp;<span style="color:#0b5394;">Included Tables URIs:</span></td>
 	         </tr>
 		    <tr>
-		    <td>&nbsp;&nbsp;{{ config['included_uris'] }}</td>
+		    <td>&nbsp;&nbsp;{{ config['included_tables_uris'] }}</td>
 	         </tr>
 		    <tr>
-		    <td>&nbsp;<span style="color:#0b5394;">Excluded URIs:</span></td>
+		    <td>&nbsp;<span style="color:#0b5394;">Excluded Tables URIs:</span></td>
 	         </tr>
 		    <tr>
-		    <td>&nbsp;&nbsp;{{ config['excluded_uris'] }}</td>
+		    <td>&nbsp;&nbsp;{{ config['excluded_tables_uris'] }}</td>
 	         </tr>
 	        
-		    {% if config['tag_type'] == 'DYNAMIC' %}
 		    <tr>
 		    <td>&nbsp;<span style="color:#0b5394;">Refresh frequency:</span></td>
 	         </tr>
@@ -59,7 +58,7 @@
 		    <td>&nbsp;&nbsp;{{ config['refresh_frequency'] }} hours
 		    </td>
 		    </tr>
-		    {% endif %}
+
 		   
 	        </table>
 		   <br>

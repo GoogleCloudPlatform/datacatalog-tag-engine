@@ -1,7 +1,7 @@
 {
     "template_id": "file_metadata",
-    "project_id": "tag-engine-develop",
-    "region": "us-central1",
+    "template_project": "tag-engine-develop",
+    "template_region": "us-central1",
     "fields": [
         {
             "field_id": "name"
@@ -43,7 +43,7 @@
             "field_id": "media_link"
         }
     ],
-    "included_uris": "gs://discovery-area/sample_data/*",
+    "included_assets_uris": "gs://discovery-area/sample_data/*",
     "refresh_mode": "ON_DEMAND",
     "tag_history": true,
     "tag_stream": false   

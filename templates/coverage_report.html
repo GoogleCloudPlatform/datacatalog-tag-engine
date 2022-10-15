@@ -27,9 +27,9 @@
 			      {% for dataset, tables in dataset_record.items(): %}
 			        {% if project_dataset in dataset: %}
 			           {% for table in tables: %}
-					   {% set table_name = table.0 %}
-					   {% set tag_count = table.1 %}
-					   {% set res = project_dataset + "." + table_name %}
+					      {% set table_name = table.0 %}
+					      {% set tag_count = table.1 %}
+					      {% set res = project_dataset + "." + table_name %}
 				        <tr>
 				          <td style="text-align:left">&nbsp;&nbsp;
 						{% if tag_count > 0 %}	
@@ -66,6 +66,6 @@
 	                            <span style="background-color:yellow">&nbsp;&nbsp;</span>&nbsp;Partial&nbsp;&nbsp;&nbsp;&nbsp;
 						   <span style="background-color:lightgreen">&nbsp;&nbsp;</span>&nbsp;Complete&nbsp;&nbsp;&nbsp;&nbsp;
 						    <span style="background-color:green">&nbsp;&nbsp;</span>&nbsp;More than expected&nbsp;&nbsp;&nbsp;&nbsp;
-	    <p>&nbsp;&nbsp;<a href="{{ url_for('coverage_settings', saved=0) }}">Coverage Settings</a>&nbsp;&nbsp;<a href="/">Homepage</a></p>
+	    <p>&nbsp;&nbsp;<a href="{{ url_for('coverage_report_settings', saved=0) }}">Coverage Settings</a>&nbsp;&nbsp;<a href="/">Homepage</a></p>
     </body>
 </html>

@@ -1,0 +1,48 @@
+{
+    "template_id": "data_governance",
+    "project_id": "tag-engine-develop",
+    "template_region": "us-central1",
+    "fields": [
+        {
+            "field_id": "data_domain",
+            "field_value": "LOGISTICS"
+        },
+        {
+            "field_id": "broad_data_category",
+            "field_value": "CONTENT"
+        },
+        {
+            "field_id": "environment",
+            "field_value": "PROD"
+        },
+        {
+            "field_id": "data_origin",
+            "field_value": "OPEN_DATA"
+        },
+        {
+            "field_id": "data_ownership",
+            "field_value": "THIRD_PARTY"
+        },
+        {
+            "field_id": "data_confidentiality",
+            "field_value": "PUBLIC"
+        },
+        {
+            "field_id": "data_retention",
+            "field_value": "30_DAYS"
+        },
+        {
+            "field_id": "data_creation",
+            "field_value": "2022-06-17"
+        },
+	    {
+	        "field_id": "data_asset_documentation",
+            "field_value": "https://support.datasf.org/help/311-case-data-faq"
+        }
+    ],
+    "included_assets_uris": "bigquery/project/warehouse-337221/dataset/cities_311/*",
+    "excluded_assets_uris": "",
+    "refresh_mode": "ON_DEMAND",
+    "tag_history": true,
+    "tag_stream": false   
+}

@@ -15,19 +15,19 @@
 		   <h6>&nbsp;Choose an existing Tag Template to create, edit or view your Data Catalog tags.<br> 
 			  &nbsp;Enter the Tag Template's id, project, and region in the text fields below.</h6>
 	   </span> 
-         <form method="post" action="/search_template">
+         <form method="post" action="/search_tag_template">
 		    <table>
 		        <tr>
 		          <td>Tag Template Id:</td>
 		          <td><input type="text" name="template_id" value="{{ template_id }}" style="width: 150px;padding: 3px;"></td>
 			   </tr>
 		        <tr>
-		          <td>GCP Project Id:</td>
-		          <td><input type="text" name="project_id" value="{{ project_id }}" style="width: 150px;padding: 3px;"></td>
+		          <td>Template Project:</td>
+		          <td><input type="text" name="template_project" value="{{ template_project }}" style="width: 150px;padding: 3px;"></td>
 			   </tr>
 		        <tr>
-		          <td>GCP Region:</td>
-		          <td><input type="text" name="region" value="{{ region }}" style="width: 150px;padding: 3px;"></td>
+		          <td>Template Region:</td>
+		          <td><input type="text" name="template_region" value="{{ template_region }}" style="width: 150px;padding: 3px;"></td>
 			   </tr>
 			    <td></td>
 			    <td><input type="submit" value="Search Template" name="search" style="width: 158px;padding: 3px;"></td>
@@ -38,10 +38,10 @@
 	    <div class="header">
 	    <h2>Settings and Reports</h2>
 	    </div>
-	    &nbsp;<a href="{{ url_for('default_settings', saved=0) }}">Set Default Tag Template</a><br>
+	    &nbsp;<a href="{{ url_for('default_tag_template_settings', saved=0) }}">Set Default Tag Template</a><br>
 	    &nbsp;<a href="{{ url_for('tag_history_settings', saved=0) }}">Turn on/off Tag History</a><br>
 	    &nbsp;<a href="{{ url_for('tag_stream_settings', saved=0) }}">Turn on/off Tag Stream</a><br>
-	    &nbsp;<a href="{{ url_for('coverage_settings', saved=0) }}">Configure Coverage Report</a><br>
+	    &nbsp;<a href="{{ url_for('coverage_report_settings', saved=0) }}">Configure Coverage Report</a><br>
 	    &nbsp;<a href="{{ url_for('coverage_report') }}">View Coverage Report</a><br>
 	    
 	    <p>&nbsp;</p>

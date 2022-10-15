@@ -1,17 +1,17 @@
 project,dataset,table,column,is_compliant,reason
-tag-engine-develop,finwire,FINWIRE1976Q1_CMP ,pts,TRUE,
-tag-engine-develop,finwire,FINWIRE1976Q1_CMP ,recType,TRUE,
-tag-engine-develop,finwire,FINWIRE1976Q1_CMP ,companyName,TRUE,
-tag-engine-develop,finwire,FINWIRE1976Q1_CMP ,cik,TRUE,
-tag-engine-develop,finwire,FINWIRE1976Q1_CMP ,status,TRUE,
-tag-engine-develop,finwire,FINWIRE1976Q1_CMP ,industryID,TRUE,
-tag-engine-develop,finwire,FINWIRE1976Q1_CMP ,spRating,TRUE,
-tag-engine-develop,finwire,FINWIRE1976Q1_CMP ,foundingDate,TRUE,
-tag-engine-develop,finwire,FINWIRE1976Q1_CMP ,addr_line1,TRUE,
-tag-engine-develop,finwire,FINWIRE1976Q1_CMP ,addr_line2,TRUE,
-tag-engine-develop,finwire,FINWIRE1976Q1_CMP ,postalCode,TRUE,
-tag-engine-develop,finwire,FINWIRE1976Q1_CMP ,city,TRUE,
-tag-engine-develop,finwire,FINWIRE1976Q1_CMP ,stateProvince,TRUE,
-tag-engine-develop,finwire,FINWIRE1976Q1_CMP ,country,TRUE,
-tag-engine-develop,finwire,FINWIRE1976Q1_CMP ,ceoName,FALSE,Name was used by knowledge graph
-tag-engine-develop,finwire,FINWIRE1976Q1_CMP ,description,FALSE,Description was used in financial analysis
+tag-engine-develop,finwire,FINWIRE1976Q1_CMP,pts,TRUE,Passed automated controls
+tag-engine-develop,finwire,FINWIRE1976Q1_CMP,recType,TRUE,Passed automated controls
+tag-engine-develop,finwire,FINWIRE1976Q1_CMP,companyName,TRUE,Passed automated controls
+tag-engine-develop,finwire,FINWIRE1976Q1_CMP,cik,TRUE,Passed automated controls
+tag-engine-develop,finwire,FINWIRE1976Q1_CMP,status,TRUE,Passed automated controls
+tag-engine-develop,finwire,FINWIRE1976Q1_CMP,industryID,TRUE,Passed automated controls
+tag-engine-develop,finwire,FINWIRE1976Q1_CMP,spRating,TRUE,Passed automated controls
+tag-engine-develop,finwire,FINWIRE1976Q1_CMP,foundingDate,TRUE,Passed automated controls
+tag-engine-develop,finwire,FINWIRE1976Q1_CMP,addr_line1,TRUE,Passed automated controls
+tag-engine-develop,finwire,FINWIRE1976Q1_CMP,addr_line2,TRUE,Passed automated controls
+tag-engine-develop,finwire,FINWIRE1976Q1_CMP,postalCode,TRUE,Passed automated controls
+tag-engine-develop,finwire,FINWIRE1976Q1_CMP,city,TRUE,Passed automated controls
+tag-engine-develop,finwire,FINWIRE1976Q1_CMP,stateProvince,TRUE,Passed automated controls
+tag-engine-develop,finwire,FINWIRE1976Q1_CMP,country,TRUE,Passed automated controls
+tag-engine-develop,finwire,FINWIRE1976Q1_CMP,ceoName,FALSE,Name was used by knowledge graph
+tag-engine-develop,finwire,FINWIRE1976Q1_CMP,description,FALSE,Description was used in financial analysis

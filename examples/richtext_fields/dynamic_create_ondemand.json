@@ -1,7 +1,7 @@
 {
     "template_id": "data_sharing_agreement",
-    "project_id": "tag-engine-develop",
-    "region": "us-central1",
+    "template_project": "tag-engine-develop",
+    "template_region": "us-central1",
     "fields": [
         {
             "field_id": "data_owner_name",

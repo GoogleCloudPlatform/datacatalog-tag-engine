@@ -1,6 +1,6 @@
 <html>
  <head>
-   <title>Restore Config Created</title>
+   <title>Restore Tag Config Created</title>
    <link rel="stylesheet" type="text/css" href="/static/style.css">
  </head>
  <body>
@@ -11,10 +11,10 @@
       {% endif %}
 	 
    <div class="pagetitle">
-   <h1>Restore Config Submitted</h1>
+   <h1>Restore Tag Config Submitted</h1>
     </div>
        <div id="main">
-         <p>Your restore config is being processed. Please check <a href="{{ url_for('view_configs',template_id=target_template_id,project_id=target_template_project,region=target_template_region) }}">here</a> for the latest status of your request. </p>
+         <p>Your restore config is being processed. Please check <a href="{{ url_for('view_configs',template_id=target_template_id,template_project=target_template_project,template_region=target_template_region) }}">here</a> for the latest status of your request. </p>
 	   
   	   <p>Here's a summary of your config:</p>
          <p>
@@ -34,7 +34,7 @@
 		<span style="color:#0b5394;">Tag history option</span>: {{ tag_history }}<br>
 		<span style="color:#0b5394;">Tag stream option</span>: {{ tag_stream }}<br>
 	  </p></p>
-	  <p><a href="{{ url_for('choose_action',template_id=target_template_id,project_id=target_template_project,region=target_template_region) }}">Create more configs</a>&nbsp;&nbsp;<a href="/">Switch tag templates / Homepage</a></p>
+	  <p><a href="{{ url_for('choose_action',template_id=target_template_id,template_project=target_template_project,template_region=target_template_region) }}">Create more configs</a>&nbsp;&nbsp;<a href="/">Switch tag templates / Homepage</a></p>
      </div>
    </div>
  </body>

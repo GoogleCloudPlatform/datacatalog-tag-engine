@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+  <head>
+    <title>Tag Engine</title>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+  </head>  
+    <body>
+	   <div class="pagetitle">
+	   <h1>Tag Engine</h1>
+        </div>
+	   <div class="header">
+	   <h2>Update Static Assets Tags using {{ template_id }}</h2>
+	   <span style="color:#9d9a9a;">
+		   <h5>Make changes to your static assets config below. A checked box indicates the field is part of this tag config. You can add new fields and/or remove existing ones from the tag config. <br>You can also edit a field's value, the included URIs, excluded URIs, and tag history.  <br><br>   
+		   </h5>
+	  </span>
+	   </div>
+	   <h3>Template Field Values</h3>
+	   
+	   <span style="color:#9d9a9a;">
+		   <h5>
+	 	Mandatory tag template fields are marked by <span style="color:red;">*</span>. 
+	 	</h5>
+	   </span>
+         <form method="post" action="/process_update_static_asset_config">
+		    <table>
+			   {% for field in fields %}
+		        <tr>
+		          <td>   
+				   {% set ns = namespace(found=false) %}
+				   
+				   {% for current_field in config['fields']  %}
+				      {% if current_field['field_id'] == field['field_id'] %}
+					      
+						 {% set ns.found = true %}
+                              
+						 <input type="checkbox" class="form-control move-left" name="selected" value="{{ field['field_id'] }}" checked>
+					 {% endif %}
+				    {% endfor %}
+				    
+				    {% if ns.found == false %}
+				       <input type="checkbox" class="form-control move-left" name="selected" value="{{ field['field_id'] }}">
+				    {% endif %}
+				    
+				    
+				</td>
+				<td>
+				{% if field['is_required'] == True %}
+				<span style="color:red;">*</span>
+				{% else: %}
+				&nbsp;
+				{% endif %}
+				{{ field['field_id'] }} (type {{ field['field_type'] }}):
+				</td>
+				<td>
+				{% if field['field_type'] == "enum": %}
+				   <select name= "{{ field['field_id'] }}" style="width: 207px;padding: 3px;">
+					   
+					   {% set ns = namespace(found=false) %}
+					   
+					   {% for current_field in config['fields'] %}
+					      {% if current_field['field_id'] == field['field_id'] %}
+					      
+						      {% set ns.found = true %}
+					      
+							 {% for enum_value in field['enum_values'] %}
+						         {% if current_field['field_value'] == enum_value %}
+					                <option value="{{ enum_value }}" selected>{{ enum_value }}</option>
+							    {% else %}
+							      <option value="{{ enum_value }}">{{ enum_value }}</option>
+							    {% endif %}
+					    	      {% endfor %}
+						 
+						 {% endif %}
+					    {% endfor %}
+					    {% if ns.found == false %}
+					       {% for enum_value in field['enum_values'] %}
+					       <option value="{{ enum_value }}">{{ enum_value }}</option>
+						  {% endfor %}
+					    {% endif %}
+				   </select>
+				
+				{% elif field['field_type'] == "bool": %}
+				    <select name= "{{ field['field_id'] }}" style="width: 80px;padding: 3px;">
+				      {% set ns = namespace(found=false) %}
+				      
+					 {% for current_field in config['fields'] %}
+					   
+					   {% if current_field['field_id'] == field['field_id'] %}
+				           {% set ns.found = true %}
+						   
+						   {% if current_field['field_value'] == True %} 
+						      <option value="True" selected>True</option>
+						   {% else %}
+					           <option value="True">True</option>
+						   {% endif %}
+						   
+						   {% if current_field['field_value'] == False %} 
+						      <option value="False" selected>False</option>
+						   {% else %}
+					           <option value="False">False</option>
+						   {% endif %}
+					   {% endif %}
+					 {% endfor %}
+					 
+					 {% if ns.found == false %}
+					 	<option value="True">True</option>
+						<option value="False">False</option>
+					 {% endif %}
+				    </select>
+				    
+				{% elif field['field_type'] == "datetime": %}
+			        {% set ns = namespace(found=false) %}
+			      
+				   {% for current_field in config['fields'] %}
+				   
+				      {% if current_field['field_id'] == field['field_id'] %}
+			           {% set ns.found = true %}
+					   
+			                <input type="text" value="{{ current_field['field_value'] }}" name="{{ field['field_id'] }}" style="width: 150px;padding: 3px;">
+
+					 {% endif %}
+				    {% endfor %}
+				    
+				   {% if ns.found == false %}
+		                <input type="text" value="{{ current_time }}" name="{{ field['field_id'] }}" style="width: 150px;padding: 3px;">
+				   {% endif %}
+					
+				{% else: %}
+ 			        {% set ns = namespace(found=false) %}
+			      
+ 				   {% for current_field in config['fields'] %}
+				   
+ 				      {% if current_field['field_id'] == field['field_id'] %}
+ 			           {% set ns.found = true %}
+					   
+					       <input type="text" value="{{ current_field['field_value'] }}" name="{{ field['field_id'] }}">	
+
+    					 {% endif %}
+    				    {% endfor %}
+				    
+ 				   {% if ns.found == false %}
+ 		                <input type="text" value="" name="{{ field['field_id'] }}">
+ 				   {% endif %}
+					
+				{% endif %}
+				</td>
+			   </tr>
+			   {% endfor %}
+			   </table>
+		    <p>&nbsp;</p>
+			   <h3>BigQuery or Google Cloud Storage Assets</h3>
+		 	   
+			   <h5>
+			   Specify comma-separated list of URIs for resources to include in and exclude from your static tag. Wildcards are allowed in the table name. <br><br>
+					  Supported URIs for BigQuery resources: <br>
+					   bigquery/project/[PROJECT]/dataset/[DATASET]/* <br>
+				       bigquery/project/[PROJECT]/dataset/[DATASET]/[TABLE] <br>
+				
+				
+ 			   Specify a comma-separated list of URIs for file paths to include in and exclude from your entry config. Wildcards are allowed in the path name. <br><br>
+ 					  Supported URIs for GCS files: <br>
+ 					    gs://[BUCKET]/[FOLDER]/* <br>
+ 				        gs://[BUCKET]/[FOLDER]/*.parquet <br>
+ 					    gs://[BUCKET]/[FOLDER]/[FOLDER]/* <br>
+ 				        </h5>
+			   
+			    <table>
+			     <tr>
+			    <td><span style="color:red;">*</span>Included Assets URIs:&nbsp;&nbsp;
+					<input type="text" value="{{ config['included_assets_uris'] }}" name="included_assets_uris" style="align-content:left; width: 700px; overflow:auto;"/>
+			     </td>
+			     </tr>
+			     <tr><td>&nbsp;</td></tr>
+				<tr>
+ 			    <td>&nbsp;Excluded Assets URIs:&nbsp;&nbsp;
+					<input type="text" value="{{ config['excluded_assets_uris'] }}" name="excluded_assets_uris" style="align-content:left; width: 700px; overflow:auto;"/>	
+			    </td>
+		         </tr>
+		         </table>
+				 
+    		        <p>&nbsp;</p>
+    			   <h3>Update Options</h3>
+    		 	   <span style="color:#9d9a9a;">
+    		 		   <h5>If you choose the AUTO refresh mode, your static config will be scheduled for updates based on your specified refresh frequency. <br>
+    					   If you choose the ON-DEMAND refresh mode, your static config will <b>not</b> be scheduled for updates (even if you specify a refresh frequency). <br>The AUTO mode is helpful for tagging new tables in BQ or files on GCS on a recurring schedule. It will not re-tag existing tables or files. <br><br>
+    				   </h5>
+    				</span>
+ 			     <table>
+  				<tr>	
+  			    <td>Refresh mode:&nbsp;<select name="refresh_mode">
+ 				    			{% if config['refresh_mode'] == 'AUTO' %}
+    				  				<option value="AUTO" selected>AUTO</option>
+    							   	<option value="ON-DEMAND">ON-DEMAND</option>
+ 							{% else %}
+    				  				<option value="AUTO">AUTO</option>
+    							   	<option value="ON-DEMAND" selected>ON-DEMAND</option>
+ 							{% endif %}
+  							  </select>
+							  
+  			    </td>
+  		         </tr>
+  			     <tr><td>&nbsp;</td></tr>
+ 				<tr>	
+ 			    <td>Refresh frequency: <input type="text" value="{{ config['refresh_frequency'] }}" name="refresh_frequency" style="width: 30px;padding: 3px;"> &nbsp;<select name="refresh_unit" style="width: 70px;padding: 3px;">
+  						{% if config['refresh_unit'] == 'minutes' %}
+     				  			<option value="minutes" selected>minutes</option>
+								<option value="hours">hours</option>
+     							<option value="days">days</option>
+			    		{% elif config['refresh_unit'] == 'hours' %}
+ 				  				<option value="minutes">minutes</option>
+								<option value="hours" selected>hours</option>
+ 							   	<option value="days">days</option>
+						{% else %}
+ 				  				<option value="minutes">minutes</option>
+								<option value="hours">hours</option>
+ 							   	<option value="days">days</option>
+						{% endif %}
+    							  </select></td>
+ 		         </tr>
+ 		         </table>
+				 
+				 
+				 
+			    {% if display_tag_history_option == 1 %}
+			      <p>&nbsp;</p>
+				<h3>Choose Tag History Option</h3>
+			    <table>
+			    <tr><td>
+				    {% if config['tag_history'] == True %} 
+				    		<input type="checkbox" class="form-control move-left" name="tag_history" value="selected" checked>
+				    {% else %}
+				         	<input type="checkbox" class="form-control move-left" name="tag_history" value="selected">
+				    {% endif %}
+				    Save tag values to BigQuery history table&nbsp;&nbsp;
+			    </td></tr>
+			    </table>
+			    {% endif %}
+			    {% if display_tag_stream_option == 1 %}
+			      <p>&nbsp;</p>
+				<h3>Choose Tag Stream Option</h3>
+			    <table>
+			    <tr><td>
+				    {% if config['tag_stream'] == True %} 
+				    		<input type="checkbox" class="form-control move-left" name="tag_stream" value="selected" checked>
+				    {% else %}
+				         	<input type="checkbox" class="form-control move-left" name="tag_stream" value="selected">
+				    {% endif %}
+				    Save tag values to Pub/Sub tag stream topic&nbsp;&nbsp;
+			    </td></tr>
+			    </table>
+			    {% endif %}
+	         <p>&nbsp;</p>
+		        <table>
+		        <tr>
+			   <td><input type="submit" value="Submit Changes" name="action">&nbsp;<input type="submit" value="Cancel Changes" name="action"></td>
+		        </tr>
+			   </table>
+			   <input type="hidden" name="template_id" value="{{ template_id }}">
+			   <input type="hidden" name="template_project" value="{{ template_project }}">
+			   <input type="hidden" name="template_region" value="{{ template_region }}">
+			   <input type="hidden" name="config_uuid" value="{{ config['config_uuid'] }}">
+			   
+			   {% for field in fields %}
+			   	<input type="hidden" name="{{ field['field_id'] }}_datatype" value="{{ field['field_type'] }}">
+			   {% endfor %}	   
+         </form>
+    </body>
+</html>

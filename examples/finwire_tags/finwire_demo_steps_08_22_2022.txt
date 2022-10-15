@@ -1,0 +1,7 @@
+curl -X POST https://tag-engine-develop.uc.r.appspot.com/static_create -d @examples/finwire_configs/finwire_data_product.json
+
+curl -X POST https://tag-engine-develop.uc.r.appspot.com/dynamic_create -d @examples/finwire_configs/finwire_data_standardization.json
+
+curl -X POST https://tag-engine-develop.uc.r.appspot.com/sensitive_create -d @examples/finwire_configs/finwire_data_sensitivity.json
+
+curl -X POST https://tag-engine-develop.uc.r.appspot.com/dynamic_create -d @examples/finwire_configs/finwire_data_resource.json

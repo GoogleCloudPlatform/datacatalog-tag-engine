@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+  <head>
+    <title>Tag Engine</title>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+  </head>  
+    <body>
+	    {% if settings == 1 %}
+	    <table><tr><td>
+	    &nbsp;<span style="color:green;">Settings Saved!</span>
+         </td></tr></table><p>
+	    {% endif %}
+	    
+	   <div class="pagetitle">
+	   <h1>Tag Engine for Data Catalog</h1>
+        </div>
+	   <div class="header">
+	   <h2>Default Tag Template Settings</h2>
+	   </div>
+	   <span style="color:#9d9a9a;">
+		   <h6>&nbsp;Set your default Tag Template preferences (template id, template project, and template region) to avoid retyping them into the text fields each time you use Tag Engine. 
+
+		   </h6>
+	   </span> 
+         <form method="post" action="/set_default_tag_template">
+		    <table>
+		        <tr>
+		          <td>&nbsp;Template Id:</td>
+		          <td>&nbsp;<input type="text" name="template_id" value="{{ template_id }}" style="width: 150px;padding: 3px;"></td>
+			   </tr>
+		        <tr>
+		          <td>&nbsp;Template Project:</td>
+		          <td>&nbsp;<input type="text" name="template_project" value="{{ template_project }}" style="width: 150px;padding: 3px;"></td>
+			   </tr>
+		        <tr>
+		          <td>&nbsp;Template Region:</td>
+		          <td>&nbsp;<input type="text" name="template_region" value="{{ template_region }}" style="width: 150px;padding: 3px;"></td>
+			   </tr>
+			   <tr>
+			    <td></td>
+			    <td>&nbsp;<input type="submit" value="Save Settings" name="submit" style="width: 160px;padding: 3px;"></td> 
+			  </tr>
+		    </table>
+           
+         </form>
+	    <p>&nbsp;&nbsp;<a href="/">Homepage</a></p>
+    </body>
+</html>

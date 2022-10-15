@@ -15,7 +15,7 @@
  	   <h1>Tag Engine for Data Catalog</h1>
          </div>
  	   <div class="header">
-	    <h2>Tags attached to template: {{ template_id }}</h2>
+	    <h2>Configs associated with template {{ template_id }}</h2>
 	   </div>
 	    <span style="color:#9d9a9a;">
 	    <h5>
@@ -35,12 +35,12 @@
 			<th>&nbsp;<input type="submit" value="Edit Config" name="submit"></th>
 			<tr><td>&nbsp;<span style="color:#0b5394;">Config Status:</span> {{ config['config_status'] }}
 			{% if config['config_status'] != 'ACTIVE' and config['config_status'] != 'ERROR' %}
-				<a href="{{ url_for('view_configs',template_id=template_id,project_id=project_id,region=region) }}">refresh</a>
+				<a href="{{ url_for('view_configs',template_id=template_id,template_project=template_project,template_region=template_region) }}">refresh</a>
 			{% endif %}
 			</td></tr> 
-			<tr><td>&nbsp;<span style="color:#0b5394;">Config Type:</span> {{ config['config_type'].title() }}</td></tr>
+			<tr><td>&nbsp;<span style="color:#0b5394;">Config Type:</span> {{ config['config_type'] }}</td></tr>
 			<tr><td>&nbsp;</td></tr>
-			{% if config['config_type'] == 'RESTORE' %}
+			{% if config['config_type'] == 'RESTORE_TAG' %}
  		       <table style="background-color:#f1eeee" width="1000">
 			   <tr>
  		          <td>&nbsp;<span style="color:#0b5394;">Source template id:</span>
@@ -71,9 +71,8 @@
  		          <td>&nbsp;<span style="color:#0b5394;">Metadata export location:</span>
  		           &nbsp;&nbsp;{{ config['metadata_export_location'] }}</td>
  	           </tr>
-			   <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
 			   </table>
-		{% elif config['config_type'] == 'IMPORT' %}
+		{% elif config['config_type'] == 'IMPORT_TAG' %}
 	       <table style="background-color:#f1eeee" width="1000">
 		   <tr>
 	          <td>&nbsp;<span style="color:#0b5394;">Template id:</span>
@@ -93,35 +92,38 @@
 	           &nbsp;&nbsp;{{ config['metadata_import_location'] }}</td>
            </tr>
 		   </table>
-			{% else %}
+		  {% else %}
 				<tr><td>&nbsp;<span style="color:#0b5394;">Tag Template Fields:</span></td></tr>
 			    </table>
 				<table style="background-color:#f1eeee" width="1000">
 				{% for field in config['fields'] %}
-		          <tr>
-			     <td>&nbsp;
-					 {% if field['is_required'] == True %}
-						<span style="color:red;">*</span>
-					 {% else %}
-					   &nbsp;
-					 {% endif %}
+			         <tr>
+				     <td>&nbsp;
+						 {% if field['is_required'] == True %}
+							<span style="color:red;">*</span>
+						 {% else %}
+						   &nbsp;
+						 {% endif %}
 				
-					{{ field['field_id'] }} (<span style="color:green;">{{ field['field_type'] }}</span>): 
-				 </td>
-			     <td style="width: 450px;">
-					{% if config['config_type'] == 'STATIC' %}
-					  {{ field['field_value'] }}
-					{% endif %}
-					{% if config['config_type'] == 'DYNAMIC' %}
-					  {{ field['query_expression'] }}
-					{% endif %}
-				 </td>
-			     </tr>
-				 <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+						{{ field['field_id'] }} (<span style="color:green;">{{ field['field_type'] }}</span>): 
+					 </td>
+				    </tr>
+					<tr>
+				     <td style="width: 450px;color:grey;text-align: left;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+						{% if config['config_type'] == 'STATIC_ASSET_TAG' %}
+						  {{ field['field_value'] }}
+						{% endif %}
+						{% if config['config_type'] == 'DYNAMIC_TABLE_TAG' or config['config_type'] == 'DYNAMIC_COLUMN_TAG' %}
+						  {{ field['query_expression'] }}
+						{% endif %}
+					 </td>
+				     </tr>
+					 
 			     {% endfor %}
 		  </table>
+		{% endif %}
 		   
-	    {% if config['config_type'] == 'SENSITIVE' %}
+	    {% if config['config_type'] == 'SENSITIVE_COLUMN_TAG' %}
 		  <table style="background-color:#f1eeee" width="1000">  
 	       <tr>
 	       <td>&nbsp;<span style="color:#0b5394;">DLP Dataset:</span></td>
@@ -132,53 +134,119 @@
 			</table>
 	    {% endif %}
 		
-			    {% if config['config_type'] == 'GLOSSARY' or config['config_type'] == 'SENSITIVE' %}
-				  <table style="background-color:#f1eeee" width="1000">  
-			       <tr>
-			       <td>&nbsp;<span style="color:#0b5394;">Mapping Table:</span></td>
-		            </tr>
-			       <tr>
-			       <td>&nbsp;&nbsp;{{ config['mapping_table'] }}</td>
-		            </tr>
-					</table>
-			    {% endif %}
+	    {% if config['config_type'] == 'GLOSSARY_ASSET_TAG' or config['config_type'] == 'SENSITIVE_COLUMN_TAG' %}
+		  <table style="background-color:#f1eeee" width="1000">  
+	       <tr>
+	       <td>&nbsp;<span style="color:#0b5394;">Mapping Table:</span></td>
+            </tr>
+	       <tr>
+	       <td>&nbsp;&nbsp;{{ config['mapping_table'] }}</td>
+            </tr>
+			</table>
+	    {% endif %}
 		  
 		
 		   <table style="background-color:#f1eeee" width="1000">
 		    <tr><td>&nbsp;</td></tr>
-			<tr>
-		    <td>&nbsp;<span style="color:#0b5394;">Included URIs:</span></td>
-	         </tr>
-		    <tr>
-		    <td>&nbsp;&nbsp;{{ config['included_uris'] }}</td>
-	         </tr>
-		    {% if config['config_type'] == 'DYNAMIC' %}
-		       <tr>
-		       <td>&nbsp;<span style="color:#0b5394;">Included URIs Hash:</span></td>
-	            </tr>
-		       <tr>
-		       <td>&nbsp;&nbsp;{{ config['included_uris_hash'] }}</td>
-	            </tr>
-		    {% endif %}
-		    <tr>
-		    <td>&nbsp;<span style="color:#0b5394;">Excluded URIs:</span></td>
-	         </tr>
-		    </table>
-			<table style="background-color:#f1eeee" width="1000">
-		    {% if config['excluded_uris'] != '' %}
-		      <tr>
-		       <td>&nbsp;&nbsp;{{ config['excluded_uris'] }}</td>
-	          </tr>
-		    {% else %}
-		       <tr>
-		        <td>&nbsp;&nbsp;N/A</td>
-	           </tr>
-	         {% endif %}
-			 <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
-			 </table>
-		 {% endif %}
 			
-		    {% if config['config_type'] == 'SENSITIVE' %}
+			{% if config['config_type'] == 'ENTRY' %}
+				<tr>
+			    <td>&nbsp;<span style="color:#0b5394;">Included Assets URIs:</span></td>
+		        </tr>
+				<tr>
+			    <td>&nbsp;&nbsp;{{ config['included_assets_uris'] }}</td>
+		        </tr>
+		       <tr>
+		       <td>&nbsp;<span style="color:#0b5394;">Included Assets URIs Hash:</span></td>
+	            </tr>
+		       <tr>
+		       <td>&nbsp;&nbsp;{{ config['included_assets_uris_hash'] }}</td>
+	            </tr>
+			    <tr>
+			    <td>&nbsp;<span style="color:#0b5394;">Excluded Assets URIs:</span></td>
+		         </tr>
+				    {% if config['excluded_assets_uris'] != '' %}
+					  <tr>
+				       <td>&nbsp;&nbsp;{{ config['excluded_assets_uris'] }}</td>
+			          </tr>
+				    {% else %}
+				       <tr>
+				        <td>&nbsp;&nbsp;N/A</td>
+			           </tr>
+			         {% endif %}
+				 <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+			
+			{% elif config['config_type'] == 'STATIC_ASSET_TAG' or config['config_type'] == 'GLOSSARY_ASSET_TAG' %}
+				<tr>
+			    <td>&nbsp;<span style="color:#0b5394;">Included Assets URIs:</span></td>
+		        </tr>
+				<tr>
+			    <td>&nbsp;&nbsp;{{ config['included_assets_uris'] }}</td>
+		        </tr>
+		       <tr>
+		       <td>&nbsp;<span style="color:#0b5394;">Included Assets URIs Hash:</span></td>
+	            </tr>
+		       <tr>
+		       <td>&nbsp;&nbsp;{{ config['included_assets_uris_hash'] }}</td>
+	            </tr>
+			    <tr>
+			    <td>&nbsp;<span style="color:#0b5394;">Excluded Assets URIs:</span></td>
+		         </tr>
+				    {% if config['excluded_assets_uris'] != '' %}
+					  <tr>
+				       <td>&nbsp;&nbsp;{{ config['excluded_assets_uris'] }}</td>
+			          </tr>
+				    {% else %}
+				       <tr>
+				        <td>&nbsp;&nbsp;N/A</td>
+			           </tr>
+			         {% endif %}
+				 <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+				 
+			{% elif config['config_type'] == 'DYNAMIC_TABLE_TAG' or config['config_type'] == 'DYNAMIC_COLUMN_TAG' or config['config_type'] == 'SENSITIVE_COLUMN_TAG' %}
+			
+				{% if config['config_type'] == 'DYNAMIC_COLUMN_TAG' %}
+			       <tr>
+			       <td>&nbsp;<span style="color:#0b5394;">Included Columns Query:</span></td>
+		            </tr>
+			       <tr>
+			       <td>&nbsp;&nbsp;{{ config['included_columns_query'] }}</td>
+		           </tr>
+			    {% endif %}
+					
+				<tr>
+			    <td>&nbsp;<span style="color:#0b5394;">Included Tables URIs:</span></td>
+		        </tr>
+				<tr>
+			    <td>&nbsp;&nbsp;{{ config['included_tables_uris'] }}</td>
+		         </tr>
+				    
+					{% if config['config_type'] == 'DYNAMIC_TABLE_TAG' %}
+				       <tr>
+				       <td>&nbsp;<span style="color:#0b5394;">Included Tables URIs Hash:</span></td>
+			            </tr>
+				       <tr>
+				       <td>&nbsp;&nbsp;{{ config['included_tables_uris_hash'] }}</td>
+			            </tr>
+				    {% endif %}
+					
+			    <tr>
+			    <td>&nbsp;<span style="color:#0b5394;">Excluded Tables URIs:</span></td>
+		         </tr>
+				    {% if config['excluded_tables_uris'] != '' %}
+				      <tr>
+				       <td>&nbsp;&nbsp;{{ config['excluded_tables_uris'] }}</td>
+			          </tr>
+				    {% else %}
+				       <tr>
+				        <td>&nbsp;&nbsp;N/A</td>
+			           </tr>
+			         {% endif %}
+				 <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+				 </table>
+			 {% endif %}
+			
+		    {% if config['config_type'] == 'SENSITIVE_COLUMN_TAG' %}
 			  <table style="background-color:#f1eeee" width="1000">  
 		       <tr>
 		       <td>&nbsp;<span style="color:#0b5394;">Create Policy Tags:</span></td>
@@ -210,10 +278,9 @@
 		    <td>&nbsp;<span style="color:#0b5394;">Refresh Frequency:</span>
 			    &nbsp;{{ config['refresh_frequency'] }}&nbsp;{{ config['refresh_unit'] }}</td>
 	         </tr>
+			 <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
 		    {% endif %} 
-		    
-			<tr><td>&nbsp;</td><td>&nbsp;</td></tr>
-			
+
 		    {% if 'tag_history' in config %}
 		    <tr>
 		    <td>&nbsp;<span style="color:#0b5394;">Tag History:</span>
@@ -231,35 +298,38 @@
 	        </table>
 		   <br>
 		   <input type="hidden" name="template_id" value="{{ template_id }}">
-		   <input type="hidden" name="project_id" value="{{ project_id }}">
-		   <input type="hidden" name="region" value="{{ region }}">
+		   <input type="hidden" name="template_project" value="{{ template_project }}">
+		   <input type="hidden" name="template_region" value="{{ template_region }}">
 		   <input type="hidden" name="config_uuid" value="{{ config['config_uuid'] }}">
 		   <input type="hidden" name="config_type" value="{{ config['config_type'] }}">
 		   </form>
 		   {% endfor %}
 		   <p>&nbsp;</p>
-		   <form method="post" action="/display_selected_action">
+		   <form method="post" action="/display_configuration">
 		    <table>
 		     <tr>
-		    <td>&nbsp;<input type="submit" value="Create Static Config" name="action"></td>
-		    <td>&nbsp;<input type="submit" value="Create Dynamic Config" name="action"></td>
-			<td>&nbsp;<input type="submit" value="Create Glossary Config" name="action"></td>
-			<td>&nbsp;<input type="submit" value="Create Sensitive Config" name="action"></td>
-			<td>&nbsp;<input type="submit" value="Create Entry Config" name="action"></td>
+		    <td>&nbsp;<input type="submit" value="Create Static Asset Tags" name="action"></td>
+		    <td>&nbsp;<input type="submit" value="Create Dynamic Table Tags" name="action"></td>
+			<td>&nbsp;<input type="submit" value="Create Dynamic Column Tags" name="action"></td>
+		    </tr>
+			<tr>
+			<td>&nbsp;<input type="submit" value="Create Glossary Asset Tags" name="action"></td>
+			<td>&nbsp;<input type="submit" value="Create Sensitive Column Tags" name="action"></td>
+			<td>&nbsp;<input type="submit" value="Create Data Catalog Entries" name="action"></td>
 			</tr>
 			<tr>
-			<td>&nbsp;<input type="submit" value="Create Restore Config" name="action"></td>
-			<td>&nbsp;<input type="submit" value="Create Import Config" name="action"></td>
+			<td>&nbsp;<input type="submit" value="Restore Tags" name="action"></td>
+			<td>&nbsp;<input type="submit" value="Import Tags" name="action"></td>
 	         </tr>
 	        </table>
-		   {% if config['config_type'] == 'RESTORE' %}
+		   {% if config['config_type'] == 'RESTORE_TAG' %}
 		   		<input type="hidden" name="template_id" value="{{ target_template_id }}">
-		   	 	<input type="hidden" name="project_id" value="{{ target_template_project }}">
-		   	 	<input type="hidden" name="region" value="{{ target_template_region }}">
+		   	 	<input type="hidden" name="template_project" value="{{ target_template_project }}">
+		   	 	<input type="hidden" name="template_region" value="{{ target_template_region }}">
 		   {% else %}
 		   		<input type="hidden" name="template_id" value="{{ template_id }}">
-		   	 	<input type="hidden" name="project_id" value="{{ project_id }}">
-		   	 	<input type="hidden" name="region" value="{{ region }}">
+		   	 	<input type="hidden" name="template_project" value="{{ template_project }}">
+		   	 	<input type="hidden" name="template_region" value="{{ template_region }}">
 		   {% endif %}
 		   </form>        
     <p>&nbsp;&nbsp;<a href="/">Homepage</a></p>
