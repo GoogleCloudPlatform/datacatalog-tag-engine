@@ -2077,7 +2077,7 @@ def dynamic_table_tags():
         resp = jsonify(success=False)
         return resp
     
-    if 'excluded_tables_uris' in:
+    if 'excluded_tables_uris' in json:
         excluded_tables_uris = json['excluded_tables_uris']
     else:
         excluded_tables_uris = None
@@ -2239,7 +2239,7 @@ def static_asset_tags():
         resp = jsonify(success=False)
         return resp
     
-    if json['excluded_assets_uris']:
+    if 'excluded_assets_uris' in json:
         excluded_assets_uris = json['excluded_assets_uris']
     else:
         excluded_assets_uris = None
@@ -2314,7 +2314,7 @@ def entries():
     if 'excluded_assets_uris' in json:
         excluded_assets_uris = json['excluded_assets_uris']
     else:
-        excluded_assets_uris = ''
+        excluded_assets_uris = None
     
     refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
     
@@ -2392,7 +2392,7 @@ def glossary_asset_tags():
     if 'excluded_assets_uris' in json:
         excluded_assets_uris = json['excluded_assets_uris']
     else:
-        excluded_assets_uris = ''
+        excluded_assets_uris = None
     
     refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
     
@@ -2482,7 +2482,7 @@ def sensitive_column_tags():
     if 'excluded_tables_uris' in json:
         excluded_tables_uris = json['excluded_tables_uris']
     else:
-        excluded_tables_uris = ''
+        excluded_tables_uris = None
     
     # validate create_policy_tags parameter
     if 'create_policy_tags' in json:
