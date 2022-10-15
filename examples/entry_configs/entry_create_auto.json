@@ -1,7 +1,7 @@
 {
     "template_id": "file_metadata",
-    "project_id": "tag-engine-develop",
-    "region": "us-central1",
+    "template_project": "tag-engine-develop",
+    "template_region": "us-central1",
     "fields": [
         {
             "field_id": "name"
@@ -43,8 +43,8 @@
             "field_id": "media_link"
         }
     ],
-    "included_uris": "gs://discovery-area/cities_311/*",
-    "excluded_uris": "gs://discovery-area/cities_311/austin_311_service_requests.parquet",
+    "included_assets_uris": "gs://discovery-area/cities_311/*",
+    "excluded_assets_uris": "gs://discovery-area/cities_311/austin_311_service_requests.parquet",
     "refresh_mode": "AUTO",
     "refresh_frequency": 30,
     "refresh_unit": "minutes",

@@ -31,7 +31,7 @@ class TagEngineUtils:
         config = configparser.ConfigParser()
         config.read("tagengine.ini")
         
-    def read_default_settings(self):
+    def read_default_tag_template_settings(self):
         
         settings = {}
         exists = False
@@ -44,6 +44,20 @@ class TagEngineUtils:
             exists = True 
         
         return exists, settings
+        
+    
+    def write_default_tag_template_settings(self, template_id, template_project, template_region):
+        
+        report_settings = self.db.collection('settings')
+        doc_ref = report_settings.document('default_tag_template')
+        doc_ref.set({
+            'template_id': template_id,
+            'template_project':  template_project,
+            'template_region': template_region
+        })
+        
+        print('Saved default tag template settings.')
+    
 
     def read_tag_history_settings(self):
         
@@ -60,6 +74,20 @@ class TagEngineUtils:
                 enabled = True
             
         return enabled, settings
+
+    
+    def write_tag_history_settings(self, enabled, bigquery_project, bigquery_region, bigquery_dataset):
+        
+        history_settings = self.db.collection('settings')
+        doc_ref = history_settings.document('tag_history')
+        doc_ref.set({
+            'enabled': bool(enabled),
+            'bigquery_project': bigquery_project,
+            'bigquery_region':  bigquery_region,
+            'bigquery_dataset': bigquery_dataset
+        })
+        
+        print('Saved tag history settings.')
 
 
     def read_tag_stream_settings(self):
@@ -79,12 +107,25 @@ class TagEngineUtils:
         return enabled, settings
    
    
-    def read_coverage_settings(self):
+    def write_tag_stream_settings(self, enabled, pubsub_project, pubsub_topic):
+       
+       history_settings = self.db.collection('settings')
+       doc_ref = history_settings.document('tag_stream')
+       doc_ref.set({
+           'enabled': bool(enabled),
+           'pubsub_project': pubsub_project,
+           'pubsub_topic':  pubsub_topic
+       })
+       
+       print('Saved tag stream settings.')
+   
+   
+    def read_coverage_report_settings(self):
         
         settings = {}
         exists = False
         
-        doc_ref = self.db.collection('settings').document('coverage')
+        doc_ref = self.db.collection('settings').document('coverage_report')
         doc = doc_ref.get()
         
         if doc.exists:
@@ -93,62 +134,18 @@ class TagEngineUtils:
         
         return exists, settings
 
-
-    def write_default_settings(self, template_id, project_id, region):
+    
+    def write_coverage_report_settings(self, included_bigquery_projects, excluded_bigquery_datasets, excluded_bigquery_tables):
         
         report_settings = self.db.collection('settings')
-        doc_ref = report_settings.document('default_tag_template')
+        doc_ref = report_settings.document('coverage_report')
         doc_ref.set({
-            'template_id': template_id,
-            'project_id':  project_id,
-            'region': region
+            'included_bigquery_projects': included_bigquery_projects,
+            'excluded_bigquery_datasets':  excluded_bigquery_datasets,
+            'excluded_bigquery_tables': excluded_bigquery_tables
         })
         
-        print('Saved default settings.')
-    
-    
-    def write_tag_history_settings(self, enabled, project_id, region, dataset):
-        
-        history_settings = self.db.collection('settings')
-        doc_ref = history_settings.document('tag_history')
-        doc_ref.set({
-            'enabled': bool(enabled),
-            'project_id': project_id,
-            'region':  region,
-            'dataset': dataset
-        })
-        
-        print('Saved tag history settings.')
-        
-        # assume that the BQ dataset exists
-        #bqu = bq.BigQueryUtils()
-        #bqu.create_dataset(project_id, region, dataset)
-
-    
-    def write_tag_stream_settings(self, enabled, project_id, topic):
-        
-        history_settings = self.db.collection('settings')
-        doc_ref = history_settings.document('tag_stream')
-        doc_ref.set({
-            'enabled': bool(enabled),
-            'project_id': project_id,
-            'topic':  topic
-        })
-        
-        print('Saved tag stream settings.')
-
-
-    def write_coverage_settings(self, project_ids, datasets, tables):
-        
-        report_settings = self.db.collection('settings')
-        doc_ref = report_settings.document('coverage')
-        doc_ref.set({
-            'project_ids': project_ids,
-            'excluded_datasets':  datasets,
-            'excluded_tables': tables
-        })
-        
-        print('Saved coverage settings.')
+        print('Saved coverage report settings.')
         
         
     def generate_coverage_report(self):    
@@ -156,19 +153,19 @@ class TagEngineUtils:
         summary_report = []
         detailed_report = []
         
-        exists, settings = self.read_coverage_settings()
-        project_ids = settings['project_ids']
-        excluded_datasets = settings['excluded_datasets']
-        excluded_tables = settings['excluded_tables']
+        exists, settings = self.read_coverage_report_settings()
+        included_bigquery_projects = settings['included_bigquery_projects']
+        excluded_bigquery_datasets = settings['excluded_bigquery_datasets']
+        excluded_bigquery_tables = settings['excluded_bigquery_tables']
         
-        print('project_ids: ' + project_ids)
-        print('excluded_datasets: ' + excluded_datasets)
-        print('excluded_tables: ' + excluded_tables)
+        print('included_bigquery_projects: ' + included_bigquery_projects)
+        print('excluded_bigquery_datasets: ' + excluded_bigquery_datasets)
+        print('excluded_bigquery_tables: ' + excluded_bigquery_tables)
         
         log_ref = self.db.collection('logs')
         
         # list datasets and tables for chosen projects
-        for project in project_ids.split(','):
+        for project in included_bigquery_projects.split(','):
             project_id = project.strip()
             bq_client = bigquery.Client(project=project_id)
             datasets = list(bq_client.list_datasets())
@@ -179,7 +176,7 @@ class TagEngineUtils:
                 
                 dataset_id = dataset.dataset_id
 
-                if project_id + "." + dataset_id in excluded_datasets:
+                if project_id + "." + dataset_id in excluded_bigquery_datasets:
                     #print('skipping ' + project_id + "." + dataset_id)
                     continue
                
@@ -206,7 +203,7 @@ class TagEngineUtils:
                     print('table_path_short: ' + table_path_short)
                     print('table_name: ' + table_name)
                 
-                    if table_path_short in project_id + '.' + excluded_tables:
+                    if table_path_short in project_id + '.' + excluded_bigquery_tables:
                         print('skipping ' + table_path_short)
                         continue
                     
@@ -230,14 +227,14 @@ class TagEngineUtils:
       
     def update_config_status(self, config_uuid, config_type, status):
     
-        coll_name = self.get_config_collection(config_type)
+        coll_name = self.lookup_config_collection(config_type)
         self.db.collection(coll_name).document(config_uuid).update({
             'config_status': status
         })
     
     def update_scheduling_status(self, config_uuid, config_type, status):
     
-        coll_name = self.get_config_collection(config_type)
+        coll_name = self.lookup_config_collection(config_type)
         config_ref = self.db.collection(coll_name).document(config_uuid)
         doc = config_ref.get()
         
@@ -263,7 +260,7 @@ class TagEngineUtils:
         if unit == 'days':
             next_run = datetime.utcnow() + timedelta(days=delta)
         
-        coll_name = self.get_config_collection(config_type)
+        coll_name = self.lookup_config_collection(config_type)
         self.db.collection(coll_name).document(config_uuid).update({
             'version': version,
             'next_run' : next_run
@@ -271,12 +268,12 @@ class TagEngineUtils:
             
     def update_overwrite_flag(self, config_uuid, config_type):
         
-        coll_name = self.get_config_collection(config_type)
+        coll_name = self.lookup_config_collection(config_type)
         self.db.collection(coll_name).document(config_uuid).update({
             'overwrite': False
         })
                                                                              
-    def read_template_config(self, template_uuid):
+    def read_tag_template_config(self, template_uuid):
                 
         template_ref = self.db.collection('tag_templates').document(template_uuid)
         doc = template_ref.get()
@@ -288,14 +285,14 @@ class TagEngineUtils:
         return template_config
     
     
-    def read_tag_template(self, template_id, project_id, region):
+    def read_tag_template(self, template_id, template_project, template_region):
         
         template_exists = False
         template_uuid = ""
         
         # check to see if this template already exists
         template_ref = self.db.collection('tag_templates')
-        query = template_ref.where('template_id', '==', template_id).where('project_id', '==', project_id).where('region', '==', region)
+        query = template_ref.where('template_id', '==', template_id).where('template_project', '==', template_project).where('template_region', '==', template_region)
         
         matches = query.get()
         
@@ -309,9 +306,9 @@ class TagEngineUtils:
         return (template_exists, template_uuid)
         
     
-    def write_tag_template(self, template_id, project_id, region):
+    def write_tag_template(self, template_id, template_project, template_region):
         
-        template_exists, template_uuid = self.read_tag_template(template_id, project_id, region)
+        template_exists, template_uuid = self.read_tag_template(template_id, template_project, template_region)
         
         if template_exists == False:    
             print('tag template {} doesn\'t exist. Creating new template'.format(template_id))
@@ -322,23 +319,23 @@ class TagEngineUtils:
             doc_ref.set({
                 'template_uuid': template_uuid, 
                 'template_id': template_id,
-                'project_id': project_id,
-                'region': region
+                'template_project': template_project,
+                'template_region': template_region
             })
                                    
         return template_uuid
         
         
-    def write_static_config(self, config_status, fields, included_uris, excluded_uris, template_uuid, \
-                            refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite=False):
+    def write_static_asset_config(self, config_status, fields, included_assets_uris, excluded_assets_uris, template_uuid, \
+                                  refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite=False):
         
-        # hash the included_uris string
-        included_uris_hash = hashlib.md5(included_uris.encode()).hexdigest()
+        # hash the included_assets_uris string
+        included_assets_uris_hash = hashlib.md5(included_assets_uris.encode()).hexdigest()
         
         # check to see if this static config already exists
-        configs_ref = self.db.collection('static_configs')
-        query = configs_ref.where('template_uuid', '==', template_uuid).where('included_uris_hash', '==',\
-                            included_uris_hash).where('config_type', '==', 'STATIC').where('config_status', '!=', 'INACTIVE')
+        configs_ref = self.db.collection('static_asset_configs')
+        query = configs_ref.where('template_uuid', '==', template_uuid).where('included_assets_uris_hash', '==',\
+                            included_assets_uris_hash).where('config_type', '==', 'STATIC_ASSET_TAG').where('config_status', '!=', 'INACTIVE')
        
         matches = query.get()
        
@@ -348,7 +345,7 @@ class TagEngineUtils:
                 #print('Static config already exists. Config_uuid: ' + str(config_uuid_match))
                 
                 # update status to INACTIVE 
-                self.db.collection('static_configs').document(config_uuid_match).update({
+                self.db.collection('static_asset_configs').document(config_uuid_match).update({
                     'config_status' : "INACTIVE"
                 })
                 #print('Updated config status to INACTIVE.')
@@ -359,17 +356,17 @@ class TagEngineUtils:
             
             delta, next_run = self.validate_auto_refresh(refresh_frequency, refresh_unit)
        
-            config = self.db.collection('static_configs')
+            config = self.db.collection('static_asset_configs')
             doc_ref = config.document(config_uuid)
             doc_ref.set({
                 'config_uuid': config_uuid,
-                'config_type': 'STATIC',
+                'config_type': 'STATIC_ASSET_TAG',
                 'config_status': config_status, 
                 'creation_time': datetime.utcnow(), 
                 'fields': fields,
-                'included_uris': included_uris,
-                'included_uris_hash': included_uris_hash,
-                'excluded_uris': excluded_uris,
+                'included_assets_uris': included_assets_uris,
+                'included_assets_uris_hash': included_assets_uris_hash,
+                'excluded_assets_uris': excluded_assets_uris,
                 'template_uuid': template_uuid,
                 'refresh_mode': refresh_mode, # AUTO refresh mode
                 'refresh_frequency': delta,
@@ -384,17 +381,17 @@ class TagEngineUtils:
             
         else:
             
-            config = self.db.collection('static_configs')
+            config = self.db.collection('static_asset_configs')
             doc_ref = config.document(config_uuid)
             doc_ref.set({
                 'config_uuid': config_uuid,
-                'config_type': 'STATIC',
+                'config_type': 'STATIC_ASSET_TAG',
                 'config_status': config_status, 
                 'creation_time': datetime.utcnow(), 
                 'fields': fields,
-                'included_uris': included_uris,
-                'included_uris_hash': included_uris_hash,
-                'excluded_uris': excluded_uris,
+                'included_assets_uris': included_assets_uris,
+                'included_assets_uris_hash': included_assets_uris_hash,
+                'excluded_assets_uris': excluded_assets_uris,
                 'template_uuid': template_uuid,
                 'refresh_mode': refresh_mode, # ON_DEMAND refresh mode
                 'refresh_frequency': 0, # N/A
@@ -404,17 +401,17 @@ class TagEngineUtils:
                 'overwrite': overwrite
             })
         
-        return config_uuid, included_uris_hash
+        return config_uuid, included_assets_uris_hash
     
     
-    def write_dynamic_config(self, config_status, fields, included_uris, excluded_uris, template_uuid, refresh_mode,\
-                          refresh_frequency, refresh_unit, tag_history, tag_stream):
+    def write_dynamic_table_config(self, config_status, fields, included_tables_uris, excluded_tables_uris, template_uuid, refresh_mode,\
+                                   refresh_frequency, refresh_unit, tag_history, tag_stream):
         
-        included_uris_hash = hashlib.md5(included_uris.encode()).hexdigest()
+        included_tables_uris_hash = hashlib.md5(included_tables_uris.encode()).hexdigest()
         
         # check to see if this config already exists
-        configs_ref = self.db.collection('dynamic_configs')
-        query = configs_ref.where('template_uuid', '==', template_uuid).where('included_uris_hash', '==', included_uris_hash).where('config_type', '==', 'DYNAMIC').where('config_status', '!=', 'INACTIVE')
+        configs_ref = self.db.collection('dynamic_table_configs')
+        query = configs_ref.where('template_uuid', '==', template_uuid).where('included_tables_uris_hash', '==', included_tables_uris_hash).where('config_type', '==', 'DYNAMIC_TABLE_TAG').where('config_status', '!=', 'INACTIVE')
        
         matches = query.get()
        
@@ -424,13 +421,13 @@ class TagEngineUtils:
                 #print('Config already exists. Config_uuid: ' + str(config_uuid_match))
                 
                 # update status to INACTIVE 
-                self.db.collection('dynamic_configs').document(config_uuid_match).update({
+                self.db.collection('dynamic_table_configs').document(config_uuid_match).update({
                     'config_status' : "INACTIVE"
                 })
                 print('Updated status to INACTIVE.')
        
         config_uuid = uuid.uuid1().hex
-        config = self.db.collection('dynamic_configs')
+        config = self.db.collection('dynamic_table_configs')
         doc_ref = config.document(config_uuid)
         
         if refresh_mode == 'AUTO':
@@ -439,13 +436,13 @@ class TagEngineUtils:
             
             doc_ref.set({
                 'config_uuid': config_uuid,
-                'config_type': 'DYNAMIC',
+                'config_type': 'DYNAMIC_TABLE_TAG',
                 'config_status': config_status, 
                 'creation_time': datetime.utcnow(), 
                 'fields': fields,
-                'included_uris': included_uris,
-                'included_uris_hash': included_uris_hash,
-                'excluded_uris': excluded_uris,
+                'included_tables_uris': included_tables_uris,
+                'included_tables_uris_hash': included_tables_uris_hash,
+                'excluded_tables_uris': excluded_tables_uris,
                 'template_uuid': template_uuid,
                 'refresh_mode': refresh_mode, # AUTO refresh mode
                 'refresh_frequency': delta,
@@ -460,13 +457,13 @@ class TagEngineUtils:
         else:
             doc_ref.set({
                 'config_uuid': config_uuid,
-                'config_type': 'DYNAMIC',
+                'config_type': 'DYNAMIC_TABLE_TAG',
                 'config_status': config_status, 
                 'creation_time': datetime.utcnow(), 
                 'fields': fields,
-                'included_uris': included_uris,
-                'included_uris_hash': included_uris_hash,
-                'excluded_uris': excluded_uris,
+                'included_tables_uris': included_tables_uris,
+                'included_tables_uris_hash': included_tables_uris_hash,
+                'excluded_tables_uris': excluded_tables_uris,
                 'template_uuid': template_uuid,
                 'refresh_mode': refresh_mode, # ON_DEMAND refresh mode
                 'refresh_frequency': 0,
@@ -475,11 +472,86 @@ class TagEngineUtils:
                 'version': 1
             })
         
-        print('Created new dynamic config.')
+        print('Created new dynamic table config.')
         
-        return config_uuid, included_uris_hash
-  
+        return config_uuid, included_tables_uris_hash
+
+    
+    def write_dynamic_column_config(self, config_status, fields, included_columns_query, included_tables_uris, excluded_tables_uris, \
+                                    template_uuid, refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream):
         
+        included_tables_uris_hash = hashlib.md5(included_tables_uris.encode()).hexdigest()
+        
+        # check to see if this config already exists
+        configs_ref = self.db.collection('dynamic_column_configs')
+        query = configs_ref.where('template_uuid', '==', template_uuid).where('included_tables_uris_hash', '==', included_tables_uris_hash).where('config_type', '==', 'DYNAMIC_COLUMN_TAG').where('config_status', '!=', 'INACTIVE')
+       
+        matches = query.get()
+       
+        for match in matches:
+            if match.exists:
+                config_uuid_match = match.id
+                #print('Config already exists. Config_uuid: ' + str(config_uuid_match))
+                
+                # update status to INACTIVE 
+                self.db.collection('dynamic_column_configs').document(config_uuid_match).update({
+                    'config_status' : "INACTIVE"
+                })
+                print('Updated status to INACTIVE.')
+       
+        config_uuid = uuid.uuid1().hex
+        config = self.db.collection('dynamic_column_configs')
+        doc_ref = config.document(config_uuid)
+        
+        if refresh_mode == 'AUTO':
+            
+            delta, next_run = self.validate_auto_refresh(refresh_frequency, refresh_unit)
+            
+            doc_ref.set({
+                'config_uuid': config_uuid,
+                'config_type': 'DYNAMIC_COLUMN_TAG',
+                'config_status': config_status, 
+                'creation_time': datetime.utcnow(), 
+                'fields': fields,
+                'included_columns_query': included_columns_query,
+                'included_tables_uris': included_tables_uris,
+                'included_tables_uris_hash': included_tables_uris_hash,
+                'excluded_tables_uris': excluded_tables_uris,
+                'template_uuid': template_uuid,
+                'refresh_mode': refresh_mode, # AUTO refresh mode
+                'refresh_frequency': delta,
+                'refresh_unit': refresh_unit,
+                'tag_history': tag_history,
+                'tag_stream': tag_stream,
+                'scheduling_status': 'PENDING',
+                'next_run': next_run,
+                'version': 1
+            })
+            
+        else:
+            doc_ref.set({
+                'config_uuid': config_uuid,
+                'config_type': 'DYNAMIC_TABLE_TAG',
+                'config_status': config_status, 
+                'creation_time': datetime.utcnow(), 
+                'fields': fields,
+                'included_columns_query': included_columns_query,
+                'included_tables_uris': included_tables_uris,
+                'included_tables_uris_hash': included_tables_uris_hash,
+                'excluded_tables_uris': excluded_tables_uris,
+                'template_uuid': template_uuid,
+                'refresh_mode': refresh_mode, # ON_DEMAND refresh mode
+                'refresh_frequency': 0,
+                'tag_history': tag_history,
+                'tag_stream': tag_stream,
+                'version': 1
+            })
+        
+        print('Created new dynamic column config.')
+        
+        return config_uuid, included_tables_uris_hash
+    
+
     def validate_auto_refresh(self, refresh_frequency, refresh_unit):
         
         if type(refresh_frequency) is int: 
@@ -506,7 +578,7 @@ class TagEngineUtils:
         return delta, next_run
     
     
-    def write_entry_config(self, config_status, fields, included_uris, excluded_uris, template_uuid, refresh_mode,\
+    def write_entry_config(self, config_status, fields, included_assets_uris, excluded_assets_uris, template_uuid, refresh_mode,\
                            refresh_frequency, refresh_unit, tag_history, tag_stream):
         
         print('** enter write_entry_config **')
@@ -514,11 +586,11 @@ class TagEngineUtils:
         print('refresh_frequency: ', refresh_frequency)
         print('refresh_unit: ', refresh_unit)
         
-        included_uris_hash = hashlib.md5(included_uris.encode()).hexdigest()
+        included_assets_uris_hash = hashlib.md5(included_assets_uris.encode()).hexdigest()
         
         # check to see if this config already exists
         configs_ref = self.db.collection('entry_configs')
-        query = configs_ref.where('template_uuid', '==', template_uuid).where('included_uris_hash', '==', included_uris_hash).where('config_type', '==', 'ENTRY').where('config_status', '!=', 'INACTIVE')
+        query = configs_ref.where('template_uuid', '==', template_uuid).where('included_assets_uris_hash', '==', included_assets_uris_hash).where('config_type', '==', 'ENTRY').where('config_status', '!=', 'INACTIVE')
        
         matches = query.get()
        
@@ -547,9 +619,9 @@ class TagEngineUtils:
                 'config_status': config_status, 
                 'creation_time': datetime.utcnow(), 
                 'fields': fields,
-                'included_uris': included_uris,
-                'included_uris_hash': included_uris_hash,
-                'excluded_uris': excluded_uris,
+                'included_assets_uris': included_assets_uris,
+                'included_assets_uris_hash': included_assets_uris_hash,
+                'excluded_assets_uris': excluded_assets_uris,
                 'template_uuid': template_uuid,
                 'refresh_mode': refresh_mode, # AUTO refresh mode
                 'refresh_frequency': delta,
@@ -568,9 +640,9 @@ class TagEngineUtils:
                 'config_status': config_status, 
                 'creation_time': datetime.utcnow(), 
                 'fields': fields,
-                'included_uris': included_uris,
-                'included_uris_hash': included_uris_hash,
-                'excluded_uris': excluded_uris,
+                'included_assets_uris': included_assets_uris,
+                'included_assets_uris_hash': included_assets_uris_hash,
+                'excluded_assets_uris': excluded_assets_uris,
                 'template_uuid': template_uuid,
                 'refresh_mode': refresh_mode, # ON_DEMAND refresh mode
                 'refresh_frequency': 0,
@@ -581,19 +653,19 @@ class TagEngineUtils:
         
         print('Created new entry config.')
         
-        return config_uuid, included_uris_hash
+        return config_uuid, included_assets_uris_hash
 
     
-    def write_glossary_config(self, config_status, fields, mapping_table, included_uris, excluded_uris, template_uuid, \
+    def write_glossary_asset_config(self, config_status, fields, mapping_table, included_assets_uris, excluded_assets_uris, template_uuid, \
                              refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite=False):
         
-        print('** enter write_glossary_config **')
+        print('** enter write_glossary_asset_config **')
         
-        included_uris_hash = hashlib.md5(included_uris.encode()).hexdigest()
+        included_assets_uris_hash = hashlib.md5(included_assets_uris.encode()).hexdigest()
         
         # check to see if this config already exists
-        configs_ref = self.db.collection('glossary_configs')
-        query = configs_ref.where('template_uuid', '==', template_uuid).where('included_uris_hash', '==', included_uris_hash).where('config_type', '==', 'GLOSSARY').where('config_status', '!=', 'INACTIVE')
+        configs_ref = self.db.collection('glossary_asset_configs')
+        query = configs_ref.where('template_uuid', '==', template_uuid).where('included_assets_uris_hash', '==', included_assets_uris_hash).where('config_type', '==', 'GLOSSARY_ASSET_TAG').where('config_status', '!=', 'INACTIVE')
        
         matches = query.get()
        
@@ -603,13 +675,13 @@ class TagEngineUtils:
                 #print('config already exists. Found config_uuid: ' + str(config_uuid_match))
                 
                 # update status to INACTIVE 
-                self.db.collection('glossary_configs').document(config_uuid_match).update({
+                self.db.collection('glossary_asset_configs').document(config_uuid_match).update({
                     'config_status' : "INACTIVE"
                 })
                 print('Updated status to INACTIVE.')
        
         config_uuid = uuid.uuid1().hex
-        config = self.db.collection('glossary_configs')
+        config = self.db.collection('glossary_asset_configs')
         doc_ref = config.document(config_uuid)
         
         if refresh_mode == 'AUTO':
@@ -618,14 +690,14 @@ class TagEngineUtils:
             
             doc_ref.set({
                 'config_uuid': config_uuid,
-                'config_type': 'GLOSSARY',
+                'config_type': 'GLOSSARY_ASSET_TAG',
                 'config_status': config_status, 
                 'creation_time': datetime.utcnow(), 
                 'fields': fields,
                 'mapping_table': mapping_table,
-                'included_uris': included_uris,
-                'included_uris_hash': included_uris_hash,
-                'excluded_uris': excluded_uris,
+                'included_assets_uris': included_assets_uris,
+                'included_assets_uris_hash': included_assets_uris_hash,
+                'excluded_assets_uris': excluded_assets_uris,
                 'template_uuid': template_uuid,
                 'refresh_mode': refresh_mode, # AUTO refresh mode
                 'refresh_frequency': delta,
@@ -641,14 +713,14 @@ class TagEngineUtils:
         else:
             doc_ref.set({
                 'config_uuid': config_uuid,
-                'config_type': 'GLOSSARY',
+                'config_type': 'GLOSSARY_ASSET_TAG',
                 'config_status': config_status, 
                 'creation_time': datetime.utcnow(), 
                 'fields': fields,
                 'mapping_table': mapping_table,
-                'included_uris': included_uris,
-                'included_uris_hash': included_uris_hash,
-                'excluded_uris': excluded_uris,
+                'included_assets_uris': included_assets_uris,
+                'included_assets_uris_hash': included_assets_uris_hash,
+                'excluded_assets_uris': excluded_assets_uris,
                 'template_uuid': template_uuid,
                 'refresh_mode': refresh_mode, # ON_DEMAND refresh mode
                 'refresh_frequency': 0,
@@ -658,23 +730,22 @@ class TagEngineUtils:
                 'overwrite': overwrite
             })
         
-        print('Created new glossary config.')
+        print('Created new glossary asset config.')
         
-        return config_uuid, included_uris_hash
+        return config_uuid, included_assets_uris_hash
 
 
-    def write_sensitive_config(self, config_status, fields, dlp_dataset, mapping_table, included_uris, excluded_uris, \
-                               create_policy_tags, taxonomy_id, \
-                               template_uuid, \
+    def write_sensitive_column_config(self, config_status, fields, dlp_dataset, mapping_table, included_tables_uris, excluded_tables_uris, \
+                               create_policy_tags, taxonomy_id, template_uuid, \
                                refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite=False):
         
-        print('** enter write_sensitive_config **')
+        print('** enter write_sensitive_column_config **')
         
-        included_uris_hash = hashlib.md5(included_uris.encode()).hexdigest()
+        included_tables_uris_hash = hashlib.md5(included_tables_uris.encode()).hexdigest()
         
         # check to see if this config already exists
-        configs_ref = self.db.collection('sensitive_configs')
-        query = configs_ref.where('template_uuid', '==', template_uuid).where('included_uris_hash', '==', included_uris_hash).where('config_type', '==', 'SENSITIVE').where('config_status', '!=', 'INACTIVE')
+        configs_ref = self.db.collection('sensitive_column_configs')
+        query = configs_ref.where('template_uuid', '==', template_uuid).where('included_tables_uris_hash', '==', included_tables_uris_hash).where('config_type', '==', 'SENSITIVE_COLUMN_TAG').where('config_status', '!=', 'INACTIVE')
        
         matches = query.get()
        
@@ -684,13 +755,13 @@ class TagEngineUtils:
                 #print('config already exists. Found config_uuid: ' + str(config_uuid_match))
                 
                 # update status to INACTIVE 
-                self.db.collection('sensitive_configs').document(config_uuid_match).update({
+                self.db.collection('sensitive_column_configs').document(config_uuid_match).update({
                     'config_status' : "INACTIVE"
                 })
                 print('Updated status to INACTIVE.')
        
         config_uuid = uuid.uuid1().hex
-        configs = self.db.collection('sensitive_configs')
+        configs = self.db.collection('sensitive_column_configs')
         doc_ref = configs.document(config_uuid)
         
         if refresh_mode == 'AUTO':
@@ -699,15 +770,15 @@ class TagEngineUtils:
             
             doc_ref.set({
                 'config_uuid': config_uuid,
-                'config_type': 'SENSITIVE',
+                'config_type': 'SENSITIVE_COLUMN_TAG',
                 'config_status': config_status, 
                 'creation_time': datetime.utcnow(), 
                 'fields': fields,
                 'dlp_dataset': dlp_dataset,
                 'mapping_table': mapping_table,
-                'included_uris': included_uris,
-                'included_uris_hash': included_uris_hash,
-                'excluded_uris': excluded_uris,
+                'included_tables_uris': included_tables_uris,
+                'included_tables_uris_hash': included_tables_uris_hash,
+                'excluded_tables_uris': excluded_tables_uris,
                 'create_policy_tags': create_policy_tags, 
                 'taxonomy_id': taxonomy_id,
                 'template_uuid': template_uuid,
@@ -725,15 +796,15 @@ class TagEngineUtils:
         else:
             doc_ref.set({
                 'config_uuid': config_uuid,
-                'config_type': 'SENSITIVE',
+                'config_type': 'SENSITIVE_COLUMN_TAG',
                 'config_status': config_status, 
                 'creation_time': datetime.utcnow(), 
                 'fields': fields,
                 'dlp_dataset': dlp_dataset,
                 'mapping_table': mapping_table,
-                'included_uris': included_uris,
-                'included_uris_hash': included_uris_hash,
-                'excluded_uris': excluded_uris,
+                'included_tables_uris': included_tables_uris,
+                'included_tables_uris_hash': included_tables_uris_hash,
+                'excluded_tables_uris': excluded_tables_uris,
                 'create_policy_tags': create_policy_tags, 
                 'taxonomy_id': taxonomy_id,
                 'template_uuid': template_uuid,
@@ -745,9 +816,9 @@ class TagEngineUtils:
                 'overwrite': overwrite
             })
         
-        print('Created new sensitive config.')
+        print('Created new sensitive column config.')
         
-        return config_uuid, included_uris_hash
+        return config_uuid, included_tables_uris_hash
 
     
     def write_restore_config(self, config_status, source_template_uuid, source_template_id, source_template_project, source_template_region, \
@@ -779,7 +850,7 @@ class TagEngineUtils:
         
         doc_ref.set({
             'config_uuid': config_uuid,
-            'config_type': 'RESTORE',
+            'config_type': 'RESTORE_TAG',
             'config_status': config_status, 
             'creation_time': datetime.utcnow(), 
             'source_template_uuid': source_template_uuid,
@@ -827,7 +898,7 @@ class TagEngineUtils:
         
         doc_ref.set({
             'config_uuid': config_uuid,
-            'config_type': 'IMPORT',
+            'config_type': 'IMPORT_TAG',
             'config_status': config_status, 
             'creation_time': datetime.utcnow(), 
             'template_uuid': template_uuid,
@@ -887,37 +958,46 @@ class TagEngineUtils:
         #print('Wrote error entry.')    
     
     
-    def get_config_collection(self, config_type):
+    def lookup_config_collection(self, config_type):
         
-        if config_type == 'STATIC':
-            coll = 'static_configs'
-        if config_type == 'DYNAMIC':
-            coll = 'dynamic_configs'   
+        print('config_type:', config_type)
+        
+        if config_type == 'STATIC_ASSET_TAG':
+            coll = 'static_asset_configs'
+        if config_type == 'DYNAMIC_TABLE_TAG':
+            coll = 'dynamic_table_configs'
+        if config_type == 'DYNAMIC_COLUMN_TAG':
+            coll = 'dynamic_column_configs'   
         if config_type == 'ENTRY':
             coll = 'entry_configs' 
-        if config_type == 'GLOSSARY':
-            coll = 'glossary_configs'
-        if config_type == 'SENSITIVE':
-            coll = 'sensitive_configs'
-        if config_type == 'RESTORE':
+        if config_type == 'GLOSSARY_ASSET_TAG':
+            coll = 'glossary_asset_configs'
+        if config_type == 'SENSITIVE_COLUMN_TAG':
+            coll = 'sensitive_column_configs'
+        if config_type == 'RESTORE_TAG':
             coll = 'restore_configs'
-        if config_type == 'IMPORT':
+        if config_type == 'IMPORT_TAG':
             coll = 'import_configs'
         
         return coll
     
+    def get_config_collections(self):
+        return ['static_asset_configs', 'dynamic_table_configs', 'dynamic_column_configs', \
+                'entry_configs', 'glossary_asset_configs', 'sensitive_column_configs', 'restore_configs', 'import_configs']
+        
     
-    def read_configs(self, template_id, project_id, region, config_type='ALL'):
+    def read_configs(self, template_id, template_project, template_region, config_type='ALL'):
         
         colls = []
         config_results = []
+        template_exists, template_uuid = self.read_tag_template(template_id, template_project, template_region)
         
         if config_type == 'ALL':
-            colls = ['dynamic_configs', 'static_configs', 'entry_configs', 'glossary_configs', 'sensitive_configs', 'restore_configs', 'import_configs']
+            colls = self.get_config_collections()
         else:
-            colls.append(self.get_config_collection(config_type))
+            colls.append(self.lookup_config_collection(config_type))
         
-        template_exists, template_uuid = self.read_tag_template(template_id, project_id, region)
+        #print('colls: ', colls)
         
         for coll_name in colls:
             configs_ref = self.db.collection(coll_name)
@@ -929,16 +1009,16 @@ class TagEngineUtils:
                 
             for doc in docs:
                 config = doc.to_dict()
+                #print('config: ', config)
                 config_results.append(config)  
-                
-        #print(str(configs))
+
         return config_results
         
     
     def read_config(self, config_uuid, config_type):
                 
         config_result = {}
-        coll_name = self.get_config_collection(config_type)
+        coll_name = self.lookup_config_collection(config_type)
         
         config_ref = self.db.collection(coll_name).document(config_uuid)
         doc = config_ref.get()
@@ -952,7 +1032,7 @@ class TagEngineUtils:
     def read_ready_configs(self):
         
         ready_configs = []
-        colls = ['static_configs', 'dynamic_configs', 'entry_configs', 'glossary_configs']
+        colls = ['static_asset_configs', 'dynamic_table_configs', 'dynamic_column_configs', 'entry_configs', 'glossary_asset_configs', 'sensitive_column_configs']
         
         for coll_name in colls:
             config_ref = self.db.collection(coll_name)
@@ -971,23 +1051,23 @@ class TagEngineUtils:
         return ready_configs  
         
         
-    def lookup_config_by_included_uris(self, template_uuid, included_uris, included_uris_hash):
+    def lookup_config_by_included_tables_uris(self, template_uuid, included_tables_uris, included_tables_uris_hash):
         
         success = False
         config_result = {}
         
-        colls = ['dynamic_configs', 'static_configs', 'entry_configs', 'glossary_configs', 'sensitive_configs']
+        colls = ['static_asset_configs', 'dynamic_table_configs', 'dynamic_column_configs', 'entry_configs', 'glossary_asset_configs', 'sensitive_column_configs']
         
         for coll_name in colls:
             
             config_ref = self.db.collection(coll_name)
         
-            if included_uris is not None:
+            if included_tables_uris is not None:
                 docs = config_ref.where('template_uuid', '==', template_uuid).where('config_status', '==', 'ACTIVE')\
-                .where('included_uris', '==', included_uris).stream()
-            if included_uris_hash is not None:
+                .where('included_tables_uris', '==', included_tables_uris).stream()
+            if included_tables_uris_hash is not None:
                 docs = config_ref.where('template_uuid', '==', template_uuid).where('config_status', '==', 'ACTIVE')\
-                .where('included_uris_hash', '==', included_uris_hash).stream()
+                .where('included_tables_uris_hash', '==', included_tables_uris_hash).stream()
         
             for doc in docs:
                 config_result = doc.to_dict()
@@ -1001,27 +1081,39 @@ class TagEngineUtils:
     def update_config(self, old_config_uuid, config_type, config_status, fields, included_uris, excluded_uris, template_uuid, \
                       refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite=False, mapping_table=None):
         
-        coll_name = self.get_config_collection(config_type)
+        print('enter update_config')
+        print('old_config_uuid: ', old_config_uuid)
+        print('config_type: ', config_type)
+        
+        coll_name = self.lookup_config_collection(config_type)
+        print('coll_name: ', coll_name)
+        
         self.db.collection(coll_name).document(old_config_uuid).update({
             'config_status' : "INACTIVE"
         })
         
-        if config_type == 'STATIC':
-            new_config_uuid, included_uris_hash = self.write_static_config(config_status, fields, included_uris, excluded_uris, template_uuid, \
-                                                                           refresh_mode, refresh_frequency, refresh_unit, \
-                                                                           tag_history, tag_stream, overwrite)
+        if config_type == 'STATIC_ASSET_TAG':
+            new_config_uuid, included_uris_hash = self.write_static_asset_config(config_status, fields, included_uris, excluded_uris, template_uuid, \
+                                                                                 refresh_mode, refresh_frequency, refresh_unit, \
+                                                                                 tag_history, tag_stream, overwrite)
         
-        if config_type == 'DYNAMIC':
-            new_config_uuid, included_uris_hash = self.write_dynamic_config(config_status, fields, included_uris, excluded_uris, \
-                                                                            template_uuid, refresh_mode, refresh_frequency, refresh_unit,\
-                                                                            tag_history, tag_stream)
+        if config_type == 'DYNAMIC_TABLE_TAG':
+            new_config_uuid, included_uris_hash = self.write_dynamic_table_config(config_status, fields, included_uris, excluded_uris, \
+                                                                                  template_uuid, refresh_mode, refresh_frequency, refresh_unit,\
+                                                                                  tag_history, tag_stream)
+        
+        if config_type == 'DYNAMIC_COLUMN_TAG':
+            new_config_uuid, included_uris_hash = self.write_dynamic_column_config(config_status, fields, included_uris, excluded_uris, \
+                                                                                   template_uuid, refresh_mode, refresh_frequency, refresh_unit,\
+                                                                                   tag_history, tag_stream)
+        
         if config_type == 'ENTRY':
             new_config_uuid, included_uris_hash = self.write_entry_config(config_status, fields, included_uris, excluded_uris, \
                                                                           template_uuid, refresh_mode, refresh_frequency, refresh_unit,\
                                                                           tag_history, tag_stream)
                                                                      
-        if config_type == 'GLOSSARY':
-            new_config_uuid, included_uris_hash = self.write_glossary_config(config_status, fields, mapping_table, included_uris, excluded_uris, \
+        if config_type == 'GLOSSARY_ASSET_TAG':
+            new_config_uuid, included_uris_hash = self.write_glossary_asset_config(config_status, fields, mapping_table, included_uris, excluded_uris, \
                                                                             template_uuid, refresh_mode, refresh_frequency, refresh_unit,\
                                                                             tag_history, tag_stream, overwrite)
         # note: no need to return the included_uris_hash
@@ -1029,17 +1121,18 @@ class TagEngineUtils:
         return new_config_uuid
     
 
-    def update_sensitive_config(self, old_config_uuid, config_status, dlp_dataset, mapping_table, included_uris, excluded_uris, 
+    def update_sensitive_column_config(self, old_config_uuid, config_status, dlp_dataset, mapping_table, included_tables_uris, excluded_tables_uris, 
                                 create_policy_tags, taxonomy_id, template_uuid, refresh_mode, refresh_frequency, refresh_unit, 
                                 tag_history, tag_stream, overwrite):
         
-        self.db.collection('sensitive_configs').document(old_config_uuid).update({
+        self.db.collection('sensitive_column_configs').document(old_config_uuid).update({
             'config_status' : "INACTIVE"
         })
         
-        config = self.read_config(old_config_uuid, 'SENSITIVE')
+        config = self.read_config(old_config_uuid, 'SENSITIVE_COLUMN_TAG')
         
-        new_config_uuid, included_uris_hash = self.write_sensitive_config(config_status, config['fields'], dlp_dataset, mapping_table, included_uris, excluded_uris, \
+        new_config_uuid, included_tables_uris_hash = self.write_sensitive_column_config(config_status, config['fields'], dlp_dataset, mapping_table, \
+                                                                          included_tables_uris, excluded_tables_uris, \
                                                                           create_policy_tags, taxonomy_id, template_uuid, \
                                                                           refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite)
         
@@ -1062,11 +1155,3 @@ class TagEngineUtils:
                     
         return new_config_uuid
     
-    
-if __name__ == '__main__':
-    
-    config = configparser.ConfigParser()
-    config.read("tagengine.ini")
-    
-    te = TagEngineUtils();
-    te.write_template('quality_template', config['DEFAULT']['PROJECT'], config['DEFAULT']['REGION'], 'ACTIVE')

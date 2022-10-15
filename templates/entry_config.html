@@ -9,11 +9,11 @@
 	   <h1>Tag Engine for Data Catalog</h1>
         </div>
 	   <div class="header">
-	   <h2>Create GCS entry config with {{ template_id }}</h2>
+	   <h2>Create entry config using template {{ template_id }}</h2>
 	   <span style="color:#9d9a9a;">
 	  </span>
 	   </div>
-	   <h3>Choose Tag Template Fields</h3>
+	   <h3>Tag Template Fields</h3>
 	   <h5 style="width: 500px;">To include a field in the tag, click on the checkbox next to the field. The tag will be created with the selected fields. <br><br>
 	   
 	   Mandatory template fields are marked by <span style="color:red;">*</span> and are already checked for you. 
@@ -41,37 +41,36 @@
 			   {% endfor %}
 			   </table>
 		    <p>&nbsp;</p>
-			   <h3>Enter URIs</h3>
+			   <h3>Google Cloud Storage Assets URIs</h3>
 		 	   
-			   <span style="color:#9d9a9a;"><h5>
+			   <h5>
 			   Specify a comma-separated list of URIs for file paths to include in and exclude from your entry config. Wildcards are allowed in the path name. <br><br>
 					  Supported URIs for GCS files: <br>
-					    gs://my-bucket/my-folder/* <br>
-				        gs://my-bucket/my-folder/*.parquet <br>
-					    gs://my-bucket/my-folderA/my-folderB/* <br>
+					    gs://[BUCKET]/[FOLDER]/* <br>
+				        gs://[BUCKET]/[FOLDER]/*.parquet <br>
+					    gs://[BUCKET]/[FOLDER]/[FOLDER]/* <br>
 				        </h5>
-				</span>
 				    <table>
 				     <tr>
-				    <td><span style="color:red;">*</span> Included URIs:&nbsp;&nbsp;
-				    	  <input type="text" value="gs://" name="included_uris" style="align-content:left; width: 700px; overflow:auto;"/>
+				    <td><span style="color:red;">*</span> Included Assets URIs:&nbsp;&nbsp;
+				    	  <input type="text" value="gs://[BUCKET]/[FOLDER]/*" name="included_assets_uris" style="align-content:left; width: 700px; overflow:auto;"/>
 
 				    	</td>
 				     </tr>
 				     <tr><td>&nbsp;</td></tr>
 	 				<tr>
-	 			    <td>&nbsp;&nbsp;Excluded URIs:&nbsp;
-				    	  <input type="text" name="excluded_uris" style="align-content:left; width: 700px; overflow:auto;"/>			 
+	 			    <td>&nbsp;&nbsp;Excluded Assets URIs:&nbsp;
+				    	  <input type="text" name="excluded_assets_uris" style="align-content:left; width: 700px; overflow:auto;"/>			 
 				    </td>
 	 		         </tr>
 			    </table>
  		        <p>&nbsp;</p>
- 			   <h3>Choose Update Options</h3>
- 		 	   <span style="color:#9d9a9a;">
+ 			   <h3>Update Options</h3>
+ 		 	   
  		 		   <h5>If you choose the AUTO refresh mode, your entry config will be scheduled for updates based on your specified refresh frequency. <br>
- 					   If you choose the ON-DEMAND refresh mode, your entry config will <b>not</b> be scheduled for updates (even if you specify a refresh frequency). <br>The AUTO mode is helpful for registering and tagging new files on GCS on a recurring schedule. It will not re-register or re-tag existing files. <br><br> <br><br>
+ 					   If you choose the ON-DEMAND refresh mode, your entry config will <b>not</b> be scheduled for updates (even if you specify a refresh frequency). <br>The AUTO mode is helpful for registering and tagging new files on GCS on a recurring schedule. It will not re-register or re-tag existing files. <br><br> 
  				   </h5>
- 				</span>
+ 				
  			     <table>
  				<tr>	
  			    <td><span style="color:red;">*</span> Refresh mode:&nbsp;<select name="refresh_mode" style="width: 100px;padding: 3px;">
@@ -92,7 +91,7 @@
  		        </table>
 			    {% if display_tag_history %}
 			      <p>&nbsp;</p>
-				<h3>Choose Tag History Option</h3>
+				<h3>Tag History Option</h3>
 			    <table>
 			    <tr><td><input type="checkbox" class="form-control move-left" name="tag_history" value="selected" checked>
 				    Save tag values from this config to BigQuery tag history table.&nbsp;&nbsp;
@@ -101,7 +100,7 @@
 			    {% endif %}
 			    {% if display_tag_stream %}
 			      <p>&nbsp;</p>
-				<h3>Choose Tag Stream Option</h3>
+				<h3>Tag Stream Option</h3>
 			    <table>
 			    <tr><td><input type="checkbox" class="form-control move-left" name="tag_stream" value="selected" checked>
 				    Publish tag values from this config to Pub/Sub tag stream topic.&nbsp;&nbsp;
@@ -117,8 +116,8 @@
 		        </tr>
 			   </table>
 			   <input type="hidden" name="template_id" value="{{ template_id }}">
-			   <input type="hidden" name="project_id" value="{{ project_id }}">
-			   <input type="hidden" name="region" value="{{ region }}">
+			   <input type="hidden" name="template_project" value="{{ template_project }}">
+			   <input type="hidden" name="template_region" value="{{ template_region }}">
 			   
 			   {% for dict_field in fields %}
 			   	<input type="hidden" name="{{ dict_field['field_id'] }}_datatype" value="{{ dict_field['field_type'] }}">

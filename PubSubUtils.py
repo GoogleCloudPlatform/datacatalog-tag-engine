@@ -29,8 +29,8 @@ class PubSubUtils:
         enabled, settings = store.read_tag_stream_settings()
         
         self.enabled = enabled
-        self.project_id = settings['project_id']
-        self.topic = settings['topic']
+        self.project_id = settings['pubsub_project']
+        self.topic = settings['pubsub_topic']
         
         #print('project_id: ' + self.project_id)
         #print('topic: ' + self.topic)

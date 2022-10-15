@@ -202,7 +202,7 @@ class JobManager:
     
     def _create_job_task(self, job_uuid, config_uuid, config_type):
         
-        #print('*** enter _create_cloud_task ***')
+        print('*** enter _create_cloud_task ***')
 
         client = tasks_v2.CloudTasksClient()
         parent = client.queue_path(self.tag_engine_project, self.queue_region, self.queue_name)
@@ -222,7 +222,7 @@ class JobManager:
         task['app_engine_http_request']['body'] = payload_utf8
 
         resp = client.create_task(parent=parent, task=task)
-        #print('resp: ' + str(resp))
+        print('resp: ', resp)
         
         return resp
         

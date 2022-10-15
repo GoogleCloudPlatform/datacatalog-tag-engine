@@ -15,7 +15,7 @@
  	  </span>
 	   </div>
 	  
-	   <h3>Choose Tag Template Fields</h3>
+	   <h3>Tag Template Fields</h3>
  	   <span style="color:#9d9a9a;">
  		   <h5>
 	   
@@ -57,34 +57,35 @@
 			   {% endfor %}
 			   </table>
 		    <p>&nbsp;</p>
-			   <h3>Enter URIs</h3>
-		 	   <span style="color:#9d9a9a;"><h5>
+			   <h3>GCS Assets URIs</h3>
+		 	   <h5>
  			   Specify a comma-separated list of URIs for file paths to include in and exclude from your entry config. Wildcards are allowed in the path name. <br><br>
- 					  Supported URIs for GCS files: <br>
- 					    gs://my-bucket/my-folder/* <br>
- 				        gs://my-bucket/my-folder/*.parquet <br>
- 					    gs://my-bucket/my-folderA/my-folderB/* <br></h5>
+				  Supported URIs for GCS files: <br>
+				    gs://[BUCKET]/[FOLDER]/* <br>
+			        gs://[BUCKET]/[FOLDER]/*.parquet <br>
+				    gs://[BUCKET]/[FOLDER]/[FOLDER]/* <br>
+				</h5>
 				</span>
 			    <table>
 			     <tr>
-			    <td><span style="color:red;">*</span>Included URIs:&nbsp;&nbsp;
-					<input type="text" value="{{ config['included_uris'] }}" name="included_uris" style="align-content:left; width: 700px; overflow:auto;"/>
+			    <td><span style="color:red;">*</span>Included Assets URIs:&nbsp;&nbsp;
+					<input type="text" value="{{ config['included_assets_uris'] }}" name="included_assets_uris" style="align-content:left; width: 700px; overflow:auto;"/>
 			     </td>
 			     </tr>
 			     <tr><td>&nbsp;</td></tr>
  				<tr>
- 			    <td>&nbsp;Excluded URIs:&nbsp;&nbsp;
-					<input type="text" value="{{ config['excluded_uris'] }}" name="excluded_uris" style="align-content:left; width: 700px; overflow:auto;"/>	
+ 			    <td>&nbsp;Excluded Assets URIs:&nbsp;&nbsp;
+					<input type="text" value="{{ config['excluded_assets_uris'] }}" name="excluded_assets_uris" style="align-content:left; width: 700px; overflow:auto;"/>	
 			    </td>
  		         </tr>
 		        </table>
 		        <p>&nbsp;</p>
-			   <h3>Choose Update Options</h3>
-		 	   <span style="color:#9d9a9a;">
+			   <h3>Update Options</h3>
+		 	
 		 		   <h5>If you choose the AUTO refresh mode, your entry config will be scheduled for updates based on your specified refresh frequency.<br>
 					   If you choose the ON-DEMAND refresh mode, your entry config will <b>not</b> be scheduled for updates (even if you specify a refresh frequency). <br>This mode is useful when no new files get added to your dataset on a regular basis or when you want to control the cataloging of new files through the Tag Engine API. <br><br>
 				   </h5>
-				</span>
+			
 			     <table>
  				<tr>	
  			    <td>Refresh mode:&nbsp;<select name="refresh_mode">
@@ -120,7 +121,7 @@
 		         </table>
 			    {% if display_tag_history_option == 1 %}
 			      <p>&nbsp;</p>
-				<h3>Choose Tag History Option</h3>
+				<h3>Tag History Option</h3>
 			    <table>
 			    <tr><td>
 				    {% if config['tag_history'] == True %} 
@@ -134,7 +135,7 @@
 			    {% endif %}
 			    {% if display_tag_stream_option == 1 %}
 			      <p>&nbsp;</p>
-				<h3>Choose Tag Stream Option</h3>
+				<h3>Tag Stream Option</h3>
 			    <table>
 			    <tr><td>
 				    {% if config['tag_stream'] == True %} 
@@ -152,8 +153,8 @@
 			   <td><input type="submit" value="Submit Changes" name="action">&nbsp;<input type="submit" value="Cancel Changes" name="action"></td>
 			   </table>
 			   <input type="hidden" name="template_id" value="{{ template_id }}">
-			   <input type="hidden" name="project_id" value="{{ project_id }}">
-			   <input type="hidden" name="region" value="{{ region }}">
+			   <input type="hidden" name="template_project" value="{{ template_project }}">
+			   <input type="hidden" name="template_region" value="{{ template_region }}">
 			   <input type="hidden" name="config_uuid" value="{{ config['config_uuid'] }}">
 			   
 			   {% for field in fields %}

@@ -37,15 +37,15 @@ import constants
 
 class DataCatalogUtils:
     
-    def __init__(self, template_id=None, project_id=None, region=None):
+    def __init__(self, template_id=None, template_project=None, template_region=None):
         self.template_id = template_id
-        self.project_id = project_id
-        self.region = region
+        self.template_project = template_project
+        self.template_region = template_region
         
         self.client = DataCatalogClient()
         
-        if template_id is not None and project_id is not None and region is not None:
-            self.template_path = DataCatalogClient.tag_template_path(project_id, region, template_id)
+        if template_id is not None and template_project is not None and template_region is not None:
+            self.template_path = DataCatalogClient.tag_template_path(template_project, template_region, template_id)
     
     def get_template(self, included_fields=None):
         
@@ -136,7 +136,7 @@ class DataCatalogUtils:
         return sorted(fields, key=itemgetter('order'), reverse=True)
     
         
-    def check_if_exists(self, parent, column=''):
+    def check_if_exists(self, parent, column=None):
         
         #print('enter check_if_exists')
         #print('input parent: ' + parent)
@@ -144,6 +144,9 @@ class DataCatalogUtils:
         
         tag_exists = False
         tag_id = ""
+        
+        if column != None and column != "" and len(column) > 1:
+            column = column.lower() # column is stored in lower case in the tag object
         
         tag_list = self.client.list_tags(parent=parent, timeout=120)
         
@@ -153,27 +156,24 @@ class DataCatalogUtils:
             #print('tag name: ' + str(tag_instance.name))
             tagged_column = tag_instance.column
             
-            #print('found tagged column: ' + tagged_column)
-            template: "projects/data-mesh-344315/locations/us-central1/tagTemplates/cities_311"
-            
+            #print('found tagged column: ' + tagged_column)            
             tagged_template_project = tag_instance.template.split('/')[1]
             tagged_template_location = tag_instance.template.split('/')[3]
             tagged_template_id = tag_instance.template.split('/')[5]
             
-            if column == "" or column == None:
+            if column == '' or column == None:
                 # looking for a table-level tag
-                if tagged_template_id == self.template_id and tagged_template_project == self.project_id and \
-                    tagged_template_location == self.region and tagged_column == "":
-                    #print('DEBUG: Table tag exists.')
+                if tagged_template_id == self.template_id and tagged_template_project == self.template_project and \
+                    tagged_template_location == self.template_region and tagged_column == "":
+                    #print('DEBUG: table-level tag exists.')
                     tag_exists = True
                     tag_id = tag_instance.name
                     #print('DEBUG: tag_id: ' + tag_id)
                     break
             else:
-                # looking for a column-level tag
-                if column == tagged_column and tagged_template_id == self.template_id and tagged_template_project == self.project_id and \
-                    tagged_template_location == self.region:
-                    #print('Column tag exists.')
+                if column == tagged_column and tagged_template_id == self.template_id and tagged_template_project == self.template_project and \
+                    tagged_template_location == self.template_region:
+                    #print('DEBUG: column-level tag exists.')
                     tag_exists = True
                     tag_id = tag_instance.name
                     #print('DEBUG: tag_id: ' + tag_id)
@@ -185,10 +185,14 @@ class DataCatalogUtils:
         return tag_exists, tag_id
     
     
-    def apply_static_config(self, fields, uri, config_uuid, template_uuid, tag_history, tag_stream, overwrite=False):
+    def apply_static_asset_config(self, fields, uri, config_uuid, template_uuid, tag_history, tag_stream, overwrite=False):
         
-        print('*** apply_static_config ***')
-
+        print('*** apply_static_asset_config ***')
+        #print('fields: ', fields)
+        #print('uri: ', uri)
+        #print('config_uuid: ', config_uuid)
+        #print('template_uuid: ', template_uuid)
+        
         # uri is either a BQ table/view path or GCS file path
         store = te.TagEngineUtils()        
         creation_status = constants.SUCCESS
@@ -202,28 +206,23 @@ class DataCatalogUtils:
             is_gcs = True
             bucket = uri[0].replace('-', '_')
             filename = uri[1].split('.')[0].replace('/', '_') # extract the filename without extension, replace '/' with '_'
-            gcs_resource = '//datacatalog.googleapis.com/projects/' + self.project_id + '/locations/' + self.region + '/entryGroups/' + bucket + '/entries/' + filename
-            #print('gcs_resource: ', gcs_resource)
+            gcs_resource = '//datacatalog.googleapis.com/projects/' + self.template_project + '/locations/' + self.template_region + '/entryGroups/' + bucket + '/entries/' + filename
+            print('gcs_resource: ', gcs_resource)
             request = datacatalog.LookupEntryRequest()
             request.linked_resource=gcs_resource
             uri = '/'.join(uri)
+            #print('uri:', uri)
             
             try:
                 entry = self.client.lookup_entry(request)
+                print('GCS entry:', entry.name)
             except Exception as e:
                 print('Unable to find the entry in the catalog. Entry ' + gcs_resource + ' does not exist.')
                 creation_status = constants.ERROR
                 return creation_status
-                #print('entry found: ', entry)
-        
-        if isinstance(uri, str):
+                
+        elif isinstance(uri, str):
             is_bq = True
-            if "/column/" in uri:
-                # we have a column tag
-                split_resource = uri.split("/column/")
-                uri = split_resource[0]
-                column = split_resource[1]
-        
             bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
             #print("bigquery_resource: " + bigquery_resource)
         
@@ -233,7 +232,7 @@ class DataCatalogUtils:
             #print('entry: ', entry)
         
         try:    
-            tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
+            tag_exists, tag_id = self.check_if_exists(parent=entry.name)
             print('tag exists: ', tag_exists)
         
         except Exception as e:
@@ -246,32 +245,27 @@ class DataCatalogUtils:
             creation_status = constants.SUCCESS
             return creation_status
         
-        creation_status = self.create_update_tag(fields, tag_exists, tag_id, config_uuid, 'STATIC', tag_history, tag_stream, entry, uri, column)    
+        creation_status = self.create_update_tag(fields, tag_exists, tag_id, config_uuid, 'STATIC_ASSET_TAG', tag_history, tag_stream, entry, uri)    
            
         return creation_status
 
 
-    def apply_dynamic_config(self, fields, uri, config_uuid, template_uuid, tag_history, tag_stream, batch_mode=False):
+    def apply_dynamic_table_config(self, fields, uri, config_uuid, template_uuid, tag_history, tag_stream, batch_mode=False):
         
-        print('*** apply_dynamic_config ***')
-        #print('fields: ', fields) 
+        print('*** apply_dynamic_table_config ***')
+        #print('fields:', fields) 
+        #print('uri:', uri)
+        #print('config_uuid:', config_uuid)
+        #print('template_uuid:', template_uuid)
+        #print('tag_history:', tag_history)
+        #print('tag_stream:', tag_stream)
                 
         store = te.TagEngineUtils()
         bq_client = bigquery.Client()
         
         creation_status = constants.SUCCESS
-  
-        #print('uri: ' + uri)
-        
         error_exists = False
         
-        column = ""
-        if "/column/" in uri:
-            # we have a column tag
-            split_resource = uri.split("/column/")
-            uri = split_resource[0]
-            column = split_resource[1]
-            
         bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
         
         #print('bigquery_resource: ', bigquery_resource)
@@ -280,7 +274,7 @@ class DataCatalogUtils:
         request.linked_resource=bigquery_resource
         entry = self.client.lookup_entry(request)
 
-        tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
+        tag_exists, tag_id = self.check_if_exists(parent=entry.name)
         #print("tag_exists: " + str(tag_exists))
         
         # create new tag
@@ -294,21 +288,18 @@ class DataCatalogUtils:
             query_expression = field['query_expression']
 
             # parse and run query in BQ
-            if column != "":
-                query_str = self.parse_query_expression(uri, query_expression, column)
-            else:
-                query_str = self.parse_query_expression(uri, query_expression)
+            query_str = self.parse_query_expression(uri, query_expression)
             #print('returned query_str: ' + query_str)
             
-            # note: field_value is of type list
-            field_value, error_exists = self.run_query(bq_client, query_str, field_type, batch_mode, store)
-            #print('field_value: ', field_value)
+            # note: field_values is of type list
+            field_values, error_exists = self.run_query(bq_client, query_str, field_type, batch_mode, store)
+            #print('field_values: ', field_values)
             #print('error_exists: ', error_exists)
     
-            if error_exists or field_value == []:
+            if error_exists or field_values == []:
                 continue
             
-            tag, error_exists = self.populate_tag_field(tag, field_id, field_type, field_value, store)
+            tag, error_exists = self.populate_tag_field(tag, field_id, field_type, field_values, store)
     
             if error_exists:
                 continue
@@ -319,9 +310,9 @@ class DataCatalogUtils:
             # store the value back in the dict, so that it can be accessed by the exporter
             #print('field_value: ' + str(field_value))
             if field_type == 'richtext':
-                formatted_value = ', '.join(str(v) for v in field_value)
+                formatted_value = ', '.join(str(v) for v in field_values)
             else:
-                formatted_value = field_value[0]
+                formatted_value = field_values[0]
                 
             field['field_value'] = formatted_value
             
@@ -336,10 +327,6 @@ class DataCatalogUtils:
             # tag is empty due to errors, skip tag creation
             return constants.ERROR
                         
-        if column != "":
-            tag.column = column
-            #print('tag.column: ' + column) 
-        
         if tag_exists == True:
             #print('updating tag')
             #print('tag request: ' + str(tag))
@@ -352,7 +339,7 @@ class DataCatalogUtils:
             except Exception as e:
                 print('Error occurred during tag update: ' + str(e))
                 msg = 'Error occurred during tag update: ' + str(e)
-                store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'DYNAMIC', msg)
+                store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'DYNAMIC_TABLE_TAG', msg)
             
         else:
 
@@ -364,19 +351,160 @@ class DataCatalogUtils:
             except Exception as e:
                 print('Error occurred during tag create: ', e)
                 msg = 'Error occurred during tag create: ' + str(e)
-                store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'DYNAMIC', msg)
+                store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'DYNAMIC_TABLE_TAG', msg)
             
         if tag_history:
             bqu = bq.BigQueryUtils()
             template_fields = self.get_template()
-            bqu.copy_tag(self.template_id, template_fields, uri, column, fields)
+            bqu.copy_tag(self.template_id, template_fields, uri, None, fields)
             
         if tag_stream:
             psu = ps.PubSubUtils()
-            psu.copy_tag(self.template_id, uri, column, fields)
+            psu.copy_tag(self.template_id, uri, None, fields)
                 
                                  
         return creation_status
+
+
+    def apply_dynamic_column_config(self, fields, columns_query, uri, config_uuid, template_uuid, tag_history, tag_stream, batch_mode=False):
+        
+        print('*** apply_dynamic_column_config ***')
+        #print('fields:', fields) 
+        #print('columns_query', columns_query)
+        #print('uri:', uri)
+        #print('config_uuid:', config_uuid)
+        #print('template_uuid:', template_uuid)
+        #print('tag_history:', tag_history)
+        #print('tag_stream:', tag_stream)
+                
+        store = te.TagEngineUtils()
+        bq_client = bigquery.Client()
+        
+        creation_status = constants.SUCCESS
+        error_exists = False
+        
+        columns = [] # columns to be tagged
+        rows = bq_client.query(columns_query).result()
+        for row in rows:
+            columns.append(row[0]) # DC stores all schema columns in lower case
+            
+        print('columns to be tagged:', columns)
+                    
+        bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
+        #print('bigquery_resource: ', bigquery_resource)
+        
+        request = datacatalog.LookupEntryRequest()
+        request.linked_resource=bigquery_resource
+        entry = self.client.lookup_entry(request)
+        
+        schema_columns = [] # columns in the entry's schema
+                
+        for column_schema in entry.schema.columns:
+            schema_columns.append(column_schema.column)
+            
+        print('schema_columns:', schema_columns)
+
+        for column in columns:
+            
+            # skip columns not found in the entry's schema
+            if column not in schema_columns:
+                continue
+            
+            # check to see if a tag has already been created on this column
+            tag_exists, tag_id = self.check_if_exists(entry.name, column)
+            print("tag_exists: ", tag_exists)
+        
+            # initialize the new column-level tag
+            tag = datacatalog.Tag()
+            tag.template = self.template_path
+            tag.column = column
+            
+            verified_field_count = 0
+            
+            for field in fields:
+                field_id = field['field_id']
+                field_type = field['field_type']
+                query_expression = field['query_expression']
+
+                query_str = self.parse_query_expression(uri, query_expression, column)
+                #print('returned query_str: ' + query_str)
+            
+                # note: field_values is of type list
+                field_values, error_exists = self.run_query(bq_client, query_str, field_type, batch_mode, store)
+                #print('field_values: ', field_values)
+                #print('error_exists: ', error_exists)
+    
+                if error_exists or field_values == []:
+                    continue
+            
+                tag, error_exists = self.populate_tag_field(tag, field_id, field_type, field_values, store)
+    
+                if error_exists:
+                    continue
+                                    
+                verified_field_count = verified_field_count + 1
+                #print('verified_field_count: ' + str(verified_field_count))    
+            
+                # store the value back in the dict, so that it can be accessed by the exporter
+                #print('field_value: ' + str(field_value))
+                if field_type == 'richtext':
+                    formatted_value = ', '.join(str(v) for v in field_values)
+                else:
+                    formatted_value = field_values[0]
+                
+                field['field_value'] = formatted_value
+            
+            # inner loop ends here
+
+            if error_exists:
+                # error was encountered while running SQL expression
+                # proceed with tag creation / update, but return error to user
+                creation_status = constants.ERROR
+            
+            if verified_field_count == 0:
+                # tag is empty due to errors, skip tag creation
+                return constants.ERROR
+            
+            # we are ready to create or update the tag 
+                       
+            if tag_exists == True:
+                #print('updating tag')
+                #print('tag request: ' + str(tag))
+                tag.name = tag_id
+            
+                try:
+                    print('tag update request: ', tag)
+                    response = self.client.update_tag(tag=tag)
+                    #print('response: ', response)
+                except Exception as e:
+                    print('Error occurred during tag update: ' + str(e))
+                    msg = 'Error occurred during tag update: ' + str(e)
+                    store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'DYNAMIC_COLUMN_TAG', msg)
+            else:
+
+                try:
+                    print('tag create request: ', tag)
+                    response = self.client.create_tag(parent=entry.name, tag=tag)
+                    #print('response: ', response)
+                
+                except Exception as e:
+                    print('Error occurred during tag create: ', e)
+                    msg = 'Error occurred during tag create: ' + str(e)
+                    store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'DYNAMIC_COLUMN_TAG', msg)
+            
+            if tag_history:
+                bqu = bq.BigQueryUtils()
+                template_fields = self.get_template()
+                bqu.copy_tag(self.template_id, template_fields, uri, column, fields)
+            
+            if tag_stream:
+                psu = ps.PubSubUtils()
+                psu.copy_tag(self.template_id, uri, column, fields)
+
+        # outer loop ends here                
+                                 
+        return creation_status
+
         
 
     def apply_entry_config(self, fields, uri, config_uuid, template_uuid, tag_history, tag_stream):
@@ -392,7 +520,7 @@ class DataCatalogUtils:
         blob = bucket.get_blob(filename)
         
         entry_group_short_name = bucket_name.replace('-', '_')
-        entry_group_full_name = 'projects/' + self.project_id + '/locations/' + self.region + '/entryGroups/' + bucket_name.replace('-', '_')
+        entry_group_full_name = 'projects/' + self.template_project + '/locations/' + self.template_region + '/entryGroups/' + bucket_name.replace('-', '_')
         
         # create the entry group    
         is_entry_group = self.entry_group_exists(entry_group_full_name)
@@ -467,7 +595,7 @@ class DataCatalogUtils:
             os.remove(tmp_file)
             
             # create the file metadata tag
-            template_path = self.client.tag_template_path(self.project_id, self.region, self.template_id)
+            template_path = self.client.tag_template_path(self.template_project, self.template_region, self.template_id)
             tag = datacatalog.Tag()
             tag.template = template_path
     
@@ -580,7 +708,7 @@ class DataCatalogUtils:
         eg.display_name = entry_group_short_name
         
         entry_group = self.client.create_entry_group(
-                    parent='projects/' + self.project_id + '/locations/' + self.region,
+                    parent='projects/' + self.template_project + '/locations/' + self.template_region,
                     entry_group_id=entry_group_short_name,
                     entry_group=eg)
         
@@ -588,14 +716,20 @@ class DataCatalogUtils:
         return entry_group.name
            
 
-    def apply_glossary_config(self, fields, mapping_table, uri, config_uuid, template_uuid, tag_history, tag_stream, overwrite=False):
+    def apply_glossary_asset_config(self, fields, mapping_table, uri, config_uuid, template_uuid, tag_history, tag_stream, overwrite=False):
         
-        print('** enter apply_glossary_config **')
+        print('** enter apply_glossary_asset_config **')
+        #print('fields: ', fields)
+        print('mapping_table: ', mapping_table)
+        print('uri: ', uri)
+        #print('config_uuid: ', config_uuid)
+        #print('template_uuid: ', template_uuid)
+        #print('tag_history: ', tag_history)
+        #print('tag_stream: ', tag_stream)
  
         # uri is either a BQ table/view path or GCS file path
         store = te.TagEngineUtils()        
         creation_status = constants.SUCCESS
-        column = ''
         
         is_gcs = False
         is_bq = False
@@ -605,36 +739,33 @@ class DataCatalogUtils:
             is_gcs = True
             bucket = uri[0].replace('-', '_')
             filename = uri[1].split('.')[0].replace('/', '_') # extract the filename without the extension, replace '/' with '_'
-            gcs_resource = '//datacatalog.googleapis.com/projects/' + self.project_id + '/locations/' + self.region + '/entryGroups/' + bucket + '/entries/' + filename
+            gcs_resource = '//datacatalog.googleapis.com/projects/' + self.template_project + '/locations/' + self.template_region + '/entryGroups/' + bucket + '/entries/' + filename
             #print('gcs_resource: ', gcs_resource)
             request = datacatalog.LookupEntryRequest()
             request.linked_resource=gcs_resource
             
             try:
                 entry = self.client.lookup_entry(request)
+                print('entry: ', entry.name)
             except Exception as e:
                 print('Unable to find entry in the catalog. Entry ' + gcs_resource + ' does not exist.')
                 creation_status = constants.ERROR
                 return creation_status
                 #print('entry found: ', entry)
         
-        if isinstance(uri, str):
-            is_bq = True
-            if "/column/" in uri:
-                # we have a column tag
-                split_resource = uri.split("/column/")
-                uri = split_resource[0]
-                column = split_resource[1]
-        
+        elif isinstance(uri, str):
+            is_bq = True        
             bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
-            #print("bigquery_resource: " + bigquery_resource)
+            print("bigquery_resource: " + bigquery_resource)
         
             request = datacatalog.LookupEntryRequest()
             request.linked_resource=bigquery_resource
             entry = self.client.lookup_entry(request)
+            print('entry: ', entry.name)
         
         try:    
-            tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
+            tag_exists, tag_id = self.check_if_exists(parent=entry.name)
+            print('tag_exists: ', tag_exists)
         
         except Exception as e:
             print('Error during check_if_exists: ', e)
@@ -642,25 +773,27 @@ class DataCatalogUtils:
             return creation_status
 
         if tag_exists and overwrite == False:
-            #print('Info: tag already exists and overwrite set to False')
+            print('Info: tag already exists and overwrite set to False')
             creation_status = constants.SUCCESS
             return creation_status
          
-        # entry exists while glossary tag does not
         if entry.schema == None:
-            #print('Error: entry ' + entry.name + ' does not have a schema in the catalog.')
+            print('Error: entry ' + entry.name + ' does not have a schema in the catalog.')
             creation_status = constants.ERROR
             return creation_status
         
+        # retrieve the schema columns from the entry
         column_schema_str = ''
         for column_schema in entry.schema.columns: 
-            column_schema_str += str(column_schema).split(':')[3].strip() + ','
-                
+            column_schema_str += "'" + column_schema.column + "',"
+        
+        #print('column_schema_str: ', column_schema_str)
+             
         mapping_table_formatted = mapping_table.replace('bigquery/project/', '').replace('/dataset/', '.').replace('/', '.')
                 
         query_str = 'select canonical_name from `' + mapping_table_formatted + '` where source_name in (' + column_schema_str[0:-1] + ')'
         #print('query_str: ', query_str)
-        
+
         # run query against mapping table
         bq_client = bigquery.Client()
         rows = bq_client.query(query_str).result()
@@ -668,22 +801,27 @@ class DataCatalogUtils:
         tag = datacatalog.Tag()
         tag.template = self.template_path
         
+        tag_is_empty = True
+        
         for row in rows:
             canonical_name = row['canonical_name']
             #print('canonical_name: ', canonical_name)
         
             for field in fields:
                 if field['field_id'] == canonical_name:
+                    #print('found match')
                     bool_field = datacatalog.TagField()
                     bool_field.bool_value = True
                     tag.fields[canonical_name] = bool_field
                     field['field_value'] = True
+                    tag_is_empty = False
                     break
-                        
-        if column != "":
-            tag.column = column
-            #print('tag.column == ' + column)   
-                
+                    
+        if tag_is_empty:
+            print("Error: can't create the tag because it's empty")
+            creation_status = constants.ERROR
+            return creation_status
+                            
         if tag_exists:
             # tag already exists and overwrite is True
             tag.name = tag_id
@@ -693,7 +831,7 @@ class DataCatalogUtils:
                 response = self.client.update_tag(tag=tag)
             except Exception as e:
                 msg = 'Error occurred during tag update: ' + str(e)
-                store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'GLOSSARY', msg)
+                store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'GLOSSARY_ASSET_TAG', msg)
                 
                 # sleep and retry the tag update
                 if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
@@ -704,13 +842,14 @@ class DataCatalogUtils:
                         response = self.client.update_tag(tag=tag)
                     except Exception as e:
                         msg = 'Error occurred during tag update after sleep: ' + str(e)
-                        store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'GLOSSARY', msg)
+                        store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'GLOSSARY_ASSET_TAG', msg)
         else:
             try:
+                print('tag create: ', tag)
                 response = self.client.create_tag(parent=entry.name, tag=tag)
             except Exception as e:
                 msg = 'Error occurred during tag create: ' + str(e) + '. Failed tag request = ' + str(tag)
-                store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'GLOSSARY', msg)
+                store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'GLOSSARY_ASSET_TAG', msg)
                 
                 # sleep and retry write
                 if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
@@ -721,7 +860,7 @@ class DataCatalogUtils:
                         response = self.client.create_tag(parent=entry.name, tag=tag)
                     except Exception as e:
                         msg = 'Error occurred during tag create after sleep: ' + str(e)
-                        store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'GLOSSARY', msg)
+                        store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'GLOSSARY_ASSET_TAG', msg)
                     
         if tag_history:
             bqu = bq.BigQueryUtils()
@@ -729,22 +868,22 @@ class DataCatalogUtils:
             if is_gcs:
                 bqu.copy_tag(self.template_id, template_fields, '/'.join(uri), None, fields)
             if is_bq:
-                bqu.copy_tag(self.template_id, template_fields, uri, column, fields)
+                bqu.copy_tag(self.template_id, template_fields, uri, None, fields)
         
         if tag_stream:
             psu = ps.PubSubUtils()
             if is_gcs:
                 bqu.copy_tag(self.template_id, '/'.join(uri), None, fields)
             if is_bq:
-                psu.copy_tag(self.template_id, uri, column, fields)
+                psu.copy_tag(self.template_id, uri, None, fields)
            
         return creation_status
       
                  
-    def apply_sensitive_config(self, fields, dlp_dataset, mapping_table, uri, create_policy_tags, taxonomy_id, \
-                               config_uuid, template_uuid, tag_history, tag_stream, overwrite=False):
+    def apply_sensitive_column_config(self, fields, dlp_dataset, mapping_table, uri, create_policy_tags, taxonomy_id, \
+                                       config_uuid, template_uuid, tag_history, tag_stream, overwrite=False):
         
-        print('** enter apply_sensitive_config **')
+        print('** enter apply_sensitive_column_config **')
         #print('uri: ', uri)
         
         if create_policy_tags:
@@ -784,7 +923,7 @@ class DataCatalogUtils:
             is_gcs = True
             bucket = uri[0].replace('-', '_')
             filename = uri[1].split('.')[0].replace('/', '_') # extract the filename without the extension, replace '/' with '_'
-            gcs_resource = '//datacatalog.googleapis.com/projects/' + self.project_id + '/locations/' + self.region + '/entryGroups/' + bucket + '/entries/' + filename
+            gcs_resource = '//datacatalog.googleapis.com/projects/' + self.template_project + '/locations/' + self.template_region + '/entryGroups/' + bucket + '/entries/' + filename
             #print('gcs_resource: ', gcs_resource)
             request = datacatalog.LookupEntryRequest()
             request.linked_resource=gcs_resource
@@ -907,7 +1046,7 @@ class DataCatalogUtils:
                     
                 except Exception as e:
                     msg = 'Error occurred during tag update: ' + str(e) + '. Failed tag request = ' + str(tag)
-                    store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'SENSITIVE', msg)
+                    store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'SENSITIVE_TAG', msg)
                 
                     # sleep and retry the tag update
                     if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
@@ -919,7 +1058,7 @@ class DataCatalogUtils:
                         except Exception as e:
                             msg = 'Error occurred during tag update after sleep: ' + str(e)
                             print(msg)
-                            store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'SENSITIVE', msg)
+                            store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'SENSITIVE_TAG', msg)
             else:
                 try:
                     print('tag create request: ', tag)
@@ -928,7 +1067,7 @@ class DataCatalogUtils:
                 except Exception as e:
                     msg = 'Error occurred during tag create: ' + str(e) + '. Failed tag request = ' + str(tag)
                     print(msg)
-                    store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'SENSITIVE', msg)
+                    store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'SENSITIVE_TAG', msg)
                 
                     # sleep and retry write
                     if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
@@ -940,7 +1079,7 @@ class DataCatalogUtils:
                         except Exception as e:
                             msg = 'Error occurred during tag create after sleep: ' + str(e)
                             print(msg)
-                            store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'SENSITIVE', msg)
+                            store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'SENSITIVE_TAG', msg)
                     
             if create_policy_tags:
                 # add the column name and policy tag name to a list
@@ -1008,7 +1147,8 @@ class DataCatalogUtils:
     def apply_restore_config(self, config_uuid, tag_extract, tag_history, tag_stream, overwrite=False):
         
         print('** enter apply_restore_config **')
-        #print('tag_extract: ', tag_extract)
+        print('config_uuid:', config_uuid)
+        print('tag_extract: ', tag_extract)
         
         store = te.TagEngineUtils()        
         creation_status = constants.SUCCESS
@@ -1025,7 +1165,7 @@ class DataCatalogUtils:
             #print('entry_id: ', entry_id)
         
             entry_name = 'projects/' + project_id + '/locations/' + location_id + '/entryGroups/' + entry_group + '/entries/' + entry_id
-            #print('entry_name: ', entry_name)
+            print('entry_name: ', entry_name)
     
             try:
                 entry = self.client.get_entry(name=entry_name)
@@ -1061,7 +1201,7 @@ class DataCatalogUtils:
             
                     # create or update column-level tag
                     uri = entry.linked_resource.replace('//bigquery.googleapis.com/projects/', '') + '/column/' + column_name
-                    creation_status = self.create_update_tag(fields, tag_exists, tag_id, config_uuid, 'RESTORE', tag_history, tag_stream, \
+                    creation_status = self.create_update_tag(fields, tag_exists, tag_id, config_uuid, 'RESTORE_TAG', tag_history, tag_stream, \
                                                              entry, uri, column_name)
             
             if 'tags' in json_obj:
@@ -1085,7 +1225,7 @@ class DataCatalogUtils:
                 
                 # create or update table-level tag
                 uri = entry.linked_resource.replace('//bigquery.googleapis.com/projects/', '')
-                creation_status = self.create_update_tag(fields, tag_exists, tag_id, config_uuid, 'RESTORE', tag_history, \
+                creation_status = self.create_update_tag(fields, tag_exists, tag_id, config_uuid, 'RESTORE_TAG', tag_history, \
                                                          tag_stream, entry, uri)                     
                     
         return creation_status
@@ -1160,7 +1300,7 @@ class DataCatalogUtils:
             tag_fields.append(field)
             
         
-        creation_status = self.create_update_tag(tag_fields, tag_exists, tag_id, config_uuid, 'IMPORT', tag_history, tag_stream, \
+        creation_status = self.create_update_tag(tag_fields, tag_exists, tag_id, config_uuid, 'IMPORT_TAG', tag_history, tag_stream, \
                                                  entry, uri, column_name)
                                 
         return creation_status
@@ -1271,7 +1411,7 @@ class DataCatalogUtils:
                 response = self.client.update_tag(tag=tag)
             except Exception as e:
                 msg = 'Error occurred during tag update: ' + str(e)
-                store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'RESTORE', msg)
+                store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, config_type, msg)
                 
                 # sleep and retry the tag update
                 if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
@@ -1319,17 +1459,17 @@ class DataCatalogUtils:
         return creation_status
         
        
-    def search_catalog(self, bq_project, bq_dataset):
+    def search_catalog(self, bigquery_project, bigquery_dataset):
         
         linked_resources = {}
         
         scope = datacatalog.SearchCatalogRequest.Scope()
-        scope.include_project_ids.append(bq_project)
+        scope.include_project_ids.append(bigquery_project)
         
         request = datacatalog.SearchCatalogRequest()
         request.scope = scope
     
-        query = 'parent:' + bq_project + '.' + bq_dataset
+        query = 'parent:' + bigquery_project + '.' + bigquery_dataset
         print('query string: ' + query)
     
         request.query = query
@@ -1459,8 +1599,9 @@ class DataCatalogUtils:
                 rows = job.result()
             
             else:
+                #print('query_str:', query_str)
                 rows = bq_client.query(query_str).result()
-                #print('rows: ', rows)
+                #print('rows:', rows)
             
             # if query expression is well-formed, there should only be a single row returned with a single field_value
             # However, user may mistakenly run a query that returns a list of rows. In that case, grab only the top row.  
@@ -1482,7 +1623,7 @@ class DataCatalogUtils:
         
         except Exception as e:
             error_exists = True
-            print('Error occurred during run_query: ', e)
+            print('Error occurred during run_query ' + query_str + ', Error: ' + str(e))
             store.write_tag_value_error('invalid query parameter(s): ' + query_str + ' produced error ' + str(e))
         
         #print('field_values: ', field_values)
@@ -1490,40 +1631,52 @@ class DataCatalogUtils:
         return field_values, error_exists
         
 
-    def populate_tag_field(self, tag, field_id, field_type, field_value, store):
+    def populate_tag_field(self, tag, field_id, field_type, field_values, store):
         
         error_exists = False
         
         try:             
             if field_type == "bool":
                 bool_field = datacatalog.TagField()
-                bool_field.bool_value = bool(field_value[0])
+                bool_field.bool_value = bool(field_values[0])
                 tag.fields[field_id] = bool_field
             if field_type == "string":
                 string_field = datacatalog.TagField()
-                string_field.string_value = str(field_value[0])
+                string_field.string_value = str(field_values[0])
                 tag.fields[field_id] = string_field
             if field_type == "richtext":
                 richtext_field = datacatalog.TagField()
-                formatted_value = '<br>'.join(str(v) for v in field_value)
+                formatted_value = '<br>'.join(str(v) for v in field_values)
                 richtext_field.richtext_value = str(formatted_value)
                 tag.fields[field_id] = richtext_field
             if field_type == "double":
                 float_field = datacatalog.TagField()
-                float_field.double_value = float(field_value[0])
+                float_field.double_value = float(field_values[0])
                 tag.fields[field_id] = float_field
             if field_type == "enum":
                 enum_field = datacatalog.TagField()
-                enum_field.enum_value.display_name = field_value[0]
+                enum_field.enum_value.display_name = field_values[0]
                 tag.fields[field_id] = enum_field
             if field_type == "datetime":
                 # timestamp value gets stored in DC, expected format: 2020-12-02T16:34:14Z
                 # however, field_value can be a date value e.g. "2022-05-08" or a datetime value e.g. "2022-05-08 15:00:00"
-                if len(str(field_value)) == 10:
+                field_value = field_values[0]
+                print('field_value:', field_value)
+                print('field_value type:', type(field_value))
+                
+                # we have a datetime type 
+                if type(field_value) == datetime:
+                    timestamp = pytz.utc.localize(field_value)
+                elif type(field_value) == date:
+                    dt = datetime.combine(field_value, datetime.min.time())
+                    timestamp = pytz.utc.localize(dt)
+                # we have a date cast as a string
+                elif len(str(field_value)) == 10:
                     utc = pytz.timezone('UTC')
                     d = date(int(field_value[0:4]), int(field_value[5:7]), int(field_value[8:10]))
                     dt = datetime.combine(d, dtime(00, 00)) # when no time is supplied, default to 12:00:00 AM UTC
                     timestamp = utc.localize(dt)
+                # we have a timestamp cast as a string
                 else:
                     timestamp_value = field_value.isoformat()
                     field_value = timestamp_value[0:19] + timestamp_value[26:32] + "Z"
@@ -1534,32 +1687,29 @@ class DataCatalogUtils:
                 datetime_field.timestamp_value = timestamp
                 tag.fields[field_id] = datetime_field
                 
-        except ValueError:
+        except Exception as e:
             error_exists = True
-            print("cast error, writing error entry")
-            store.write_tag_value_error('cast error in sql query: ' + query_str)
+            print("Error storing field value ", field_value, " into tag field ", field_id)
+            store.write_tag_value_error("Error storing field value " + str(field_value) + " into tag field " + field_id)
         
         return tag, error_exists
     
         
 if __name__ == '__main__':
     
-    te_config = configparser.ConfigParser()
-    te_config.read("tagengine.ini")
-    template_project=te_config['DEFAULT']['TAG_ENGINE_PROJECT']
-    template_region=te_config['DEFAULT']['QUEUE_REGION']
-    '''
-    dcu = DataCatalogUtils(template_id='data_resource_v2', project_id=template_project, region=template_region)
-    tag_extract = [{'entryGroupId': '@bigquery', 'id': 'cHJvamVjdHMvdGFnLWVuZ2luZS1kZXZlbG9wL2RhdGFzZXRzL2RhdGFfc291cmNlX3VzL3RhYmxlcy9mYXJt', 'locationId': 'us', 'projectId': 'tag-engine-develop', 'system': 'BIGQUERY', 'tags': [{'fields': [{'name': 'data_confidentiality', 'type': 'ENUM', 'value': 'UNKNOWN'}, {'name': 'num_fields', 'type': 'DOUBLE', 'value': '10.000000'}, {'name': 'global_id_location', 'type': 'BOOL', 'value': 'FALSE'}, {'name': 'num_records', 'type': 'DOUBLE', 'value': '15.000000'}, {'name': 'global_id_customer', 'type': 'BOOL', 'value': 'FALSE'}, {'name': 'recent_data_update', 'type': 'TIMESTAMP', 'value': '2022-08-01T05:00:00+00:00'}, {'name': 'global_id_account', 'type': 'BOOL', 'value': 'FALSE'}, {'name': 'global_id_product', 'type': 'BOOL', 'value': 'TRUE'}, {'name': 'size', 'type': 'DOUBLE', 'value': '3.000000'}, {'type': 'BOOL', 'value': 'FALSE'}, {'type': 'BOOL', 'value': 'TRUE'}, {'type': 'BOOL', 'value': 'FALSE'}, {'type': 'ENUM'}, {'type': 'DOUBLE', 'value': '1.000000'}, {'type': 'BOOL', 'value': 'FALSE'}, {'type': 'DOUBLE', 'value': '12.000000'}, {'type': 'TIMESTAMP', 'value': '2022-07-13T05:00:00+00:00'}, {'type': 'DOUBLE', 'value': '43.000000'}], 'projectId': 'data-mesh-344315', 'templateId': 'data_resource'}], 'type': 'TABLE'}, {'entryGroupId': '@bigquery', 'id': 'cHJvamVjdHMvdGFnLWVuZ2luZS1kZXZlbG9wL2RhdGFzZXRzL2RhdGFfc291cmNlX3VzL3RhYmxlcy91c2E', 'locationId': 'us', 'projectId': 'tag-engine-develop', 'system': 'BIGQUERY', 'tags': [{'fields': [{'name': 'data_confidentiality', 'type': 'ENUM', 'value': 'PUBLIC'}, {'name': 'num_fields', 'type': 'DOUBLE', 'value': '5.000000'}, {'name': 'global_id_location', 'type': 'BOOL', 'value': 'FALSE'}, {'name': 'num_records', 'type': 'DOUBLE', 'value': '3.000000'}, {'name': 'global_id_customer', 'type': 'BOOL', 'value': 'TRUE'}, {'name': 'recent_data_update', 'type': 'TIMESTAMP', 'value': '2022-08-03T05:00:00+00:00'}, {'name': 'global_id_account', 'type': 'BOOL', 'value': 'FALSE'}, {'name': 'global_id_product', 'type': 'BOOL', 'value': 'FALSE'}, {'name': 'size', 'type': 'DOUBLE', 'value': '10.000000'}], 'projectId': 'data-mesh-344315', 'templateId': 'data_resource'}], 'type': 'TABLE'}]
-    dcu.apply_restore_config(config_uuid, tag_extract, tag_history=False, tag_stream=False, overwrite=True)
+    template_id = 'enterprise_glossary'
+    template_project='tag-engine-develop'
+    template_region='us-central1'
+
+    dcu = DataCatalogUtils(template_id=template_id, template_project=template_project, template_region=template_region)
+
+    fields = [{'field_type': 'bool', 'field_id': 'primary_business_name', 'is_required': False}, {'is_required': False, 'field_id': 'organization_address_street_address_line1', 'field_type': 'bool'}, {'is_required': False, 'field_id': 'organization_address_city', 'field_type': 'bool'}, {'is_required': False, 'field_id': 'organization_address_state', 'field_type': 'bool'}, {'is_required': False, 'field_id': 'organization_address_postal_code', 'field_type': 'bool'}, {'field_type': 'bool', 'field_id': 'organization_address_country', 'is_required': False}, {'is_required': False, 'field_id': 'telephone_number', 'field_type': 'bool'}, {'is_required': False, 'field_id': 'chief_executive_officer_first_name', 'field_type': 'bool'}, {'is_required': False, 'field_id': 'chief_executive_officer_last_name', 'field_type': 'bool'}, {'field_type': 'bool', 'field_id': 'chief_executive_officer_name_suffix', 'is_required': False}, {'field_type': 'bool', 'field_id': 'sic_code_1', 'is_required': False}, {'is_required': False, 'field_id': 'chief_executive_officer_title', 'field_type': 'bool'}, {'field_type': 'bool', 'field_id': 'sic_code_1_base_6', 'is_required': False}, {'is_required': False, 'field_id': 'organization_address_county', 'field_type': 'bool'}, {'is_required': False, 'field_id': 'organization_msa_name', 'field_type': 'bool'}, {'is_required': False, 'field_id': 'year_started', 'field_type': 'bool'}, {'is_required': False, 'field_id': 'organization_address_postal_code_4_extension', 'field_type': 'bool'}, {'field_type': 'bool', 'field_id': 'company_url', 'is_required': False}]
+    mapping_table = 'bigquery/project/tag-engine-develop/dataset/enterprise_glossary/mapping'
+    uri = ['discovery-area', 'sample_data/usa.parquet']
+    config_uuid = '42a4be2e4c0f11ed90d8acde48001122'
+    template_uuid = '0170f9524b4911edb068acde48001122'
+    tag_history = False
+    tag_stream = False
+
+    dcu.apply_glossary_asset_config(fields, mapping_table, uri, config_uuid, template_uuid, tag_history, tag_stream, overwrite=True)    
     
-    dcu = DataCatalogUtils(template_id='cities_311', project_id=template_project, region=template_region)
-    dcu.apply_dynamic_config(fields, uri, config_uuid, template_uuid, tag_history=False, tag_stream=False)
-    
-    dcu = DataCatalogUtils(template_id='data_governance', project_id=template_project, region=template_region)
-    dcu.apply_static_config(fields, uri, config_uuid, template_uuid, tag_history=False, tag_stream=False, overwrite=True)
-    '''
-    dcu = DataCatalogUtils(template_id='data_resource', project_id=template_project, region=template_region)
-    config_uuid = '37af26e01e7d11ed8f31b5dca4029d3e'
-    tag_dict = {'project': 'tag-engine-develop', 'dataset': 'finwire', 'table': 'FINWIRE1976Q1_FIN', 'data_confidentiality': 'SENSITIVE', 'num_fields': '19', 'num_records': '105', 'size': '0.1', 'recent_data_update': '2022-08-10', 'global_id_customer': 'FALSE', 'global_id_account': 'TRUE'}
-    dcu.apply_import_config(config_uuid, tag_dict, tag_history=False, tag_stream=False, overwrite=True)

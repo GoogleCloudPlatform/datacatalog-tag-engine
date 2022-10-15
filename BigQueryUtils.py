@@ -42,11 +42,11 @@ class BigQueryUtils:
         if enabled == False:
             return enabled, settings
         
-        project_id = settings['project_id']
-        region = settings['region']
-        dataset = settings['dataset']
+        bigquery_project = settings['bigquery_project']
+        bigquery_region = settings['bigquery_region']
+        bigquery_dataset = settings['bigquery_dataset']
         
-        dataset_id = self.client.dataset(dataset, project=project_id)
+        dataset_id = self.client.dataset(bigquery_dataset, project=bigquery_project)
         table_id = dataset_id.table(table_name)
         
         try:
@@ -86,7 +86,10 @@ class BigQueryUtils:
                 
             if field['field_type'] == 'datetime':
                 col_type = 'TIMESTAMP' # datetime fields should be mapped to timestamps in BQ because they actually contain a timezone
-            
+
+            if field['field_type'] == 'richtext':
+                col_type = 'STRING' 
+
             if field['is_required'] == True:
                 mode = "REQUIRED"
             else:
@@ -124,7 +127,7 @@ class BigQueryUtils:
                 row[tagged_value['field_id']]= json.dumps(tagged_value['field_value'], default=str)
                 row[tagged_value['field_id']]= tagged_value['field_value']
     
-        print('insert row: ' + str(row))
+        #print('insert row: ' + str(row))
         row_to_insert = [row,]
 
         try:
@@ -150,7 +153,7 @@ class BigQueryUtils:
         exists, table_id, settings = self.table_exists(table_name)
         
         if exists != True:
-            dataset_id = self.client.dataset(settings['dataset'], project=settings['project_id'])
+            dataset_id = self.client.dataset(settings['bigquery_dataset'], project=settings['bigquery_project'])
             table_id = self.create_table(dataset_id, table_name, table_fields)
 
         if tagged_column and tagged_column not in "":

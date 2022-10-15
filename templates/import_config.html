@@ -11,18 +11,20 @@
 	   <div class="header">
 	   <h2>Create import config using {{ template_id }}</h2>
 	   
-		   <h3>How to format your CSV file for import:</h3>
+		   <h3>To import your tags from a CSV, you need to follow this format:</h3>
 		   <span style="color:#9d9a9a;">
 		   <h5>
-  			   &nbsp;The top line of the CSV file is reserved for column headers. These headers must be as follows:<br>
-  			   &nbsp;&nbsp;- <b>project</b> The GCP project of the data asset you want to tag.<br>
-  			   &nbsp;&nbsp;- <b>dataset</b> The BQ dataset of the data asset you want to tag.<br>
+  			   &nbsp;The top line of the CSV file is reserved for column headers. These headers must be:<br>
+  			   &nbsp;&nbsp;- <b>project</b> The BigQuery project of the data asset you want to tag.<br>
+  			   &nbsp;&nbsp;- <b>dataset</b> The BigQuery dataset of the data asset you want to tag.<br>
   			   &nbsp;&nbsp;- <b>table</b> The name of the data asset you want to tag. This is typically a BQ table, but it can also be a BQ view. <br>
-  			   &nbsp;&nbsp;- <b>column</b> The name of the BQ column you want to tag. This field is only mandatory if you are creating a column-level tag. <br>
+  			   &nbsp;&nbsp;- <b>column</b> The name of the BQ column you want to tag. This field is only needed if you are creating a column-level tag. If you are creating a table-level tag, leave out this field. <br>
 			   <br>
-			   &nbsp;The remaining headers are for the fields from the tag template that you want to use for tagging. Note: all the fields in a CSV must be from the same tag template. 
+			   &nbsp;The remaining headers are for the tag template fields. You should have one header per tag template field to be included in the tag. Note: all the fields in a CSV file must be from the same tag template. 
 			   <br>
-			   &nbsp;Example CSV files: <a href="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/develop/examples/import_configs/sakila_table_tags.csv">table-level tags</a>, <a href="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/develop/examples/import_configs/sakila_column_tags.csv">column-level tags</a>
+			   &nbsp;Populate the tag values starting on line 2. There is no size limit, just remember that all the fields must be from the same tag template. 
+			   <br>
+			   &nbsp;Sample CSVs: <a href="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/develop/examples/import_configs/sakila_table_tags.csv">table-level tags</a>, <a href="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/develop/examples/import_configs/sakila_column_tags.csv">column-level tags</a>
 			    <br><br>
 			   
 			   &nbsp;&nbsp;Mandatory fields are marked by <span style="color:red;">*</span></h5>
