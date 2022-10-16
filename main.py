@@ -2104,7 +2104,7 @@ def dynamic_table_tags():
     included_fields = json['fields']
     fields = dcu.get_template(included_fields)
     
-    if json['included_tables_uris']:
+    if 'included_tables_uris' in json:
         included_tables_uris = json['included_tables_uris']
     else:
         print("The dynamic_table_tags request requires an included_tables_uris parameter.")
@@ -2118,12 +2118,12 @@ def dynamic_table_tags():
     
     refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
     
-    if json['tag_history']:
+    if 'tag_history' in json:
         tag_history = json['tag_history']
     else:
         tag_history = None
       
-    if json['tag_stream']:  
+    if 'tag_stream' in json:  
         tag_stream = json['tag_stream']
     else:
         tag_stream = None
@@ -2181,14 +2181,14 @@ def dynamic_column_tags():
     included_fields = json['fields']
     fields = dcu.get_template(included_fields)
 
-    if json['included_columns_query']:
+    if 'included_columns_query' in json:
         included_columns_query = json['included_columns_query']
     else:
         print("The dynamic_columns_tags request requires an included_columns_query parameter.")
         resp = jsonify(success=False)
         return resp
     
-    if json['included_tables_uris']:
+    if 'included_tables_uris' in json:
         included_tables_uris = json['included_tables_uris']
     else:
         print("The dynamic_table_tags request requires an included_tables_uris parameter.")
@@ -2202,12 +2202,12 @@ def dynamic_column_tags():
     
     refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
     
-    if json['tag_history']:
+    if 'tag_history' in json:
         tag_history = json['tag_history']
     else:
         tag_history = None
       
-    if json['tag_stream']:  
+    if 'tag_stream' in json:  
         tag_stream = json['tag_stream']
     else:
         tag_stream = None
@@ -2278,8 +2278,15 @@ def static_asset_tags():
     else:
         excluded_assets_uris = ''
 
-    tag_history = json['tag_history']
-    tag_stream = json['tag_stream']
+    if 'tag_history' in json:
+        tag_history = json['tag_history']
+    else:
+        tag_history = None
+      
+    if 'tag_stream' in json:  
+        tag_stream = json['tag_stream']
+    else:
+        tag_stream = None
     
     refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
     
@@ -2352,8 +2359,15 @@ def entries():
     
     refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
     
-    tag_history = json['tag_history']
-    tag_stream = json['tag_stream']
+    if 'tag_history' in json:
+        tag_history = json['tag_history']
+    else:
+        tag_history = None
+      
+    if 'tag_stream' in json:  
+        tag_stream = json['tag_stream']
+    else:
+        tag_stream = None
     
     config_uuid, included_assets_uris_hash = teu.write_entry_config('PENDING', fields, included_assets_uris, excluded_assets_uris, template_uuid,\
                                                              refresh_mode, refresh_frequency, refresh_unit, \
@@ -2430,8 +2444,16 @@ def glossary_asset_tags():
     
     refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
     
-    tag_history = json['tag_history']
-    tag_stream = json['tag_stream']
+    if 'tag_history' in json:
+        tag_history = json['tag_history']
+    else:
+        tag_history = None
+      
+    if 'tag_stream' in json:  
+        tag_stream = json['tag_stream']
+    else:
+        tag_stream = None
+
     overwrite = True
     
     config_uuid, included_assets_uris_hash = teu.write_glossary_asset_config('PENDING', fields, mapping_table, included_assets_uris, excluded_assets_uris, template_uuid,\
@@ -2536,8 +2558,16 @@ def sensitive_column_tags():
         
     refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
             
-    tag_history = json['tag_history']
-    tag_stream = json['tag_stream']
+    if 'tag_history' in json:
+        tag_history = json['tag_history']
+    else:
+        tag_history = None
+      
+    if 'tag_stream' in json:  
+        tag_stream = json['tag_stream']
+    else:
+        tag_stream = None
+
     overwrite = True
     
     config_uuid, included_tables_uris_hash = teu.write_sensitive_column_config('PENDING', fields, dlp_dataset, mapping_table, \
@@ -2626,8 +2656,16 @@ def restore_tags():
     source_template_uuid = teu.write_tag_template(source_template_id, source_template_project, source_template_region)
     target_template_uuid = teu.write_tag_template(target_template_id, target_template_project, target_template_region)
     
-    tag_history = json['tag_history']
-    tag_stream = json['tag_stream']
+    if 'tag_history' in json:
+        tag_history = json['tag_history']
+    else:
+        tag_history = None
+      
+    if 'tag_stream' in json:  
+        tag_stream = json['tag_stream']
+    else:
+        tag_stream = None
+
     overwrite = True
     
     config_uuid = teu.write_restore_config('PENDING', source_template_uuid, source_template_id, source_template_project, source_template_region, \
@@ -2672,8 +2710,16 @@ def import_tags():
         
     metadata_import_location = json['metadata_import_location']
            
-    tag_history = json['tag_history']
-    tag_stream = json['tag_stream']
+    if 'tag_history' in json:
+        tag_history = json['tag_history']
+    else:
+        tag_history = None
+      
+    if 'tag_stream' in json:  
+        tag_stream = json['tag_stream']
+    else:
+        tag_stream = None
+
     overwrite = True
     
     config_uuid = teu.write_import_config('PENDING', template_uuid, template_id, template_project, template_region, \
