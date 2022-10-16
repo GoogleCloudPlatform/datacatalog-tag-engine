@@ -679,6 +679,9 @@ def process_update_static_asset_config():
     
         #print('fields: ' + str(fields))
         
+        if excluded_assets_uris == 'None':
+            excluded_assets_uris = ''
+        
         tag_history = False
     
         if "tag_history" in request.form:
@@ -774,6 +777,9 @@ def process_update_dynamic_table_config():
     
         #print('fields: ' + str(fields))
         
+        if excluded_tables_uris == 'None':
+            excluded_tables_uris = ''
+        
         tag_history = False
     
         if "tag_history" in request.form:
@@ -860,6 +866,9 @@ def process_update_entry_config():
                 break
     
         #print('fields: ' + str(fields))
+        
+        if excluded_assets_uris == 'None':
+            excluded_assets_uris = ''
         
         tag_history = False
     
@@ -949,6 +958,9 @@ def process_update_glossary_asset_config():
     
         #print('fields: ' + str(fields))
         
+        if excluded_assets_uris == 'None':
+            excluded_assets_uris = ''
+        
         tag_history = False
     
         if "tag_history" in request.form:
@@ -1026,6 +1038,9 @@ def process_update_sensitive_column_config():
     template_fields = dcu.get_template()
     
     if action == "Submit Changes":
+        
+        if excluded_tables_uris == 'None':
+            excluded_tables_uris = ''
         
         tag_history = False
     
@@ -1209,6 +1224,9 @@ def process_static_asset_config():
     
     #print('fields: ' + str(fields))
     
+    if excluded_assets_uris == 'None':
+        excluded_assets_uris = ''
+    
     tag_history_option = False
     tag_history_enabled = "OFF"
     
@@ -1310,6 +1328,9 @@ def process_dynamic_table_config():
             break
     
     #print('fields: ' + str(fields))
+    
+    if excluded_tables_uris == 'None':
+        excluded_tables_uris = ''
     
     tag_history_option = False
     tag_history_enabled = "OFF"
@@ -1415,6 +1436,9 @@ def process_dynamic_column_config():
             break
     
     #print('fields: ' + str(fields))
+    
+    if excluded_tables_uris == 'None':
+        excluded_tables_uris = ''
     
     tag_history_option = False
     tag_history_enabled = "OFF"
@@ -1522,6 +1546,9 @@ def process_entry_config():
     
     #print('fields: ' + str(fields))
     
+    if excluded_assets_uris == 'None':
+        excluded_assets_uris = ''
+    
     tag_history_option = False
     tag_history_enabled = "OFF"
     
@@ -1590,8 +1617,8 @@ def process_glossary_asset_config():
     overwrite = True # set to true as we are creating a new glossary asset config
     action = request.form['action']
     
-    #print('included_tables_uris: ' + included_tables_uris)
-    #print('excluded_tables_uris: ' + excluded_tables_uris)
+    #print('included_assets_uris: ' + included_assets_uris)
+    #print('excluded_assets_uris: ' + excluded_assets_uris)
     #print('refresh_mode: ' + refresh_mode)
     #print('refresh_frequency: ' + refresh_frequency)
     #print('refresh_unit: ' + refresh_unit)
@@ -1629,6 +1656,9 @@ def process_glossary_asset_config():
             break
     
     #print('fields: ' + str(fields))
+    
+    if excluded_assets_uris == 'None':
+        excluded_assets_uris = ''
     
     tag_history_option = False
     tag_history_enabled = "OFF"
@@ -1751,6 +1781,9 @@ def process_sensitive_column_config():
     
     #print('fields: ' + str(fields))
     
+    if excluded_tables_uris == 'None':
+        excluded_tables_uris = ''
+    
     tag_history_option = False
     tag_history_enabled = "OFF"
     
@@ -1773,11 +1806,12 @@ def process_sensitive_column_config():
     
     template_uuid = teu.write_tag_template(template_id, template_project, template_region)
 
-    config_uuid, included_tables_uris_hash = teu.write_sensitive_column_config('PENDING', fields, dlp_dataset, mapping_table, included_tables_uris, excluded_tables_uris, \
-                                                              create_policy_tags, taxonomy_id, \
-                                                              template_uuid, \
-                                                              refresh_mode, refresh_frequency, refresh_unit, \
-                                                              tag_history_option, tag_stream_option, overwrite)
+    config_uuid, included_tables_uris_hash = teu.write_sensitive_column_config('PENDING', fields, dlp_dataset, mapping_table, \
+                                                                                included_tables_uris, excluded_tables_uris, \
+                                                                                create_policy_tags, taxonomy_id, \
+                                                                                template_uuid, \
+                                                                                refresh_mode, refresh_frequency, refresh_unit, \
+                                                                                tag_history_option, tag_stream_option, overwrite)
     if isinstance(config_uuid, str): 
         job_uuid = jm.create_job(config_uuid, 'SENSITIVE_COLUMN_TAG')
     else:
@@ -2080,7 +2114,7 @@ def dynamic_table_tags():
     if 'excluded_tables_uris' in json:
         excluded_tables_uris = json['excluded_tables_uris']
     else:
-        excluded_tables_uris = None
+        excluded_tables_uris = ''
     
     refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
     
@@ -2164,7 +2198,7 @@ def dynamic_column_tags():
     if 'excluded_tables_uris' in json:
         excluded_tables_uris = json['excluded_tables_uris']
     else:
-        excluded_tables_uris = None
+        excluded_tables_uris = ''
     
     refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
     
@@ -2232,7 +2266,7 @@ def static_asset_tags():
     included_fields = json['fields']
     fields = dcu.get_template(included_fields)
 
-    if json['included_assets_uris']:
+    if 'included_assets_uris' in json:
         included_assets_uris = json['included_assets_uris']
     else:
         print("The static_asset_tags request requires an included_assets_uris parameter.")
@@ -2242,7 +2276,7 @@ def static_asset_tags():
     if 'excluded_assets_uris' in json:
         excluded_assets_uris = json['excluded_assets_uris']
     else:
-        excluded_assets_uris = None
+        excluded_assets_uris = ''
 
     tag_history = json['tag_history']
     tag_stream = json['tag_stream']
@@ -2304,7 +2338,7 @@ def entries():
     included_fields = json['fields']
     fields = dcu.get_template(included_fields)
 
-    if json['included_assets_uris']:
+    if 'included_assets_uris' in json:
         included_assets_uris = json['included_assets_uris']
     else:
         print("The entry request requires an included_assets_uris parameter.")
@@ -2314,7 +2348,7 @@ def entries():
     if 'excluded_assets_uris' in json:
         excluded_assets_uris = json['excluded_assets_uris']
     else:
-        excluded_assets_uris = None
+        excluded_assets_uris = ''
     
     refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
     
@@ -2382,7 +2416,7 @@ def glossary_asset_tags():
         resp = jsonify(success=False)
         return resp
     
-    if json['included_assets_uris']:
+    if 'included_assets_uris' in json:
         included_assets_uris = json['included_assets_uris']
     else:
         print("The glossary_asset_tags request requires an included_assets_uris parameter.")
@@ -2392,7 +2426,7 @@ def glossary_asset_tags():
     if 'excluded_assets_uris' in json:
         excluded_assets_uris = json['excluded_assets_uris']
     else:
-        excluded_assets_uris = None
+        excluded_assets_uris = ''
     
     refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
     
@@ -2472,7 +2506,7 @@ def sensitive_column_tags():
         resp = jsonify(success=False)
         return resp
     
-    if json['included_tables_uris']:
+    if 'included_tables_uris' in json:
         included_tables_uris = json['included_tables_uris']
     else:
         print("The sensitive_column_tags request requires an included_tables_uris parameter.")
@@ -2482,7 +2516,7 @@ def sensitive_column_tags():
     if 'excluded_tables_uris' in json:
         excluded_tables_uris = json['excluded_tables_uris']
     else:
-        excluded_tables_uris = None
+        excluded_tables_uris = ''
     
     # validate create_policy_tags parameter
     if 'create_policy_tags' in json:
@@ -2539,21 +2573,21 @@ def restore_tags():
     json = request.get_json(force=True) 
     print('json: ' + str(json))
     
-    if json['source_template_id']:
+    if 'source_template_id' in json:
         source_template_id = json['source_template_id']
     else:
         print("The restore_tags request requires a source_template_id parameter.")
         resp = jsonify(success=False)
         return resp
 
-    if json['source_template_project']:
+    if 'source_template_project' in json:
         source_template_project = json['source_template_project']
     else:
         print("The restore_tags request requires a source_template_project parameter.")
         resp = jsonify(success=False)
         return resp
     
-    if json['source_template_region']:
+    if 'source_template_region' in json:
         source_template_region = json['source_template_region']
     else:
         print("The restore_tags request requires a source_template_region parameter.")
@@ -2561,21 +2595,21 @@ def restore_tags():
         return resp
        
 
-    if json['target_template_id']:
+    if 'target_template_id' in json:
         target_template_id = json['target_template_id']
     else:
         print("The restore_tags request requires a target_template_id parameter.")
         resp = jsonify(success=False)
         return resp
 
-    if json['target_template_project']:
+    if 'target_template_project' in json:
         target_template_project = json['target_template_project']
     else:
         print("The restore_tags request requires a target_template_project parameter.")
         resp = jsonify(success=False)
         return resp
     
-    if json['target_template_region']:
+    if 'target_template_region' in json:
         target_template_region = json['target_template_region']
     else:
         print("The restore_tags request requires a target_template_region parameter.")
@@ -2686,9 +2720,17 @@ def ondemand_updates():
     elif 'included_tables_uris_hash' in json:
         included_tables_uris_hash = json['included_tables_uris_hash']
         success, config = teu.lookup_config_by_included_tables_uris(template_uuid, None, included_tables_uris_hash)
+ 
+    elif 'included_assets_uris' in json:
+       included_assets_uris = json['included_assets_uris']
+       success, config = teu.lookup_config_by_included_assets_uris(template_uuid, included_assets_uris, None)
+          
+    elif 'included_assets_uris_hash' in json:
+        included_assets_uris_hash = json['included_assets_uris_hash']
+        success, config = teu.lookup_config_by_included_assets_uris(template_uuid, None, included_assets_uris_hash)
     
     else:
-        resp = jsonify(success=False, message="Request is missing the required field included_tables_uris or included_tables_uris_hash.")
+        resp = jsonify(success=False, message="Request is missing one of these required fields: included_tables_uris, included_tables_uris_hash, included_assets_uris, or included_assets_uris_hash.")
         return resp
     
     if success != True:
@@ -2726,8 +2768,14 @@ Returns:
 def get_job_status(): 
     
     json = request.get_json(force=True)
-    job_uuid = json['job_uuid']
     
+    if 'job_uuid' in json:
+        job_uuid = json['job_uuid']
+    else:
+        print("get_job_status request is missing the required parameter job_uuid. Please add this parameter to the json object.")
+        resp = jsonify(success=False)
+        return resp
+        
     job = jm.get_job_status(job_uuid)
     print('job: ', job)
     

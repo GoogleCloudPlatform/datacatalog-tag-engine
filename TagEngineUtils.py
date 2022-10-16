@@ -1056,7 +1056,7 @@ class TagEngineUtils:
         success = False
         config_result = {}
         
-        colls = ['static_asset_configs', 'dynamic_table_configs', 'dynamic_column_configs', 'entry_configs', 'glossary_asset_configs', 'sensitive_column_configs']
+        colls = ['dynamic_table_configs', 'dynamic_column_configs', 'sensitive_column_configs']
         
         for coll_name in colls:
             
@@ -1077,6 +1077,33 @@ class TagEngineUtils:
         
         return success, config_result
         
+
+    def lookup_config_by_included_assets_uris(self, template_uuid, included_assets_uris, included_assets_uris_hash):
+        
+        success = False
+        config_result = {}
+        
+        colls = ['static_asset_configs', 'entry_configs', 'glossary_asset_configs']
+        
+        for coll_name in colls:
+            
+            config_ref = self.db.collection(coll_name)
+        
+            if included_assets_uris is not None:
+                docs = config_ref.where('template_uuid', '==', template_uuid).where('config_status', '==', 'ACTIVE')\
+                .where('included_assets_uris', '==', included_assets_uris).stream()
+            if included_assets_uris_hash is not None:
+                docs = config_ref.where('template_uuid', '==', template_uuid).where('config_status', '==', 'ACTIVE')\
+                .where('included_assets_uris_hash', '==', included_assets_uris_hash).stream()
+        
+            for doc in docs:
+                config_result = doc.to_dict()
+                success = True
+                return success, config_result
+                
+        
+        return success, config_result
+
     
     def update_config(self, old_config_uuid, config_type, config_status, fields, included_uris, excluded_uris, template_uuid, \
                       refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite=False, mapping_table=None):
