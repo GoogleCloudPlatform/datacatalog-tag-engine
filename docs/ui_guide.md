@@ -150,5 +150,5 @@ The restore tags configuration re-creates Data Catalog tags from a metadata expo
 
 The import tags configuration creates Data Catalog tags from a CSV file. The tags are created either on BQ tables and views or BQ columns. The config takes as input a CSV file located on GCS. The CSV file which must conform to the [CSV template specification](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/import_configs/CSV-template-for-bulk-tagging.xlsx).
 
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/import-config-1.png" alt="static" width="800"/>
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/import-config-2.png" alt="static" width="300"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/import-config-1.png" alt="static" width="900"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/import-config-2.png" alt="static" width="400"/>
