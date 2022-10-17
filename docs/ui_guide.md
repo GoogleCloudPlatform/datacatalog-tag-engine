@@ -126,7 +126,12 @@ The glossary asset config creates Data Catalog tags on either tables and views i
 
 #### <a name="entry"></a> Entry configuration
 
-An entry configuration creates FILESET entries in Data Catalog that represents parquet files stored in GCS. Each entry is tagged with the [file metadata template](https://github.com/GoogleCloudPlatform/datacatalog-templates/blob/master/file_template.yaml) that includes the file size, the file creation time, and the number of rows in the file. In the future, we plan to extend this configuration to other popular structured file formats (e.g. csv, json, xml, etc.). 
+The entry configuration creates Data Catalog entries that represents parquet files stored in GCS. Each entry represents a different file and is tagged with the [file metadata template](https://github.com/GoogleCloudPlatform/datacatalog-templates/blob/master/file_template.yaml). This template includes various file metadata attributes such as file size, creation time, and number of rows. The majority of these attributes are harvested from the Cloud Storage API.  
+
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/entry-config-1.png" alt="static" width="500"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/entry-config-2.png" alt="static" width="750"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/entry-config-3.png" alt="static" width="500"/>
+
 
 ###### Sample entry and file metadata tag in Data Catalog
 
