@@ -8,11 +8,11 @@ This is a user guide for the Tag Engine UI.
 *  Static asset configuration [link](#static_asset)
 *  Dynamic table configuration [link](#dynamic_table)
 *  Dynamic column configuration [link](#dynamic_column)
-*  Sensitive column configuration [link](#sensitive) 
-*  Glossary asset configuration
+*  Sensitive column configuration [link](#sensitive_column) 
+*  Glossary asset configuration [link](#glossary_asset) 
 *  Entry configuration [link](#entry)
-*  Restore tag configuration
-*  Import tag configuration
+*  Restore tag configuration [link](#restore_tags) 
+*  Import tag configuration [link](#import_tags) 
 
 #### <a name="get_started"></a> Getting started
 
@@ -73,7 +73,7 @@ The `refresh_mode` field is either `AUTO` or `ON-DEMAND`. `AUTO` means that any 
 Upon clicking the submit button, you will be directed to a confirmation page. You can click on the `here` link to see status of your request. 
 
 
-#### <a name="sensitive"></a> Sensitive column configuration
+#### <a name="sensitive_column"></a> Sensitive column configuration
 
 The sensitive column configuration creates Data Catalog tags on columns in BQ that classify the sensitivity of the data. This configuration requires the [sensitive data template](https://github.com/GoogleCloudPlatform/datacatalog-templates/blob/master/data_sensitivity.yaml) and Data Loss Prevention. It uses as input the info types found from a DLP inspection job. It maps the info types to a data classification provided as input. It can also create policy tags on each sensitive column to restrict access to the data. 
 
@@ -91,6 +91,8 @@ Below are sensitive tags (metadata and policy) produced by a sensitive tag confi
 
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/sensitive_tags.png" alt="static" width="500"/>
 
+#### <a name="glossary_asset"></a> Glossary asset configuration
+
 #### <a name="entry"></a> Entry configuration
 
 An entry configuration creates FILESET entries in Data Catalog that represents parquet files stored in GCS. Each entry is tagged with the [file metadata template](https://github.com/GoogleCloudPlatform/datacatalog-templates/blob/master/file_template.yaml) that includes the file size, the file creation time, and the number of rows in the file. In the future, we plan to extend this configuration to other popular structured file formats (e.g. csv, json, xml, etc.). 
@@ -101,4 +103,7 @@ Below is a sample entry and tag produced by an entry configuration in Tag Engine
 
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/entry_2.png" alt="static" width="650"/>
 
+#### <a name="restore_tags"></a> Restore tags configuration
+
+#### <a name="import_tags"></a> Import tags configuration
 
