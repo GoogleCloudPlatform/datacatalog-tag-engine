@@ -18,7 +18,10 @@ This is a user guide for the Tag Engine UI.
 
 The first time you bring up the Tag Engine UI, you should see a login page.
 
-Enter your tag template details into the three fields shown. The `template_id` is the tag template identifier, the `template_project` is the tag template's GCP project id, and the `template_region` is the tag template's region. You must already have a Data Catalog tag template to continue. Once you have entered those details, you can click the `Search Template` button to creating Data Catalog tags. 
+Enter your tag template details into the three fields shown. The `template_id` is the tag template identifier, the `template_project` is the tag template's GCP project id, and the `template_region` is the tag template's region. You must already have a Data Catalog tag template to continue. Once you have entered those details, you can click the `Search Template` button to start creating Data Catalog tags. 
+
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/login.png" alt="static" width="350"/>
+
 
 On the home page, you'll also see links for setting a default tag template, turning on/off tag history as well as turning on/off tag stream. Setting a default tag template saves you from having to type the details into the fields each time you use the Tag Engine UI. Tag history lets you save a change history of all your tags into BigQuery and is a popular option. Tag stream lets you do something similar with Pub/Sub in that Tag Engine will publish to a pub/sub topic a message for every tag creation or update request.    
 
@@ -27,12 +30,18 @@ On the home page, you'll also see links for setting a default tag template, turn
 
 On the next page, you'll see the field details of your tag template. Below, you'll also see a number of actions. 
 
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/configuration-types.png" alt="static"/>
+
 Each action type will be covered below. 
 
 
 #### <a name="static_asset"></a> Static asset configuration
 
 A static asset configuration creates Data Catalog tags on BigQuery assets (datasets, tables, views) or Google Cloud Storage assets (buckets, folders, files) that match a URI. 
+
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/static-asset-config-1.png" alt="static" width="500"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/static-asset-config-2.png" alt="static" width="500"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/static-asset-config-3.png" alt="static" width="500"/>
 
 The `included_assets_URIs` field can be set to either one or more BQ paths or one or more GCS path. If you want to tag assets in BQ and GCS, you need to create a separate configuration for each. 
 
@@ -56,6 +65,9 @@ The `refresh_mode` field is either `AUTO` or `ON-DEMAND`. `AUTO` means that any 
 
 Upon clicking the submit button, you will be directed to a confirmation page. You can click on the `here` link to see status of your request. 
 
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/dynamic-table-config-1.png" alt="static" width="700"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/dynamic-table-config-2.png" alt="static" width="600"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/dynamic-table-config-3.png" alt="static" width="300"/>
 
 #### <a name="dynamic_column"></a> Dynamic column configuration
 
@@ -72,16 +84,24 @@ The `refresh_mode` field is either `AUTO` or `ON-DEMAND`. `AUTO` means that any 
 
 Upon clicking the submit button, you will be directed to a confirmation page. You can click on the `here` link to see status of your request. 
 
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/dynamic-column-config-1.png" alt="static" width="700"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/dynamic-column-config-2.png" alt="static" width="700"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/dynamic-column-config-3.png" alt="static" width="400"/>
+
 
 #### <a name="sensitive_column"></a> Sensitive column configuration
 
-The sensitive column configuration creates Data Catalog tags on columns in BQ that classify the sensitivity of the data. This configuration requires the [sensitive data template](https://github.com/GoogleCloudPlatform/datacatalog-templates/blob/master/data_sensitivity.yaml) and Data Loss Prevention. It uses as input the info types found from a DLP inspection job. It maps the info types to a data classification provided as input. It can also create policy tags on each sensitive column to restrict access to the data. 
+The sensitive column configuration creates Data Catalog tags on columns in BQ. This configuration classifies the sensitivity of the data in those columns and tags the classification results. The classification requires the [sensitive data template](https://github.com/GoogleCloudPlatform/datacatalog-templates/blob/master/data_sensitivity.yaml) and Data Loss Prevention. It uses as input the info types found in the DLP inspection jobs. It then maps the info types to a custom data classification defined in a mapping table in BQ. It can optionally create policy tags on the sensitive columns so that access to the sensitive data is restricted. 
 
-###### Sample mapping table in BQ (input to the sensitive column configuration)
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/sensitive-column-config-1.png" alt="static" width="800"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/sensitive-column-config-2.png" alt="static" width="750"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/sensitive-column-config-3.png" alt="static" width="500"/>
+
+##### Sample mapping table in BQ (input to the sensitive column configuration)
 
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/mapping_table.png" alt="static" width="400"/>
 
-###### Sample policy tag taxonomy in Data Catalog (input to the sensitive column configuration)
+##### Sample policy tag taxonomy in Data Catalog (input to the sensitive column configuration)
 
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/policy_tag_taxonomy.png" alt="static" width="400"/>
 
