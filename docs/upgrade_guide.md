@@ -44,7 +44,7 @@ EOL
 
 * Open the Firestore console in your Tag Engine project and manually delete all the Firestore collections. 
 
-* Note: this will remove all your existing static and dynamic tag configurations. If you want to recreate them, you'll need to record the details before deleting the collections. This will <b>not</b> delete your Data Catalog tags, only your tag configurations in Tag Engine.  <br><br>
+* Note: this will remove all your existing Tag Engine configurations. If you want to recreate them, you'll need to record the details before deleting the collections. This step does <b>not</b> delete any of your Data Catalog tags, only your Tag Engine configurations.  <br><br>
 
 
 
