@@ -113,6 +113,17 @@ Below are sensitive tags (metadata and policy) produced by a sensitive tag confi
 
 #### <a name="glossary_asset"></a> Glossary asset configuration
 
+The glossary asset config creates Data Catalog tags on either tables and views in BQ or files in GCS. The fields in the tag contain canonical field names which are mapped from the schema columns of the asset. This configuration type requires a mapping table in BQ, specified below. It also requires every canonical element name to be present in the tag template as a boolean field. When Tag Engine finds a mapping, it sets the tag template field to true, thus enabling users to search the catalog by canonical name. 
+
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/glossary-asset-config-1.png" alt="static" width="500"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/glossary-asset-config-2.png" alt="static" width="750"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/glossary-asset-config-3.png" alt="static" width="500"/>
+
+##### Sample mapping table in BQ (input to the glossary asset configuration)
+
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/glossary-asset-mapping-table.png" alt="static" width="400"/>
+
+
 #### <a name="entry"></a> Entry configuration
 
 An entry configuration creates FILESET entries in Data Catalog that represents parquet files stored in GCS. Each entry is tagged with the [file metadata template](https://github.com/GoogleCloudPlatform/datacatalog-templates/blob/master/file_template.yaml) that includes the file size, the file creation time, and the number of rows in the file. In the future, we plan to extend this configuration to other popular structured file formats (e.g. csv, json, xml, etc.). 
