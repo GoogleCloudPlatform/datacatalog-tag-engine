@@ -141,10 +141,14 @@ Below is a sample entry and tag produced by an entry configuration in Tag Engine
 
 #### <a name="restore_tags"></a> Restore tags configuration
 
-The restore configuration re-creates Data Catalog tags from a metadata export file. It takes as input a metadata export file on GCS, generated from the Data Catalog export API. 
+The restore tags configuration re-creates Data Catalog tags from a metadata export file. It takes as input a metadata export file on GCS, generated from the Data Catalog export API. 
 
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/restore-config-1.png" alt="static" width="600"/>
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/restore-config-2.png" alt="static" width="300"/>
 
 #### <a name="import_tags"></a> Import tags configuration
 
+The import tags configuration creates Data Catalog tags from a CSV file. It takes as input a CSV file on GCS which must conform to the [CSV template specification](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/import_configs/CSV-template-for-bulk-tagging.xlsx).
+
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/import-config-1.png" alt="static" width="800"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/import-config-2.png" alt="static" width="300"/>
