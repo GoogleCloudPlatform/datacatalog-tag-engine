@@ -1849,6 +1849,23 @@ def process_sensitive_column_config():
 @app.route('/process_restore_config', methods=['POST'])
 def process_restore_config():
     
+    template_id = request.form['template_id']
+    template_project = request.form['template_project']
+    template_region = request.form['template_region']
+    action = request.form['action']
+    
+    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
+    template = dcu.get_template()
+    
+    if action == "Cancel Changes":
+        
+        return render_template(
+            'tag_template.html',
+            template_id=template_id,
+            template_project=template_project,
+            template_region=template_region, 
+            fields=template)
+            
     source_template_id = request.form['source_template_id']
     source_template_project = request.form['source_template_project']
     source_template_region = request.form['source_template_region']
@@ -1863,16 +1880,7 @@ def process_restore_config():
     
     dcu = dc.DataCatalogUtils(target_template_id, target_template_project, target_template_region)
     template = dcu.get_template()
-    
-    if action == "Cancel Changes":
         
-        return render_template(
-            'tag_template.html',
-            template_id=target_template_id,
-            template_project=target_template_project,
-            template_region=target_template_region, 
-            fields=template)
-    
     tag_history_option = False
     tag_history_enabled = "OFF"
     

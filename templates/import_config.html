@@ -12,7 +12,7 @@
 	   <h2>Create import config using {{ template_id }}</h2>
 	   
 		   <h3>To import your tags from a CSV, you need to follow this format:</h3>
-		   <span style="color:#9d9a9a;">
+
 		   <h5>
   			   &nbsp;The top line of the CSV file is reserved for column headers. These headers must be:<br>
   			   &nbsp;&nbsp;- <b>project</b> The BigQuery project of the data asset you want to tag.<br>
@@ -28,7 +28,7 @@
 			    <br><br>
 			   
 			   &nbsp;&nbsp;Mandatory fields are marked by <span style="color:red;">*</span></h5>
-	   </span>
+
 	   </div>
 	   <form method="post" action="/process_import_config"> 
 
@@ -54,7 +54,7 @@
        </tr>
        </table>
 		<p>&nbsp;</p>
-		<h3>Enter GCS Path to CSV Files</h3>
+		<h3>GCS Path to CSV Files</h3>
 		 	   <h5>		   
   			  
 			   &nbsp;&nbsp;If you have multiple files to upload, use a comma-separated list. Example: gs://bucket/folder/tags1.csv, 
@@ -73,7 +73,7 @@
 				
 			    {% if display_tag_history %}
 			      <p>&nbsp;</p>
-				<h3>Choose Tag History Option</h3>
+				<h3>Tag History Option</h3>
 			    <table>
 			    <tr><td><input type="checkbox" class="form-control move-left" name="tag_history" value="selected" checked>
 				    Save tag values from this config to BigQuery tag history table.&nbsp;&nbsp;
@@ -82,7 +82,7 @@
 			    {% endif %}
 			    {% if display_tag_stream %}
 			      <p>&nbsp;</p>
-				<h3>Choose Tag Stream Option</h3>
+				<h3>Tag Stream Option</h3>
 			    <table>
 			    <tr><td><input type="checkbox" class="form-control move-left" name="tag_stream" value="selected" checked>
 				    Publish tag values from this config to Pub/Sub tag stream topic.&nbsp;&nbsp;
