@@ -10,13 +10,13 @@
         </div>
 	   <div class="header">
 	   <h2>Update dynamic column config using {{ template_id }}</h2>
- 	   <span style="color:#9d9a9a;">
+ 	   
  		   <h5>Make changes to your dynamic column config below. A checked box indicates the field is part of this tag config. You can add new fields and/or remove existing ones from the tag config. <br>You can also edit the query expression, the included columns query, the included or excluded tables URIs, the refresh frequency, and the tag history and tag stream if you've enabled those options. </h5>
- 	  </span>
+
 	   </div>
 	  
 	   <h3>Query Expressions</h3>
- 	   <span style="color:#9d9a9a;">
+
  		   <h5>
 		   The query expression must be a <i>valid</i> select statement in BQ. It can contain aggregate functions, joins, filters, groupings, etc. <br>
 	   <br>
@@ -38,7 +38,7 @@
 			   
 	 	Mandatory tag template fields are marked by <span style="color:red;">*</span>. 
 	 	</h5>
-	   </span>
+
 	   
          <form method="post" action="/process_update_dynamic_table_config">
 		    <table>
@@ -107,7 +107,7 @@
 			   
 			   
 		    <p>&nbsp;</p>
-			   <h3>BigQuery Table URIs</h3>
+			   <h3>BigQuery Tables</h3>
 		 	   <span style="color:#9d9a9a;">
 		 		   <h5>Specify URIs for resources to include in or exclude from your dynamic tag. Wildcards are allowed in the table name. <br><br>
 					   Supported URIs: <br>
@@ -130,7 +130,7 @@
  		         </tr>
 		        </table>
 		        <p>&nbsp;</p>
-			   <h3>Choose Scheduling</h3>
+			   <h3>Scheduling Options</h3>
 		 	   <span style="color:#9d9a9a;">
 		 		   <h5>If you choose the AUTO refresh mode, your tags will be scheduled for update based on your specified refresh frequency. <br>
 					   If you choose the ON-DEMAND refresh mode, your tags will <b>not</b> be scheduled for refresh (even if you specify a refresh frequency). <br>This mode is useful when you have tags that don't need to be updated or when you want to trigger the update from the API. <br><br>

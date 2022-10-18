@@ -43,7 +43,7 @@
 		    <p>&nbsp;</p>
 		   <h3>Glossary Table in BigQuery</h3>
 	 	   
-		  <h5 style="width: 500px;">
+		  <h5 style="width: 700px;">
 		   Specify the path to your glossary table in BigQuery. The schema for this table must include <i>(source_name STRING, canonical_name STRING)</i>. The <i>source_name</i> represents the raw element name and the <i>canonical_name</i> represents the canonical name you want to map to. Note that each canonical name value should also exist as a field in the tag template. See <a href="https://github.com/GoogleCloudPlatform/datacatalog-templates/blob/master/enterprise_glossary.yaml">sample tag template</a> for more details.<br><br>
 				  Supported URI format: <br>
 				    bigquery/project/[PROJECT]/dataset/[DATASET]/[TABLE] <br>
@@ -87,7 +87,7 @@
 	 		         </tr>
 			    </table>
  		        <p>&nbsp;</p>
- 			   <h3>Update Options</h3>
+ 			   <h3>Scheduling Options</h3>
  		 	   
  		 		   <h5>If you choose the AUTO refresh mode, your entry config will be scheduled for updates based on your specified refresh frequency. <br>
  					   If you choose the ON-DEMAND refresh mode, your entry config will <b>not</b> be scheduled for updates (even if you specify a refresh frequency). <br>The AUTO mode is helpful for registering and tagging new files on GCS on a recurring schedule. It will not re-register or re-tag existing files. <br><br>

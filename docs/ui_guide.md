@@ -99,17 +99,17 @@ The sensitive column configuration creates Data Catalog tags on columns in BQ. T
 
 ##### Sample mapping table in BQ (input to the sensitive column configuration)
 
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/mapping_table.png" alt="static" width="400"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/sensitive-column-mapping-table.png" alt="static" width="400"/>
 
 ##### Sample policy tag taxonomy in Data Catalog (input to the sensitive column configuration)
 
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/policy_tag_taxonomy.png" alt="static" width="400"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/policy-tag-taxonomy.png" alt="static" width="400"/>
 
 ###### Sample sensitive column tag created by Tag Engine
 
 Below are sensitive tags (metadata and policy) produced by a sensitive tag configuration in Tag Engine: 
 
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/sensitive_tags.png" alt="static" width="500"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/sensitive-tags.png" alt="static" width="500"/>
 
 #### <a name="glossary_asset"></a> Glossary asset configuration
 
@@ -137,7 +137,7 @@ The entry configuration creates Data Catalog entries that represents parquet fil
 
 Below is a sample entry and tag produced by an entry configuration in Tag Engine. 
 
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/entry_2.png" alt="static" width="650"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/entry-and-tag.png" alt="static" width="650"/>
 
 #### <a name="restore_tags"></a> Restore tags configuration
 
