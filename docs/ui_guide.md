@@ -65,9 +65,9 @@ The `refresh_mode` field is either `AUTO` or `ON-DEMAND`. `AUTO` means that any 
 
 Upon clicking the submit button, you will be directed to a confirmation page. You can click on the `here` link to see status of your request. 
 
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/dynamic-table-config-1.png" alt="static" width="700"/>
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/dynamic-table-config-2.png" alt="static" width="600"/>
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/dynamic-table-config-3.png" alt="static" width="300"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/dynamic-table-config-1.png" alt="static" width="800"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/dynamic-table-config-2.png" alt="static" width="700"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/dynamic-table-config-3.png" alt="static" width="400"/>
 
 #### <a name="dynamic_column"></a> Dynamic column configuration
 
@@ -93,9 +93,9 @@ Upon clicking the submit button, you will be directed to a confirmation page. Yo
 
 The sensitive column configuration creates Data Catalog tags on columns in BQ. This configuration classifies the sensitivity of the data in those columns and tags the classification results. The classification requires the [sensitive data template](https://github.com/GoogleCloudPlatform/datacatalog-templates/blob/master/data_sensitivity.yaml) and Data Loss Prevention. It uses as input the info types found in the DLP inspection jobs. It then maps the info types to a custom data classification defined in a mapping table in BQ. It can optionally create policy tags on the sensitive columns so that access to the sensitive data is restricted. 
 
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/sensitive-column-config-1.png" alt="static" width="800"/>
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/sensitive-column-config-2.png" alt="static" width="750"/>
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/sensitive-column-config-3.png" alt="static" width="500"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/sensitive-column-config-1.png" alt="static" width="850"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/sensitive-column-config-2.png" alt="static" width="850"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/sensitive-column-config-3.png" alt="static" width="700"/>
 
 ##### Sample mapping table in BQ (input to the sensitive column configuration)
 
@@ -109,7 +109,7 @@ The sensitive column configuration creates Data Catalog tags on columns in BQ. T
 
 Below are sensitive tags (metadata and policy) produced by a sensitive tag configuration in Tag Engine: 
 
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/sensitive-tags.png" alt="static" width="500"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/sensitive-column-tags.png" alt="static" width="500"/>
 
 #### <a name="glossary_asset"></a> Glossary asset configuration
 
@@ -117,7 +117,7 @@ The glossary asset config creates Data Catalog tags on either tables and views i
 
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/glossary-asset-config-1.png" alt="static" width="500"/>
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/glossary-asset-config-2.png" alt="static" width="750"/>
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/glossary-asset-config-3.png" alt="static" width="500"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/glossary-asset-config-3.png" alt="static" width="600"/>
 
 ##### Sample mapping table in BQ (input to the glossary asset configuration)
 
@@ -128,8 +128,8 @@ The glossary asset config creates Data Catalog tags on either tables and views i
 
 The entry configuration creates Data Catalog entries that represents parquet files stored in GCS. Each entry represents a different file and is tagged with the [file metadata template](https://github.com/GoogleCloudPlatform/datacatalog-templates/blob/master/file_template.yaml). This template includes various file metadata attributes such as file size, creation time, and number of rows. The majority of these attributes are harvested from the Cloud Storage API.  
 
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/entry-config-1.png" alt="static" width="500"/>
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/entry-config-2.png" alt="static" width="750"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/entry-config-1.png" alt="static" width="600"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/entry-config-2.png" alt="static" width="700"/>
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/entry-config-3.png" alt="static" width="500"/>
 
 
@@ -137,7 +137,7 @@ The entry configuration creates Data Catalog entries that represents parquet fil
 
 Below is a sample entry and tag produced by an entry configuration in Tag Engine. 
 
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/docs/entry-and-tag.png" alt="static" width="650"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/entry-and-tag.png" alt="static" width="650"/>
 
 #### <a name="restore_tags"></a> Restore tags configuration
 
