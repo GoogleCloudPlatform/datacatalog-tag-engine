@@ -1,0 +1,17 @@
+{
+    "template_id": "data_standardization",
+    "template_project": "data-mesh-344315",
+    "template_region": "us-central1",
+    "fields": [
+        {
+            "field_id": "degree",
+            "query_expression": "with status_unmatches as (select count(*) umatched_counts from $project.$dataset.$table where $column not in (select st_id from $project.reference.StatusType)), records_total as (select count(*) as total_counts from $project.$dataset.$table) select round(safe_divide((total_counts - umatched_counts), total_counts) * 100) as degree from status_unmatches, records_total"
+        }
+    ],
+    "included_columns_query": "select distinct column_name from `data-mesh-343422`.`region-us-central1`.INFORMATION_SCHEMA.COLUMNS where ENDS_WITH(column_name, '_st_id')",
+	"included_tables_uris": "bigquery/project/data-mesh-343422/oltp",
+    "refresh_mode": "ON_DEMAND",
+    "tag_history": true,
+    "tag_stream": false  
+}
+

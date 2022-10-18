@@ -1689,8 +1689,8 @@ class DataCatalogUtils:
                 
         except Exception as e:
             error_exists = True
-            print("Error storing field value ", field_value, " into tag field ", field_id)
-            store.write_tag_value_error("Error storing field value " + str(field_value) + " into tag field " + field_id)
+            print("Error storing values ", field_values, " into field ", field_id)
+            store.write_tag_value_error("Error storing value(s) " + str(field_values) + " into field " + field_id)
         
         return tag, error_exists
     

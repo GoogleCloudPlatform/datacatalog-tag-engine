@@ -531,7 +531,7 @@ class TagEngineUtils:
         else:
             doc_ref.set({
                 'config_uuid': config_uuid,
-                'config_type': 'DYNAMIC_TABLE_TAG',
+                'config_type': 'DYNAMIC_COLUMN_TAG',
                 'config_status': config_status, 
                 'creation_time': datetime.utcnow(), 
                 'fields': fields,

@@ -15,8 +15,8 @@
 import base64, requests, json, time
 from google.cloud import storage
 
-bucket_name = 'tag-engine-configs'
-
+BUCKET = 'tag-engine-configs'
+TAG_ENGINE_URL = 'https://tag-engine-develop.uc.r.appspot.com'
 
 def process_pending_status_event(event, context):
         
@@ -24,7 +24,7 @@ def process_pending_status_event(event, context):
     data = json.loads(message)
     #print('data: ', data)
     data_domain = data['protoPayload']['request']['tag']['fields']['data_domain']['enumValue']['displayName']
-    data_product = data['protoPayload']['request']['tag']['fields']['data_product_name']['stringValue']
+    data_product = data['protoPayload']['request']['tag']['fields']['data_product_name']['stringValue'].replace(' ', '_')
     print('data_domain: ', data_domain)
     print('data_product: ', data_product)
     
@@ -39,13 +39,22 @@ def process_pending_status_event(event, context):
         
     return "OK" 
  
+def get_tag_config(file_name):
+    
+    print('file_name: ', file_name)
+    storage_client = storage.Client()
+    bucket = storage_client.get_bucket(BUCKET)
+    blob = bucket.get_blob(file_name)
+    blob_data = blob.download_as_string()
+    json_dict = json.loads(blob_data) 
+    return json_dict
 
 def create_data_standardization_tags(data_domain, data_product):
     
     file_name = data_domain + '/' + data_product + '/' + 'data_standardization.json'
     payload = get_tag_config(file_name)
     
-    url = 'https://tag-engine-develop.uc.r.appspot.com/dynamic_create'
+    url = TAG_ENGINE_URL + '/dynamic_column_tags'
     res = requests.post(url, json=payload)
     print('res: ', res.text)
     config_res = json.loads(res.text)
@@ -57,7 +66,7 @@ def create_data_sensitivity_tags(data_domain, data_product):
     file_name = data_domain + '/' + data_product + '/' + 'data_sensitivity.json'
     payload = get_tag_config(file_name)
 
-    url = 'https://tag-engine-develop.uc.r.appspot.com/sensitive_create'
+    url = TAG_ENGINE_URL + '/sensitive_column_tags'
     res = requests.post(url, json=payload)
     print('res: ', res.text)
     config_res = json.loads(res.text)
@@ -69,30 +78,19 @@ def create_data_resource_tags(data_domain, data_product):
     file_name = data_domain + '/' + data_product + '/' + 'data_resource.json'
     payload = get_tag_config(file_name)
     
-    url = 'https://tag-engine-develop.uc.r.appspot.com/dynamic_create'
+    url = TAG_ENGINE_URL + '/dynamic_table_tags'
     res = requests.post(url, json=payload)
     print('res: ', res.text)
     config_res = json.loads(res.text)
     return config_res
     
-
-def get_tag_config(file_name):
     
-    print('file_name: ', file_name)
-    storage_client = storage.Client()
-    bucket = storage_client.get_bucket(bucket_name)
-    blob = bucket.get_blob(file_name)
-    blob_data = blob.download_as_string()
-    json_dict = json.loads(blob_data) 
-    return json_dict
-
-
 def job_complete(payload, prev_tasks_ran):
     
     print('payload', payload)
     print('prev_tasks_ran', prev_tasks_ran)
     
-    url = 'https://tag-engine-develop.uc.r.appspot.com/get_job_status'
+    url = TAG_ENGINE_URL + '/get_job_status'
     res = requests.post(url, json=payload)
     job_dict = json.loads(res.text)
     cur_tasks_ran = job_dict['tasks_ran']
@@ -103,6 +101,3 @@ def job_complete(payload, prev_tasks_ran):
     else:
         time.sleep(5)
         job_complete(payload, cur_tasks_ran)
-
-
-
