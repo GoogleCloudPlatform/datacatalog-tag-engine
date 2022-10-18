@@ -68,8 +68,8 @@
             "field_value": "2022-08-30"
         }
     ],
-    "included_uris": "bigquery/project/data-mesh-343422/dataset/oltp",
-    "excluded_uris": "",
+    "included_tables_uris": "bigquery/project/data-mesh-343422/dataset/oltp",
+    "excluded_tables_uris": "",
     "refresh_mode": "ON_DEMAND",
     "tag_history": true,
     "tag_stream": false   
