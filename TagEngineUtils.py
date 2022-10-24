@@ -1128,12 +1128,7 @@ class TagEngineUtils:
             new_config_uuid, included_uris_hash = self.write_dynamic_table_config(config_status, fields, included_uris, excluded_uris, \
                                                                                   template_uuid, refresh_mode, refresh_frequency, refresh_unit,\
                                                                                   tag_history, tag_stream)
-        
-        if config_type == 'DYNAMIC_COLUMN_TAG':
-            new_config_uuid, included_uris_hash = self.write_dynamic_column_config(config_status, fields, included_uris, excluded_uris, \
-                                                                                   template_uuid, refresh_mode, refresh_frequency, refresh_unit,\
-                                                                                   tag_history, tag_stream)
-        
+                
         if config_type == 'ENTRY':
             new_config_uuid, included_uris_hash = self.write_entry_config(config_status, fields, included_uris, excluded_uris, \
                                                                           template_uuid, refresh_mode, refresh_frequency, refresh_unit,\
@@ -1147,6 +1142,23 @@ class TagEngineUtils:
             
         return new_config_uuid
     
+
+    def update_dynamic_column_config(self, old_config_uuid, config_type, config_status, fields, included_columns_query, included_tables_uris,\
+                                     excluded_tables_uris, template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
+                                     tag_history, tag_stream):
+        
+        self.db.collection('dynamic_column_configs').document(old_config_uuid).update({
+            'config_status' : "INACTIVE"
+        })
+        
+        
+        new_config_uuid, included_tables_uris_hash = self.write_dynamic_column_config(config_status, fields, included_columns_query, \
+                                                                                      included_tables_uris, excluded_tables_uris, \
+                                                                                      template_uuid, refresh_mode, refresh_frequency, \
+                                                                                      refresh_unit, tag_history, tag_stream)
+        
+        return new_config_uuid
+        
 
     def update_sensitive_column_config(self, old_config_uuid, config_status, dlp_dataset, mapping_table, included_tables_uris, excluded_tables_uris, 
                                 create_policy_tags, taxonomy_id, template_uuid, refresh_mode, refresh_frequency, refresh_unit, 

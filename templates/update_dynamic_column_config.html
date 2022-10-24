@@ -40,7 +40,7 @@
 	 	</h5>
 
 	   
-         <form method="post" action="/process_update_dynamic_table_config">
+         <form method="post" action="/process_update_dynamic_column_config">
 		    <table>
 			   {% for field in fields %}
 		        <tr>
@@ -101,7 +101,7 @@
 
 		<td>
 		<td><span style="color:red;">*</span> Included columns query:&nbsp;&nbsp;
-		<textarea name="included_columns_query" value="{{ config['included_columns_query'] }}" style="align-content:left; width: 600px; overflow:auto;">
+		<textarea name="included_columns_query" style="align-content:left; width: 600px; overflow:auto;">{{ config['included_columns_query'] }}
 		</textarea>
 		</td>	   
 			   
@@ -119,13 +119,13 @@
 			    <table>
 			     <tr>
 			    <td><span style="color:red;">*</span>Included Tables URIs:&nbsp;&nbsp;
-					<input type="text" value="{{ config['included_tables_uris'] }}" name="included_uris" style="align-content:left; width: 700px; overflow:auto;"/>
+					<input type="text" value="{{ config['included_tables_uris'] }}" name="included_tables_uris" style="align-content:left; width: 700px; overflow:auto;"/>
 			     </td>
 			     </tr>
 			     <tr><td>&nbsp;</td></tr>
  				<tr>
  			    <td>&nbsp;Excluded Tables URIs:&nbsp;&nbsp;
-					<input type="text" value="{{ config['excluded_tables_uris'] }}" name="excluded_uris" style="align-content:left; width: 700px; overflow:auto;"/>	
+					<input type="text" value="{{ config['excluded_tables_uris'] }}" name="excluded_tables_uris" style="align-content:left; width: 700px; overflow:auto;"/>	
 			    </td>
  		         </tr>
 		        </table>

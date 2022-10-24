@@ -1,0 +1,21 @@
+{
+    "template_id": "query_cookbook",
+    "template_project": "tag-engine-develop",
+    "template_region": "us-central1",
+    "fields": [
+        {
+            "field_id": "top_users",
+            "query_expression": "select `tag-engine-develop`.remote_functions.top_users('tag-engine-develop', 'finwire', '$table', 'us-central1', 6, NULL)"
+        },
+		{
+            "field_id": "top_queries",
+            "query_expression": "select `tag-engine-develop`.remote_functions.top_queries('tag-engine-develop', 'finwire', '$table', 'us-central1', 6, NULL)"
+        }
+    ],
+    "included_tables_uris": "bigquery/project/tag-engine-develop/dataset/finwire/*",
+    "refresh_mode": "AUTO",
+    "refresh_frequency": 24,
+    "refresh_unit": "hours",
+    "tag_history": true,
+    "tag_stream": false  
+}
