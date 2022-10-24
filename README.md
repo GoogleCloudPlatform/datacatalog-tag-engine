@@ -70,7 +70,6 @@ gcloud app firewall-rules update default --action deny
 
 Alternatively, control access to App Engine by user identity (instead of IP address) with [Identity-Aware Proxy (IAP)](https://cloud.google.com/iap/docs/concepts-overview). 
 
-
 #### Step 7: Run the Terraform scripts
 ``` 
 gcloud auth application-default login
@@ -81,7 +80,6 @@ terraform apply -var-file=variables.tfvars
 
 Note: The deployment takes several minutes due to the index builds. There are 24 indexes in Firestore that are created as part of this step. 
 
-
 #### Step 8: Launch the Tag Engine UI
 ```
 gcloud app browse
@@ -90,7 +88,7 @@ gcloud app browse
 Hint: read [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog) to learn about Tag Engine's static and dynamic tag configurations. <br><br>
 
 
-#### Common UI Commands:
+### Common UI Commands:
 
 * Open the Tag Engine UI:<br>
 `gcloud app browse`
@@ -99,7 +97,7 @@ Hint: read [this tutorial](https://cloud.google.com/architecture/tag-engine-and-
 `gcloud app logs tail -s default`
 
 
-#### Common API Commands:
+### Common API Commands:
 
 * Create a static asset tags through API:<br>
 `curl -X POST [TAG ENGINE URL]/static_asset_tags -d @examples/static_asset_configs/static_asset_create_auto_bq.json`
