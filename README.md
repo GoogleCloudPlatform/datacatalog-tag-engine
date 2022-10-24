@@ -78,7 +78,7 @@ terraform init
 terraform apply -var-file=variables.tfvars
 ```  
 
-Note: The deployment takes several minutes due to the index builds. There are 24 indexes in Firestore that are created as part of this step. 
+Note: The deployment can take 30 minutes due to the index builds. There are 24 Firestore indexes that must be created sequentially to avoid build failures. 
 
 #### Step 8: Launch the Tag Engine UI
 ```
