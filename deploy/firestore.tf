@@ -45,7 +45,7 @@ resource "google_firestore_index" "index-1" {
       order      = "ASCENDING"
     }
 
-  depends_on = [google_firestore_index.index-0]
+  depends_on = [google_project_service.tag_engine_project]
 }
 
 # static asset configs
@@ -75,7 +75,7 @@ resource "google_firestore_index" "index-2" {
     order      = "ASCENDING"
   }
 
-  depends_on = [google_firestore_index.index-1]
+  depends_on = [google_project_service.tag_engine_project]
 }
 
 resource "google_firestore_index" "index-3" {
@@ -103,7 +103,7 @@ resource "google_firestore_index" "index-3" {
       order      = "ASCENDING"
     }
 
-    depends_on = [google_firestore_index.index-2]
+    depends_on = [google_project_service.tag_engine_project]
 }
 
 resource "google_firestore_index" "index-4" {
@@ -121,7 +121,7 @@ resource "google_firestore_index" "index-4" {
       order      = "ASCENDING"
     }
 
-  depends_on = [google_firestore_index.index-3]
+  depends_on = [google_project_service.tag_engine_project]
 }
 
 
@@ -142,7 +142,7 @@ resource "google_firestore_index" "index-5" {
       order      = "ASCENDING"
     }
 
-  depends_on = [google_firestore_index.index-4]
+  depends_on = [google_project_service.tag_engine_project]
 }
 
 resource "google_firestore_index" "index-6" {
@@ -170,7 +170,7 @@ resource "google_firestore_index" "index-6" {
     order      = "ASCENDING"
   }
 
-  depends_on = [google_firestore_index.index-5]
+  depends_on = [google_project_service.tag_engine_project]
 }
 
 
@@ -199,7 +199,7 @@ resource "google_firestore_index" "index-7" {
       order      = "ASCENDING"
     }
 
-    depends_on = [google_firestore_index.index-6]
+    depends_on = [google_project_service.tag_engine_project]
 }
 
 # dynamic column configs
@@ -219,7 +219,7 @@ resource "google_firestore_index" "index-8" {
       order      = "ASCENDING"
     }
 
-  depends_on = [google_firestore_index.index-7]
+  depends_on = [google_project_service.tag_engine_project]
 }
 
 resource "google_firestore_index" "index-9" {
@@ -247,7 +247,7 @@ resource "google_firestore_index" "index-9" {
     order      = "ASCENDING"
   }
 
-  depends_on = [google_firestore_index.index-8]
+  depends_on = [google_project_service.tag_engine_project]
 }
 
 resource "google_firestore_index" "index-10" {
@@ -275,7 +275,7 @@ resource "google_firestore_index" "index-10" {
       order      = "ASCENDING"
     }
 
-    depends_on = [google_firestore_index.index-9]
+    depends_on = [google_project_service.tag_engine_project]
 }
 
 
@@ -306,7 +306,7 @@ resource "google_firestore_index" "index-11" {
     order      = "ASCENDING"
   }
 
-  depends_on = [google_firestore_index.index-10]
+  depends_on = [google_project_service.tag_engine_project]
 }
 
 resource "google_firestore_index" "index-12" {
@@ -324,7 +324,7 @@ resource "google_firestore_index" "index-12" {
       order      = "ASCENDING"
     }
 
-  depends_on = [google_firestore_index.index-11]
+  depends_on = [google_project_service.tag_engine_project]
 }
 
 resource "google_firestore_index" "index-13" {
@@ -352,7 +352,7 @@ resource "google_firestore_index" "index-13" {
       order      = "ASCENDING"
     }
 
-    depends_on = [google_firestore_index.index-12]
+    depends_on = [google_project_service.tag_engine_project]
 }
 
 
@@ -382,7 +382,7 @@ resource "google_firestore_index" "index-14" {
     order      = "ASCENDING"
   }
 
-  depends_on = [google_firestore_index.index-13]
+  depends_on = [google_project_service.tag_engine_project]
 }
 
 resource "google_firestore_index" "index-15" {
@@ -410,7 +410,7 @@ resource "google_firestore_index" "index-15" {
       order      = "ASCENDING"
     }
 
-    depends_on = [google_firestore_index.index-14]
+    depends_on = [google_project_service.tag_engine_project]
 }
 
 resource "google_firestore_index" "index-16" {
@@ -428,7 +428,7 @@ resource "google_firestore_index" "index-16" {
       order      = "ASCENDING"
     }
 
-  depends_on = [google_firestore_index.index-15]
+  depends_on = [google_project_service.tag_engine_project]
 }
 
 # sensitive column configs
@@ -458,7 +458,7 @@ resource "google_firestore_index" "index-17" {
     order      = "ASCENDING"
   }
 
-  depends_on = [google_firestore_index.index-16]
+  depends_on = [google_project_service.tag_engine_project]
 }
 
 resource "google_firestore_index" "index-18" {
@@ -476,7 +476,7 @@ resource "google_firestore_index" "index-18" {
       order      = "ASCENDING"
     }
 
-  depends_on = [google_firestore_index.index-17]
+  depends_on = [google_project_service.tag_engine_project]
 }
 
 
@@ -505,7 +505,7 @@ resource "google_firestore_index" "index-19" {
       order      = "ASCENDING"
     }
 
-    depends_on = [google_firestore_index.index-18]
+    depends_on = [google_project_service.tag_engine_project]
 }
 
 # restore configs
@@ -530,7 +530,7 @@ resource "google_firestore_index" "index-20" {
       order      = "ASCENDING"
     }
 
-  depends_on = [google_firestore_index.index-19]
+  depends_on = [google_project_service.tag_engine_project]
 }
 
 
@@ -549,7 +549,7 @@ resource "google_firestore_index" "index-21" {
       order      = "ASCENDING"
     }
 
-  depends_on = [google_firestore_index.index-20]
+  depends_on = [google_project_service.tag_engine_project]
 }
 
 
@@ -570,7 +570,7 @@ resource "google_firestore_index" "index-22" {
       order      = "ASCENDING"
     }
 
-  depends_on = [google_firestore_index.index-21]
+  depends_on = [google_project_service.tag_engine_project]
 }
 
 resource "google_firestore_index" "index-23" {
@@ -593,5 +593,5 @@ resource "google_firestore_index" "index-23" {
       order      = "ASCENDING"
     }
 
-  depends_on = [google_firestore_index.index-22]
+  depends_on = [google_project_service.tag_engine_project]
 }

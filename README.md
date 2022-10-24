@@ -68,43 +68,36 @@ gcloud app firewall-rules create 100 --action ALLOW --source-range [IP_RANGE]
 gcloud app firewall-rules update default --action deny
 ```
 
-Alternatively, you can use [IAP](https://cloud.google.com/iap/docs/concepts-overview) to control access to App Engine. 
+Alternatively, control access to App Engine by user identity (instead of IP address) with [Identity-Aware Proxy (IAP)](https://cloud.google.com/iap/docs/concepts-overview). 
 
-
-#### Step 7: (Optional) Create a service account for running the Terraform scripts
-```                
-gcloud iam service-accounts create terraform
-gcloud iam service-accounts keys create key.json --iam-account=$TERRAFORM_SA 
-gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT --member=serviceAccount:${TERRAFORM_SA} --role=roles/owner
-gcloud projects add-iam-policy-binding $BQ_PROJECT --member=serviceAccount:${TERRAFORM_SA} --role=roles/owner
-gcloud auth activate-service-account $TERRAFORM_SA --key-file=/tmp/key.json
-```
-
-#### Step 8: Run the Terraform scripts
-```  
+#### Step 7: Run the Terraform scripts
+``` 
+gcloud auth application-default login
 cd datacatalog-tag-engine/deploy
 terraform init
-terraform apply
+terraform apply -var-file=variables.tfvars
 ```  
 
-#### Step 9: (Optional) Delete the Terraform service account
-```
-gcloud iam service-accounts delete $TERRAFORM_SA
-rm /tmp/key.json
-```
+Note: The deployment takes several minutes due to the index builds. There are 24 indexes in Firestore that are created as part of this step. 
 
-#### Step 10: Launch the Tag Engine UI
+#### Step 8: Launch the Tag Engine UI
 ```
 gcloud app browse
 ```
 
-Hint: read [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog) to learn about Tag Engine's static and dynamic tagging configurations. <br><br>
+Hint: read [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog) to learn about Tag Engine's static and dynamic tag configurations. <br><br>
 
 
-#### Common Commands:
+### Common UI Commands:
 
 * Open the Tag Engine UI:<br>
 `gcloud app browse`
+
+* Consult the App Engine logs if you encounter an error while using Tag Engine:<br>
+`gcloud app logs tail -s default`
+
+
+### Common API Commands:
 
 * Create a static asset tags through API:<br>
 `curl -X POST [TAG ENGINE URL]/static_asset_tags -d @examples/static_asset_configs/static_asset_create_auto_bq.json`
@@ -132,7 +125,4 @@ Hint: read [this tutorial](https://cloud.google.com/architecture/tag-engine-and-
 
 * Get the status of a job through API:<br>
 `curl -X POST [TAG ENGINE URL]/get_job_status -d '{"job_uuid":"47aa9460fbac11ecb1a0190a014149c1"}'`
-
-* Consult the App Engine logs if you encounter an error while using Tag Engine:<br>
-`gcloud app logs tail -s default`
 
