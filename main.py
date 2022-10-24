@@ -750,68 +750,177 @@ def process_update_dynamic_table_config():
     
     dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
     template_fields = dcu.get_template()
+    configs = teu.read_configs(template_id, template_project, template_region)
     
-    if action == "Submit Changes":
+    if action == "Cancel Changes":
+        return render_template(
+        'view_configs.html',
+        template_id=template_id,
+        template_project=template_project,
+        template_region=template_region,
+        fields=template_fields,
+        configs=configs,
+        status=job_creation)
         
-        fields = []
-    
-        selected_fields = request.form.getlist("selected")
-        print("selected_fields: " + str(selected_fields))
-    
-        for selected_field in selected_fields:
-            query_expression = request.form.get(selected_field).replace('\t', '').replace('\r', '').replace('\n', ' ').strip()
-            print('query_expression: ' + query_expression)
-            selected_field_type = request.form.get(selected_field + "_datatype")
-            print(selected_field + ", " + query_expression + ", " + selected_field_type)
+        
+    fields = []
+
+    selected_fields = request.form.getlist("selected")
+    print("selected_fields: " + str(selected_fields))
+
+    for selected_field in selected_fields:
+        query_expression = request.form.get(selected_field).replace('\t', '').replace('\r', '').replace('\n', ' ').strip()
+        print('query_expression: ' + query_expression)
+        selected_field_type = request.form.get(selected_field + "_datatype")
+        print(selected_field + ", " + query_expression + ", " + selected_field_type)
+        
+        for template_field in template_fields:
+            if template_field['field_id'] != selected_field:
+                continue
             
-            for template_field in template_fields:
-                if template_field['field_id'] != selected_field:
-                    continue
-                
-                is_required = template_field['is_required']
-        
-                field = {'field_id': selected_field, 'query_expression': query_expression, 'field_type': selected_field_type,\
-                         'is_required': is_required}
-                fields.append(field)
-                break
+            is_required = template_field['is_required']
     
-        #print('fields: ' + str(fields))
-        
-        if excluded_tables_uris == 'None':
-            excluded_tables_uris = ''
-        
-        tag_history = False
+            field = {'field_id': selected_field, 'query_expression': query_expression, 'field_type': selected_field_type,\
+                     'is_required': is_required}
+            fields.append(field)
+            break
+
+    #print('fields: ' + str(fields))
     
-        if "tag_history" in request.form:
-            tag_history_option = request.form.get("tag_history")
+    if excluded_tables_uris == 'None':
+        excluded_tables_uris = ''
     
-            if tag_history_option == "selected":
-                tag_history = True
-        
-        tag_stream = False
-                
-        if "tag_stream" in request.form:
-            tag_stream_option = request.form.get("tag_stream")
+    tag_history = False
+
+    if "tag_history" in request.form:
+        tag_history_option = request.form.get("tag_history")
+
+        if tag_history_option == "selected":
+            tag_history = True
     
-            if tag_stream_option == "selected":
-                tag_stream = True
+    tag_stream = False
+            
+    if "tag_stream" in request.form:
+        tag_stream_option = request.form.get("tag_stream")
+
+        if tag_stream_option == "selected":
+            tag_stream = True
+
+    template_exists, template_uuid = teu.read_tag_template(template_id, template_project, template_region)
+    new_config_uuid = teu.update_config(old_config_uuid, 'DYNAMIC_TABLE_TAG', 'PENDING', fields, included_tables_uris, excluded_tables_uris,\
+                                        template_uuid, refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream)
     
-        template_exists, template_uuid = teu.read_tag_template(template_id, template_project, template_region)
-        new_config_uuid = teu.update_config(old_config_uuid, 'DYNAMIC_TABLE_TAG', 'PENDING', fields, included_tables_uris, excluded_tables_uris,\
-                                                  template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
-                                                  tag_history, tag_stream)
-        
-        job_uuid = jm.create_job(new_config_uuid, 'DYNAMIC_TABLE_TAG')
-    
-        if job_uuid == None: 
-            job_creation = constants.ERROR
-             
-    template_fields = dcu.get_template()  
-    #print('template_fields: ' + str(template_fields))
+    job_uuid = jm.create_job(new_config_uuid, 'DYNAMIC_TABLE_TAG')
+
+    if job_uuid == None: 
+        job_creation = constants.ERROR
     
     configs = teu.read_configs(template_id, template_project, template_region)
-      
+    print('configs: ', configs)         
+
      # [END process_update_dynamic_table_config]
+     # [START render_template]
+    return render_template(
+         'view_configs.html',
+         template_id=template_id,
+         template_project=template_project,
+         template_region=template_region,
+         fields=template_fields,
+         configs=configs,
+         status=job_creation)  
+
+
+@app.route('/process_update_dynamic_column_config', methods=['POST'])
+def process_update_dynamic_column_config():
+    template_id = request.form['template_id']
+    template_project = request.form['template_project']
+    template_region = request.form['template_region']
+    old_config_uuid = request.form['config_uuid']
+    included_columns_query = request.form['included_columns_query'].rstrip()
+    included_tables_uris = request.form['included_tables_uris'].rstrip()
+    excluded_tables_uris = request.form['excluded_tables_uris'].rstrip()
+    refresh_mode = request.form['refresh_mode']
+    refresh_frequency = request.form['refresh_frequency'].rstrip()
+    refresh_unit = request.form['refresh_unit']
+    action = request.form['action']
+    
+    job_creation = constants.SUCCESS
+    
+    #print('old_config_uuid: ' + old_config_uuid)
+    #print("action: " + str(action))
+    
+    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
+    template_fields = dcu.get_template()
+    configs = teu.read_configs(template_id, template_project, template_region)
+    
+    if action == "Cancel Changes":
+        return render_template(
+        'view_configs.html',
+        template_id=template_id,
+        template_project=template_project,
+        template_region=template_region,
+        fields=template_fields,
+        configs=configs,
+        status=job_creation)
+        
+        
+    fields = []
+
+    selected_fields = request.form.getlist("selected")
+    print("selected_fields: " + str(selected_fields))
+
+    for selected_field in selected_fields:
+        query_expression = request.form.get(selected_field).replace('\t', '').replace('\r', '').replace('\n', ' ').strip()
+        print('query_expression: ' + query_expression)
+        selected_field_type = request.form.get(selected_field + "_datatype")
+        print(selected_field + ", " + query_expression + ", " + selected_field_type)
+        
+        for template_field in template_fields:
+            if template_field['field_id'] != selected_field:
+                continue
+            
+            is_required = template_field['is_required']
+    
+            field = {'field_id': selected_field, 'query_expression': query_expression, 'field_type': selected_field_type,\
+                     'is_required': is_required}
+            fields.append(field)
+            break
+
+    #print('fields: ' + str(fields))
+    
+    if excluded_tables_uris == 'None':
+        excluded_tables_uris = ''
+    
+    tag_history = False
+
+    if "tag_history" in request.form:
+        tag_history_option = request.form.get("tag_history")
+
+        if tag_history_option == "selected":
+            tag_history = True
+    
+    tag_stream = False
+            
+    if "tag_stream" in request.form:
+        tag_stream_option = request.form.get("tag_stream")
+
+        if tag_stream_option == "selected":
+            tag_stream = True
+
+    template_exists, template_uuid = teu.read_tag_template(template_id, template_project, template_region)
+    new_config_uuid = teu.update_dynamic_column_config(old_config_uuid, 'DYNAMIC_COLUMN_TAG', 'PENDING', fields, included_columns_query, \
+                                                       included_tables_uris, excluded_tables_uris, template_uuid, refresh_mode, \
+                                                       refresh_frequency, refresh_unit, tag_history, tag_stream)
+    
+    job_uuid = jm.create_job(new_config_uuid, 'DYNAMIC_COLUMN_TAG')
+
+    if job_uuid == None: 
+        job_creation = constants.ERROR
+             
+    configs = teu.read_configs(template_id, template_project, template_region)
+    print('configs: ', configs)
+
+     # [END process_update_dynamic_column_config]
      # [START render_template]
     return render_template(
          'view_configs.html',
