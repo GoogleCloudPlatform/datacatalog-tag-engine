@@ -1,4 +1,4 @@
-# Copyright 2020 Google, LLC.
+# Copyright 2020-2022 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ SUCCESS = 0
 ERROR = -1
 TAG_CREATED = 'TAG_CREATED'
 TAG_UPDATED = 'TAG_UPDATED'
+BQ_DATASET_TAG = 1
 BQ_TABLE_TAG = 2
 BQ_COLUMN_TAG = 3
 BQ_RES = 'BQ'
