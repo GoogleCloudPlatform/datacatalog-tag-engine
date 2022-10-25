@@ -85,20 +85,37 @@ class Resources:
          
         return formatted
     
+    @staticmethod
+    def get_datasets(bq_client, dataset):
+        
+        dataset_list = []
+        
+        if dataset.endswith("*"):
+            datasets = list(bq_client.list_datasets())  
+
+            for ds in datasets:
+                if dataset[:-1] in ds.dataset_id:
+                    dataset_list.append(ds.dataset_id)
+        else:
+            dataset_list.append(dataset)
+        
+        return dataset_list
+        
+    
     @staticmethod     
     def find_bq_resources(uris):
        
         # @input uris: comma-separated list of uri representing a BQ resource
         # BQ resources are specified as:  
-        # bigquery/project/<project>/dataset/<dataset>/<table>/<column>
-        # wildcards are allowed 
+        # bigquery/project/<project>/dataset/<dataset>/<table>
+        # wildcards are allowed in the table and dataset components of the uri 
         resources = set()
         table_resources = set() 
         column_resources = set() 
         
         uri_list = uris.split(",")
-        for uri in uri_list:
-            
+        
+        for uri in uri_list: 
             #print("uri: " + uri)
             split_path = uri.strip().split("/")
 
@@ -122,8 +139,6 @@ class Resources:
                     tables = list(bq_client.list_tables(dataset.dataset_id))
         
                     for table in tables:
-                
-                        #print("full_table_id: " + str(table.full_table_id))
                         table_resources.add(table.full_table_id)
                 
                 tag_type = constants.BQ_TABLE_TAG
@@ -131,118 +146,64 @@ class Resources:
             if path_length > 4:
                
                 dataset = split_path[4]
-                dataset_id = project_id + "." + dataset
+                dataset_list = Resources.get_datasets(bq_client, dataset)                
+                 
+                for dataset_name in dataset_list:            
+                    dataset_id = project_id + "." + dataset_name
             
-                #print("path_length: ", path_length)
-                #print("dataset: " + dataset)
-                #print("dataset_id: " + dataset_id)
-            
-                dataset = bq_client.get_dataset(dataset_id)
+                    print("path_length: ", path_length)
+                    print("dataset_id: " + dataset_id)
                 
-                if path_length == 5:
-                    dataset_resource = Resources.format_dataset_resource(dataset_id)
-                    resources.add(dataset_resource)
-                    continue
+                    if path_length == 5: 
+                        tag_type = constants.BQ_DATASET_TAG
+                        dataset_resource = Resources.format_dataset_resource(dataset_id)
+                        resources.add(dataset_resource)
+                        continue
                 
-                table_expression = split_path[5]
-                #print("table_expression: " + table_expression)
+                    table_expression = split_path[5]
+                    print("table_expression: " + table_expression)
 
-                if path_length < 6 or path_length > 7:
-                    print("Error. Invalid URI " + path)
-                    return None
-        
-                if path_length == 6:
-                    tag_type = constants.BQ_TABLE_TAG
-                if path_length == 7:
-                    tag_type = constants.BQ_COLUMN_TAG
-                
-                if table_expression == "*":
-                    
-                    #print("list all tables in dataset")
-                    tables = list(bq_client.list_tables(dataset))
-            
-                    for table in tables:
-                    
-                        #print("full_table_id: " + str(table.full_table_id))
-                        table_resources.add(table.full_table_id)
-                    
-                elif "*" in table_expression:
-                    #print("table expression contains wildcard")
-                    table_substrings = table_expression.split("*")
-            
-                    tables = list(bq_client.list_tables(dataset))
-                    
-                    #print('table_substrings: ', table_substrings)
-                    
-                    for table in tables:
-                        is_match = True
-                        
-                        #print('table: ', table.full_table_id)
-                        
-                        for substring in table_substrings:
-                            if substring not in table.full_table_id:
-                                is_match = False
-                                break
-                        #print('is_match: ', is_match)
-                        
-                        if is_match == True:
-                            table_resources.add(table.full_table_id)
-                
-                else:
-                    #print("table expression == table name")
-                
-                    table_id = dataset_id + "." + table_expression
-                
-                    #print('table_id: ' + table_id)
-                
-                    try:
-                        table = bq_client.get_table(table_id)
-                    
-                        #print("full_table_id: " + table.full_table_id)
-                        table_resources.add(table.full_table_id)
-                    
-                    except NotFound:
-                        print("NotFound: table " + table_id + " not found.")
-            
-            if tag_type == constants.BQ_COLUMN_TAG:
-                #print("tagging a column")
-    
-                column_exists = False
-                column = split_path[6]
-                #print("column: " + column)
-
-                for table_id in table_resources:
-                
-                    #print('table_id: ' + table_id)
-            
-                    try:
-            
-                        table = bq_client.get_table(table_id.replace(':', '.'))
-                
-                        schema = table.schema
-                        #print("table schema: " + str(table.schema))
-                
-                        for schema_field in schema:
-                            if schema_field.name == column:
-                                column_exists = True
-                                break
-            
-                    except:
-                        print("NotFound: table " + table_id + " not found.")
-        
-
-                    if column_exists == True:
-                        #print("column exists")
-                        table_resource = Resources.format_table_resource(table_id)
-                        table_column_resource = table_resource + "/column/" + column
-                        #print("table_column_resource: " + table_column_resource)
-                        resources.add(table_column_resource)
-                    else:
-                        print('Error: column ' + column + ' not found in table ' + table_id)
+                    if path_length != 6:
+                        print("Error. Invalid URI " + path)
                         return None
+                    else:
+                        tag_type = constants.BQ_TABLE_TAG
+
+                    if table_expression == "*":
+                        #print("list tables in dataset")
+                        tables = list(bq_client.list_tables(bq_client.get_dataset(dataset_id)))
+            
+                        for table in tables:
+                            #print("full_table_id: " + str(table.full_table_id))
+                            table_resources.add(table.full_table_id)
+                    
+                    elif "*" in table_expression:
+                        #print("table expression contains wildcard")
+                        table_substrings = table_expression.split("*")
+                        tables = list(bq_client.list_tables(bq_client.get_dataset(dataset_id)))
+                    
+                        for table in tables:
+                            is_match = True
+                            for substring in table_substrings:
+                                if substring not in table.full_table_id:
+                                    is_match = False
+                                    break
+                        
+                            if is_match == True:
+                                table_resources.add(table.full_table_id)
+                
+                    else:
+                        table_id = dataset_id + "." + table_expression
+                
+                        try:
+                            table = bq_client.get_table(table_id)
+                            table_resources.add(table.full_table_id)
+                    
+                        except NotFound:
+                            print("Error: " + table_id + " not found.")
+            
                     
             if tag_type == constants.BQ_TABLE_TAG:
-        
                 for table in table_resources:
                     formatted_table = Resources.format_table_resource(table)
                     resources.add(formatted_table)
@@ -318,25 +279,3 @@ class Resources:
                 
         return resources        
         
-
-if __name__ == '__main__':
-    
-    config = configparser.ConfigParser()
-    config.read("tagengine.ini")
-    project_id = config['DEFAULT']['TAG_ENGINE_PROJECT']
-    
-    #included_uris='bigquery/project/' + project_id + '/dataset/hr/FTE_*'
-    #excluded_uris=None
-    #resources = Resources.get_bq_resources(included_uris, excluded_uris)
-    
-    #included_uris = 'bigquery/project/tag-engine-develop/dataset/finwire/FINWIRE*_CMP/industryID'
-    included_uris = 'bigquery/project/data-mesh-343422/dataset/oltp/Account/ca_st_id'
-    #included_uris = 'gs://discovery-area/austin_311_service_requests.parquet'
-    #included_uris = 'gs://discovery-area/cities_311/austin_311_service_requests.parquet', 'gs://discovery-area/cities_311/san_francisco_311_service_requests/*'
-    #excluded_uris = 'gs://discovery-area/cities_311/san_francisco_311_service_requests/000000000003'
-    #included_uris = 'gs://discovery-area/cities_311/*'
-    #included_uris = 'gs://discovery-area/austin_311_service_requests.parquet'
-    #resources = Resources.find_gcs_resources(included_uris)
-
-    resources = Resources.get_resources(included_uris, None)
-    print('resources: ' + str(resources))
