@@ -880,11 +880,20 @@ class DataCatalogUtils:
         return creation_status
       
                  
-    def apply_sensitive_column_config(self, fields, dlp_dataset, mapping_table, uri, create_policy_tags, taxonomy_id, \
-                                       config_uuid, template_uuid, tag_history, tag_stream, overwrite=False):
+    def apply_sensitive_column_config(self, fields, dlp_dataset, infotype_selection_table, infotype_classification_table, \
+                                      uri, create_policy_tags, taxonomy_id, config_uuid, template_uuid, \
+                                      tag_history, tag_stream, overwrite=False):
         
         print('** enter apply_sensitive_column_config **')
-        #print('uri: ', uri)
+        print('fields: ', fields)
+        print('dlp_dataset: ', dlp_dataset)
+        print('infotype_selection_table: ', infotype_selection_table)
+        print('infotype_classification_table: ', infotype_classification_table)
+        print('uri: ', uri)
+        print('create_policy_tags: ', create_policy_tags)
+        print('taxonomy_id: ', taxonomy_id)
+        print('config_uuid: ', config_uuid)
+        print('template_uuid: ', template_uuid)
         
         if create_policy_tags:
             ptm_client = datacatalog.PolicyTagManagerClient()
@@ -907,103 +916,157 @@ class DataCatalogUtils:
         
             #print('policy_tag_names: ', policy_tag_names)
             
-            policy_tag_requests = [] # to store the list of fully qualified policy tag names and table column names, 
-                                     # so that we can create the policy tags on the various columns
+            policy_tag_requests = [] # stores the list of fully qualified policy tag names and table column names, 
+                                     # so that we can create the policy tags on the various sensitive fields
  
-        # uri is either a BQ table/view path or GCS file path
+        # uri is a BQ table path 
         store = te.TagEngineUtils()        
         creation_status = constants.SUCCESS
         column = ''
         
-        is_gcs = False
-        is_bq = False
-        
-        # look up the entry based on the resource type
-        if isinstance(uri, list):
-            is_gcs = True
-            bucket = uri[0].replace('-', '_')
-            filename = uri[1].split('.')[0].replace('/', '_') # extract the filename without the extension, replace '/' with '_'
-            gcs_resource = '//datacatalog.googleapis.com/projects/' + self.template_project + '/locations/' + self.template_region + '/entryGroups/' + bucket + '/entries/' + filename
-            #print('gcs_resource: ', gcs_resource)
-            request = datacatalog.LookupEntryRequest()
-            request.linked_resource=gcs_resource
-            
-            try:
-                entry = self.client.lookup_entry(request)
-            except Exception as e:
-                print('Unable to find entry in the catalog. Entry ' + gcs_resource + ' does not exist.')
-                creation_status = constants.ERROR
-                return creation_status
-                #print('entry found: ', entry)
-        
-        if isinstance(uri, str):
-            is_bq = True
-            if "/column/" in uri:
-                # we have a column tag
-                split_resource = uri.split("/column/")
-                uri = split_resource[0]
-                column = split_resource[1]
-        
-            bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
-            print("uri: ", uri)
-            #print("bigquery_resource: ", bigquery_resource)
-        
-            request = datacatalog.LookupEntryRequest()
-            request.linked_resource=bigquery_resource
-            entry = self.client.lookup_entry(request)
-        
-        # entry is GCS and create_policy_tags == True
-        if is_gcs and create_policy_tags:
-            #print('Error: policy tags cannot be created on GCS resources')
+        if isinstance(uri, str) == False:
+            print('Error: url ' + str(url) + ' is not of type string.')
             creation_status = constants.ERROR
             return creation_status
+            
+        bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
+        #print("bigquery_resource: ", bigquery_resource)
         
-        # entry does not have a schema
-        if entry.schema == None:
-            #print('Error: entry ' + entry.name + ' does not have a schema in the catalog.')
+        request = datacatalog.LookupEntryRequest()
+        request.linked_resource=bigquery_resource
+        
+        try:
+            entry = self.client.lookup_entry(request)
+        except Exception as e:
+            print('Error looking up entry ' + bigquery_resource + ' in the catalog. Error message: ', e)
             creation_status = constants.ERROR
             return creation_status
              
         dlp_dataset = dlp_dataset.replace('bigquery/project/', '').replace('/dataset/', '.').replace('/', '.')        
-        mapping_table = mapping_table.replace('bigquery/project/', '').replace('/dataset/', '.').replace('/', '.')
+        infotype_selection_table = infotype_selection_table.replace('bigquery/project/', '').replace('/dataset/', '.').replace('/', '.')
+        infotype_classification_table = infotype_classification_table.replace('bigquery/project/', '').replace('/dataset/', '.').replace('/', '.')
         dlp_table = dlp_dataset + '.' + uri.split('/')[4]
         
         #print('dlp_dataset: ', dlp_dataset)
-        #print('mapping_table: ', mapping_table)
         #print('dlp_table: ', dlp_table)
                 
-        category_subquery = '(select infotype, category, rank from ' + mapping_table + ')'  
-        dlp_subquery = ('(select distinct info_type.name as infotype, l.record_location.field_id.name as column_name '  
-                           'from ' + dlp_table + ', UNNEST(location.content_locations) as l)')
-          
-        rank_subquery = ('(select column_name, category, rank() over (partition by column_name order by rank desc) as category_rank '
-                    'from ' + category_subquery + ' as c join ' + dlp_subquery + ' as d ' 
-                    'on c.infotype = d.infotype)')
-                    
-        query = ('select column_name, category from ' + rank_subquery + ' where category_rank = 1')
-        #print('query: ', query)
+        infotype_fields = []
+        notable_infotypes = []
+    
+        # get an array of infotypes associated with each field in the DLP findings table
+        dlp_sql = 'select field, array_agg(infotype) infotypes '
+        dlp_sql += 'from (select distinct cl.record_location.field_id.name as field, info_type.name as infotype '
+        dlp_sql += 'from ' + dlp_table + ', unnest(location.content_locations) as cl '
+        dlp_sql += 'order by cl.record_location.field_id.name) '
+        dlp_sql += 'group by field'
         
-        # run the query to get the list of column names and sensitive categories for this table
+        #print('dlp_sql: ', dlp_sql)
+        
         bq_client = bigquery.Client()
         
         try:
-            rows = bq_client.query(query).result()
+            dlp_rows = bq_client.query(dlp_sql).result()
+        
         except Exception as e:
-            print('Error querying the mapping table using ' + query + '. Error message: ', e)
+            print('Error querying DLP findings table. Error message: ', e)
             creation_status = constants.ERROR
             return creation_status
+
+        dlp_row_count = 0
+    
+        for dlp_row in dlp_rows:
+        
+            dlp_row_count += 1
+        
+            field = dlp_row['field']
+            infotype_fields.append(field)
+            infotypes = dlp_row['infotypes']
+        
+            print('field ', field, ', infotypes [', infotypes, ']')
+        
+            is_sql = 'select notable_infotype '
+            is_sql += 'from ' + infotype_selection_table + ' i, '
+        
+            infotype_count = len(infotypes)
+        
+            for i in range(0, infotype_count):
+            
+                is_sql += 'unnest(i.field_infotypes) as i' + str(i) + ', '
+        
+            is_sql = is_sql[:-2] + ' '
+            
+            for i, infotype in enumerate(infotypes):
+            
+                if i == 0:
+                    is_sql += 'where i' + str(i) + ' = "' + infotype + '" ' 
+                else:
+                    is_sql += 'and i' + str(i) + ' = "' + infotype + '" ' 
+        
+            is_sql += 'order by array_length(i.field_infotypes) '
+            is_sql += 'limit 1'
+        
+            #print('is_sql: ', is_sql)
+            
+            try:
+                ni_rows = bq_client.query(is_sql).result()
+            except Exception as e:
+                print('Error querying infotype selection table. Error message: ', e)
+                creation_status = constants.ERROR
+                return creation_status
+        
+            for ni_row in ni_rows:
+                notable_infotypes.append(ni_row['notable_infotype']) # there should be just one notable infotype per field
+    
+        # there are no DLP findings
+        if dlp_row_count == 0:
+            creation_status = constants.SUCCESS
+            return creation_status
+    
+        # remove duplicate infotypes from notable list
+        final_set = list(set(notable_infotypes))
+        print('final_set: ', final_set)
+        
+        # lookup classification using set of notable infotypes   
+        c_sql = 'select classification_result '
+        c_sql += 'from ' + infotype_classification_table + ' c, '
+    
+        for i in range(0, len(final_set)):
+            c_sql += 'unnest(c.notable_infotypes) as c' + str(i) + ', '
+    
+        c_sql = c_sql[:-2] + ' '
+    
+        for i, notable_infotype in enumerate(final_set):
+        
+            if i == 0:
+                c_sql += 'where c' + str(i) + ' = "' + notable_infotype + '" '
+            else:
+                c_sql += 'and c' + str(i) + ' = "' + notable_infotype + '" '
+
+        c_sql += 'order by array_length(c.notable_infotypes) '
+        c_sql += 'limit 1'  
+
+        #print('c_sql: ', c_sql)
+    
+        try:
+            c_rows = bq_client.query(c_sql).result()
+        except Exception as e:
+            print('Error querying infotype classification table. Error message: ', e)
+            creation_status = constants.ERROR
+            return creation_status
+        
+        classification_result = None
+    
+        for c_row in c_rows:
+            classification_result = c_row['classification_result'] # we should end up with one classification result per table
+    
+        print('classification_result: ', classification_result)
         
         tag = datacatalog.Tag()
         tag.template = self.template_path
         
-        # each row from this query represents a unique sensitive column that needs to be tagged
-        for row in rows:
-            column = row['column_name']
-            category = row['category']
+        # each element represents a field which needs to be tagged
+        for infotype_field in infotype_fields:
             
-            #print('column: ', column)
-            #print('category: ', category)
-        
             for field in fields:
                 if 'sensitive_field' in field['field_id']:
                     bool_field = datacatalog.TagField()
@@ -1013,16 +1076,16 @@ class DataCatalogUtils:
                 
                 if 'sensitive_type' in field['field_id']:
                     enum_field = datacatalog.TagField()
-                    enum_field.enum_value.display_name = category
+                    enum_field.enum_value.display_name = classification_result
                     tag.fields['sensitive_type'] = enum_field
-                    field['field_value'] = category
+                    field['field_value'] = classification_result
            
-            tag.column = column
-            #print('tag.column: ', column)
+            tag.column = infotype_field
+            print('tag.column: ', infotype_field)
             
             # check if a tag already exists on this column
             try:    
-                tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column)
+                tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=infotype_field)
         
             except Exception as e:
                 print('Error during check_if_exists: ', e)
@@ -1081,29 +1144,23 @@ class DataCatalogUtils:
                             print(msg)
                             store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'SENSITIVE_TAG', msg)
                     
-            if create_policy_tags:
+            if create_policy_tags and classification_result != 'Public_Information':
                 # add the column name and policy tag name to a list
                 for policy_tag_name, policy_tag_category in policy_tag_names:
-                    if policy_tag_category == category:
-                        policy_tag_requests.append((column, policy_tag_name))
+                    if policy_tag_category == classification_result:
+                        policy_tag_requests.append((infotype_field, policy_tag_name))
                     
                             
             if tag_history:
                 bqu = bq.BigQueryUtils()
                 template_fields = self.get_template()
-                if is_gcs:
-                    bqu.copy_tag(self.template_id, template_fields, '/'.join(uri), None, fields)
-                if is_bq:
-                    bqu.copy_tag(self.template_id, template_fields, uri, column, fields)
+                bqu.copy_tag(self.template_id, template_fields, uri, infotype_field, fields)
         
             if tag_stream:
                 psu = ps.PubSubUtils()
-                if is_gcs:
-                    bqu.copy_tag(self.template_id, '/'.join(uri), None, fields)
-                if is_bq:
-                    psu.copy_tag(self.template_id, uri, column, fields)
+                psu.copy_tag(self.template_id, uri, infotype_field, fields)
         
-        
+                
         # Once we have created the regular tags, we create/update the policy tags
         if create_policy_tags and len(policy_tag_requests) > 0:
             self.apply_policy_tags(uri, policy_tag_requests)
@@ -1697,19 +1754,23 @@ class DataCatalogUtils:
         
 if __name__ == '__main__':
     
-    template_id = 'enterprise_glossary'
+    template_id = 'data_sensitivity'
     template_project='tag-engine-develop'
     template_region='us-central1'
 
     dcu = DataCatalogUtils(template_id=template_id, template_project=template_project, template_region=template_region)
 
-    fields = [{'field_type': 'bool', 'field_id': 'primary_business_name', 'is_required': False}, {'is_required': False, 'field_id': 'organization_address_street_address_line1', 'field_type': 'bool'}, {'is_required': False, 'field_id': 'organization_address_city', 'field_type': 'bool'}, {'is_required': False, 'field_id': 'organization_address_state', 'field_type': 'bool'}, {'is_required': False, 'field_id': 'organization_address_postal_code', 'field_type': 'bool'}, {'field_type': 'bool', 'field_id': 'organization_address_country', 'is_required': False}, {'is_required': False, 'field_id': 'telephone_number', 'field_type': 'bool'}, {'is_required': False, 'field_id': 'chief_executive_officer_first_name', 'field_type': 'bool'}, {'is_required': False, 'field_id': 'chief_executive_officer_last_name', 'field_type': 'bool'}, {'field_type': 'bool', 'field_id': 'chief_executive_officer_name_suffix', 'is_required': False}, {'field_type': 'bool', 'field_id': 'sic_code_1', 'is_required': False}, {'is_required': False, 'field_id': 'chief_executive_officer_title', 'field_type': 'bool'}, {'field_type': 'bool', 'field_id': 'sic_code_1_base_6', 'is_required': False}, {'is_required': False, 'field_id': 'organization_address_county', 'field_type': 'bool'}, {'is_required': False, 'field_id': 'organization_msa_name', 'field_type': 'bool'}, {'is_required': False, 'field_id': 'year_started', 'field_type': 'bool'}, {'is_required': False, 'field_id': 'organization_address_postal_code_4_extension', 'field_type': 'bool'}, {'field_type': 'bool', 'field_id': 'company_url', 'is_required': False}]
-    mapping_table = 'bigquery/project/tag-engine-develop/dataset/enterprise_glossary/mapping'
-    uri = ['discovery-area', 'sample_data/usa.parquet']
-    config_uuid = '42a4be2e4c0f11ed90d8acde48001122'
-    template_uuid = '0170f9524b4911edb068acde48001122'
+    fields = [{'display_name': 'Sensitive field', 'field_id': 'sensitive_field', 'is_required': True, 'order': 1, 'field_type': 'bool'}, {'display_name': 'Sensitive type', 'field_id': 'sensitive_type', 'enum_values': ['Sensitive_Personal_Identifiable_Information', 'Personal_Identifiable_Information', 'Sensitive_Personal_Information', 'Personal_Information', 'Public_Information'], 'field_type': 'enum', 'order': 0, 'is_required': False}]
+    dlp_dataset = 'bigquery/project/tag-engine-develop/dataset/finwire_dlp'
+    infotype_selection_table = 'bigquery/project/tag-engine-develop/dataset/reference/infotype_selection'
+    infotype_classification_table = 'bigquery/project/tag-engine-develop/dataset/reference/infotype_classification'
+    uri = 'tag-engine-develop/datasets/finwire/tables/FINWIRE1967Q1_CMP'
+    create_policy_tags = True
+    taxonomy_id = 'projects/tag-engine-develop/locations/us-central1/taxonomies/317244085807144487'
+    config_uuid = 'fb0d1e2a563c11ed9812a12dcae7c58c'
+    template_uuid = '51c6990e4b3311ed9218acde48001122'
     tag_history = False
     tag_stream = False
 
-    dcu.apply_glossary_asset_config(fields, mapping_table, uri, config_uuid, template_uuid, tag_history, tag_stream, overwrite=True)    
-    
+    dcu.apply_sensitive_column_config(fields, dlp_dataset, infotype_selection_table, infotype_classification_table, uri, create_policy_tags, \
+                                      taxonomy_id, config_uuid, template_uuid, tag_history, tag_stream, overwrite=True) 

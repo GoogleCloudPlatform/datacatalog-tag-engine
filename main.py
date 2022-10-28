@@ -1120,7 +1120,8 @@ def process_update_sensitive_column_config():
     template_region = request.form['template_region']
     old_config_uuid = request.form['config_uuid']
     dlp_dataset = request.form['dlp_dataset'].rstrip()
-    mapping_table = request.form['mapping_table'].rstrip()
+    infotype_selection_table = request.form['infotype_selection_table'].rstrip()
+    infotype_classification_table = request.form['infotype_classification_table'].rstrip()
     included_tables_uris = request.form['included_tables_uris'].rstrip()
     excluded_tables_uris = request.form['excluded_tables_uris'].rstrip()
     
@@ -1169,7 +1170,8 @@ def process_update_sensitive_column_config():
     
         template_exists, template_uuid = teu.read_tag_template(template_id, template_project, template_region)
         
-        new_config_uuid = teu.update_sensitive_column_config(old_config_uuid, 'PENDING', dlp_dataset, mapping_table, \
+        new_config_uuid = teu.update_sensitive_column_config(old_config_uuid, 'PENDING', dlp_dataset, infotype_selection_table, \
+                                                             infotype_classification_table, \
                                                              included_tables_uris, excluded_tables_uris,\
                                                              create_policy_tags, taxonomy_id, template_uuid, \
                                                              refresh_mode, refresh_frequency, refresh_unit, \
@@ -1831,7 +1833,8 @@ def process_sensitive_column_config():
     template_project = request.form['template_project']
     template_region = request.form['template_region']
     dlp_dataset = request.form['dlp_dataset'].rstrip()
-    mapping_table = request.form['mapping_table'].rstrip()
+    infotype_selection_table = request.form['infotype_selection_table'].rstrip()
+    infotype_classification_table = request.form['infotype_classification_table'].rstrip()
     included_tables_uris = request.form['included_tables_uris'].rstrip()
     excluded_tables_uris = request.form['excluded_tables_uris'].rstrip()
     
@@ -1915,7 +1918,8 @@ def process_sensitive_column_config():
     
     template_uuid = teu.write_tag_template(template_id, template_project, template_region)
 
-    config_uuid, included_tables_uris_hash = teu.write_sensitive_column_config('PENDING', fields, dlp_dataset, mapping_table, \
+    config_uuid, included_tables_uris_hash = teu.write_sensitive_column_config('PENDING', fields, dlp_dataset, infotype_selection_table, \
+                                                                                infotype_classification_table,
                                                                                 included_tables_uris, excluded_tables_uris, \
                                                                                 create_policy_tags, taxonomy_id, \
                                                                                 template_uuid, \
@@ -1940,7 +1944,8 @@ def process_sensitive_column_config():
         template_region=template_region,
         fields=fields,
         dlp_dataset=dlp_dataset,
-        mapping_table=mapping_table,
+        infotype_selection_table=infotype_selection_table,
+        infotype_classification_table=infotype_classification_table,
         included_tables_uris=included_tables_uris,
         included_tables_uris_hash=included_tables_uris_hash,
         excluded_tables_uris=excluded_tables_uris,
@@ -2592,7 +2597,8 @@ Args:
     template_region: tag template's region 
     fields: list of aincluded_tables_urisll the template field names to include in the tag (no need to include the field type)
     dlp_dataset: The path to the dataset in BQ in which the DLP findings tables are stored
-    mapping_table: The path to the mapping table in BQ. This is required. 
+    infotype_selection_table: The path to the infotype selection table in BQ. This is required. 
+    infotype_classification_table: The path to the infotype classification table in BQ. This is required. 
     included_tables_uris: The path(s) to the BQ tables to be tagged 
     excluded_tables_uris: The path(s) to the BQ tables to exclude from the tagging (optional)
     create_policy_tags: true if this request should also create the policy tags on the sensitive columns, false otherwise
@@ -2637,11 +2643,19 @@ def sensitive_column_tags():
         resp = jsonify(success=False)
         return resp
             
-    # validate mapping_table parameter
-    if 'mapping_table' in json:
-        mapping_table = json['mapping_table']
+    # validate infotype_selection_table parameter
+    if 'infotype_selection_table' in json:
+        infotype_selection_table = json['infotype_selection_table']
     else:
-        print("sensitive_column_config request doesn't include a mapping_table field. This is a required parameter.")
+        print("sensitive_column_config request doesn't include an infotype_selection_table field. This is a required parameter.")
+        resp = jsonify(success=False)
+        return resp
+        
+    # validate infotype_classification_table parameter
+    if 'infotype_classification_table' in json:
+        infotype_classification_table = json['infotype_classification_table']
+    else:
+        print("sensitive_column_config request doesn't include an infotype_classification_table field. This is a required parameter.")
         resp = jsonify(success=False)
         return resp
     
@@ -2687,7 +2701,8 @@ def sensitive_column_tags():
 
     overwrite = True
     
-    config_uuid, included_tables_uris_hash = teu.write_sensitive_column_config('PENDING', fields, dlp_dataset, mapping_table, \
+    config_uuid, included_tables_uris_hash = teu.write_sensitive_column_config('PENDING', fields, dlp_dataset, infotype_selection_table, \
+                                                                                infotype_classification_table, \
                                                                                 included_tables_uris, excluded_tables_uris, \
                                                                                 create_policy_tags, taxonomy_id, template_uuid, \
                                                                                 refresh_mode, refresh_frequency, refresh_unit, \
@@ -3152,10 +3167,11 @@ def _run_task():
                                                     config['template_uuid'], config['tag_history'], \
                                                     config['tag_stream'], config['overwrite'])
     if config_type == 'SENSITIVE_COLUMN_TAG':
-        creation_status = dcu.apply_sensitive_column_config(config['fields'], config['dlp_dataset'], config['mapping_table'], \
-                                                     uri, config['create_policy_tags'], config['taxonomy_id'], config['config_uuid'], \
-                                                     config['template_uuid'], config['tag_history'], \
-                                                     config['tag_stream'], config['overwrite'])
+        creation_status = dcu.apply_sensitive_column_config(config['fields'], config['dlp_dataset'], config['infotype_selection_table'], \
+                                                            config['infotype_classification_table'], uri, config['create_policy_tags'], \
+                                                            config['taxonomy_id'], config['config_uuid'], \
+                                                            config['template_uuid'], config['tag_history'], \
+                                                            config['tag_stream'], config['overwrite'])
     if config_type == 'RESTORE_TAG':
         creation_status = dcu.apply_restore_config(config['config_uuid'], tag_extract, \
                                                    config['tag_history'], config['tag_stream'], config['overwrite']) 
@@ -3188,6 +3204,13 @@ def _run_task():
     
     return resp
 #[END _run_task]
+
+####################### VERSION METHOD ####################################  
+    
+@app.route("/version", methods=['GET'])
+def version():
+    return "Welcome to Tag Engine version 1.0.0"
+#[END ping]
     
 ####################### TEST METHOD ####################################  
     

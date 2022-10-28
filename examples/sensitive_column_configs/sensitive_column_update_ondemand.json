@@ -1,6 +1,0 @@
-{
-	"template_id": "data_attribute", 
-	"template_project": "data-mesh-344315", 
-	"template_region": "us-central1", 
-	"included_tables_uris": "bigquery/project/data-mesh-343422/dataset/finance/*"
-}

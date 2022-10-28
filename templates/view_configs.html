@@ -134,7 +134,7 @@
 			</table>
 	    {% endif %}
 		
-	    {% if config['config_type'] == 'GLOSSARY_ASSET_TAG' or config['config_type'] == 'SENSITIVE_COLUMN_TAG' %}
+	    {% if config['config_type'] == 'GLOSSARY_ASSET_TAG' %}
 		  <table style="background-color:#f1eeee" width="1000">  
 	       <tr>
 	       <td>&nbsp;<span style="color:#0b5394;">Mapping Table:</span></td>
@@ -144,7 +144,24 @@
             </tr>
 			</table>
 	    {% endif %}
-		  
+		
+	    {% if config['config_type'] == 'SENSITIVE_COLUMN_TAG' %}
+		  <table style="background-color:#f1eeee" width="1000">  
+	       <tr>
+	       <td>&nbsp;<span style="color:#0b5394;">Infotype Selection Table:</span></td>
+            </tr>
+	       <tr>
+	       <td>&nbsp;&nbsp;{{ config['infotype_selection_table'] }}</td>
+            </tr>
+ 	       <tr>
+ 	       <td>&nbsp;<span style="color:#0b5394;">Infotype Classification Table:</span></td>
+             </tr>
+ 	       <tr>
+ 	       <td>&nbsp;&nbsp;{{ config['infotype_classification_table'] }}</td>
+             </tr>
+			</table>
+	    {% endif %}
+		
 		
 		   <table style="background-color:#f1eeee" width="1000">
 		    <tr><td>&nbsp;</td></tr>
