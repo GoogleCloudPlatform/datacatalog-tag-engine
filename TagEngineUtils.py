@@ -735,9 +735,9 @@ class TagEngineUtils:
         return config_uuid, included_assets_uris_hash
 
 
-    def write_sensitive_column_config(self, config_status, fields, dlp_dataset, mapping_table, included_tables_uris, excluded_tables_uris, \
-                               create_policy_tags, taxonomy_id, template_uuid, \
-                               refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite=False):
+    def write_sensitive_column_config(self, config_status, fields, dlp_dataset, infotype_selection_table, infotype_classification_table, \
+                                        included_tables_uris, excluded_tables_uris, create_policy_tags, taxonomy_id, template_uuid, \
+                                        refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite=False):
         
         print('** enter write_sensitive_column_config **')
         
@@ -775,7 +775,8 @@ class TagEngineUtils:
                 'creation_time': datetime.utcnow(), 
                 'fields': fields,
                 'dlp_dataset': dlp_dataset,
-                'mapping_table': mapping_table,
+                'infotype_selection_table': infotype_selection_table,
+                'infotype_classification_table': infotype_classification_table,
                 'included_tables_uris': included_tables_uris,
                 'included_tables_uris_hash': included_tables_uris_hash,
                 'excluded_tables_uris': excluded_tables_uris,
@@ -801,7 +802,8 @@ class TagEngineUtils:
                 'creation_time': datetime.utcnow(), 
                 'fields': fields,
                 'dlp_dataset': dlp_dataset,
-                'mapping_table': mapping_table,
+                'infotype_selection_table': infotype_selection_table,
+                'infotype_classification_table': infotype_classification_table,
                 'included_tables_uris': included_tables_uris,
                 'included_tables_uris_hash': included_tables_uris_hash,
                 'excluded_tables_uris': excluded_tables_uris,
@@ -1160,9 +1162,9 @@ class TagEngineUtils:
         return new_config_uuid
         
 
-    def update_sensitive_column_config(self, old_config_uuid, config_status, dlp_dataset, mapping_table, included_tables_uris, excluded_tables_uris, 
-                                create_policy_tags, taxonomy_id, template_uuid, refresh_mode, refresh_frequency, refresh_unit, 
-                                tag_history, tag_stream, overwrite):
+    def update_sensitive_column_config(self, old_config_uuid, config_status, dlp_dataset, infotype_selection_table, infotype_classification_table, \
+                                      included_tables_uris, excluded_tables_uris, create_policy_tags, taxonomy_id, template_uuid, \
+                                      refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite):
         
         self.db.collection('sensitive_column_configs').document(old_config_uuid).update({
             'config_status' : "INACTIVE"
@@ -1170,7 +1172,8 @@ class TagEngineUtils:
         
         config = self.read_config(old_config_uuid, 'SENSITIVE_COLUMN_TAG')
         
-        new_config_uuid, included_tables_uris_hash = self.write_sensitive_column_config(config_status, config['fields'], dlp_dataset, mapping_table, \
+        new_config_uuid, included_tables_uris_hash = self.write_sensitive_column_config(config_status, config['fields'], dlp_dataset, \
+                                                                          infotype_selection_table, infotype_classification_table, \
                                                                           included_tables_uris, excluded_tables_uris, \
                                                                           create_policy_tags, taxonomy_id, template_uuid, \
                                                                           refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite)
