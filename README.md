@@ -45,13 +45,14 @@ app_engine_subregion="${TAG_ENGINE_SUB_REGION}"
 EOL
 ```
 
-Edit the four variables in `datacatalog-tag-engine/tagengine.ini`: 
+Edit the five variables in `datacatalog-tag-engine/tagengine.ini`: 
 ```
 [DEFAULT]
 TAG_ENGINE_PROJECT = tag-engine-develop
 QUEUE_REGION = us-central1
 INJECTOR_QUEUE = tag-engine-injector-queue
 WORK_QUEUE = tag-engine-work-queue
+BIGQUERY_REGION = us-central1
 ```
 
 #### Step 5: Create the Firestore database and deploy the App Engine application
