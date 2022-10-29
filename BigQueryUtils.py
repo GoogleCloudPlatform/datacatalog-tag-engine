@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json, datetime, time
+import json, datetime, time, configparser
 import decimal
 
 from google.cloud import bigquery
@@ -20,11 +20,15 @@ from google.cloud.exceptions import NotFound
 
 import TagEngineUtils as te
 
+config = configparser.ConfigParser()
+config.read("tagengine.ini")
+BIGQUERY_REGION = config['DEFAULT']['BIGQUERY_REGION']
+
 class BigQueryUtils:
     
     def __init__(self):
         
-        self.client = bigquery.Client()
+        self.client = bigquery.Client(location=BIGQUERY_REGION)
 
     def create_dataset(self, project_id, region, dataset):
 

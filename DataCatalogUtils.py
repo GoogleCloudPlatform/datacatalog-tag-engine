@@ -35,6 +35,10 @@ import BigQueryUtils as bq
 import PubSubUtils as ps
 import constants
 
+config = configparser.ConfigParser()
+config.read("tagengine.ini")
+BIGQUERY_REGION = config['DEFAULT']['BIGQUERY_REGION']
+
 class DataCatalogUtils:
     
     def __init__(self, template_id=None, template_project=None, template_region=None):
@@ -259,9 +263,8 @@ class DataCatalogUtils:
         #print('template_uuid:', template_uuid)
         #print('tag_history:', tag_history)
         #print('tag_stream:', tag_stream)
-                
         store = te.TagEngineUtils()
-        bq_client = bigquery.Client()
+        bq_client = bigquery.Client(location=BIGQUERY_REGION)
         
         creation_status = constants.SUCCESS
         error_exists = False
@@ -378,7 +381,7 @@ class DataCatalogUtils:
         #print('tag_stream:', tag_stream)
                 
         store = te.TagEngineUtils()
-        bq_client = bigquery.Client()
+        bq_client = bigquery.Client(location=BIGQUERY_REGION)
         
         creation_status = constants.SUCCESS
         error_exists = False
@@ -795,7 +798,7 @@ class DataCatalogUtils:
         #print('query_str: ', query_str)
 
         # run query against mapping table
-        bq_client = bigquery.Client()
+        bq_client = bigquery.Client(location=BIGQUERY_REGION)
         rows = bq_client.query(query_str).result()
         
         tag = datacatalog.Tag()
@@ -962,7 +965,7 @@ class DataCatalogUtils:
         
         #print('dlp_sql: ', dlp_sql)
         
-        bq_client = bigquery.Client()
+        bq_client = bigquery.Client(location=BIGQUERY_REGION)
         
         try:
             dlp_rows = bq_client.query(dlp_sql).result()
@@ -1179,7 +1182,7 @@ class DataCatalogUtils:
         
         print('enter apply_policy_tags')
 
-        bq_client = bigquery.Client()
+        bq_client = bigquery.Client(location=BIGQUERY_REGION)
 
         table_id = uri.replace('/datasets/', '.').replace('/tables/', '.')
         table = bq_client.get_table(table_id) 

@@ -3209,7 +3209,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 1.0.0"
+    return "Welcome to Tag Engine version 1.0.1"
 #[END ping]
     
 ####################### TEST METHOD ####################################  
