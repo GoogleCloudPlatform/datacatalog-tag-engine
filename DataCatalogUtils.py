@@ -1070,10 +1070,16 @@ class DataCatalogUtils:
             for field in fields:
                 if 'sensitive_field' in field['field_id']:
                     bool_field = datacatalog.TagField()
-                    bool_field.bool_value = True
+                    
+                    if classification_result == 'Public_Information':
+                        bool_field.bool_value = False
+                        field['field_value'] = False
+                    else:
+                        bool_field.bool_value = True
+                        field['field_value'] = True
+                    
                     tag.fields['sensitive_field'] = bool_field
-                    field['field_value'] = True
-                
+                    
                 if 'sensitive_type' in field['field_id']:
                     enum_field = datacatalog.TagField()
                     enum_field.enum_value.display_name = classification_result

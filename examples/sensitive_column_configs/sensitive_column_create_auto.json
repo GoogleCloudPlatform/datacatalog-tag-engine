@@ -13,7 +13,7 @@
 	"dlp_dataset": "bigquery/project/tag-engine-develop/dataset/finwire_dlp",
 	"infotype_selection_table": "bigquery/project/tag-engine-develop/dataset/reference/infotype_selection",
 	"infotype_classification_table": "bigquery/project/tag-engine-develop/dataset/reference/infotype_classification",
-    "included_tables_uris": "bigquery/project/tag-engine-develop/dataset/finwire/*",
+    "included_tables_uris": "bigquery/project/tag-engine-develop/dataset/finwire/FINWIRE1967Q1_CMP",
 	"create_policy_tags": true,
 	"taxonomy_id": "projects/tag-engine-develop/locations/us-central1/taxonomies/317244085807144487",
     "refresh_mode": "AUTO",
