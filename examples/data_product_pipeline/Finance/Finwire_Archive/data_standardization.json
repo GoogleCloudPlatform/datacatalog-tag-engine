@@ -9,7 +9,7 @@
         }
     ],
     "included_columns_query": "select 'status'",
-	"included_tables_uris": "bigquery/project/data-mesh-343422/dataset/finance/*",
+	"included_tables_uris": "bigquery/project/data-mesh-343422/dataset/finwire/*",
     "refresh_mode": "ON_DEMAND",
     "tag_history": true,
     "tag_stream": false  

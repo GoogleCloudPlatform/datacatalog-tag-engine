@@ -5,7 +5,7 @@
     "fields": [
         {
             "field_id": "data_sensitivity",
-            "query_expression": "select sensitive_type from tag-engine-develop.tag_history.data_sensitivity ds join $project.reference.SensitiveCategory sc on ds.sensitive_type = sc.category where starts_with(asset_name, '$project/dataset/$dataset/table/$table/') order by rank desc limit 1"
+            "query_expression": "select sensitive_type from tag-engine-develop.tag_history.data_sensitivity ds join $project.reference.infotype_classification ic on ds.sensitive_type = ic.classification_result where starts_with(asset_name, '$project/dataset/$dataset/table/$table/')"
         },
         {
             "field_id": "num_fields",
