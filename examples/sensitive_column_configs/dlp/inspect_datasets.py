@@ -17,12 +17,12 @@ from google.cloud import bigquery
 
 region = 'us-central1'
 inspect_project = 'tag-engine-develop'
-#inspect_datasets = ['crm', 'finwire', 'hr', 'oltp', 'sales']
-inspect_datasets = ['finwire']
+#inspect_datasets = ['finwire', 'crm', 'hr', 'oltp', 'sales']
+inspect_datasets = ['crm']
 
 result_project = 'tag-engine-develop'
-#result_datasets = ['crm_dlp', 'finwire_dlp', 'hr_dlp', 'oltp_dlp', 'sales_dlp']
-result_datasets = ['finwire_dlp']
+#result_datasets = ['finwire_dlp', 'crm_dlp', 'hr_dlp', 'oltp_dlp', 'sales_dlp']
+result_datasets = ['crm_dlp']
 
 bq_client = bigquery.Client(project=inspect_project)
 dlp_client = dlp.DlpServiceClient()

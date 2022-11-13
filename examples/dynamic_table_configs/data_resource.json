@@ -44,7 +44,7 @@
             "query_expression": "select False"
         }
     ],
-    "included_tables_uris": "bigquery/project/data-mesh-343422/dataset/finwire/*",
+    "included_tables_uris": "bigquery/project/data-mesh-343422/dataset/crm/*",
     "refresh_mode": "ON_DEMAND",
     "tag_history": true,
     "tag_stream": false  

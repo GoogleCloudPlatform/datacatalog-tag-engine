@@ -2224,7 +2224,7 @@ def dynamic_table_tags():
     
     dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
     included_fields = json['fields']
-    fields = dcu.get_template(included_fields)
+    fields = dcu.get_template(included_fields=included_fields)
     
     if 'included_tables_uris' in json:
         included_tables_uris = json['included_tables_uris']
@@ -2301,7 +2301,7 @@ def dynamic_column_tags():
     
     dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
     included_fields = json['fields']
-    fields = dcu.get_template(included_fields)
+    fields = dcu.get_template(included_fields=included_fields)
 
     if 'included_columns_query' in json:
         included_columns_query = json['included_columns_query']
@@ -2386,7 +2386,7 @@ def static_asset_tags():
     
     dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
     included_fields = json['fields']
-    fields = dcu.get_template(included_fields)
+    fields = dcu.get_template(included_fields=included_fields)
 
     if 'included_assets_uris' in json:
         included_assets_uris = json['included_assets_uris']
@@ -2465,7 +2465,7 @@ def entries():
     
     dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
     included_fields = json['fields']
-    fields = dcu.get_template(included_fields)
+    fields = dcu.get_template(included_fields=included_fields)
 
     if 'included_assets_uris' in json:
         included_assets_uris = json['included_assets_uris']
@@ -2542,7 +2542,7 @@ def glossary_asset_tags():
     
     dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
     included_fields = json['fields']
-    fields = dcu.get_template(included_fields)
+    fields = dcu.get_template(included_fields=included_fields)
     
     # validate mapping_table field
     if 'mapping_table' in json:
@@ -2633,7 +2633,7 @@ def sensitive_column_tags():
     
     dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
     included_fields = json['fields']
-    fields = dcu.get_template(included_fields)
+    fields = dcu.get_template(included_fields=included_fields)
 
     # validate dlp_dataset parameter
     if 'dlp_dataset' in json:
@@ -2863,6 +2863,76 @@ def import_tags():
         job_uuid = None
     
     return jsonify(job_uuid=job_uuid)
+
+
+@app.route("/copy_tags", methods=['POST'])
+def copy_tags():
+    json = request.get_json(force=True) 
+    print('json: ' + str(json))
+       
+    if 'source_project' in json:
+        source_project = json['source_project']
+    else:
+        response = {
+                "status": "error",
+                "message": "Request JSON is missing a source_project parameter",
+        }
+        return jsonify(response), 400
+    
+    if 'source_dataset' in json:
+        source_dataset = json['source_dataset']
+    else:
+        response = {
+                "status": "error",
+                "message": "Request JSON is missing a source_dataset parameter",
+        }
+        return jsonify(response), 400
+    
+    if 'source_table' in json:
+         source_table = json['source_table']
+    else:
+         response = {
+             "status": "error",
+             "message": "Request JSON is missing a source_table parameter",
+     }
+         return jsonify(response), 400
+ 
+    if 'target_project' in json:
+        target_project = json['target_project']
+    else:
+        response = {
+                "status": "error",
+                "message": "Request JSON is missing a target_project parameter",
+        }
+        return jsonify(response), 400
+    
+    if 'target_dataset' in json:
+        target_dataset = json['target_dataset']
+    else:
+        response = {
+                "status": "error",
+                "message": "Request JSON is missing a target_dataset parameter",
+        }
+        return jsonify(response), 400
+    
+    if 'target_table' in json:
+         target_table = json['target_table']
+    else:
+         response = {
+             "status": "error",
+             "message": "Request JSON is missing a target_table parameter",
+     }
+         return jsonify(response), 400
+
+    dcu = dc.DataCatalogUtils()
+    success = dcu.copy_tags(source_project, source_dataset, source_table, target_project, target_dataset, target_table)                                                      
+    
+    if success:
+        response = {"status": "success"}
+    else:
+        response = {"status": "failure"}
+    
+    return jsonify(response)
 
 
 """
@@ -3209,7 +3279,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 1.0.1"
+    return "Welcome to Tag Engine version 1.0.2"
 #[END ping]
     
 ####################### TEST METHOD ####################################  
