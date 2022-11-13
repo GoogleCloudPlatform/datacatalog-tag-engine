@@ -16,13 +16,13 @@ from google.cloud import dlp
 from google.cloud import bigquery
 
 region = 'us-central1'
-inspect_project = 'data-mesh-343422'
-inspect_datasets = ['finwire', 'crm', 'hr', 'oltp', 'sales']
-#inspect_datasets = ['finwire']
+inspect_project = 'tag-engine-develop'
+#inspect_datasets = ['finwire', 'crm', 'hr', 'oltp', 'sales']
+inspect_datasets = ['crm']
 
-result_project = 'data-mesh-343422'
-result_datasets = ['finwire_dlp', 'crm_dlp', 'hr_dlp', 'oltp_dlp', 'sales_dlp']
-#result_datasets = ['finwire_dlp']
+result_project = 'tag-engine-develop'
+#result_datasets = ['finwire_dlp', 'crm_dlp', 'hr_dlp', 'oltp_dlp', 'sales_dlp']
+result_datasets = ['crm_dlp']
 
 bq_client = bigquery.Client(project=inspect_project)
 dlp_client = dlp.DlpServiceClient()

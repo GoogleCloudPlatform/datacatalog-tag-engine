@@ -5,14 +5,14 @@
     "fields": [
         {
             "field_id": "top_users",
-            "query_expression": "select `tag-engine-develop`.remote_functions.top_users('tag-engine-develop', 'finwire', '$table', 'us-central1', 6, NULL)"
+            "query_expression": "select `tag-engine-develop`.remote_functions.top_users('$project', '$dataset', '$table', 'us-central1', 6, NULL)"
         },
 		{
             "field_id": "top_queries",
-            "query_expression": "select `tag-engine-develop`.remote_functions.top_queries('tag-engine-develop', 'finwire', '$table', 'us-central1', 6, NULL)"
+            "query_expression": "select `tag-engine-develop`.remote_functions.top_queries('$project', '$dataset', '$table', 'us-central1', 6, NULL)"
         }
     ],
-    "included_tables_uris": "bigquery/project/tag-engine-develop/dataset/finwire/*",
+    "included_tables_uris": "bigquery/project/data-mesh-343422/dataset/oltp/*,bigquery/project/data-mesh-343422/dataset/crm/*",
     "refresh_mode": "AUTO",
     "refresh_frequency": 24,
     "refresh_unit": "hours",

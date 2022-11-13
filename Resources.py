@@ -116,7 +116,7 @@ class Resources:
         uri_list = uris.split(",")
         
         for uri in uri_list: 
-            #print("uri: " + uri)
+            print("uri: " + uri)
             split_path = uri.strip().split("/")
 
             if split_path[1] != "project":

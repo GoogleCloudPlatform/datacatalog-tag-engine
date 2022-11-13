@@ -1172,19 +1172,18 @@ class DataCatalogUtils:
                 
         # Once we have created the regular tags, we create/update the policy tags
         if create_policy_tags and len(policy_tag_requests) > 0:
-            self.apply_policy_tags(uri, policy_tag_requests)
+            table_id = uri.replace('/datasets/', '.').replace('/tables/', '.')
+            self.apply_policy_tags(table_id, policy_tag_requests)
             
            
         return creation_status
 
     
-    def apply_policy_tags(self, uri, policy_tag_requests):
+    def apply_policy_tags(self, table_id, policy_tag_requests):
         
-        print('enter apply_policy_tags')
-
+        success = True
+        
         bq_client = bigquery.Client(location=BIGQUERY_REGION)
-
-        table_id = uri.replace('/datasets/', '.').replace('/tables/', '.')
         table = bq_client.get_table(table_id) 
         schema = table.schema
 
@@ -1197,7 +1196,7 @@ class DataCatalogUtils:
             for column, policy_tag_name in policy_tag_requests:
                 
                 if field.name == column:
-                    
+                    print('applying policy tag on', field.name)
                     policy = bigquery.schema.PolicyTagList(names=[policy_tag_name,])
                     new_schema.append(bigquery.schema.SchemaField(field.name, field.field_type, field.mode, policy_tags=policy)) 
                     field_match = True
@@ -1207,8 +1206,16 @@ class DataCatalogUtils:
                 new_schema.append(field)
                 
         table.schema = new_schema
-        table = bq_client.update_table(table, ["schema"])  
-
+        
+        try:
+            table = bq_client.update_table(table, ["schema"])  
+        
+        except Exception as e:
+            print('Error occurred while updating the schema of', table_id, 'Error message:', e)
+            success = False
+        
+        return success
+            
 
     def apply_restore_config(self, config_uuid, tag_extract, tag_history, tag_stream, overwrite=False):
         
@@ -1697,7 +1704,7 @@ class DataCatalogUtils:
         return field_values, error_exists
         
 
-    def populate_tag_field(self, tag, field_id, field_type, field_values, store):
+    def populate_tag_field(self, tag, field_id, field_type, field_values, store=None):
         
         error_exists = False
         
@@ -1756,30 +1763,159 @@ class DataCatalogUtils:
         except Exception as e:
             error_exists = True
             print("Error storing values ", field_values, " into field ", field_id)
-            store.write_tag_value_error("Error storing value(s) " + str(field_values) + " into field " + field_id)
+            
+            if store != None:
+                store.write_tag_value_error("Error storing value(s) " + str(field_values) + " into field " + field_id)
         
         return tag, error_exists
+    
+    
+    def copy_tags(self, source_project, source_dataset, source_table, target_project, target_dataset, target_table, include_policy_tags=False):
+        
+        success = True
+        
+        # lookup the source entry
+        linked_resource = '//bigquery.googleapis.com/projects/{0}/datasets/{1}/tables/{2}'.format(source_project, source_dataset, source_table)
+        
+        request = datacatalog.LookupEntryRequest()
+        request.linked_resource = linked_resource
+        source_entry = self.client.lookup_entry(request)
+        
+        if source_entry.bigquery_table_spec.table_source_type != types.TableSourceType.BIGQUERY_TABLE:
+            success = False
+            print('Error:', source_table, 'is not a BQ table.')
+            return success
+        
+        # lookup the target entry
+        linked_resource = '//bigquery.googleapis.com/projects/{0}/datasets/{1}/tables/{2}'.format(target_project, target_dataset, target_table)
+        
+        request = datacatalog.LookupEntryRequest()
+        request.linked_resource = linked_resource
+        target_entry = self.client.lookup_entry(request)
+        
+        if target_entry.bigquery_table_spec.table_source_type != types.TableSourceType.BIGQUERY_TABLE:
+            success = False
+            print('Error:', target_table, 'is not a BQ table.')
+            return success
+        
+        
+        # look to see if the source table is tagged
+        tag_list = self.client.list_tags(parent=source_entry.name, timeout=120)
+    
+        for source_tag in tag_list:
+            print('source_tag.template:', source_tag.template)
+            print('source_tag.column:', source_tag.column)
+            
+            # get tag template fields
+            self.template_id = source_tag.template.split('/')[5]
+            self.template_project = source_tag.template.split('/')[1]
+            self.template_region = source_tag.template.split('/')[3]
+            self.template_path = source_tag.template
+            template_fields = self.get_template()
+            
+            # start a new target tag
+            target_tag = datacatalog.Tag()
+            target_tag.template = source_tag.template
+            
+            if source_tag.column:
+                target_tag.column = source_tag.column
+            
+            for template_field in template_fields:
+    
+                #print('template_field:', template_field)
+                
+                if template_field['field_id'] in source_tag.fields:
+                    field_id = template_field['field_id']
+                    tagged_field = source_tag.fields[field_id]
+                    
+                    print('field_id:', field_id)
+                
+                    if tagged_field.double_value:
+                        field_type = 'double'
+                        field_value = tagged_field.double_value
+                    if tagged_field.string_value:
+                        field_type = 'string'
+                        field_value = tagged_field.string_value
+                    if tagged_field.enum_value:
+                        field_type = 'enum'
+                        field_value = tagged_field.enum_value.display_name
+                    if tagged_field.timestamp_value:
+                        field_type = 'timestamp'
+                        field_value = tagged_field.timestamp_value
+                    if tagged_field.richtext_value:
+                        field_type = 'richtext'
+                        field_value = tagged_field.richtext_value
+                        
+                    target_tag, error_exists = self.populate_tag_field(target_tag, field_id, field_type, [field_value])
+            
+            # create the target tag            
+            tag_exists, tag_id = self.check_if_exists(parent=target_entry.name, column=source_tag.column)
+		
+            if tag_exists == True:
+                target_tag.name = tag_id
+            
+                try:
+                    print('tag update request: ', target_tag)
+                    response = self.client.update_tag(tag=target_tag)
+                except Exception as e:
+                    success = False
+                    print('Error occurred during tag update: ', e)
+            
+            else:
+                try:
+                    print('tag create request: ', target_tag)
+                    response = self.client.create_tag(parent=target_entry.name, tag=target_tag)
+                except Exception as e:
+                    success = False
+                    print('Error occurred during tag create: ', e)
+                        
+        # copy policy tags            
+        success = self.copy_policy_tags(source_project, source_dataset, source_table, target_project, target_dataset, target_table)    
+        
+        return success
+
+    
+    def copy_policy_tags(self, source_project, source_dataset, source_table, target_project, target_dataset, target_table):
+    
+        success = True
+    
+        bq_client = bigquery.Client(location=BIGQUERY_REGION)
+
+        source_table_id = source_project + '.' + source_dataset + '.' + source_table
+        target_table_id = target_project + '.' + target_dataset + '.' + target_table
+    
+        try:
+            source_schema = bq_client.get_table(source_table_id).schema
+        except Exception as e:
+            success = False
+            print('Error occurred while retrieving the schema of ', source_table_id, '. Error message:', e)
+            return success 
+    
+        policy_tag_list = []
+    
+        for field in source_schema:
+            if field.policy_tags != None:
+                policy_tag = field.policy_tags.names[0]
+                pt_tuple = (field.name, policy_tag)
+                policy_tag_list.append(pt_tuple)
+	
+        if len(policy_tag_list) == 0:
+            return success
+    
+        print('policy_tag_list:', policy_tag_list)
+        success = self.apply_policy_tags(target_table_id, policy_tag_list)
+    
+        return success		
     
         
 if __name__ == '__main__':
     
-    template_id = 'data_sensitivity'
-    template_project='tag-engine-develop'
-    template_region='us-central1'
+    dcu = DataCatalogUtils()
 
-    dcu = DataCatalogUtils(template_id=template_id, template_project=template_project, template_region=template_region)
-
-    fields = [{'display_name': 'Sensitive field', 'field_id': 'sensitive_field', 'is_required': True, 'order': 1, 'field_type': 'bool'}, {'display_name': 'Sensitive type', 'field_id': 'sensitive_type', 'enum_values': ['Sensitive_Personal_Identifiable_Information', 'Personal_Identifiable_Information', 'Sensitive_Personal_Information', 'Personal_Information', 'Public_Information'], 'field_type': 'enum', 'order': 0, 'is_required': False}]
-    dlp_dataset = 'bigquery/project/tag-engine-develop/dataset/finwire_dlp'
-    infotype_selection_table = 'bigquery/project/tag-engine-develop/dataset/reference/infotype_selection'
-    infotype_classification_table = 'bigquery/project/tag-engine-develop/dataset/reference/infotype_classification'
-    uri = 'tag-engine-develop/datasets/finwire/tables/FINWIRE1967Q1_CMP'
-    create_policy_tags = True
-    taxonomy_id = 'projects/tag-engine-develop/locations/us-central1/taxonomies/317244085807144487'
-    config_uuid = 'fb0d1e2a563c11ed9812a12dcae7c58c'
-    template_uuid = '51c6990e4b3311ed9218acde48001122'
-    tag_history = False
-    tag_stream = False
-
-    dcu.apply_sensitive_column_config(fields, dlp_dataset, infotype_selection_table, infotype_classification_table, uri, create_policy_tags, \
-                                      taxonomy_id, config_uuid, template_uuid, tag_history, tag_stream, overwrite=True) 
+    source_project = 'tag-engine-develop'
+    source_dataset = 'supply_chain_serving'
+    source_table = 'shipping_lead_time_slt'
+    target_project = 'tag-engine-develop'
+    target_dataset = 'archives'
+    target_table = 'supply_chain_serving_shipping_lead_time_slt'
+    dcu.copy_tags(source_project, source_dataset, source_table, target_project, target_dataset, target_table)
