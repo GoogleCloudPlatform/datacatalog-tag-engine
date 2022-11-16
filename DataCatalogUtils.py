@@ -1829,7 +1829,10 @@ class DataCatalogUtils:
                     tagged_field = source_tag.fields[field_id]
                     
                     print('field_id:', field_id)
-                
+                    
+                    if tagged_field.bool_value:
+                        field_type = 'bool'
+                        field_value = tagged_field.bool_value
                     if tagged_field.double_value:
                         field_type = 'double'
                         field_value = tagged_field.double_value
@@ -1911,11 +1914,10 @@ class DataCatalogUtils:
 if __name__ == '__main__':
     
     dcu = DataCatalogUtils()
-
-    source_project = 'tag-engine-develop'
-    source_dataset = 'supply_chain_serving'
-    source_table = 'shipping_lead_time_slt'
-    target_project = 'tag-engine-develop'
+    source_project = 'sdw-conf-b1927e-bcc1'
+    source_dataset = 'crm'
+    source_table = 'NewCust'
+    target_project = 'sdw-conf-b1927e-bcc1'
     target_dataset = 'archives'
-    target_table = 'supply_chain_serving_shipping_lead_time_slt'
+    target_table = 'crm_NewCust'
     dcu.copy_tags(source_project, source_dataset, source_table, target_project, target_dataset, target_table)
