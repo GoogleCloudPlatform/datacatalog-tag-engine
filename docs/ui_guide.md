@@ -155,7 +155,7 @@ The export config lets you export your Data Catalog tags into BigQuery. It gener
 one for dataset-level tags, another for table and view level tags, and a third for column-level tags. <br>
 These tables can be used to source curation boards and other business intelligence reports.
 
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/export-config-1.png" alt="static" width="900"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/export-config-1.png" alt="static" width="400"/>
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/export-config-2.png" alt="static" width="400"/>
 
 
