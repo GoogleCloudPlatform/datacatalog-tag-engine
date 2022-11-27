@@ -26,6 +26,7 @@ curl -X POST $TAG_ENGINE_URL/glossary_asset_tags -d @examples/glossary_asset_con
 
 curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"1404a2b04a6011ed9082eb6a49899340"}'
 
+
 ####### GCS section #######
 
 # data catalog entries 
@@ -40,7 +41,26 @@ curl -X POST $TAG_ENGINE_URL/static_asset_tags -d @examples/static_asset_configs
 
 curl -X POST $TAG_ENGINE_URL/glossary_asset_tags -d @examples/glossary_asset_configs/glossary_asset_create_auto_gcs.json
 
-####### restore section #######
+
+####### export tags section #######
+
+curl -X POST $TAG_ENGINE_URL/export_tags -d @examples/export_configs/export_tags_by_project.json
+
+curl -X POST $TAG_ENGINE_URL/export_tags -d @examples/export_configs/export_tags_by_folder.json
+
+
+####### import tags section #######
+
+# create the tag templates
+python create_template.py tag-engine-develop us-central1 data_discovery.yaml
+python create_template.py tag-engine-develop us-central1 compliance_template.yaml
+
+curl -X POST $TAG_ENGINE_URL/import_tags -d @examples/import_configs/import_table_tags.json
+
+curl -X POST $TAG_ENGINE_URL/import_tags -d @examples/import_configs/import_column_tags.json
+
+
+####### restore tags section #######
 
 curl --request POST 'https://datacatalog.googleapis.com/v1/projects/tag-engine-develop/locations/us-central1:exportMetadata' \
 --header "X-Goog-User-Project: tag-engine-develop" \
@@ -61,13 +81,3 @@ curl --request POST 'https://datacatalog.googleapis.com/v1/projects/tag-engine-d
 --compressed
 
 curl -X POST $TAG_ENGINE_URL/restore_tags -d @examples/restore_configs/restore_column_tags.json
-
-####### import section #######
-
-# create the tag templates
-python create_template.py tag-engine-develop us-central1 data_discovery.yaml
-python create_template.py tag-engine-develop us-central1 compliance_template.yaml
-
-curl -X POST $TAG_ENGINE_URL/import_tags -d @examples/import_configs/import_table_tags.json
-
-curl -X POST $TAG_ENGINE_URL/import_tags -d @examples/import_configs/import_column_tags.json

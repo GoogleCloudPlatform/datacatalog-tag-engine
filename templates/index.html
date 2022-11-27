@@ -5,21 +5,21 @@
     <link rel="stylesheet" type="text/css" href="/static/style.css">
   </head>  
     <body>
-		<span style="color:#9d9a9a;"><h6>Tag Engine version: 1.0.2</h6></span> 
+		<span style="color:#9d9a9a;"><h6>Tag Engine version: 1.0.3</h6></span> 
 	   <div class="pagetitle">
 	   <h1>Tag Engine for Data Catalog</h1>
         </div>
 	   <div class="header">
 	   <h2>Create and Edit Tags</h2>
 	   </div>
-	   <span style="color:#9d9a9a;">
-		   <h6>&nbsp;Choose an existing Tag Template to create, edit or view your Data Catalog tags.<br> 
-			  &nbsp;Enter the Tag Template's id, project, and region in the text fields below.</h6>
-	   </span> 
+		   <h5>&nbsp;Choose an existing tag template to create, edit, or view a Tag Engine configuration. <br>
+			   &nbsp;Configurations let you create and populate Data Catalog tags in bulk. <br>
+			   &nbsp;Each configuration is scoped for one tag template. <br> 
+			  &nbsp;Enter the tag template's ID, project, and region to get started.</h5>
          <form method="post" action="/search_tag_template">
 		    <table>
 		        <tr>
-		          <td>Tag Template Id:</td>
+		          <td>Tag Template ID:</td>
 		          <td><input type="text" name="template_id" value="{{ template_id }}" style="width: 150px;padding: 3px;"></td>
 			   </tr>
 		        <tr>
@@ -33,12 +33,31 @@
 			    <td></td>
 			    <td><input type="submit" value="Search Template" name="search" style="width: 158px;padding: 3px;"></td>
 		    </table>
-           
          </form>
 	    <p>&nbsp;</p>
+ 	   <div class="header">
+ 	   <h2>Export Tags</h2>
+ 	   </div>
+ 		   <h5>&nbsp;Export all of your Data Catalog tags into BigQuery tables. 
+			   <br>&nbsp;Choose which tags to export using a list of projects or a folder. 
+ 		   </h5>
+	   		<form method="post" action="/display_export_option">
+ 		    <table>
+ 			   <tr>
+ 			    <td><input type="submit" value="Create Export Config" name="action" style="width: 158px;padding: 3px;"></td>
+			   </tr>
+			   <tr>
+			    <td><input type="submit" value="View and Edit Configs" name="action" style="width: 158px;padding: 3px;"></td>
+		   		</tr>
+ 		    </table>
+          </form>
+ 	    <p>&nbsp;</p>
 	    <div class="header">
 	    <h2>Settings and Reports</h2>
 	    </div>
+	   <h5>&nbsp;Choose your default tag template and enable/disable tag history and tag stream. 
+		   <br>&nbsp;You can also configure a coverage report of all your tags across your data estate. 
+	   </h5>
 	    &nbsp;<a href="{{ url_for('default_tag_template_settings', saved=0) }}">Set Default Tag Template</a><br>
 	    &nbsp;<a href="{{ url_for('tag_history_settings', saved=0) }}">Turn on/off Tag History</a><br>
 	    &nbsp;<a href="{{ url_for('tag_stream_settings', saved=0) }}">Turn on/off Tag Stream</a><br>

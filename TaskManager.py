@@ -47,7 +47,7 @@ class TaskManager:
         
         print('*** enter create_config_uuid_tasks ***')
         
-        # create shards of 5000 records
+        # create shards of 1000 tasks
         if len(uris) > self.tasks_per_shard:
             shards = math.ceil(len(uris) / self.tasks_per_shard)
         else:
@@ -230,8 +230,10 @@ class TaskManager:
     
     def _create_config_uuid_task(self, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, uri):
         
-        print('*** enter _create_task ***')
+        print('*** enter _create_config_uuid_task ***')
  
+        success = True
+        
         client = tasks_v2.CloudTasksClient()
         parent = client.queue_path(self.tag_engine_project, self.queue_region, self.queue_name)
         
@@ -255,15 +257,19 @@ class TaskManager:
             task = client.create_task(parent=parent, task=task)
         
         except Exception as e:
-            print('Error: could not create task for task_uuid ', task_uuid, '. Error: ', e)
+            print('Error: could not create task for uri ', uri, '. Error: ', e)
             self._set_task_failed(shard_uuid, task_uuid)
+            success = False
             
+        return success
                   
         
     def _create_tag_extract_task(self, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, extract):
         
         print('*** enter _create_tag_extract_task ***')
  
+        success = True
+        
         client = tasks_v2.CloudTasksClient()
         parent = client.queue_path(self.tag_engine_project, self.queue_region, self.queue_name)
         
@@ -291,8 +297,10 @@ class TaskManager:
         except Exception as e:
             print('Error: could not create task for task_uuid ', task_uuid, '. Error: ', e)
             self._set_task_failed(shard_uuid, task_uuid)
+            success = False
             
-    
+        return success
+            
     
     def _set_task_running(self, shard_uuid, task_uuid):
         
@@ -353,31 +361,7 @@ class TaskManager:
         shard_ref = self.db.collection('shards').document(shard_uuid)
         shard_ref.update({'tasks_failed': firestore.Increment(1), 'tasks_running': firestore.Increment(-1)})
     
-    
 
-if __name__ == '__main__':
-
-    config = configparser.ConfigParser()
-    config.read("tagengine.ini")
-    
-    project = config['DEFAULT']['TAG_ENGINE_PROJECT']
-    region = config['DEFAULT']['QUEUE_REGION']
-    queue_name = config['DEFAULT']['WORK_QUEUE']
-    app_engine_uri = '/_run_task'
-    tm = TaskManager(project, region, queue_name, app_engine_uri)
-    
-    job_uuid = '3e7218ac85d011ecae18ab89ce97b309'
-    config_uuid = '1f1b4720839c11eca541e1ad551502cb'
-    uris = ['bigquery/project/warehouse-337221/dataset/austin_311_500/austin_311_service_requests_0',\
-            'bigquery/project/warehouse-337221/dataset/austin_311_500/austin_311_service_requests_1',\
-            'bigquery/project/warehouse-337221/dataset/austin_311_500/austin_311_service_requests_2',
-            'bigquery/project/warehouse-337221/dataset/austin_311_500/austin_311_service_requests_3',
-            'bigquery/project/warehouse-337221/dataset/austin_311_500/austin_311_service_requests_4'
-            'bigquery/project/warehouse-337221/dataset/austin_311_500/austin_311_service_requests_5']
-    
-    tm.create_work_tasks(job_uuid, config_uuid, uris)
-    
-    print('done')
 
 
 

@@ -9,13 +9,13 @@
 	   <h1>Tag Engine</h1>
         </div>
 	   <div class="header">
-	   <h2>Update dynamic column config using {{ template_id }}</h2>
+	   <h2>Update Dynamic Column Config using {{ template_id }}</h2>
  	   
  		   <h5>Make changes to your dynamic column config below. A checked box indicates the field is part of this tag config. You can add new fields and/or remove existing ones from the tag config. <br>You can also edit the query expression, the included columns query, the included or excluded tables URIs, the refresh frequency, and the tag history and tag stream if you've enabled those options. </h5>
 
 	   </div>
 	  
-	   <h3>Query Expressions</h3>
+	   <h3>Template Field Values</h3>
 
  		   <h5>
 		   The query expression must be a <i>valid</i> select statement in BQ. It can contain aggregate functions, joins, filters, groupings, etc. <br>
@@ -30,8 +30,6 @@
 	   select count(*) from $table<br>
 	   select count(distinct($column)) from $table <br>
 	   select count(*) > 1 from $table where $column is null<br>
-	   select rating from dw-project.quality.scores where table = '$table' and dataset = '$dataset' and project = '$project'<br>
-	   select '30-DAYS'<br>
 	    <br>
 		Note: The result of the query expression must satisfy the type requirements of the field in the tag template. <br>
 		For example, if the tag template field is of type string, the query expression must return a string type.<br><br>
@@ -40,7 +38,7 @@
 	 	</h5>
 
 	   
-         <form method="post" action="/process_update_dynamic_column_config">
+         <form method="post" action="/process_dynamic_column_config">
 		    <table>
 			   {% for field in fields %}
 		        <tr>

@@ -1215,15 +1215,175 @@ class DataCatalogUtils:
             success = False
         
         return success
+        
             
+    def apply_export_config(self, config_uuid, target_project, target_dataset, target_region, uri):
+        
+        print('** enter apply_export_config **')
+        print('uri:', uri)
+        
+        export_status = constants.SUCCESS
+        bqu = bq.BigQueryUtils(target_region)
+        
+        if isinstance(uri, str) == False:
+            print('Error: url ' + str(url) + ' is not of type string.')
+            export_status = constants.ERROR
+            return export_status
+        
+        tagged_project = uri.split('/')[0]
+        tagged_dataset = uri.split('/')[2]
+        
+        if '/tables/' in uri:
+            target_table_id = target_project + '.' + target_dataset + '.' + 'catalog_report_table_tags'
+            tagged_table = uri.split('/')[4]
+        else:
+            target_table_id = target_project + '.' + target_dataset + '.' + 'catalog_report_dataset_tags'
+            tagged_table = None
+            
+        bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
+        #print("bigquery_resource: ", bigquery_resource)
+        
+        request = datacatalog.LookupEntryRequest()
+        request.linked_resource=bigquery_resource
+        
+        try:
+            entry = self.client.lookup_entry(request)
+        except Exception as e:
+            print('Error looking up entry ' + bigquery_resource + ' in the catalog. Error message: ', e)
+            export_status = constants.ERROR
+            return export_status
+
+        tag_list = self.client.list_tags(parent=entry.name, timeout=120)
+    
+        for tag in tag_list:
+            print('tag.template:', tag.template)
+            print('tag.column:', tag.column)
+            
+            # get tag template fields
+            self.template_id = tag.template.split('/')[5]
+            self.template_project = tag.template.split('/')[1]
+            self.template_region = tag.template.split('/')[3]
+            self.template_path = tag.template
+            template_fields = self.get_template()
+            
+            if tag.column:
+                tagged_column = tag.column
+                target_table_id = target_project + '.' + target_dataset + '.' + 'catalog_report_column_tags'
+            else:
+                tagged_column = None
+            
+            for template_field in template_fields:
+    
+                #print('template_field:', template_field)
+                field_id = template_field['field_id']
+                
+                if field_id not in tag.fields:
+                    continue
+                    
+                tagged_field = tag.fields[field_id]
+                    
+                if tagged_field.bool_value:
+                    field_value = str(tagged_field.bool_value)
+                if tagged_field.double_value:
+                    field_value = str(tagged_field.double_value)
+                if tagged_field.string_value:
+                    field_value = tagged_field.string_value
+                if tagged_field.enum_value:
+                    field_value = str(tagged_field.enum_value.display_name)
+                if tagged_field.timestamp_value:
+                    field_value = str(tagged_field.timestamp_value)
+                if tagged_field.richtext_value:
+                    field_value = str(tagged_field.richtext_value)
+                    
+                # write record to BQ
+                success = bqu.insert_record(target_table_id, tagged_project, tagged_dataset, tagged_table, tagged_column, self.template_id, field_id, field_value)
+        
+                if success == False:
+                    export_status = constants.ERROR
+        
+        return export_status
+        
+            
+    def apply_import_config(self, config_uuid, tag_dict, tag_history, tag_stream, overwrite=False):
+        
+        print('** enter apply_import_config **')
+        #print('tag_dict: ', tag_dict)
+             
+        creation_status = constants.SUCCESS
+        
+        project = tag_dict['project']
+        dataset = tag_dict['dataset']
+        table = tag_dict['table']
+
+        bigquery_resource = '//bigquery.googleapis.com/projects/' + project + '/datasets/' + dataset + '/tables/' + table
+
+        request = datacatalog.LookupEntryRequest()
+        request.linked_resource=bigquery_resource
+        
+        try:
+            entry = self.client.lookup_entry(request)
+        except Exception as e:
+            print("Error: could not find the entry for ", bigquery_resource, ". Error: ", e)
+            creation_status = constants.ERROR
+            return creation_status
+
+        if 'column' in tag_dict:
+            column_name = tag_dict['column']
+            uri = entry.linked_resource.replace('//bigquery.googleapis.com/projects/', '') + '/column/' + column_name
+        else:
+            column_name = None
+            uri = entry.linked_resource.replace('//bigquery.googleapis.com/projects/', '')
+            
+        try:    
+            tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column_name)
+
+        except Exception as e:
+            print('Error during check_if_exists: ', e)
+            creation_status = constants.ERROR
+            return creation_status
+
+        if tag_exists and overwrite == False:
+            print('Tag already exists and overwrite flag is False')
+            creation_status = constants.SUCCESS
+            return creation_status
+        
+        tag_fields = []
+        template_fields = self.get_template()
+        
+        for field_name in tag_dict:
+           
+            if field_name == 'project' or field_name == 'dataset' or field_name == 'table' or field_name == 'column':
+                continue
+        
+            field_type = None
+            field_value = tag_dict[field_name].strip()
+            
+            for template_field in template_fields:
+                if template_field['field_id'] == field_name:
+                    field_type = template_field['field_type']
+                    break
+    
+            if field_type == None:
+                print('Error while preparing the tag. The field ', field_name, ' was not found in the tag template ', self.template_id)
+                creation_status = constants.ERROR
+                return creation_status
+    
+            field = {'field_id': field_name, 'field_type': field_type, 'field_value': field_value}    
+            tag_fields.append(field)
+            
+        
+        creation_status = self.create_update_tag(tag_fields, tag_exists, tag_id, config_uuid, 'IMPORT_TAG', tag_history, tag_stream, \
+                                                 entry, uri, column_name)
+                                
+        return creation_status
+    
 
     def apply_restore_config(self, config_uuid, tag_extract, tag_history, tag_stream, overwrite=False):
         
         print('** enter apply_restore_config **')
         print('config_uuid:', config_uuid)
         print('tag_extract: ', tag_extract)
-        
-        store = te.TagEngineUtils()        
+              
         creation_status = constants.SUCCESS
         
         for json_obj in tag_extract:
@@ -1303,81 +1463,6 @@ class DataCatalogUtils:
                     
         return creation_status
         
-    
-    def apply_import_config(self, config_uuid, tag_dict, tag_history, tag_stream, overwrite=False):
-        
-        print('** enter apply_import_config **')
-        #print('tag_dict: ', tag_dict)
-        
-        store = te.TagEngineUtils()        
-        creation_status = constants.SUCCESS
-        
-        project = tag_dict['project']
-        dataset = tag_dict['dataset']
-        table = tag_dict['table']
-
-        bigquery_resource = '//bigquery.googleapis.com/projects/' + project + '/datasets/' + dataset + '/tables/' + table
-
-        request = datacatalog.LookupEntryRequest()
-        request.linked_resource=bigquery_resource
-        
-        try:
-            entry = self.client.lookup_entry(request)
-        except Exception as e:
-            print("Error: could not find the entry for ", bigquery_resource, ". Error: ", e)
-            creation_status = constants.ERROR
-            return creation_status
-
-        if 'column' in tag_dict:
-            column_name = tag_dict['column']
-            uri = entry.linked_resource.replace('//bigquery.googleapis.com/projects/', '') + '/column/' + column_name
-        else:
-            column_name = None
-            uri = entry.linked_resource.replace('//bigquery.googleapis.com/projects/', '')
-            
-        try:    
-            tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column_name)
-
-        except Exception as e:
-            print('Error during check_if_exists: ', e)
-            creation_status = constants.ERROR
-            return creation_status
-
-        if tag_exists and overwrite == False:
-            print('Tag already exists and overwrite flag is False')
-            creation_status = constants.SUCCESS
-            return creation_status
-        
-        tag_fields = []
-        template_fields = self.get_template()
-        
-        for field_name in tag_dict:
-           
-            if field_name == 'project' or field_name == 'dataset' or field_name == 'table' or field_name == 'column':
-                continue
-        
-            field_type = None
-            field_value = tag_dict[field_name].strip()
-            
-            for template_field in template_fields:
-                if template_field['field_id'] == field_name:
-                    field_type = template_field['field_type']
-                    break
-    
-            if field_type == None:
-                print('Error while preparing the tag. The field ', field_name, ' was not found in the tag template ', self.template_id)
-                creation_status = constants.ERROR
-                return creation_status
-    
-            field = {'field_id': field_name, 'field_type': field_type, 'field_value': field_value}    
-            tag_fields.append(field)
-            
-        
-        creation_status = self.create_update_tag(tag_fields, tag_exists, tag_id, config_uuid, 'IMPORT_TAG', tag_history, tag_stream, \
-                                                 entry, uri, column_name)
-                                
-        return creation_status
-    
 
     def create_update_tag(self, fields, tag_exists, tag_id, config_uuid, config_type, tag_history, tag_stream, entry, uri, column_name=''):
         
@@ -1914,10 +1999,9 @@ class DataCatalogUtils:
 if __name__ == '__main__':
     
     dcu = DataCatalogUtils()
-    source_project = 'sdw-conf-b1927e-bcc1'
-    source_dataset = 'crm'
-    source_table = 'NewCust'
-    target_project = 'sdw-conf-b1927e-bcc1'
-    target_dataset = 'archives'
-    target_table = 'crm_NewCust'
-    dcu.copy_tags(source_project, source_dataset, source_table, target_project, target_dataset, target_table)
+    config_uuid = None
+    uri = 'tag-engine-develop/datasets/supply_chain_landing'
+    target_project = 'tag-engine-develop'
+    target_dataset = 'reporting'
+    target_region = 'us-central1'
+    dcu.apply_export_config(config_uuid, target_project, target_dataset, target_region, uri)

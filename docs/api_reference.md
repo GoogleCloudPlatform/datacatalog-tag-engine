@@ -10,8 +10,9 @@ This page lists the API methods for Tag Engine.
 * `glossary_asset_tags`: creates glossary tags on BigQuery or Google Cloud Storage assets
 * `sensitive_column_tags`: creates sensitive tags on BigQuery tables
 * `entries`: creates Data Catalog entries on Google Cloud Storage assets
-* `restore_tags`: restores tags from a Data Catalog metadata export file
 * `import_tags`: imports tags from a CSV file to either BigQuery tables, views and datasets or columns
+* `export_tags`: exports tags to BigQuery
+* `restore_tags`: restores tags from a Data Catalog metadata export file
 * `get_job_status`: gets the status of a job
 * `ondemand_updates`: updates the tags associated with a configuration that is set to on-demand refresh
 
@@ -55,6 +56,35 @@ creates sensitive tags on BQ tables. Requires Data Loss Prevention inspection jo
 ```
 POST [TAG_ENGINE_URL]/sensitive_column_tags -d [@input.json](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/sensitive_column_configs/sensitive_column_create_auto.json)
 ``` 
+
+#### import_tags
+
+imports tags into Data Catalog from one or more CSV files. Tags can be attached to columns or tables and views. 
+
+Example 1:
+```
+POST [TAG_ENGINE_URL]/import_tags -d [@input.json](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/import_configs/import_table_tags.json)
+``` 
+
+Example 2:
+```
+POST [TAG_ENGINE_URL]/import_tags -d [@input.json](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/import_configs/import_column_tags.json)
+``` 
+
+#### export_tags
+
+exports tags from Data Catalog into BigQuery tables. Tags are written into one of three reporting tables: tags attached to datasets are written into the dataset reporting table, tags attached to tables or views are written to the table reporting table, and tags attached to fields are written to the column reporting table.  
+
+Example 1:
+```
+POST [TAG_ENGINE_URL]/export_tags -d [@input.json](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/export_configs/export_tags_by_project.json)
+``` 
+
+Example 2:
+```
+POST [TAG_ENGINE_URL]/export_tags -d [@input.json](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/export_configs/export_tags_by_folder.json)
+``` 
+
 
 #### restore_tags
 

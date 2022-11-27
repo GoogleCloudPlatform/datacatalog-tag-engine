@@ -1,0 +1,11 @@
+{
+    "source_projects": ["tag-engine-develop"],
+	"source_region": "us-central1", 
+	"target_project": "tag-engine-develop",
+	"target_dataset": "reporting",
+	"target_region": "us-central1",
+	"write_option": "truncate",
+    "refresh_mode": "AUTO",
+    "refresh_frequency": 24,
+    "refresh_unit": "hours"
+}

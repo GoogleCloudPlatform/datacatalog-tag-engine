@@ -14,6 +14,7 @@
 
 from google.cloud import bigquery
 from google.cloud import storage
+from google.cloud import resourcemanager_v3
 import constants, configparser
 
 class Resources:
@@ -65,6 +66,65 @@ class Resources:
         
         return remaining_resources
 
+
+    @staticmethod
+    def get_resources_by_project(projects):
+        
+        print('projects:', projects)
+        
+        uris = []
+        
+        bq_client = bigquery.client.Client()
+        
+        for project in projects:
+            
+            print('project:', project)
+            datasets = list(bq_client.list_datasets(project=project))
+            
+            for dataset in datasets:
+                print('dataset:', dataset.dataset_id)
+                
+                formatted_dataset = Resources.format_dataset_resource(project + '.' + dataset.dataset_id)
+                uris.append(formatted_dataset)
+                
+                tables = bq_client.list_tables(project + '.' + dataset.dataset_id)
+                
+                for table in tables:
+                    
+                    formatted_table = Resources.format_table_resource(table.full_table_id)
+                    uris.append(formatted_table)
+                    
+        return uris
+            
+
+    @staticmethod
+    def get_resources_by_folder(folder):
+
+        if folder.replace('folders/', '').isnumeric() == False:
+            print('Error: The folder parameter must be a numeric value')
+            return
+        
+        if 'folders/' not in folder: 
+            folder = 'folders/' + folder
+        
+        rm_client = resourcemanager_v3.ProjectsClient()
+
+        request = resourcemanager_v3.ListProjectsRequest(
+            parent=folder,
+        )
+
+        resp = rm_client.list_projects(request=request)
+        
+        projects = []
+        
+        for project in resp:
+            projects.append(project.project_id)
+        
+        uris = Resources.get_resources_by_project(projects)
+        
+        return uris
+        
+    
     @staticmethod            
     def format_table_resource(table_resource):
          # BQ table format: project:dataset.table
@@ -277,5 +337,11 @@ class Resources:
             else:
                 print('Error: invalid uri provided: ' + uri)
                 
-        return resources        
+        return resources
         
+if __name__ == '__main__':
+    
+    uris = Resources.get_resources_by_project(['record-manager-service'])
+    print(uris)
+    #uris = Resources.get_resources_by_folder('folders/a593258468753') 
+    #print(uris)   

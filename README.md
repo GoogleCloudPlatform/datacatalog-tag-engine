@@ -120,6 +120,9 @@ Hint: read [this tutorial](https://cloud.google.com/architecture/tag-engine-and-
 * Import tags from CSV:<br>
 `curl -X POST [TAG ENGINE URL]/import_tags -d @examples/import_configs/import_column_tags.json`
 
+* Export tags to BigQuery:<br>
+`curl -X POST [TAG ENGINE URL]/export_tags -d @examples/export_configs/export_tags_by_project.json`
+
 * Get the status of a job:<br>
 `curl -X POST [TAG ENGINE URL]/get_job_status -d '{"job_uuid":"47aa9460fbac11ecb1a0190a014149c1"}'`
 

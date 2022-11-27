@@ -9,7 +9,7 @@
 	   <h1>Tag Engine</h1>
         </div>
 	   <div class="header">
-	   <h2>Update glossary asset config using {{ template_id }}</h2>
+	   <h2>Update Glossary Asset Config using {{ template_id }}</h2>
  	  
  		   <h5>Make changes to your glossary asset config below. A checked box indicates the field is part of the tag. You can add new fields and/or remove existing ones from the tag. <br>You can also edit the glossary table URI, the included and excluded asset URIs, the refresh frequency and tag history settings. </h5>
  	 
@@ -19,7 +19,7 @@
  	   
  		   <h5>Mandatory tag template fields are marked by <span style="color:red;">*</span>.</h5>
 	   
-         <form method="post" action="/process_update_glossary_asset_config">
+         <form method="post" action="/process_glossary_asset_config">
 		    <table>
 			   {% for field in fields %}
 		        <tr>
@@ -107,7 +107,7 @@
 			     <table>
  				<tr>	
  			    <td>Refresh mode:&nbsp;<select name="refresh_mode">
-				    			{% if config['refresh_mode'] == 'AUTO' %}
+				    		{% if config['refresh_mode'] == 'AUTO' %}
    				  				<option value="AUTO" selected>AUTO</option>
    							   	<option value="ON-DEMAND">ON-DEMAND</option>
 							{% else %}

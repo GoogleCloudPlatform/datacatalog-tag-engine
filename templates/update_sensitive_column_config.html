@@ -9,7 +9,7 @@
 	   <h1>Tag Engine</h1>
         </div>
 	   <div class="header">
-	   <h2>Update sensitive column config using {{ template_id }}</h2>
+	   <h2>Update Sensitive Column Config using {{ template_id }}</h2>
  	   
  	  	<h5>Make changes to your sensitive column config below. The fields <i>sensitive_field: BOOL</i> and <i>sensitive_type: ENUM</i> must be in the tag and are they are not editable. The remaining fields can be updated. </h5>
  	
@@ -23,7 +23,7 @@
 	 	</h5>
 	   </span>
 	   
-         <form method="post" action="/process_update_sensitive_column_config">
+         <form method="post" action="/process_sensitive_column_config">
 		    <table>
 			   {% for field in fields %}
 		        <tr>

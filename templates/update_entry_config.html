@@ -9,7 +9,7 @@
 	   <h1>Tag Engine</h1>
         </div>
 	   <div class="header">
-	   <h2>Update entry config using {{ template_id }}</h2>
+	   <h2>Update Entry Config using {{ template_id }}</h2>
  	   <span style="color:#9d9a9a;">
  		   <h5>Make changes to your entry config below. A checked box indicates the field is part of the tag. You can add new fields and/or remove existing ones from the tag. <br>You can also edit the included URIs, excluded URIs, refresh frequency, and tag history settings. </h5>
  	  </span>
@@ -23,7 +23,7 @@
 	 	</h5>
 	   </span>
 	   
-         <form method="post" action="/process_update_entry_config">
+         <form method="post" action="/process_entry_config">
 		    <table>
 			   {% for field in fields %}
 		        <tr>
