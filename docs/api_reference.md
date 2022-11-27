@@ -11,7 +11,7 @@ This page lists the API methods for Tag Engine.
 * `sensitive_column_tags`: creates sensitive tags on BigQuery tables
 * `entries`: creates Data Catalog entries on Google Cloud Storage assets
 * `import_tags`: imports tags from a CSV file to either BigQuery tables, views and datasets or columns
-* `export_tags`: exports tags to BigQuery
+* `export_tags`: exports tags from Data Catalog to BigQuery
 * `restore_tags`: restores tags from a Data Catalog metadata export file
 * `get_job_status`: gets the status of a job
 * `ondemand_updates`: updates the tags associated with a configuration that is set to on-demand refresh
@@ -22,7 +22,7 @@ This page lists the API methods for Tag Engine.
 creates static tags on BigQuery or Google Cloud Storage assets. 
 
 ```
-POST [TAG_ENGINE_URL]/static_asset_tags -d [@input.json](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/static_asset_configs/static_asset_create_auto_bq.json)
+POST [TAG_ENGINE_URL]/static_asset_tags -d datacatalog-tag-engine/examples/static_asset_configs/static_asset_create_auto_bq.json
 ```
 
 #### dynamic_table_tags
@@ -30,7 +30,7 @@ POST [TAG_ENGINE_URL]/static_asset_tags -d [@input.json](https://github.com/Goog
 creates dynamic tags on BigQuery tables, views and datasets.
 
 ```
-POST [TAG_ENGINE_URL]/dynamic_table_tags -d [@input.json](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/dynamic_table_configs/dynamic_table_create_auto.json)
+POST [TAG_ENGINE_URL]/dynamic_table_tags -d datacatalog-tag-engine/examples/dynamic_table_configs/dynamic_table_create_auto.json
 ``` 
 
 #### dynamic_column_tags
@@ -38,7 +38,7 @@ POST [TAG_ENGINE_URL]/dynamic_table_tags -d [@input.json](https://github.com/Goo
 creates dynamic tags on BigQuery columns.
 
 ```
-POST [TAG_ENGINE_URL]/dynamic_column_tags -d [@input.json](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/dynamic_column_configs/dynamic_column_create_auto.json)
+POST [TAG_ENGINE_URL]/dynamic_column_tags -d datacatalog-tag-engine/examples/dynamic_column_configs/dynamic_column_create_auto.json
 ``` 
 
 #### glossary_asset_tags
@@ -46,7 +46,7 @@ POST [TAG_ENGINE_URL]/dynamic_column_tags -d [@input.json](https://github.com/Go
 creates glossary tags on BigQuery or Google Cloud Storage assets. Requires a column to glossary attribute mapping table in BigQuery. 
 
 ```
-POST [TAG_ENGINE_URL]/glossary_asset_tags -d [@input.json](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/glossary_asset_configs/glossary_asset_create_ondemand_bq.json)
+POST [TAG_ENGINE_URL]/glossary_asset_tags -d datacatalog-tag-engine/examples/glossary_asset_configs/glossary_asset_create_ondemand_bq.json
 ``` 
 
 #### sensitive_column_tags
@@ -54,7 +54,7 @@ POST [TAG_ENGINE_URL]/glossary_asset_tags -d [@input.json](https://github.com/Go
 creates sensitive tags on BQ tables. Requires Data Loss Prevention inspection job findings in BigQuery. 
 
 ```
-POST [TAG_ENGINE_URL]/sensitive_column_tags -d [@input.json](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/sensitive_column_configs/sensitive_column_create_auto.json)
+POST [TAG_ENGINE_URL]/sensitive_column_tags -d datacatalog-tag-engine/examples/sensitive_column_configs/sensitive_column_create_auto.json
 ``` 
 
 #### import_tags
@@ -63,12 +63,12 @@ imports tags into Data Catalog from one or more CSV files. Tags can be attached 
 
 Example 1:
 ```
-POST [TAG_ENGINE_URL]/import_tags -d [@input.json](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/import_configs/import_table_tags.json)
+POST [TAG_ENGINE_URL]/import_tags -d datacatalog-tag-engine/examples/import_configs/import_table_tags.json
 ``` 
 
 Example 2:
 ```
-POST [TAG_ENGINE_URL]/import_tags -d [@input.json](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/import_configs/import_column_tags.json)
+POST [TAG_ENGINE_URL]/import_tags -d datacatalog-tag-engine/examples/import_configs/import_column_tags.json
 ``` 
 
 #### export_tags
@@ -77,12 +77,12 @@ exports tags from Data Catalog into BigQuery tables. Tags are written into one o
 
 Example 1:
 ```
-POST [TAG_ENGINE_URL]/export_tags -d [@input.json](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/export_configs/export_tags_by_project.json)
+POST [TAG_ENGINE_URL]/export_tags -d datacatalog-tag-engine/examples/export_configs/export_tags_by_project.json
 ``` 
 
 Example 2:
 ```
-POST [TAG_ENGINE_URL]/export_tags -d [@input.json](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/export_configs/export_tags_by_folder.json)
+POST [TAG_ENGINE_URL]/export_tags -d datacatalog-tag-engine/examples/export_configs/export_tags_by_folder.json
 ``` 
 
 
@@ -91,7 +91,7 @@ POST [TAG_ENGINE_URL]/export_tags -d [@input.json](https://github.com/GoogleClou
 restores tags from a Data Catalog metadata export file. Requires the Data Catalog export metadata feature. 
 
 ```
-POST [TAG_ENGINE_URL]/restore_tags -d [@input.json](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/restore_configs/restore_table_tags.json)
+POST [TAG_ENGINE_URL]/restore_tags -d datacatalog-tag-engine/examples/restore_configs/restore_table_tags.json
 ``` 
 
 #### get_job_status
@@ -104,8 +104,8 @@ POST [TAG_ENGINE_URL]/get_job_status -d '{"job_uuid":"47aa9460fbac11ecb1a0190a01
 
 #### ondemand_updates
 
-updates the tags associated with a configuration whose `refresh_mode` is set to 'ON_DEMAND'. 
+updates the tags associated with a configuration whose `refresh_mode` field is set to 'ON_DEMAND'. 
 
 ```
-POST [TAG_ENGINE_URL]/ondemand_updates -d [@input.json](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/dynamic_table_configs/dynamic_table_update_ondemand.json)
+POST [TAG_ENGINE_URL]/ondemand_updates -d datacatalog-tag-engine/examples/dynamic_table_configs/dynamic_table_update_ondemand.json
 ``` 
