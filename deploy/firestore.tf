@@ -595,3 +595,69 @@ resource "google_firestore_index" "index-23" {
 
 	depends_on = [google_firestore_index.index-22]
 }
+
+resource "google_firestore_index" "index-24" {
+    project = var.tag_engine_project
+
+    collection = "export_configs"
+
+    fields {
+      field_path = "source_region"
+      order      = "ASCENDING"
+    }
+	
+    fields {
+      field_path = "source_projects"
+      order      = "ASCENDING"
+    }
+	
+    fields {
+      field_path = "target_dataset"
+      order      = "ASCENDING"
+    }
+	
+    fields {
+      field_path = "target_project"
+      order      = "ASCENDING"
+    }
+	
+    fields {
+      field_path = "config_status"
+      order      = "ASCENDING"
+    }
+
+	depends_on = [google_firestore_index.index-23]
+}
+
+resource "google_firestore_index" "index-25" {
+    project = var.tag_engine_project
+
+    collection = "export_configs"
+
+    fields {
+      field_path = "source_region"
+      order      = "ASCENDING"
+    }
+	
+    fields {
+      field_path = "source_folder"
+      order      = "ASCENDING"
+    }
+	
+    fields {
+      field_path = "target_dataset"
+      order      = "ASCENDING"
+    }
+	
+    fields {
+      field_path = "target_project"
+      order      = "ASCENDING"
+    }
+	
+    fields {
+      field_path = "config_status"
+      order      = "ASCENDING"
+    }
+
+	depends_on = [google_firestore_index.index-24]
+}

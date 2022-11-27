@@ -2,7 +2,7 @@
 
 Context: In October 2022, a number of schema changes were made to Tag Engine, which are not backwards compatible. These changes were needed in order to support new configuration types. 
 
-The following instructions are meant for users who are running on a code base of Tag Engine prior to Oct 2022 and who want to upgrade to the most recent code base. Note that this upgrade destroys your existing Tag Engine configurations, so make note of those details if you need them. You can recreate them through the Tag Engine UI and/or API once the upgrade is complete. 
+The following instructions are meant for users who are running on a code base <b>prior to Tag Engine v1.0.0</b> and who want to upgrade to the most recent code base (e.g. v1.0.3). Note that this upgrade destroys your existing Tag Engine configurations, so make note of those details if you need them. You can recreate them through the Tag Engine UI and/or API once the upgrade is complete. 
 
 #### 1. Pull down the latest code from this repo:
 

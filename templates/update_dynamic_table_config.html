@@ -9,13 +9,13 @@
 	   <h1>Tag Engine</h1>
         </div>
 	   <div class="header">
-	   <h2>Update dynamic table config using {{ template_id }}</h2>
+	   <h2>Update Dynamic Table Config using {{ template_id }}</h2>
  	   
  		   <h5>Make changes to your dynamic table config below. A checked box indicates the field is part of this tag config. You can add new fields and/or remove existing ones from the tag config. <br>You can also edit the query expression, included URIs, excluded URIs, refresh frequency, and tag history. </h5>
 
 	   </div>
 	  
-	   <h3>Query Expressions</h3>
+	   <h3>Template Field Values</h3>
  	   
  		   <h5>
 		   The query expression must be a <i>valid</i> select statement in BQ. It can contain aggregate functions, joins, filters, groupings, etc. <br>
@@ -40,7 +40,7 @@
 	 	</h5>
 
 	   
-         <form method="post" action="/process_update_dynamic_table_config">
+         <form method="post" action="/process_dynamic_table_config">
 		    <table>
 			   {% for field in fields %}
 		        <tr>
@@ -158,7 +158,7 @@
 		         </table>
 			    {% if display_tag_history_option == 1 %}
 			      <p>&nbsp;</p>
-				<h3>Choose Tag History Option</h3>
+				<h3>Tag History Option</h3>
 			    <table>
 			    <tr><td>
 				    {% if config['tag_history'] == True %} 
@@ -172,7 +172,7 @@
 			    {% endif %}
 			    {% if display_tag_stream_option == 1 %}
 			      <p>&nbsp;</p>
-				<h3>Choose Tag Stream Option</h3>
+				<h3>Tag Stream Option</h3>
 			    <table>
 			    <tr><td>
 				    {% if config['tag_stream'] == True %} 

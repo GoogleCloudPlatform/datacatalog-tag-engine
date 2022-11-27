@@ -114,11 +114,14 @@ Hint: read [this tutorial](https://cloud.google.com/architecture/tag-engine-and-
 * Create Data Catalog entries:<br>
 `curl -X POST [TAG ENGINE URL]/entries -d @examples/entry_configs/entry_create_auto.json`
 
-* Restore tags from metadata export:<br>
-`curl -X POST [TAG ENGINE URL]/restore_tags -d @examples/restore_configs/restore_table_tags.json`
-
 * Import tags from CSV:<br>
 `curl -X POST [TAG ENGINE URL]/import_tags -d @examples/import_configs/import_column_tags.json`
+
+* Export tags to BigQuery:<br>
+`curl -X POST [TAG ENGINE URL]/export_tags -d @examples/export_configs/export_tags_by_project.json`
+
+* Restore tags from metadata export:<br>
+`curl -X POST [TAG ENGINE URL]/restore_tags -d @examples/restore_configs/restore_table_tags.json`
 
 * Get the status of a job:<br>
 `curl -X POST [TAG ENGINE URL]/get_job_status -d '{"job_uuid":"47aa9460fbac11ecb1a0190a014149c1"}'`

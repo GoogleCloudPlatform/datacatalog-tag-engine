@@ -17,7 +17,6 @@ import configparser, difflib, hashlib
 from datetime import datetime
 from datetime import timedelta
 import DataCatalogUtils as dc
-import BigQueryUtils as bq
 from google.cloud import bigquery
 from google.cloud import firestore
 import constants
@@ -915,6 +914,85 @@ class TagEngineUtils:
         
         return config_uuid
 
+    
+    def write_export_config(self, config_status, source_projects, source_folder, source_region, \
+                            target_project, target_dataset, target_region, write_option, \
+                            refresh_mode, refresh_frequency, refresh_unit):
+        
+        print('** write_export_config **')
+        
+        # check to see if this config already exists
+        configs_ref = self.db.collection('export_configs')
+        
+        if source_projects != '':
+            query = configs_ref.where('source_projects', '==', source_projects).where('source_region', '==', source_region).where('target_project', '==', target_project).where('target_dataset', '==', target_dataset).where('config_status', '!=', 'INACTIVE')
+        else:
+            query = configs_ref.where('source_folder', '==', source_folder).where('source_region', '==', source_region).where('target_project', '==', target_project).where('target_dataset', '==', target_dataset).where('config_status', '!=', 'INACTIVE')
+       
+        matches = query.get()
+       
+        for match in matches:
+            if match.exists:
+                config_uuid_match = match.id
+                print('config already exists. Found config_uuid: ' + str(config_uuid_match))
+                
+                # update status to INACTIVE 
+                self.db.collection('export_configs').document(config_uuid_match).update({
+                    'config_status' : "INACTIVE"
+                })
+                print('Updated status to INACTIVE.')
+       
+        config_uuid = uuid.uuid1().hex
+        configs = self.db.collection('export_configs')
+        doc_ref = configs.document(config_uuid)
+        
+        if refresh_mode == 'AUTO':
+            
+            delta, next_run = self.validate_auto_refresh(refresh_frequency, refresh_unit)
+        
+            doc_ref.set({
+                'config_uuid': config_uuid,
+                'config_type': 'EXPORT_TAG',
+                'config_status': config_status, 
+                'creation_time': datetime.utcnow(),
+                'source_projects': source_projects, 
+                'source_folder': source_folder,
+                'source_region': source_region,
+                'target_project': target_project,
+                'target_dataset': target_dataset,
+                'target_region': target_region,
+                'write_option': write_option,
+                'refresh_mode': refresh_mode,
+                'refresh_frequency': refresh_frequency,
+                'refresh_unit': refresh_unit,
+                'scheduling_status': 'PENDING',
+                'next_run': next_run,
+                'version': 1
+            })
+        
+        else:
+                
+            doc_ref.set({
+                'config_uuid': config_uuid,
+                'config_type': 'EXPORT_TAG',
+                'config_status': config_status, 
+                'creation_time': datetime.utcnow(),
+                'source_projects': source_projects, 
+                'source_folder': source_folder,
+                'source_region': source_region,
+                'target_project': target_project,
+                'target_dataset': target_dataset,
+                'target_region': target_region,
+                'write_option': write_option,
+                'refresh_mode': refresh_mode, # ON_DEMAND
+                'refresh_frequency': 0,
+                'version': 1
+            })
+        
+        print('Created new export config.')
+        
+        return config_uuid
+        
          
     def write_log_entry(self, dc_op, resource_type, resource, column, config_type, config_uuid, tag_id, template_uuid):
                     
@@ -976,10 +1054,12 @@ class TagEngineUtils:
             coll = 'glossary_asset_configs'
         if config_type == 'SENSITIVE_COLUMN_TAG':
             coll = 'sensitive_column_configs'
-        if config_type == 'RESTORE_TAG':
-            coll = 'restore_configs'
         if config_type == 'IMPORT_TAG':
             coll = 'import_configs'
+        if config_type == 'EXPORT_TAG':
+            coll = 'export_configs'
+        if config_type == 'RESTORE_TAG':
+            coll = 'restore_configs'
         
         return coll
     
@@ -991,7 +1071,9 @@ class TagEngineUtils:
     def read_configs(self, template_id, template_project, template_region, config_type='ALL'):
         
         colls = []
-        config_results = []
+        pending_running_configs = []
+        active_configs = []
+        combined_configs = []
         template_exists, template_uuid = self.read_tag_template(template_id, template_project, template_region)
         
         if config_type == 'ALL':
@@ -1011,13 +1093,18 @@ class TagEngineUtils:
                 
             for doc in docs:
                 config = doc.to_dict()
-                #print('config: ', config)
-                config_results.append(config)  
-
-        return config_results
+                
+                if config['config_status'] == 'PENDING' or config['config_status'] == 'RUNNING':
+                    pending_running_configs.append(config)
+                else:
+                    active_configs.append(config)
+                        
+        combined_configs = pending_running_configs + active_configs
+        
+        return combined_configs
         
     
-    def read_config(self, config_uuid, config_type):
+    def read_config(self, config_uuid, config_type, reformat=False):
                 
         config_result = {}
         coll_name = self.lookup_config_collection(config_type)
@@ -1028,13 +1115,55 @@ class TagEngineUtils:
         if doc.exists:
             config_result = doc.to_dict()
             
+            if reformat and config_type == 'EXPORT_TAG':
+                config_result = self.format_source_projects(config_result)
+            
         return config_result
+        
+    
+    def delete_config(self, config_uuid, config_type):
+        
+        coll_name = self.lookup_config_collection(config_type)
+        
+        try:
+            self.db.collection(coll_name).document(config_uuid).delete()
+        
+        except Expection as e:
+            print('Error occurred during delete_config: ', e)
+            
+    
+    def read_export_configs(self):
+        
+        configs = []
+    
+        docs = self.db.collection('export_configs').where('config_status', '!=', 'INACTIVE').order_by('config_status', direction=firestore.Query.DESCENDING).stream()
+                
+        for doc in docs:
+            config = doc.to_dict()
+            config = self.format_source_projects(config)      
+            configs.append(config)  
+
+        return configs
+      
+      
+    def format_source_projects(self, config):
+        
+        if config['source_projects'] != '':
+            
+            source_projects = config['source_projects']
+            source_projects_str = ''
+            for project in source_projects:
+                source_projects_str += project + ','
+            
+            config['source_projects'] = source_projects_str[0:-1]
+        
+        return config
         
       
     def read_ready_configs(self):
         
         ready_configs = []
-        colls = ['static_asset_configs', 'dynamic_table_configs', 'dynamic_column_configs', 'entry_configs', 'glossary_asset_configs', 'sensitive_column_configs']
+        colls = ['static_asset_configs', 'dynamic_table_configs', 'dynamic_column_configs', 'entry_configs', 'glossary_asset_configs', 'sensitive_column_configs', 'export_configs']
         
         for coll_name in colls:
             config_ref = self.db.collection(coll_name)

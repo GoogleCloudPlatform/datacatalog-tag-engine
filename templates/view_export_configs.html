@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+  <head>
+    <title>Tag Engine for Data Catalog</title>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+  </head>  
+    <body>
+	    {% if status == -1 %}
+	    <table><tr><td>
+	    &nbsp;<span style="color:red;">Errors occurred while processing your config submission. Please check Firestore for details. </span>
+         </td></tr></table><p>
+	    {% endif %}
+	    
+ 	   <div class="pagetitle">
+ 	   <h1>Tag Engine for Data Catalog</h1>
+         </div>
+ 	   <div class="header">
+	    <h2>View Export Configs</h2>
+	   </div>
+	   
+	    <h5>
+		   {% if configs|length > 0 %} 
+		    	&nbsp;Click on <b>Edit Config</b> to overwrite a configuration. Click on <b>Delete Config</b> to delete a configuration.<br> 
+				&nbsp;Note that deleting a configuration does <b>not</b> remove the exported tags from BigQuery.<br><br>
+				&nbsp;Mandatory tag template fields are marked by <span style="color:red;">*</span>. 
+		   {% else %}
+		     &nbsp;&nbsp;<span style="color:grey;">You have no export configs in the system.</span> 
+			 <p>&nbsp;&nbsp;<a href="{{ url_for('create_export_option') }}">Create an export config</a>&nbsp;&nbsp;<a href="/">Go back to home</a></p>
+		   {% endif %}
+	    </h5>
+         
+		    {% for config in configs %}
+		    <table style="background-color:#f1eeee" width="1000">
+			
+			<form method="post" action="/update_export_config">
+			<th>&nbsp;<input type="submit" value="Edit Config" name="action">
+			&nbsp;<input type="submit" value="Delete Config" name="action"></th>
+			</th>
+			<tr><td>&nbsp;<span style="color:#0b5394;">Config Status:</span> {{ config['config_status'] }}
+			{% if config['config_status'] != 'ACTIVE' and config['config_status'] != 'ERROR' %}
+				<a href="{{ url_for('view_export_configs') }}">refresh</a>
+			{% endif %}
+			</td></tr> 
+			<tr><td>&nbsp;<span style="color:#0b5394;">Config Type:</span> {{ config['config_type'] }}</td></tr>
+			<tr><td>&nbsp;</td></tr>
+		    </table>
+			<table style="background-color:#f1eeee" width="1000">
+			   {% if config['source_projects'] == '' %}
+			   	<tr>
+ 		          	<td>&nbsp;<span style="color:#0b5394;">Source projects:</span>
+ 		            &nbsp;N/A</td>
+ 	           	</tr>
+ 		       {% else %}
+  			   	<tr>
+   		          <td>&nbsp;<span style="color:#0b5394;">Source projects:</span>
+   		           &nbsp;{{ config['source_projects'] }}</td>
+   	           	</tr>
+			    {% endif %}
+				{% if config['source_folder'] == '' %}
+			   <tr>
+ 		          <td>&nbsp;<span style="color:#0b5394;">Source folder:</span>
+ 		             &nbsp;N/A</td>
+ 	           </tr>
+			    {% else %}
+ 			   <tr>
+  		          <td>&nbsp;<span style="color:#0b5394;">Source folder:</span>
+  		             &nbsp;{{ config['source_folder'] }}</td>
+  	           </tr>
+			   {% endif %}
+ 		       <tr>
+ 		          <td>&nbsp;<span style="color:#0b5394;">Source region:</span>
+ 		           &nbsp;{{ config['source_region'] }}</td>
+ 	           </tr>
+			   <tr><td>&nbsp;</td></tr>
+ 		       <tr>
+ 		          <td>&nbsp;<span style="color:#0b5394;">Target project:</span>
+ 		           &nbsp;{{ config['target_project'] }}</td>
+ 	           </tr>
+ 		       <tr>
+ 		          <td>&nbsp;<span style="color:#0b5394;">Target dataset:</span>
+ 		           &nbsp;{{ config['target_dataset'] }}</td>
+ 	           </tr>
+ 		       <tr>
+ 		          <td>&nbsp;<span style="color:#0b5394;">Target region:</span>
+ 		           &nbsp;{{ config['target_region'] }}</td>
+ 	           </tr>
+			   
+ 		       <tr>
+ 		          <td>&nbsp;<span style="color:#0b5394;">Write option:</span>
+ 		           &nbsp;{{ config['write_option'] }}</td>
+ 	           </tr>
+		     	<tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+		   
+		       <tr>
+		    	   <td>&nbsp;<span style="color:#0b5394;">Refresh mode:</span>
+			    	   &nbsp;{{ config['refresh_mode'] }}</td>
+	          </tr>
+
+			    {% if 'refresh_frequency' in config %}
+			    <tr>
+			    <td>&nbsp;<span style="color:#0b5394;">Refresh frequency:</span>
+				    &nbsp;{{ config['refresh_frequency'] }}&nbsp;{{ config['refresh_unit'] }}</td>
+		         </tr>
+				 <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+			    {% endif %} 
+		     
+			 </table>
+		   <br>
+		   <input type="hidden" name="config_uuid" value="{{ config['config_uuid'] }}">
+		   </form>
+		   {% endfor %}
+		   {% if configs|length > 0 %} 
+    	   <p>&nbsp;&nbsp;<a href="{{ url_for('create_export_option') }}">Create export config</a>&nbsp;&nbsp;<a href="/">Go back to home</a></p>
+		   {% endif %}
+    </body>
+</html>

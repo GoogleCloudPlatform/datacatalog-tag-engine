@@ -26,19 +26,180 @@ BIGQUERY_REGION = config['DEFAULT']['BIGQUERY_REGION']
 
 class BigQueryUtils:
     
-    def __init__(self):
+    def __init__(self, region=None):
         
-        self.client = bigquery.Client(location=BIGQUERY_REGION)
+        if region:
+            self.client = bigquery.Client(location=region)
+        else:
+            self.client = bigquery.Client(location=BIGQUERY_REGION)
 
-    def create_dataset(self, project_id, region, dataset):
-
-        dataset_id = bigquery.Dataset(project_id + '.' + dataset)
-        dataset_id.location = region
-        dataset_status = self.client.create_dataset(dataset_id, exists_ok=True)  
-        print("Created dataset {}".format(dataset_status.dataset_id))
+    # API method used by tag export function
+    def create_report_tables(self, project, dataset):
         
-    # used by tag history feature
-    def table_exists(self, table_name):
+        success = self.create_dataset(project, dataset)
+        
+        if success == False:
+            return success
+        
+        created_dataset_table = self.report_table_create(project, dataset, 'catalog_report_dataset_tags', 'dataset')
+        created_table_table = self.report_table_create(project, dataset, 'catalog_report_table_tags', 'table')
+        created_column_table = self.report_table_create(project, dataset, 'catalog_report_column_tags', 'column')
+        
+        if created_dataset_table or created_table_table or created_column_table:
+            return True
+        else:
+            return False
+    
+    # API method used by tag export function
+    def truncate_report_tables(self, project, dataset):
+        
+        truncate_dataset_table = self.report_table_truncate(project, dataset, 'catalog_report_dataset_tags')
+        truncate_table_table = self.report_table_truncate(project, dataset, 'catalog_report_table_tags')
+        truncate_column_table = self.report_table_truncate(project, dataset, 'catalog_report_column_tags')
+        
+        if truncate_dataset_table and truncate_table_table and truncate_column_table:
+            return True
+        else:
+            return False
+    
+    # API method used by tag export function
+    def insert_record(self, target_table_id, project, dataset, table, column, tag_template, tag_field, tag_value):    
+    
+        success = True
+        
+        current_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        if column:
+            rows_to_insert = [
+                {"project": project, "dataset": dataset, "table": table, "column": column, "tag_template": tag_template, "tag_field": tag_field, "tag_value": tag_value, "export_time": current_datetime},
+            ]
+
+        elif table:
+            rows_to_insert = [
+                {"project": project, "dataset": dataset, "table": table, "tag_template": tag_template, "tag_field": tag_field, "tag_value": tag_value, "export_time": current_datetime},
+            ]
+        
+        else:
+            rows_to_insert = [
+                {"project": project, "dataset": dataset, "tag_template": tag_template, "tag_field": tag_field, "tag_value": tag_value, "export_time": current_datetime},
+            ]
+
+        try:
+            errors = self.client.insert_rows_json(target_table_id, rows_to_insert)  
+        except Exception as e:
+            if 'NotFound: 404' in str(e):
+                # table was recently truncated and isn't quite ready to be written to
+                time.sleep(3)
+                try:
+                    errors = self.client.insert_rows_json(target_table_id, rows_to_insert)
+                except Exception as e:
+                     print("Error occurred during report_table_insert: {}".format(e))
+                     success = False
+        
+        return success
+        
+    # API method used by tag history function
+    def copy_tag(self, table_name, table_fields, tagged_table, tagged_column, tagged_values):
+        
+        #print("*** inside BigQueryUtils.copy_tag() ***")
+        exists, table_id, settings = self.history_table_exists(table_name)
+        
+        if exists != True:
+            dataset_id = self.create_dataset(settings['bigquery_project'], settings['bigquery_dataset'])
+            table_id = self.create_history_table(dataset_id, table_name, table_fields)
+
+        if tagged_column and tagged_column not in "":
+            asset_name = ("{}/column/{}".format(tagged_table, tagged_column))
+        else:
+            asset_name = tagged_table
+            
+        asset_name = asset_name.replace("datasets", "dataset").replace("tables", "table")
+        #print('asset_name: ', asset_name)
+                
+        self.insert_history_row(table_id, asset_name, tagged_values)  
+
+
+############### Internal processing methods ###############
+
+    def create_dataset(self, project, dataset):
+
+        success = True
+        dataset_id = bigquery.Dataset(project + '.' + dataset)
+        dataset_id.location = BIGQUERY_REGION
+        
+        try:
+            dataset_status = self.client.create_dataset(dataset_id, exists_ok=True)  
+            #print("Created dataset {}".format(dataset_status.dataset_id))
+            return success
+        except Exception as e:
+            print('Error occurred in create_dataset ', dataset_id, '. Error message: ', e)
+            success = False
+        return success
+    
+    # used by tag export function
+    def report_table_create(self, project, dataset, table, table_type):
+        
+        created = True
+        
+        table_id = project + '.' + dataset + '.' + table
+        table_ref = bigquery.Table.from_string(table_id)
+
+        try:
+            table = self.client.get_table(table_ref)
+            created = False
+            return created
+              
+        except NotFound:
+
+            if table_type == 'dataset':
+                schema = [
+                    bigquery.SchemaField("project", "STRING", mode="REQUIRED"),
+                    bigquery.SchemaField("dataset", "STRING", mode="REQUIRED"),
+                    bigquery.SchemaField("tag_template", "STRING", mode="REQUIRED"),
+                    bigquery.SchemaField("tag_field", "STRING", mode="REQUIRED"),
+                    bigquery.SchemaField("tag_value", "STRING", mode="REQUIRED"),
+                    bigquery.SchemaField("export_time", "DATETIME", mode="REQUIRED"),
+                ]
+            elif table_type == 'table':
+               schema = [
+                   bigquery.SchemaField("project", "STRING", mode="REQUIRED"),
+                   bigquery.SchemaField("dataset", "STRING", mode="REQUIRED"),
+                   bigquery.SchemaField("table", "STRING", mode="REQUIRED"),
+                   bigquery.SchemaField("tag_template", "STRING", mode="REQUIRED"),
+                   bigquery.SchemaField("tag_field", "STRING", mode="REQUIRED"),
+                   bigquery.SchemaField("tag_value", "STRING", mode="REQUIRED"),
+                   bigquery.SchemaField("export_time", "DATETIME", mode="REQUIRED"),
+               ] 
+            else:
+                schema = [
+                    bigquery.SchemaField("project", "STRING", mode="REQUIRED"),
+                    bigquery.SchemaField("dataset", "STRING", mode="REQUIRED"),
+                    bigquery.SchemaField("table", "STRING", mode="REQUIRED"),
+                    bigquery.SchemaField("column", "STRING", mode="REQUIRED"),
+                    bigquery.SchemaField("tag_template", "STRING", mode="REQUIRED"),
+                    bigquery.SchemaField("tag_field", "STRING", mode="REQUIRED"),
+                    bigquery.SchemaField("tag_value", "STRING", mode="REQUIRED"),
+                    bigquery.SchemaField("export_time", "DATETIME", mode="REQUIRED"),
+                ]
+
+            table = bigquery.Table(table_id, schema=schema)
+            table.time_partitioning = bigquery.TimePartitioning(type_=bigquery.TimePartitioningType.DAY, field="export_time") 
+            table = self.client.create_table(table)
+            print("Created table {}".format(table.table_id))  
+            return created
+        
+        return created
+    
+    # used by tag export function    
+    def report_table_truncate(self, project, dataset, table):
+        
+        try:
+            self.client.query('truncate table ' + project + '.' + dataset + '.' + table).result()
+        except Exception as e:
+            print('Error occurred during report_table_truncate ', e)
+                  
+    # used by tag history function
+    def history_table_exists(self, table_name):
         
         store = te.TagEngineUtils()
         enabled, settings = store.read_tag_history_settings()
@@ -63,8 +224,8 @@ class BigQueryUtils:
         
         return exists, table_id, settings
     
-    # used by tag history feature
-    def create_table(self, dataset_id, table_name, fields):
+    # used by tag history function
+    def create_history_table(self, dataset_id, table_name, fields):
         
         schema = [bigquery.SchemaField('event_time', 'DATETIME', mode='REQUIRED'), \
                   bigquery.SchemaField('asset_name', 'STRING', mode='REQUIRED')]
@@ -111,8 +272,8 @@ class BigQueryUtils:
         
         return table_id
     
-    # used by tag history feature
-    def insert_row(self, table_id, asset_name, tagged_values):
+    # writes tag history record
+    def insert_history_row(self, table_id, asset_name, tagged_values):
         
         row = {'event_time': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'), 'asset_name': asset_name}
         
@@ -136,6 +297,7 @@ class BigQueryUtils:
 
         try:
             self.client.insert_rows_json(table_id, row_to_insert)  
+        
         except Exception as e:
             if 'NotFound: 404' in str(e):
                 # table isn't quite ready to be written to
@@ -143,32 +305,12 @@ class BigQueryUtils:
                 errors = self.client.insert_rows_json(table_id, row_to_insert)  
             else:    
                 print("Error while inserting row into BQ history table: {}", e)
-        
-    # used by tag history feature
-    def copy_tag(self, table_name, table_fields, tagged_table, tagged_column, tagged_values):
-        
-        #print("*** inside BigQueryUtils.copy_tag() ***")
-        #print("table_name: " + table_name)
-        #print("table_fields: " + str(table_fields))
-        #print("tagged_table: " + tagged_table)
-        #print("tagged_column: " + tagged_column)
-        #print("tagged_values: " + str(tagged_values))
-        
-        exists, table_id, settings = self.table_exists(table_name)
-        
-        if exists != True:
-            dataset_id = self.client.dataset(settings['bigquery_dataset'], project=settings['bigquery_project'])
-            table_id = self.create_table(dataset_id, table_name, table_fields)
-
-        if tagged_column and tagged_column not in "":
-            asset_name = ("{}/column/{}".format(tagged_table, tagged_column))
-        else:
-            asset_name = tagged_table
-            
-        asset_name = asset_name.replace("datasets", "dataset").replace("tables", "table")
-        #print('asset_name: ', asset_name)
-                
-        self.insert_row(table_id, asset_name, tagged_values)  
+    
+if __name__ == '__main__':
+    
+    bqu = BigQueryUtils()
+    bqu.truncate_report_tables('tag-engine-develop', 'reporting')
+    
         
         
         

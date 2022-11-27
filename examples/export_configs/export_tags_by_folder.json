@@ -1,0 +1,11 @@
+{
+    "source_folder": "29428042487",
+	"source_region": "us-central1", 
+	"target_project": "tag-engine-develop",
+	"target_dataset": "exports",
+	"target_region": "us-central1",
+	"write_option": "append",
+    "refresh_mode": "AUTO",
+    "refresh_frequency": 24,
+    "refresh_unit": "hours"
+}

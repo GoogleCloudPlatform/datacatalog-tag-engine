@@ -9,7 +9,7 @@
 	   <h1>Tag Engine for Data Catalog</h1>
         </div>
 	   <div class="header">
-	   <h2>Create an Import Config using {{ template_id }}</h2>
+	   <h2>Update Import Config using {{ template_id }}</h2>
 	   
 		   <h5>The import config lets you create and populate Data Catalog tags from one or more CSV files. <br>
   			   For table-level tags, the CSV must have these three fields: project, dataset, and table.<br>
@@ -32,19 +32,19 @@
    	<tr>
        <td>&nbsp;<span style="color:red;">*</span>&nbsp;Tag template id:&nbsp;</td>
 	   <td>
-       	  <input type="text" name="template_id" value="{{ template_id }}" style="width: 150px;padding: 3px;"/>			 
+       	  <input type="text" name="template_id" value="{{ config['template_id'] }}" style="width: 150px;padding: 3px;"/>			 
        </td>
        </tr>
    	<tr>
        <td>&nbsp;<span style="color:red;">*</span>&nbsp;Tag template project:&nbsp;</td>
 	   <td>
-       	  <input type="text" name="template_project" value="{{ template_project }}" style="width: 150px;padding: 3px;"/>			 
+       	  <input type="text" name="template_project" value="{{ config['template_project'] }}" style="width: 150px;padding: 3px;"/>			 
        </td>
        </tr>
    	<tr>
        <td>&nbsp;<span style="color:red;">*</span>&nbsp;Tag template region:&nbsp;</td>
 	   <td>
-       	  <input type="text" name="template_region" value="{{ template_region }}" style="width: 150px;padding: 3px;"/>			 
+       	  <input type="text" name="template_region" value="{{ config['template_region'] }}" style="width: 150px;padding: 3px;"/>			 
        </td>
        </tr>
        </table>
@@ -59,28 +59,38 @@
 					    <table>
 				     <tr>
 				    <td><span style="color:red;">*</span>&nbsp;Location of metadata import file(s):&nbsp;&nbsp;
-				    	  <input type="text" value="gs://" name="metadata_import_location" style="align-content:left; width: 700px; overflow:auto;"/>
+				    	  <input type="text" value="{{ config['metadata_import_location'] }}" name="metadata_import_location" style="align-content:left; width: 700px; overflow:auto;"/>
 
 				    	</td>
 				     </tr>
 			    </table>
 				
 				
-			    {% if display_tag_history %}
+			    {% if display_tag_history_option == 1 %}
 			      <p>&nbsp;</p>
 				<h3>Tag History Option</h3>
 			    <table>
-			    <tr><td><input type="checkbox" class="form-control move-left" name="tag_history" value="selected" checked>
-				    Save tag values from this config to BigQuery tag history table.&nbsp;&nbsp;
+			    <tr><td>
+				    {% if config['tag_history'] == True %} 
+				    		<input type="checkbox" class="form-control move-left" name="tag_history" value="selected" checked>
+				    {% else %}
+				         	<input type="checkbox" class="form-control move-left" name="tag_history" value="selected">
+				    {% endif %}
+				    Save tag values to BigQuery history table&nbsp;&nbsp;
 			    </td></tr>
 			    </table>
 			    {% endif %}
-			    {% if display_tag_stream %}
+			    {% if display_tag_stream_option == 1 %}
 			      <p>&nbsp;</p>
 				<h3>Tag Stream Option</h3>
 			    <table>
-			    <tr><td><input type="checkbox" class="form-control move-left" name="tag_stream" value="selected" checked>
-				    Publish tag values from this config to Pub/Sub tag stream topic.&nbsp;&nbsp;
+			    <tr><td>
+				    {% if config['tag_stream'] == True %} 
+				    		<input type="checkbox" class="form-control move-left" name="tag_stream" value="selected" checked>
+				    {% else %}
+				         	<input type="checkbox" class="form-control move-left" name="tag_stream" value="selected">
+				    {% endif %}
+				    Save tag values to Pub/Sub tag stream topic&nbsp;&nbsp;
 			    </td></tr>
 			    </table>
 			    {% endif %}

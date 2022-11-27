@@ -17,22 +17,24 @@
  	   <div class="header">
 	    <h2>Configs associated with template {{ template_id }}</h2>
 	   </div>
-	    <span style="color:#9d9a9a;">
+
 	    <h5>
 		   {% if configs|length > 0 %} 
-		    	&nbsp;Click on Edit Config to update the rules of a config.<br><br>
+		    	&nbsp;Click on <b>Edit Config</b> to overwrite a configuration. Click on <b>Delete Config</b> to delete a configuration.<br> 
+				&nbsp;Note that deleting a configuration does <b>not</b> remove its associated tags or entries from Data Catalog.<br><br>
 				&nbsp;Mandatory tag template fields are marked by <span style="color:red;">*</span>. 
 		   {% else %}
-		     &nbsp;&nbsp;<span style="color:red;">Tag Engine has no configs associated with the tag template {{ template_id }}.</span> 
+		     &nbsp;&nbsp;<span style="color:red;">You have no configurations associated with the tag template {{ template_id }}.</span> 
 		   {% endif %}
 	    </h5>
-         </span>  
+
 		    {% for config in configs %}
 		    <table style="background-color:#f1eeee" width="1000">
 		    
 			<form method="post" action="/update_config">
 		    
-			<th>&nbsp;<input type="submit" value="Edit Config" name="submit"></th>
+			<th>&nbsp;<input type="submit" value="Edit Config" name="action">
+			&nbsp;<input type="submit" value="Delete Config" name="action"></th>
 			<tr><td>&nbsp;<span style="color:#0b5394;">Config Status:</span> {{ config['config_status'] }}
 			{% if config['config_status'] != 'ACTIVE' and config['config_status'] != 'ERROR' %}
 				<a href="{{ url_for('view_configs',template_id=template_id,template_project=template_project,template_region=template_region) }}">refresh</a>
@@ -104,10 +106,15 @@
 						 {% else %}
 						   &nbsp;
 						 {% endif %}
-				
-						{{ field['field_id'] }} (<span style="color:green;">{{ field['field_type'] }}</span>): 
+						 
+						{% if config['config_type'] == 'SENSITIVE_COLUMN_TAG' or config['config_type'] == 'ENTRY' %} 
+							{{ field['field_id'] }} (<span style="color:green;">{{ field['field_type'] }}</span>) 
+						{% else %}
+							{{ field['field_id'] }} (<span style="color:green;">{{ field['field_type'] }}</span>): 
+						{% endif %}
 					 </td>
 				    </tr>
+					{% if config['config_type'] != 'SENSITIVE_COLUMN_TAG' and config['config_type'] != 'ENTRY' %} 
 					<tr>
 				     <td style="width: 450px;color:grey;text-align: left;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 						{% if config['config_type'] == 'STATIC_ASSET_TAG' %}
@@ -118,14 +125,15 @@
 						{% endif %}
 					 </td>
 				     </tr>
-					 
+					 {% endif %}
 			     {% endfor %}
 		  </table>
 		{% endif %}
 		   
 	    {% if config['config_type'] == 'SENSITIVE_COLUMN_TAG' %}
 		  <table style="background-color:#f1eeee" width="1000">  
-	       <tr>
+	       <tr><td>&nbsp;</td></tr>
+		   <tr>
 	       <td>&nbsp;<span style="color:#0b5394;">DLP Dataset:</span></td>
             </tr>
 	       <tr>
@@ -321,7 +329,6 @@
 		   <input type="hidden" name="config_type" value="{{ config['config_type'] }}">
 		   </form>
 		   {% endfor %}
-		   <p>&nbsp;</p>
 		   <form method="post" action="/display_configuration">
 		    <table>
 		     <tr>

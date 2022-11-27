@@ -9,31 +9,33 @@
 	   <h1>Tag Engine for Data Catalog</h1>
         </div>
 	   <div class="header">
-	   <h2>Config for creating dynamic column tags using {{ template_id }}</h2>
+	   <h2>Create a Dynamic Column Config using {{ template_id }}</h2>
 	   </div>
-	   <h3>&nbsp;Query Expressions</h3>
+	   <h5>
+		   A dynamic table config is used to populate Data Catalog tags from BigQuery queries. <br>
+		   The tags generated from this config must be attached to the attributes of the data assets in BigQuery.
+		</h5>
+	   <h3>Template Field Values</h3>
  	   
- 		   <h5 style="width: 800px;">&nbsp;To include a field in your tag, click on the checkbox next to the field and enter a query expression in the text box. <br>
+ 		   <h5 style="width: 800px;">To include a field in your tag, click on the checkbox next to the field and enter a query expression in the text box. <br>
  			   <br>
- 			   &nbsp;The query expression must be a <i>valid</i> select statement in BigQuery. It may contain filter, aggregate functions, joins, groupings, subqueries, etc. as long as it's a valid select statement.<br>
+ 			   The query expression must be a <i>valid</i> select statement in BigQuery. It may contain filter, aggregate functions, joins, groupings, subqueries, etc. as long as it's a valid select statement.<br>
  			   <br>
- 			   &nbsp;In addition, the query expressions may reference these variables:<br>
+ 			   In addition, the query expressions may reference these variables:<br>
  			   - <b>$column</b> refers to the BQ table column being tagged<br>
 			   - <b>$table</b> refers to the BQ table (or view) being tagged<br>
  			   - <b>$dataset</b> refers to the BQ dataset of the table (or view) being tagged<br>
  			   - <b>$project</b> refers to the BQ project of the table (or view) being tagged<br>
  			   <br>
- 			   &nbsp;Here are some examples: <br>
- 			   &nbsp;&nbsp;select count(*) from $table where $column is null<br>
- 			   &nbsp;&nbsp;select count(distinct($column)) from $table <br>
- 			   &nbsp;&nbsp;select count(*) > 1 from $table where $column is null<br>
- 			   &nbsp;&nbsp;select rating from dw-project.quality.scores where table = '$table' and dataset = '$dataset' and project = '$project'<br>
- 			   &nbsp;&nbsp;select '30-DAYS'<br>
+ 			   Here are some examples: <br>
+ 			   &nbsp;select count(*) from $table where $column is null<br>
+ 			   &nbsp;select count(distinct($column)) from $table <br>
+ 			   &nbsp;select count(*) > 1 from $table where $column is null<br>
  			    <br>
- 			   &nbsp;Note: The result of the query expression must satisfy the type requirements of the field in the tag template. <br>
- 			   &nbsp;For example, if the tag template field is of type string, the query expression must return a string type.
+ 			   Note: The result of the query expression must satisfy the type requirements of the field in the tag template. <br>
+ 			   For example, if the tag template field is of type string, the query expression must return a string type.
 			   
- 		    <br><br>&nbsp;Mandatory tag template fields are marked by <span style="color:red;">*</span> and are already checked for you.
+ 		    <br><br>Mandatory tag template fields are marked by <span style="color:red;">*</span> and are already checked for you.
  		    </h5>
 
          <form method="post" action="/process_dynamic_column_config">
@@ -92,7 +94,7 @@
 			     </tr>
 			     <tr><td>&nbsp;</td></tr>
  				<tr>
- 			    <td>&nbsp;&nbsp;Excluded Tables URIs:&nbsp;
+ 			    <td>&nbsp;Excluded Tables URIs:&nbsp;
 			    	  <input type="text" name="excluded_tables_uris" style="align-content:left; width: 700px; overflow:auto;"/>			 
 			    </td>
  		         </tr>

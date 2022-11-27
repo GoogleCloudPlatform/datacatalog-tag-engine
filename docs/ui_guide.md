@@ -11,8 +11,9 @@ This is a user guide for the Tag Engine UI.
 *  Sensitive column configuration [link](#sensitive_column) 
 *  Glossary asset configuration [link](#glossary_asset) 
 *  Entry configuration [link](#entry)
-*  Restore tag configuration [link](#restore_tags) 
 *  Import tag configuration [link](#import_tags) 
+*  Export tag configuration [link](#export_tags) 
+*  Restore tag configuration [link](#restore_tags) 
 
 #### <a name="get_started"></a> Getting started
 
@@ -139,12 +140,6 @@ Below is a sample entry and tag produced by an entry configuration in Tag Engine
 
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/entry-and-tag.png" alt="static" width="650"/>
 
-#### <a name="restore_tags"></a> Restore tags configuration
-
-The restore tags configuration re-creates Data Catalog tags from a metadata export file. It takes as input a metadata export file stored on GCS. The export file must be generated from the Data Catalog export API. 
-
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/restore-config-1.png" alt="static" width="600"/>
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/restore-config-2.png" alt="static" width="300"/>
 
 #### <a name="import_tags"></a> Import tags configuration
 
@@ -152,3 +147,21 @@ The import tags configuration creates Data Catalog tags from a CSV file. The tag
 
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/import-config-1.png" alt="static" width="900"/>
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/import-config-2.png" alt="static" width="400"/>
+
+
+#### <a name="export_tags"></a> Export tags configuration
+
+The export config lets you export your Data Catalog tags into BigQuery. It generates three output tables in BigQuery,<br> 
+one for dataset-level tags, another for table and view level tags, and a third for column-level tags. <br>
+These tables can be used to source curation boards and other business intelligence reports.
+
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/export-config-1.png" alt="static" width="900"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/export-config-2.png" alt="static" width="400"/>
+
+
+#### <a name="restore_tags"></a> Restore tags configuration
+
+The restore tags configuration re-creates Data Catalog tags from a metadata export file. It takes as input a metadata export file stored on GCS. The export file must be generated from the Data Catalog export API. 
+
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/restore-config-1.png" alt="static" width="600"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/restore-config-2.png" alt="static" width="300"/>
