@@ -1,6 +1,6 @@
 ### Tag Engine Upgrade Guide
 
-Context: In October 2022, we made a number of schema changes to Tag Engine to support new configuration types, such as the import and export config types. These schema changes are not backwards compatible. 
+In October 2022, we made a number of schema changes to Tag Engine in order to support new configuration types, such as the import and export config types. These schema changes are not backwards compatible. 
 
 The following instructions are meant for Tag Engine users who are running on an older release of Tag Engine, prior to <b>Tag Engine v1.0.0</b>, and who want to upgrade to the most recent release. As of today Nov. 28, 2022, the most current release is v1.0.3. 
 
