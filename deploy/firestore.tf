@@ -661,3 +661,31 @@ resource "google_firestore_index" "index-25" {
 
 	depends_on = [google_firestore_index.index-24]
 }
+
+resource "google_firestore_index" "index-26" {
+    project = var.tag_engine_project
+
+    collection = "export_configs"
+
+    fields {
+      field_path = "config_status"
+      order      = "ASCENDING"
+    }
+
+    fields {
+      field_path = "refresh_mode"
+      order      = "ASCENDING"
+    }
+
+    fields {
+      field_path = "scheduling_status"
+      order      = "ASCENDING"
+    }
+
+    fields {
+      field_path = "next_run"
+      order      = "ASCENDING"
+    }
+
+    depends_on = [google_firestore_index.index-25]
+}
