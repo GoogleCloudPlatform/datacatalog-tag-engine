@@ -131,7 +131,7 @@ The entry configuration creates Data Catalog entries that represents parquet fil
 
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/entry-config-1.png" alt="static" width="600"/>
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/entry-config-2.png" alt="static" width="700"/>
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/entry-config-3.png" alt="static" width="500"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/entry-config-3.png" alt="static" width="400"/>
 
 
 ###### Sample entry and file metadata tag in Data Catalog
