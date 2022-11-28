@@ -2661,7 +2661,7 @@ def scheduled_auto_updates():
             print('ready config: ', config_uuid, ', ', config_type)
             
             if isinstance(config_uuid, str): 
-                teu.update_config_status(config_uuid, 'PENDING')
+                teu.update_config_status(config_uuid, config_type, 'PENDING')
                 teu.increment_version_next_run(config_uuid, config_type)
                 job_uuid = jm.create_job(config_uuid, config_type)
                 jobs.append(job_uuid)

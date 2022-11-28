@@ -963,7 +963,7 @@ class TagEngineUtils:
                 'target_region': target_region,
                 'write_option': write_option,
                 'refresh_mode': refresh_mode,
-                'refresh_frequency': refresh_frequency,
+                'refresh_frequency': delta,
                 'refresh_unit': refresh_unit,
                 'scheduling_status': 'PENDING',
                 'next_run': next_run,
