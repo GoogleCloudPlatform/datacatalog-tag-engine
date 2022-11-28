@@ -31,7 +31,7 @@ On the home page, you'll also see links for setting a default tag template, turn
 
 On the next page, you'll see the field details of your tag template. Below, you'll also see a number of actions. 
 
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/configuration-types.png" alt="static" width="450"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/configuration-types.png" alt="static" width="550"/>
 
 Each action type will be covered below. 
 
@@ -40,7 +40,7 @@ Each action type will be covered below.
 
 A static asset configuration creates Data Catalog tags on BigQuery assets (datasets, tables, views) or Google Cloud Storage assets (buckets, folders, files) that match a URI. 
 
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/static-asset-config-1.png" alt="static" width="500"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/static-asset-config-1.png" alt="static" width="400"/>
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/static-asset-config-2.png" alt="static" width="500"/>
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/static-asset-config-3.png" alt="static" width="500"/>
 
