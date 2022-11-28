@@ -21,7 +21,7 @@ The first time you bring up the Tag Engine UI, you should see a login page.
 
 Enter your tag template details into the three fields shown. The `template_id` is the tag template identifier, the `template_project` is the tag template's GCP project id, and the `template_region` is the tag template's region. You must already have a Data Catalog tag template to continue. Once you have entered those details, you can click the `Search Template` button to start creating Data Catalog tags. 
 
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/login.png" alt="static" width="350"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/homepage.png" alt="static" width="350"/>
 
 
 On the home page, you'll also see links for setting a default tag template, turning on/off tag history as well as turning on/off tag stream. Setting a default tag template saves you from having to type the details into the fields each time you use the Tag Engine UI. Tag history lets you save a change history of all your tags into BigQuery and is a popular option. Tag stream lets you do something similar with Pub/Sub in that Tag Engine will publish to a pub/sub topic a message for every tag creation or update request.    
@@ -31,7 +31,7 @@ On the home page, you'll also see links for setting a default tag template, turn
 
 On the next page, you'll see the field details of your tag template. Below, you'll also see a number of actions. 
 
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/configuration-types.png" alt="static"/>
+<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/configuration-types.png" alt="static" width="450"/>
 
 Each action type will be covered below. 
 
