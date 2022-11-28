@@ -98,9 +98,9 @@ The sensitive column configuration creates Data Catalog tags on columns in BQ. T
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/sensitive-column-config-2.png" alt="static" width="850"/>
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/sensitive-column-config-3.png" alt="static" width="700"/>
 
-##### Sample mapping table in BQ (input to the sensitive column configuration)
+##### Mapping tables (input to the sensitive column configuration)
 
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/static/sensitive-column-mapping-table.png" alt="static" width="400"/>
+This config requires two mapping tables, _infotype_selection_ and _infotype_classification_. The first maps the set of infotypes associated with a field from a table to a notable infotype. The second maps a set of notable infotypes to a data classification. <a href="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/sensitive_column_configs/dlp/create_classification_tables.sql">Here</a> are some sample mappings for both tables. 
 
 ##### Sample policy tag taxonomy in Data Catalog (input to the sensitive column configuration)
 
