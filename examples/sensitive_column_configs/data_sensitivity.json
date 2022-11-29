@@ -11,8 +11,8 @@
         }
     ],
     "dlp_dataset": "bigquery/project/data-mesh-343422/dataset/crm_dlp",
-	"infotype_selection_table": "bigquery/project/data-mesh-343422/dataset/reference/infotype_selection",
-	"infotype_classification_table": "bigquery/project/data-mesh-343422/dataset/reference/infotype_classification",
+    "infotype_selection_table": "bigquery/project/data-mesh-343422/dataset/reference/infotype_selection",
+    "infotype_classification_table": "bigquery/project/data-mesh-343422/dataset/reference/infotype_classification",
     "included_tables_uris": "bigquery/project/data-mesh-343422/dataset/crm/*",
     "create_policy_tags": true,
     "taxonomy_id": "projects/data-mesh-344315/locations/us-central1/taxonomies/1764167272388511191",

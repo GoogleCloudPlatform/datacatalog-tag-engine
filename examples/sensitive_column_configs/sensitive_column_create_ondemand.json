@@ -10,13 +10,13 @@
             "field_id": "sensitive_type"
         }
     ],
-	"dlp_dataset": "bigquery/project/tag-engine-develop/dataset/crm_dlp",
-	"infotype_selection_table": "bigquery/project/tag-engine-develop/dataset/reference/infotype_selection",
-	"infotype_classification_table": "bigquery/project/tag-engine-develop/dataset/reference/infotype_classification",
+    "dlp_dataset": "bigquery/project/tag-engine-develop/dataset/crm_dlp",
+    "infotype_selection_table": "bigquery/project/tag-engine-develop/dataset/reference/infotype_selection",
+    "infotype_classification_table": "bigquery/project/tag-engine-develop/dataset/reference/infotype_classification",
     "included_tables_uris": "bigquery/project/tag-engine-develop/dataset/crm/*",
-	"create_policy_tags": true,
-	"taxonomy_id": "projects/tag-engine-develop/locations/us-central1/taxonomies/317244085807144487",
-	"refresh_mode": "ON_DEMAND",
+    "create_policy_tags": true,
+    "taxonomy_id": "projects/tag-engine-develop/locations/us-central1/taxonomies/317244085807144487",
+    "refresh_mode": "ON_DEMAND",
     "refresh_unit": "hours",
     "tag_history": true,
     "tag_stream": false   
