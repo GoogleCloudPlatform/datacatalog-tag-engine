@@ -36,7 +36,7 @@ class BigQueryUtils:
     # API method used by tag export function
     def create_report_tables(self, project, dataset):
         
-        success = self.create_dataset(project, dataset)
+        success, dataset_id = self.create_dataset(project, dataset)
         
         if success == False:
             return success
@@ -46,6 +46,7 @@ class BigQueryUtils:
         created_column_table = self.report_table_create(project, dataset, 'catalog_report_column_tags', 'column')
         
         if created_dataset_table or created_table_table or created_column_table:
+            print('Created report tables')
             return True
         else:
             return False
@@ -63,33 +64,47 @@ class BigQueryUtils:
             return False
     
     # API method used by tag export function
-    def insert_record(self, target_table_id, project, dataset, table, column, tag_template, tag_field, tag_value):    
+    def insert_exported_record(self, target_table_id, project, dataset, table, column, tag_template, tag_field, tag_value):    
     
+        print("*** inside BigQueryUtils.insert_exported_record() ***")
+        
         success = True
+        current_ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
         
-        current_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        if column:
+        if target_table_id.endswith('catalog_report_column_tags'):
+            schema = self.get_report_column_schema()
             rows_to_insert = [
-                {"project": project, "dataset": dataset, "table": table, "column": column, "tag_template": tag_template, "tag_field": tag_field, "tag_value": tag_value, "export_time": current_datetime},
+                {"project": project, "dataset": dataset, "table": table, "column": column, "tag_template": tag_template, "tag_field": tag_field, "tag_value": tag_value, "export_time": current_ts},
             ]
 
-        elif table:
+        elif target_table_id.endswith('catalog_report_table_tags'):
+            schema = self.get_report_table_schema()
             rows_to_insert = [
-                {"project": project, "dataset": dataset, "table": table, "tag_template": tag_template, "tag_field": tag_field, "tag_value": tag_value, "export_time": current_datetime},
+                {"project": project, "dataset": dataset, "table": table, "tag_template": tag_template, "tag_field": tag_field, "tag_value": tag_value, "export_time": current_ts},
             ]
         
-        else:
+        elif target_table_id.endswith('catalog_report_dataset_tags'):
+            schema = self.get_report_dataset_schema()
             rows_to_insert = [
-                {"project": project, "dataset": dataset, "tag_template": tag_template, "tag_field": tag_field, "tag_value": tag_value, "export_time": current_datetime},
+                {"project": project, "dataset": dataset, "tag_template": tag_template, "tag_field": tag_field, "tag_value": tag_value, "export_time": current_ts},
             ]
+
+        
+        job_config = bigquery.LoadJobConfig(schema=schema, source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON)  
+        table_ref = bigquery.table.TableReference.from_string(target_table_id)
 
         try:
-            errors = self.client.insert_rows_json(target_table_id, rows_to_insert)  
+            job = self.client.load_table_from_json(rows_to_insert, table_ref, job_config=job_config)
+            print('Inserted record into reporting table')
+        
         except Exception as e:
-            if 'NotFound: 404' in str(e):
-                # table was recently truncated and isn't quite ready to be written to
-                time.sleep(3)
+            
+            print('Error occurred while writing record into report table ', e)
+            
+            if '404' in str(e):
+                print('Report table not ready to be written to. Sleeping for 5 seconds.')
+                time.sleep(5)
                 try:
                     errors = self.client.insert_rows_json(target_table_id, rows_to_insert)
                 except Exception as e:
@@ -101,12 +116,18 @@ class BigQueryUtils:
     # API method used by tag history function
     def copy_tag(self, table_name, table_fields, tagged_table, tagged_column, tagged_values):
         
-        #print("*** inside BigQueryUtils.copy_tag() ***")
+        print("*** inside BigQueryUtils.copy_tag() ***")
+
         exists, table_id, settings = self.history_table_exists(table_name)
         
         if exists != True:
-            dataset_id = self.create_dataset(settings['bigquery_project'], settings['bigquery_dataset'])
-            table_id = self.create_history_table(dataset_id, table_name, table_fields)
+            success, dataset_id = self.create_dataset(settings['bigquery_project'], settings['bigquery_dataset'])
+            #print('created_dataset:', success)
+            
+            if success:
+                table_id = self.create_history_table(dataset_id, table_name, table_fields)
+            else:
+                print('Error creating tag_history dataset')
 
         if tagged_column and tagged_column not in "":
             asset_name = ("{}/column/{}".format(tagged_table, tagged_column))
@@ -116,11 +137,14 @@ class BigQueryUtils:
         asset_name = asset_name.replace("datasets", "dataset").replace("tables", "table")
         #print('asset_name: ', asset_name)
                 
-        self.insert_history_row(table_id, asset_name, tagged_values)  
-
+        success = self.insert_history_row(table_id, asset_name, tagged_values)  
+        
+        return success
+        
 
 ############### Internal processing methods ###############
 
+    # used by both tag history and tag export
     def create_dataset(self, project, dataset):
 
         success = True
@@ -129,12 +153,13 @@ class BigQueryUtils:
         
         try:
             dataset_status = self.client.create_dataset(dataset_id, exists_ok=True)  
-            #print("Created dataset {}".format(dataset_status.dataset_id))
-            return success
+            print("Created dataset {}".format(dataset_status.dataset_id))
+            
         except Exception as e:
             print('Error occurred in create_dataset ', dataset_id, '. Error message: ', e)
             success = False
-        return success
+            
+        return success, dataset_id
     
     # used by tag export function
     def report_table_create(self, project, dataset, table, table_type):
@@ -152,44 +177,65 @@ class BigQueryUtils:
         except NotFound:
 
             if table_type == 'dataset':
-                schema = [
-                    bigquery.SchemaField("project", "STRING", mode="REQUIRED"),
-                    bigquery.SchemaField("dataset", "STRING", mode="REQUIRED"),
-                    bigquery.SchemaField("tag_template", "STRING", mode="REQUIRED"),
-                    bigquery.SchemaField("tag_field", "STRING", mode="REQUIRED"),
-                    bigquery.SchemaField("tag_value", "STRING", mode="REQUIRED"),
-                    bigquery.SchemaField("export_time", "DATETIME", mode="REQUIRED"),
-                ]
+                schema = self.get_report_dataset_schema()
             elif table_type == 'table':
-               schema = [
-                   bigquery.SchemaField("project", "STRING", mode="REQUIRED"),
-                   bigquery.SchemaField("dataset", "STRING", mode="REQUIRED"),
-                   bigquery.SchemaField("table", "STRING", mode="REQUIRED"),
-                   bigquery.SchemaField("tag_template", "STRING", mode="REQUIRED"),
-                   bigquery.SchemaField("tag_field", "STRING", mode="REQUIRED"),
-                   bigquery.SchemaField("tag_value", "STRING", mode="REQUIRED"),
-                   bigquery.SchemaField("export_time", "DATETIME", mode="REQUIRED"),
-               ] 
-            else:
-                schema = [
-                    bigquery.SchemaField("project", "STRING", mode="REQUIRED"),
-                    bigquery.SchemaField("dataset", "STRING", mode="REQUIRED"),
-                    bigquery.SchemaField("table", "STRING", mode="REQUIRED"),
-                    bigquery.SchemaField("column", "STRING", mode="REQUIRED"),
-                    bigquery.SchemaField("tag_template", "STRING", mode="REQUIRED"),
-                    bigquery.SchemaField("tag_field", "STRING", mode="REQUIRED"),
-                    bigquery.SchemaField("tag_value", "STRING", mode="REQUIRED"),
-                    bigquery.SchemaField("export_time", "DATETIME", mode="REQUIRED"),
-                ]
+                schema = self.get_report_table_schema()
+            elif table_type == 'column':
+                schema = self.get_report_column_schema()
 
             table = bigquery.Table(table_id, schema=schema)
             table.time_partitioning = bigquery.TimePartitioning(type_=bigquery.TimePartitioningType.DAY, field="export_time") 
             table = self.client.create_table(table)
             print("Created table {}".format(table.table_id))  
-            return created
         
         return created
+   
     
+    # used by tag export function 
+    def get_report_dataset_schema(self):
+        
+        schema = [
+            bigquery.SchemaField("project", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("dataset", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("tag_template", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("tag_field", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("tag_value", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("export_time", "TIMESTAMP", mode="REQUIRED"),
+        ]
+        
+        return schema
+    
+    # used by tag export function 
+    def get_report_table_schema(self):
+        
+        schema = [
+            bigquery.SchemaField("project", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("dataset", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("table", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("tag_template", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("tag_field", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("tag_value", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("export_time", "TIMESTAMP", mode="REQUIRED"),
+        ]
+        
+        return schema
+    
+    # used by tag export function 
+    def get_report_column_schema(self):
+        
+        schema = [
+            bigquery.SchemaField("project", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("dataset", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("table", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("column", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("tag_template", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("tag_field", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("tag_value", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("export_time", "TIMESTAMP", mode="REQUIRED"),
+        ]
+        
+        return schema
+        
     # used by tag export function    
     def report_table_truncate(self, project, dataset, table):
         
@@ -227,7 +273,7 @@ class BigQueryUtils:
     # used by tag history function
     def create_history_table(self, dataset_id, table_name, fields):
         
-        schema = [bigquery.SchemaField('event_time', 'DATETIME', mode='REQUIRED'), \
+        schema = [bigquery.SchemaField('event_time', 'TIMESTAMP', mode='REQUIRED'), \
                   bigquery.SchemaField('asset_name', 'STRING', mode='REQUIRED')]
 
         for field in fields:
@@ -275,7 +321,9 @@ class BigQueryUtils:
     # writes tag history record
     def insert_history_row(self, table_id, asset_name, tagged_values):
         
-        row = {'event_time': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f'), 'asset_name': asset_name}
+        success = True
+        
+        row = {'event_time': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f') + ' UTC', 'asset_name': asset_name}
         
         for tagged_value in tagged_values:
             
@@ -296,20 +344,28 @@ class BigQueryUtils:
         row_to_insert = [row,]
 
         try:
-            self.client.insert_rows_json(table_id, row_to_insert)  
+            self.client.insert_rows_json(table_id, row_to_insert) 
+            print('Inserted record into tag history table') 
         
         except Exception as e:
-            if 'NotFound: 404' in str(e):
+            print('Error while writing to tag history table:', e)
+            if '404' in str(e):
                 # table isn't quite ready to be written to
-                time.sleep(3)
-                errors = self.client.insert_rows_json(table_id, row_to_insert)  
-            else:    
-                print("Error while inserting row into BQ history table: {}", e)
+                print('Tag history table not ready to be written to. Sleeping for 5 seconds.')
+                time.sleep(5)
+                try:
+                    errors = self.client.insert_rows_json(table_id, row_to_insert) 
+                except Exception as e:
+                     print('Error occurred while writing to tag history table: {}'.format(e))
+                     success = False
+        
+        return success 
     
 if __name__ == '__main__':
     
     bqu = BigQueryUtils()
-    bqu.truncate_report_tables('tag-engine-develop', 'reporting')
+    bqu.create_report_tables('tag-engine-develop', 'reporting')
+    #bqu.truncate_report_tables('tag-engine-develop', 'reporting')
     
         
         

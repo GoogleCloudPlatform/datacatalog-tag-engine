@@ -12,16 +12,15 @@
   </div>  
     <body>
 	  <table>
-	 {% for project in project_ids.split(",") %}
-      	<tr><td>
-      	<h4>&nbsp;&nbsp;Project {{ project }}</h4>
-          </td></tr>
+	 {% for project in included_bigquery_projects.split(",") %}
+      	<tr><td><b>Data Assets in Project {{ project }}</td></tr>
 	    {% for header in report_headers: %}
-	      {% set project_dataset, total_tags = header %}
-		 {% set current_project = project_dataset.split('.')[0] %}
-		 {% set current_dataset = project_dataset.split('.')[1] %}
-		 {% if current_project in project: %}
-		    <tr><td style="text-align:left"><b>&nbsp;&nbsp;Dataset {{ current_dataset }} - {{ total_tags }} tags</b></td></tr>
+	       {% set project_dataset, total_tags = header %}
+		   {% set current_project = project_dataset.split('.')[0] %}
+		   {% set current_dataset = project_dataset.split('.')[1] %}
+		   {% if current_project in project: %}
+		    <tr><td>&nbsp;</td></tr>
+			<tr><td style="text-align:left"><b>&nbsp;&nbsp;Dataset {{ current_dataset }} - {{ total_tags }} tags</b></td></tr>
 		   
 			   {% for dataset_record in report_data: %}
 			      {% for dataset, tables in dataset_record.items(): %}
@@ -31,12 +30,14 @@
 					      {% set tag_count = table.1 %}
 					      {% set res = project_dataset + "." + table_name %}
 				        <tr>
-				          <td style="text-align:left">&nbsp;&nbsp;
+				          <td style="text-align:left">&nbsp;&nbsp;{{ table_name }}
+						<!-- Comment out this section because coverage_details is broken
 						{% if tag_count > 0 %}	
-							<a href="{{ url_for('coverage_details', res=res) }}">{{ table_name }}</a>
+							<a href="{{ url_for('coverage_details', res=res) }}">{{ table_name }}</a> 
+							{{ table_name }}
 						{% else %}
 							{{ table_name }}
-						{% endif %}
+						{% endif %}-->
 				          </td>
 						<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
 				          <td>

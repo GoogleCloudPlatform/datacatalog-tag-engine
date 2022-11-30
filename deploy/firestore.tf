@@ -20,6 +20,11 @@ resource "google_firestore_index" "index-0" {
       order      = "DESCENDING"
     }
 
+	fields {
+	    field_path = "__name__"
+	    order      = "ASCENDING"
+	}
+
     depends_on = [google_project_service.tag_engine_project]
 }
 
@@ -44,6 +49,11 @@ resource "google_firestore_index" "index-1" {
       field_path = "uri"
       order      = "ASCENDING"
     }
+
+	fields {
+	    field_path = "__name__"
+	    order      = "ASCENDING"
+	}
 
   depends_on = [google_firestore_index.index-0]
 }
@@ -75,6 +85,11 @@ resource "google_firestore_index" "index-2" {
     order      = "ASCENDING"
   }
 
+  fields {
+    field_path = "__name__"
+    order      = "ASCENDING"
+  }
+
   depends_on = [google_firestore_index.index-1]
 }
 
@@ -103,6 +118,11 @@ resource "google_firestore_index" "index-3" {
       order      = "ASCENDING"
     }
 
+	fields {
+	    field_path = "__name__"
+	    order      = "ASCENDING"
+	}
+
     depends_on = [google_firestore_index.index-2]
 }
 
@@ -120,6 +140,11 @@ resource "google_firestore_index" "index-4" {
       field_path = "config_status"
       order      = "ASCENDING"
     }
+	
+	fields {
+	    field_path = "__name__"
+	    order      = "ASCENDING"
+	}
 
   depends_on = [google_firestore_index.index-3]
 }
@@ -141,6 +166,11 @@ resource "google_firestore_index" "index-5" {
       field_path = "config_status"
       order      = "ASCENDING"
     }
+
+	fields {
+	    field_path = "__name__"
+	    order      = "ASCENDING"
+	}
 
   depends_on = [google_firestore_index.index-4]
 }
@@ -168,6 +198,11 @@ resource "google_firestore_index" "index-6" {
   fields {
     field_path = "config_status"
     order      = "ASCENDING"
+  }
+  
+  fields {
+     field_path = "__name__"
+     order      = "ASCENDING"
   }
 
   depends_on = [google_firestore_index.index-5]
@@ -198,6 +233,11 @@ resource "google_firestore_index" "index-7" {
       field_path = "next_run"
       order      = "ASCENDING"
     }
+	
+	fields {
+	    field_path = "__name__"
+	    order      = "ASCENDING"
+	}
 
     depends_on = [google_firestore_index.index-6]
 }
@@ -218,6 +258,11 @@ resource "google_firestore_index" "index-8" {
       field_path = "config_status"
       order      = "ASCENDING"
     }
+	
+	fields {
+	    field_path = "__name__"
+	    order      = "ASCENDING"
+	}
 
   depends_on = [google_firestore_index.index-7]
 }
@@ -245,6 +290,11 @@ resource "google_firestore_index" "index-9" {
   fields {
     field_path = "config_status"
     order      = "ASCENDING"
+  }
+  
+  fields {
+	 field_path = "__name__"
+	 order      = "ASCENDING"
   }
 
   depends_on = [google_firestore_index.index-8]
@@ -274,6 +324,11 @@ resource "google_firestore_index" "index-10" {
       field_path = "next_run"
       order      = "ASCENDING"
     }
+	
+	fields {
+	    field_path = "__name__"
+	    order      = "ASCENDING"
+	}
 
     depends_on = [google_firestore_index.index-9]
 }
@@ -305,6 +360,11 @@ resource "google_firestore_index" "index-11" {
     field_path = "config_status"
     order      = "ASCENDING"
   }
+  
+   fields {
+     field_path = "__name__"
+     order      = "ASCENDING"
+  }
 
   depends_on = [google_firestore_index.index-10]
 }
@@ -323,6 +383,11 @@ resource "google_firestore_index" "index-12" {
       field_path = "config_status"
       order      = "ASCENDING"
     }
+	
+	fields {
+	    field_path = "__name__"
+	    order      = "ASCENDING"
+	}
 
   depends_on = [google_firestore_index.index-11]
 }
@@ -351,6 +416,11 @@ resource "google_firestore_index" "index-13" {
       field_path = "next_run"
       order      = "ASCENDING"
     }
+
+	fields {
+	    field_path = "__name__"
+	    order      = "ASCENDING"
+	}
 
     depends_on = [google_firestore_index.index-12]
 }
@@ -381,6 +451,11 @@ resource "google_firestore_index" "index-14" {
     field_path = "config_status"
     order      = "ASCENDING"
   }
+  
+   fields {
+     field_path = "__name__"
+     order      = "ASCENDING"
+   }
 
   depends_on = [google_firestore_index.index-13]
 }
@@ -409,6 +484,11 @@ resource "google_firestore_index" "index-15" {
       field_path = "next_run"
       order      = "ASCENDING"
     }
+	
+	fields {
+	    field_path = "__name__"
+	    order      = "ASCENDING"
+	}
 
     depends_on = [google_firestore_index.index-14]
 }
@@ -427,6 +507,11 @@ resource "google_firestore_index" "index-16" {
       field_path = "config_status"
       order      = "ASCENDING"
     }
+	
+	fields {
+	    field_path = "__name__"
+	    order      = "ASCENDING"
+	}
 
   depends_on = [google_firestore_index.index-15]
 }
@@ -457,6 +542,11 @@ resource "google_firestore_index" "index-17" {
     field_path = "config_status"
     order      = "ASCENDING"
   }
+  
+  fields {
+    field_path = "__name__"
+    order      = "ASCENDING"
+  }
 
   depends_on = [google_firestore_index.index-16]
 }
@@ -475,6 +565,11 @@ resource "google_firestore_index" "index-18" {
       field_path = "config_status"
       order      = "ASCENDING"
     }
+	
+	fields {
+	    field_path = "__name__"
+	    order      = "ASCENDING"
+	}
 
   depends_on = [google_firestore_index.index-17]
 }
@@ -504,6 +599,11 @@ resource "google_firestore_index" "index-19" {
       field_path = "next_run"
       order      = "ASCENDING"
     }
+	
+	fields {
+	    field_path = "__name__"
+	    order      = "ASCENDING"
+	}
 
     depends_on = [google_firestore_index.index-18]
 }
@@ -529,6 +629,11 @@ resource "google_firestore_index" "index-20" {
       field_path = "config_status"
       order      = "ASCENDING"
     }
+	
+	fields {
+	    field_path = "__name__"
+	    order      = "ASCENDING"
+	}
 
   depends_on = [google_firestore_index.index-19]
 }
@@ -548,6 +653,11 @@ resource "google_firestore_index" "index-21" {
       field_path = "config_status"
       order      = "ASCENDING"
     }
+	
+	fields {
+	    field_path = "__name__"
+	    order      = "ASCENDING"
+	}
 
   depends_on = [google_firestore_index.index-20]
 }
@@ -569,6 +679,11 @@ resource "google_firestore_index" "index-22" {
       field_path = "config_status"
       order      = "ASCENDING"
     }
+	
+	fields {
+	    field_path = "__name__"
+	    order      = "ASCENDING"
+	}
 
   depends_on = [google_firestore_index.index-21]
 }
@@ -592,6 +707,11 @@ resource "google_firestore_index" "index-23" {
       field_path = "config_status"
       order      = "ASCENDING"
     }
+	
+	fields {
+	    field_path = "__name__"
+	    order      = "ASCENDING"
+	}
 
 	depends_on = [google_firestore_index.index-22]
 }
@@ -625,6 +745,11 @@ resource "google_firestore_index" "index-24" {
       field_path = "config_status"
       order      = "ASCENDING"
     }
+	
+	fields {
+	    field_path = "__name__"
+	    order      = "ASCENDING"
+	}
 
 	depends_on = [google_firestore_index.index-23]
 }
@@ -659,6 +784,11 @@ resource "google_firestore_index" "index-25" {
       order      = "ASCENDING"
     }
 
+	fields {
+	    field_path = "__name__"
+	    order      = "ASCENDING"
+	}
+
 	depends_on = [google_firestore_index.index-24]
 }
 
@@ -686,6 +816,11 @@ resource "google_firestore_index" "index-26" {
       field_path = "next_run"
       order      = "ASCENDING"
     }
+	
+	fields {
+	    field_path = "__name__"
+	    order      = "ASCENDING"
+	  }
 
     depends_on = [google_firestore_index.index-25]
 }
