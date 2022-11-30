@@ -292,7 +292,7 @@ def coverage_report():
     print('summary_report: ' + str(summary_report))
     print('detailed_report: ' + str(detailed_report))
     
-    exists, settings = teu.read_coverage_settings()
+    exists, settings = teu.read_coverage_report_settings()
     included_bigquery_projects = settings['included_bigquery_projects']
     
     return render_template(
@@ -2921,7 +2921,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 1.0.3"
+    return "Welcome to Tag Engine version 1.0.4"
 #[END ping]
     
 ####################### TEST METHOD ####################################  

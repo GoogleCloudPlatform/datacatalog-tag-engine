@@ -192,10 +192,11 @@ class DataCatalogUtils:
     def apply_static_asset_config(self, fields, uri, config_uuid, template_uuid, tag_history, tag_stream, overwrite=False):
         
         print('*** apply_static_asset_config ***')
-        #print('fields: ', fields)
-        #print('uri: ', uri)
-        #print('config_uuid: ', config_uuid)
-        #print('template_uuid: ', template_uuid)
+        print('fields: ', fields)
+        print('uri: ', uri)
+        print('config_uuid: ', config_uuid)
+        print('template_uuid: ', template_uuid)
+        print('tag_history: ', tag_history)
         
         # uri is either a BQ table/view path or GCS file path
         store = te.TagEngineUtils()        
@@ -228,12 +229,12 @@ class DataCatalogUtils:
         elif isinstance(uri, str):
             is_bq = True
             bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
-            #print("bigquery_resource: " + bigquery_resource)
+            print("bigquery_resource: " + bigquery_resource)
         
             request = datacatalog.LookupEntryRequest()
             request.linked_resource=bigquery_resource
             entry = self.client.lookup_entry(request)
-            #print('entry: ', entry)
+            print('entry: ', entry.name)
         
         try:    
             tag_exists, tag_id = self.check_if_exists(parent=entry.name)
@@ -257,12 +258,13 @@ class DataCatalogUtils:
     def apply_dynamic_table_config(self, fields, uri, config_uuid, template_uuid, tag_history, tag_stream, batch_mode=False):
         
         print('*** apply_dynamic_table_config ***')
-        #print('fields:', fields) 
-        #print('uri:', uri)
-        #print('config_uuid:', config_uuid)
-        #print('template_uuid:', template_uuid)
-        #print('tag_history:', tag_history)
-        #print('tag_stream:', tag_stream)
+        print('fields:', fields) 
+        print('uri:', uri)
+        print('config_uuid:', config_uuid)
+        print('template_uuid:', template_uuid)
+        print('tag_history:', tag_history)
+        print('tag_stream:', tag_stream)
+        
         store = te.TagEngineUtils()
         bq_client = bigquery.Client(location=BIGQUERY_REGION)
         
@@ -343,7 +345,7 @@ class DataCatalogUtils:
                 print('Error occurred during tag update: ' + str(e))
                 msg = 'Error occurred during tag update: ' + str(e)
                 store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'DYNAMIC_TABLE_TAG', msg)
-            
+                creation_status = constants.ERROR
         else:
 
             try:
@@ -355,13 +357,14 @@ class DataCatalogUtils:
                 print('Error occurred during tag create: ', e)
                 msg = 'Error occurred during tag create: ' + str(e)
                 store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'DYNAMIC_TABLE_TAG', msg)
+                creation_status = constants.ERROR
             
-        if tag_history:
+        if creation_status == constants.SUCCESS and tag_history:
             bqu = bq.BigQueryUtils()
             template_fields = self.get_template()
             bqu.copy_tag(self.template_id, template_fields, uri, None, fields)
             
-        if tag_stream:
+        if creation_status == constants.SUCCESS and tag_stream:
             psu = ps.PubSubUtils()
             psu.copy_tag(self.template_id, uri, None, fields)
                 
@@ -483,6 +486,7 @@ class DataCatalogUtils:
                     print('Error occurred during tag update: ' + str(e))
                     msg = 'Error occurred during tag update: ' + str(e)
                     store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'DYNAMIC_COLUMN_TAG', msg)
+                    creation_status = constants.ERROR
             else:
 
                 try:
@@ -494,13 +498,14 @@ class DataCatalogUtils:
                     print('Error occurred during tag create: ', e)
                     msg = 'Error occurred during tag create: ' + str(e)
                     store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'DYNAMIC_COLUMN_TAG', msg)
+                    creation_status = constants.ERROR
             
-            if tag_history:
+            if creation_status == constants.SUCCESS and tag_history:
                 bqu = bq.BigQueryUtils()
                 template_fields = self.get_template()
                 bqu.copy_tag(self.template_id, template_fields, uri, column, fields)
             
-            if tag_stream:
+            if creation_status == constants.SUCCESS and tag_stream:
                 psu = ps.PubSubUtils()
                 psu.copy_tag(self.template_id, uri, column, fields)
 
@@ -1266,7 +1271,7 @@ class DataCatalogUtils:
             self.template_path = tag.template
             template_fields = self.get_template()
             
-            if tag.column:
+            if tag.column and tag.column != '':
                 tagged_column = tag.column
                 target_table_id = target_project + '.' + target_dataset + '.' + 'catalog_report_column_tags'
             else:
@@ -1296,9 +1301,10 @@ class DataCatalogUtils:
                     field_value = str(tagged_field.richtext_value)
                     
                 # write record to BQ
-                success = bqu.insert_record(target_table_id, tagged_project, tagged_dataset, tagged_table, tagged_column, self.template_id, field_id, field_value)
-        
+                success = bqu.insert_exported_record(target_table_id, tagged_project, tagged_dataset, tagged_table, tagged_column, self.template_id, field_id, field_value)
+                
                 if success == False:
+                    print('Error occurred while writing to BigQuery report table.')
                     export_status = constants.ERROR
         
         return export_status
@@ -1466,6 +1472,9 @@ class DataCatalogUtils:
 
     def create_update_tag(self, fields, tag_exists, tag_id, config_uuid, config_type, tag_history, tag_stream, entry, uri, column_name=''):
         
+        print('create_update_tag')
+        print('tag_history:', tag_history)
+        
         creation_status = constants.SUCCESS
         valid_field = False
         store = te.TagEngineUtils() 
@@ -1607,8 +1616,11 @@ class DataCatalogUtils:
         if tag_history:
             bqu = bq.BigQueryUtils()
             template_fields = self.get_template()
-            print('before copy_tag, uri: ', uri)
-            bqu.copy_tag(self.template_id, template_fields, uri, column_name, fields)
+            success = bqu.copy_tag(self.template_id, template_fields, uri, column_name, fields)
+            
+            if success == False:
+                print('Error occurred while writing to tag history table.')
+                creation_status = constants.ERROR
 
         if tag_stream:
             psu = ps.PubSubUtils()
@@ -1649,9 +1661,9 @@ class DataCatalogUtils:
   
     def parse_query_expression(self, uri, query_expression, column=None):
         
-        #print("*** enter parse_query_expression ***")
-        #print("uri: " + uri)
-        #print("query_expression: " + query_expression)
+        print("*** enter parse_query_expression ***")
+        print("uri: " + uri)
+        print("query_expression: " + query_expression)
         
         query_str = None
         
@@ -1662,6 +1674,7 @@ class DataCatalogUtils:
         dataset_index = query_expression.rfind("$dataset", 0)
         table_index = query_expression.rfind("$table", 0)
         from_clause_table_index = query_expression.rfind(" from $table", 0)
+        from_clause_backticks_table_index = query_expression.rfind(" from `$table`", 0)
         column_index = query_expression.rfind("$column", 0)
         
         #print('table_index: ', table_index)
@@ -1682,14 +1695,16 @@ class DataCatalogUtils:
             #print('dataset_index: ', dataset_index)
         
         # $table referenced in from clause, use fully qualified table
-        if from_clause_table_index != -1:
-             #print('$table referenced in from clause')
+        if from_clause_table_index > 0 or from_clause_backticks_table_index > 0:
+             print('$table referenced in from clause')
              qualified_table = uri.replace('/project/', '.').replace('/datasets/', '.').replace('/tables/', '.')
-             #print('qualified_table: ' + qualified_table)
+             print('qualified_table:', qualified_table)
+             print('query_expression:', query_expression)
              query_str = query_expression.replace('$table', qualified_table)
+             print('query_str:', query_str)
              
         # $table is referenced somewhere in the expression, replace $table with actual table name
-        if from_clause_table_index == -1:
+        else:
         
             if table_index != -1:
                 #print('$table referenced somewhere, but not in the from clause')
@@ -1728,7 +1743,8 @@ class DataCatalogUtils:
                 query_str = query_expression.replace('$column', column)
             else:
                 query_str = query_str.replace('$column', column)
-                    
+        
+        print('returning query_str:', query_str)            
         return query_str
     
     
@@ -1819,8 +1835,8 @@ class DataCatalogUtils:
                 # timestamp value gets stored in DC, expected format: 2020-12-02T16:34:14Z
                 # however, field_value can be a date value e.g. "2022-05-08" or a datetime value e.g. "2022-05-08 15:00:00"
                 field_value = field_values[0]
-                print('field_value:', field_value)
-                print('field_value type:', type(field_value))
+                #print('field_value:', field_value)
+                #print('field_value type:', type(field_value))
                 
                 # we have a datetime type 
                 if type(field_value) == datetime:
@@ -1998,10 +2014,24 @@ class DataCatalogUtils:
         
 if __name__ == '__main__':
     
-    dcu = DataCatalogUtils()
-    config_uuid = None
-    uri = 'tag-engine-develop/datasets/supply_chain_landing'
-    target_project = 'tag-engine-develop'
-    target_dataset = 'reporting'
-    target_region = 'us-central1'
-    dcu.apply_export_config(config_uuid, target_project, target_dataset, target_region, uri)
+    template_id='cities_311'
+    template_project='tag-engine-develop'
+    template_region='us-central1'
+    
+    #dcu = DataCatalogUtils()
+    #config_uuid = None
+    #uri = 'tag-engine-develop/datasets/supply_chain_landing'
+    #target_project = 'tag-engine-develop'
+    #target_dataset = 'reporting'
+    #target_region = 'us-central1'
+    #dcu.apply_export_config(config_uuid, target_project, target_dataset, target_region, uri)
+    
+    dcu = DataCatalogUtils(template_id, template_project, template_region)
+    fields = [{'is_required': True, 'field_id': 'sum_total_requests', 'field_type': 'double', 'query_expression': 'select count(*) from `$table`'}, {'query_expression': 'select current_datetime', 'field_id': 'tag_snapshot_time', 'is_required': True, 'field_type': 'datetime'}]
+    uri = 'tag-engine-develop/datasets/reference/tables/Industry'
+    config_uuid = 'c6d2863870e811edab71e9e2a8e87ad9'
+    template_uuid = '81ecceb249c811edafe1acde48001122'
+    tag_history =  True
+    tag_stream = False
+    
+    dcu.apply_dynamic_table_config(fields, uri, config_uuid, template_uuid, tag_history, tag_stream)
