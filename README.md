@@ -62,6 +62,11 @@ gcloud app create --project=$TAG_ENGINE_PROJECT --region=$TAG_ENGINE_REGION
 gcloud app deploy datacatalog-tag-engine/app.yaml
 ```
 
+Note: The deploy command assumes that you will be running Tag Engine using App Engine's default Service Account (SA). 
+This SA gets created automatically when you run the deploy command with the 'Editor' role on the project. 
+Verify that the SA has been assigned the Editor role before continuing with the deployment. 
+
+
 #### Step 6: Secure App Engine with firewall rules  
 ```
 gcloud app firewall-rules create 100 --action ALLOW --source-range [IP_RANGE]
@@ -78,7 +83,7 @@ terraform init
 terraform apply -var-file=variables.tfvars
 ```  
 
-Note: The deployment can take up to <b>one hour</b> due to the large number of index builds. There are 24 Firestore indexes that get created sequentially to avoid build failures. 
+Note: The deployment can take up to <b>one hour</b> due to the large number of index builds. There are 27 Firestore indexes that get created sequentially to avoid hitting concurrency limits in Firestore. 
 
 #### Step 8: Launch the Tag Engine UI
 ```
@@ -96,31 +101,31 @@ Hint: read [this tutorial](https://cloud.google.com/architecture/tag-engine-and-
 
 ### Common API Commands:
 
-* Create a static asset tags:<br>
+* Create a static asset config:<br>
 `curl -X POST [TAG ENGINE URL]/static_asset_tags -d @examples/static_asset_configs/static_asset_create_auto_bq.json`
 
-* Create a dynamic table tags:<br>
+* Create a dynamic table config:<br>
 `curl -X POST [TAG ENGINE URL]/dynamic_table_tags -d @examples/dynamic_table_configs/dynamic_table_create_auto.json`
 
-* Create a dynamic column tags:<br>
+* Create a dynamic column config:<br>
 `curl -X POST [TAG ENGINE URL]/dynamic_column_tags -d @examples/dynamic_column_configs/dynamic_column_create_auto.json`
 
-* Create a glossary asset tags:<br>
+* Create a glossary asset config:<br>
 `curl -X POST [TAG ENGINE URL]/glossary_asset_tags -d @examples/glossary_asset_configs/glossary_asset_create_ondemand_bq.json`
 
-* Create a sensitive column tags:<br>
+* Create a sensitive column config:<br>
 `curl -X POST [TAG ENGINE URL]/sensitive_column_tags -d @examples/sensitive_column_configs/sensitive_column_create_auto.json`
 
-* Create Data Catalog entries:<br>
+* Create Data Catalog entry config:<br>
 `curl -X POST [TAG ENGINE URL]/entries -d @examples/entry_configs/entry_create_auto.json`
 
-* Import tags from CSV:<br>
+* Import tags from CSV files:<br>
 `curl -X POST [TAG ENGINE URL]/import_tags -d @examples/import_configs/import_column_tags.json`
 
-* Export tags to BigQuery:<br>
+* Export tags to BigQuery tables:<br>
 `curl -X POST [TAG ENGINE URL]/export_tags -d @examples/export_configs/export_tags_by_project.json`
 
-* Restore tags from metadata export:<br>
+* Restore tags from Data Catalog's metadata export:<br>
 `curl -X POST [TAG ENGINE URL]/restore_tags -d @examples/restore_configs/restore_table_tags.json`
 
 * Get the status of a job:<br>
