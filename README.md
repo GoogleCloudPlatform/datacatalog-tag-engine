@@ -63,7 +63,7 @@ gcloud app deploy datacatalog-tag-engine/app.yaml
 ```
 
 Note: The deploy command assumes that you will be running Tag Engine using App Engine's default Service Account (SA). 
-This SA gets created automatically when you run the deploy command with the 'Editor' role on the project. 
+This SA gets created automatically when you run the deploy command and is assigned the 'Editor' role on the project. 
 Verify that the SA has been assigned the Editor role before continuing with the deployment. 
 
 
