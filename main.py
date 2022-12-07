@@ -2536,6 +2536,48 @@ def copy_tags():
     return jsonify(response)
 
 
+@app.route("/update_tag_subset", methods=['POST'])
+def update_tag_subset():
+    json = request.get_json(force=True) 
+    print('json: ' + str(json))
+    valid_parameters, template_id, template_project, template_region = check_template_parameters('update_tag_subset', json)
+    
+    if valid_parameters != True:
+        response = {
+                "status": "error",
+                "message": "Request JSON is missing some required tag template parameters",
+        }
+        return jsonify(response), 400   
+        
+    if 'entry_name' in json:
+        entry_name = json['entry_name']
+    else:
+        response = {
+                "status": "error",
+                "message": "Request JSON is missing a entry_name parameter",
+        }
+        return jsonify(response), 400
+    
+    if 'changed_fields' in json:
+         changed_fields = json['changed_fields']
+    else:
+         response = {
+             "status": "error",
+             "message": "Request JSON is missing a changed_fields parameter",
+     }
+         return jsonify(response), 400
+
+    dcu = dc.DataCatalogUtils()
+    success = dcu.update_tag_subset(template_id, template_project, template_region, entry_name, changed_fields)
+
+    if success:
+        response = {"status": "success"}
+    else:
+        response = {"status": "failure"}
+    
+    return jsonify(response)
+
+
 """
 Args:
     template_id: tag template to use
@@ -2921,7 +2963,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 1.0.4"
+    return "Welcome to Tag Engine version 1.0.5"
 #[END ping]
     
 ####################### TEST METHOD ####################################  

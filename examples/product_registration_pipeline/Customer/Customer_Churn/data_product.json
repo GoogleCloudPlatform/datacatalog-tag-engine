@@ -5,19 +5,19 @@
     "fields": [
         {
             "field_id": "data_domain",
-            "field_value": "Finance"
+            "field_value": "Customer"
         },
         {
             "field_id": "data_subdomain",
-            "field_value": "Trade_and_Banking"
+            "field_value": "Customer_Management"
         },
         {
             "field_id": "data_product_name",
-            "field_value": "Trade Transactions"
+            "field_value": "Customer_Churn"
         },
         {
             "field_id": "data_product_description",
-            "field_value": "Data on customers, accounts, brokers, securities, trade details, account balances, and market information from the system of record."
+            "field_value": "Banking customers with low spend."
         },
         {
             "field_id": "data_confidentiality",
@@ -29,15 +29,15 @@
         },
         {
             "field_id": "business_owner",
-            "field_value": "Sunil Kumar"
+            "field_value": "Magnus Carlson"
         },
         {
             "field_id": "technical_owner",
-            "field_value": "Sudipta Nelson"
+            "field_value": "Jodie Chen"
         },
         {
             "field_id": "number_data_resources",
-            "field_value": "13"
+            "field_value": "2"
         },
         {
             "field_id": "storage_location",
@@ -49,7 +49,7 @@
         },
         {
             "field_id": "data_latency_slo",
-            "field_value": "daily"
+            "field_value": "monthly"
         },
         {
             "field_id": "documentation_link",
@@ -57,18 +57,18 @@
         },
         {
             "field_id": "access_request_link",
-            "field_value": "go/sphinx/trade-tx"
+            "field_value": "access.corp.company.com/customer-churn"
         },
 	    {
 	        "field_id": "data_product_status",
-            "field_value": "DRAFT"
+            "field_value": "RELEASED"
         },
 	    {
 	        "field_id": "last_modified_date",
-            "field_value": "2022-10-30"
+            "field_value": "2022-11-09"
         }
     ],
-    "included_assets_uris": "bigquery/project/data-mesh-343422/dataset/oltp",
+    "included_assets_uris": "bigquery/project/data-mesh-343422/dataset/marts",
     "excluded_assets_uris": "",
     "refresh_mode": "ON_DEMAND",
     "tag_history": true,

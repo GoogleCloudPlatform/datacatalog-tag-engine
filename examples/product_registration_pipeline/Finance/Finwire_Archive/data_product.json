@@ -57,7 +57,7 @@
         },
         {
             "field_id": "access_request_link",
-            "field_value": "go/sphinx/finwire-archive"
+            "field_value": "access.corp.company.com/finwire-archive"
         },
         {
             "field_id": "data_product_status",
