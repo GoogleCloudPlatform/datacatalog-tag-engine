@@ -394,7 +394,7 @@ class DataCatalogUtils:
         for row in rows:
             columns.append(row[0]) # DC stores all schema columns in lower case
             
-        print('columns to be tagged:', columns)
+        #print('columns to be tagged:', columns)
                     
         bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
         #print('bigquery_resource: ', bigquery_resource)
@@ -408,7 +408,7 @@ class DataCatalogUtils:
         for column_schema in entry.schema.columns:
             schema_columns.append(column_schema.column)
             
-        print('schema_columns:', schema_columns)
+        #print('schema_columns:', schema_columns)
 
         for column in columns:
             
@@ -1469,7 +1469,7 @@ class DataCatalogUtils:
                     
         return creation_status
         
-
+    # used by apply_static_assets_config, apply_import_config, and apply_restore_config
     def create_update_tag(self, fields, tag_exists, tag_id, config_uuid, config_type, tag_history, tag_stream, entry, uri, column_name=''):
         
         print('create_update_tag')
@@ -1831,13 +1831,11 @@ class DataCatalogUtils:
                 enum_field = datacatalog.TagField()
                 enum_field.enum_value.display_name = field_values[0]
                 tag.fields[field_id] = enum_field
-            if field_type == "datetime":
+            if field_type == "datetime" or field_type == "timestamp":
                 # timestamp value gets stored in DC, expected format: 2020-12-02T16:34:14Z
                 # however, field_value can be a date value e.g. "2022-05-08" or a datetime value e.g. "2022-05-08 15:00:00"
                 field_value = field_values[0]
-                #print('field_value:', field_value)
-                #print('field_value type:', type(field_value))
-                
+
                 # we have a datetime type 
                 if type(field_value) == datetime:
                     timestamp = pytz.utc.localize(field_value)
@@ -1850,6 +1848,16 @@ class DataCatalogUtils:
                     d = date(int(field_value[0:4]), int(field_value[5:7]), int(field_value[8:10]))
                     dt = datetime.combine(d, dtime(00, 00)) # when no time is supplied, default to 12:00:00 AM UTC
                     timestamp = utc.localize(dt)
+                elif len(str(field_value)) == 19:
+                    # input format: '2022-12-05 15:05:26'
+                    year = int(field_value[0:4])
+                    month = int(field_value[5:7])
+                    day = int(field_value[8:10])
+                    hour = int(field_value[11:13])
+                    minute = int(field_value[14:16])
+                    second = int(field_value[17:19])
+                    dt = datetime(year, month, day, hour, minute, second)
+                    timestamp = pytz.utc.localize(dt) 
                 # we have a timestamp cast as a string
                 else:
                     timestamp_value = field_value.isoformat()
@@ -1857,6 +1865,7 @@ class DataCatalogUtils:
                     timestamp = Timestamp()
                     timestamp.FromJsonString(field_value[0])
                 
+                print('timestamp:', timestamp)
                 datetime_field = datacatalog.TagField()
                 datetime_field.timestamp_value = timestamp
                 tag.fields[field_id] = datetime_field
@@ -2009,29 +2018,110 @@ class DataCatalogUtils:
         print('policy_tag_list:', policy_tag_list)
         success = self.apply_policy_tags(target_table_id, policy_tag_list)
     
-        return success		
+        return success
     
+    # used to update the status of a data product tag as part of the product_registration_pipeline
+    # https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/main/examples/product_registration_pipeline    
+    def update_tag_subset(self, template_id, template_project, template_region, entry_name, changed_fields):
+        
+        success = True
+        
+        tag_list = self.client.list_tags(parent=entry_name, timeout=120)
+    
+        for tag in tag_list:
+            print('tag.template:', tag.template)
+            
+            # get tag template fields
+            tagged_template_id = tag.template.split('/')[5]
+            tagged_template_project = tag.template.split('/')[1]
+            tagged_template_region = tag.template.split('/')[3]
+            
+            if tagged_template_id != template_id:
+                continue
+            
+            if tagged_template_project != template_project:
+                continue
+                
+            if tagged_template_region != template_region:
+                continue
+                
+            # start a new target tag to overwrite the existing one
+            target_tag = datacatalog.Tag()
+            target_tag.template = tag.template
+            target_tag.name = tag.name
+            
+            self.template_path = tag.template
+            template_fields = self.get_template()
+            
+            for template_field in template_fields:
+    
+                #print('template_field:', template_field)
+                field_id = template_field['field_id']
+                
+                # skip this field if it's not in the tag
+                if field_id not in tag.fields:
+                    continue
+                    
+                tagged_field = tag.fields[field_id]
+                    
+                if tagged_field.bool_value:
+                    field_type = 'bool'
+                    field_value = str(tagged_field.bool_value)
+                if tagged_field.double_value:
+                    field_type = 'double'
+                    field_value = str(tagged_field.double_value)
+                if tagged_field.string_value:
+                    field_type = 'string'
+                    field_value = tagged_field.string_value
+                if tagged_field.enum_value:
+                    field_type = 'enum'
+                    field_value = str(tagged_field.enum_value.display_name)
+                if tagged_field.timestamp_value:
+                    field_type = 'timestamp'
+                    field_value = str(tagged_field.timestamp_value)
+                    print('orig timestamp:', field_value)
+                if tagged_field.richtext_value:
+                    field_type = 'richtext'
+                    field_value = str(tagged_field.richtext_value)
+        		
+                # overwrite logic
+                for changed_field in changed_fields: 
+                    if changed_field['field_id'] == field_id:
+                        field_value = changed_field['field_value']
+                        break
+                
+                target_tag, error_exists = self.populate_tag_field(target_tag, field_id, field_type, [field_value])
+                
+                if error_exists:
+                    print('Error while populating the tag field. Aborting tag update.')
+                    success = False
+                    return success
+
+            # update the tag
+            try:
+                print('tag update request: ', target_tag)
+                response = self.client.update_tag(tag=target_tag)
+            except Exception as e:
+                success = False
+                print('Error occurred during tag update: ', e)
+ 
+        return success 
+                        
         
 if __name__ == '__main__':
     
-    template_id='cities_311'
-    template_project='tag-engine-develop'
+    template_id='data_product'
+    template_project='data-mesh-344315'
     template_region='us-central1'
     
-    #dcu = DataCatalogUtils()
-    #config_uuid = None
-    #uri = 'tag-engine-develop/datasets/supply_chain_landing'
-    #target_project = 'tag-engine-develop'
-    #target_dataset = 'reporting'
-    #target_region = 'us-central1'
-    #dcu.apply_export_config(config_uuid, target_project, target_dataset, target_region, uri)
-    
     dcu = DataCatalogUtils(template_id, template_project, template_region)
-    fields = [{'is_required': True, 'field_id': 'sum_total_requests', 'field_type': 'double', 'query_expression': 'select count(*) from `$table`'}, {'query_expression': 'select current_datetime', 'field_id': 'tag_snapshot_time', 'is_required': True, 'field_type': 'datetime'}]
-    uri = 'tag-engine-develop/datasets/reference/tables/Industry'
-    config_uuid = 'c6d2863870e811edab71e9e2a8e87ad9'
-    template_uuid = '81ecceb249c811edafe1acde48001122'
-    tag_history =  True
-    tag_stream = False
     
-    dcu.apply_dynamic_table_config(fields, uri, config_uuid, template_uuid, tag_history, tag_stream)
+    entry_name = 'projects/data-mesh-343422/locations/us-central1/entryGroups/@bigquery/entries/cHJvamVjdHMvZGF0YS1tZXNoLTM0MzQyMi9kYXRhc2V0cy9vbHRw'
+    
+    current_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(current_ts)
+    
+    changed_fields = [{'field_id': 'data_product_status', 'field_type': 'enum', 'field_value': 'REVIEW'}, {'field_id': 'last_modified_date', 'field_type': 'timestamp', 'field_value': current_ts}]
+    
+    dcu.update_tag_subset(template_id, template_project, template_region, entry_name, changed_fields)
+    

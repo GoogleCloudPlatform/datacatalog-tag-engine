@@ -1,23 +1,23 @@
 {
     "template_id": "data_product",
-    "project_id": "data-mesh-344315",
-    "region": "us-central1",
+    "template_project": "data-mesh-344315",
+    "template_region": "us-central1",
     "fields": [
         {
             "field_id": "data_domain",
-            "field_value": "Finance"
+            "field_value": "Customer"
         },
         {
             "field_id": "data_subdomain",
-            "field_value": "Trade_and_Banking"
+            "field_value": "Customer_Management"
         },
         {
             "field_id": "data_product_name",
-            "field_value": "Financial Trades"
+            "field_value": "CRM Insights"
         },
         {
             "field_id": "data_product_description",
-            "field_value": "Data on customers, accounts, brokers, securities, trade details, account balances, and market information from the system of record."
+            "field_value": "Insights on customers and accounts"
         },
         {
             "field_id": "data_confidentiality",
@@ -29,15 +29,15 @@
         },
         {
             "field_id": "business_owner",
-            "field_value": "Sunil Kumar"
+            "field_value": "Phil Riba"
         },
         {
             "field_id": "technical_owner",
-            "field_value": "Sudipta Nelson"
+            "field_value": "Bhavesh Mehta"
         },
         {
             "field_id": "number_data_resources",
-            "field_value": "13"
+            "field_value": "5"
         },
         {
             "field_id": "storage_location",
@@ -49,7 +49,7 @@
         },
         {
             "field_id": "data_latency_slo",
-            "field_value": "daily"
+            "field_value": "weekly"
         },
         {
             "field_id": "documentation_link",
@@ -57,7 +57,7 @@
         },
         {
             "field_id": "access_request_link",
-            "field_value": "go/sphinx/trade-tx"
+            "field_value": "access.corp.company.com/customer-management"
         },
 	    {
 	        "field_id": "data_product_status",
@@ -65,11 +65,11 @@
         },
 	    {
 	        "field_id": "last_modified_date",
-            "field_value": "2022-09-09"
+            "field_value": "2022-12-02"
         }
     ],
-    "included_uris": "bigquery/project/data-mesh-343422/dataset/trades",
-    "excluded_uris": "",
+    "included_assets_uris": "bigquery/project/data-mesh-343422/dataset/crm",
+    "excluded_assets_uris": "",
     "refresh_mode": "ON_DEMAND",
     "tag_history": true,
     "tag_stream": false   

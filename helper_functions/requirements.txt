@@ -1,0 +1,2 @@
+google-cloud-datacatalog
+google-cloud-dlp==1.0.0
