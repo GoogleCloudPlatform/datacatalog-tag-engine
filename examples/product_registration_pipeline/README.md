@@ -100,7 +100,9 @@ protoPayload.request.tag.fields.data_product_status.enumValue.displayName="PENDI
 
 #### Step 7: Deploy the Cloud Function
 
-The file [main.py](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/product_registration_pipeline/main.py) contains the source for the Cloud Function. The file [requirements.txt](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/product_registration_pipeline/requirements.txt). Update the _BUCKET_ and _TAG_ENGINE_URL_ variables in main.py on lines 18 and 19, respectively. The _BUCKET_ variable should point to the location where you uploaded the config files in Step 2. 
+The file [main.py](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/product_registration_pipeline/main.py) contains the source for the Cloud Function. The file [requirements.txt](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/examples/product_registration_pipeline/requirements.txt) contains the dependencies to run the function. 
+
+Before deploying, update the _BUCKET_ and _TAG_ENGINE_URL_ variables in main.py on lines 18 and 19, respectively. The _BUCKET_ variable should point to the GCS bucket where you uploaded the config files in Step 2. 
 
 Create the Cloud Function as follows:
 
@@ -119,7 +121,7 @@ curl -X POST $TAG_ENGINE_URL/static_asset_tags -d @examples/product_registration
 curl -X POST $TAG_ENGINE_URL/static_asset_tags -d @examples/product_registration_pipeline/Customer/Customer_Churn/data_product.json
 ```
 
-Remember to update the metadata attributes in the json files to reflect the data products that you are seeking to tag. These ones are intended for the TPCDI data. 
+Remember to update the metadata attribute values in the json files to reflect the data products that you are actually tagging. These ones are intended for describing products built around the TPCDI data. 
 
 
 #### Step 10: Manually update the status field of the data product tags
