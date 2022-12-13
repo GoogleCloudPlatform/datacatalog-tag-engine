@@ -94,7 +94,7 @@ class JobManager:
             job_dict = job.to_dict()
             task_count = job_dict['task_count']
             
-            # job is still running
+            # job running
             if job_dict['task_count'] > tasks_ran:
                 job_ref.update({
                     'tasks_ran': tasks_completed + tasks_failed,
@@ -104,7 +104,7 @@ class JobManager:
                 pct_complete = round(tasks_ran / task_count * 100, 2)
             
             # job completed
-            if job_dict['task_count'] == tasks_ran:
+            if job_dict['task_count'] <= tasks_ran:
                 
                 if job_dict['tasks_failed'] > 0:
                     
