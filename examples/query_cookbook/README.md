@@ -1,14 +1,16 @@
 ## Query Cookbook Overview
 
-This folder contains a workflow that creates and populates Query Cookbooks tags on your BigQuery entities in Data Catalog.  
+This folder contains a workflow that creates and populates the Query Cookbooks tags on all Data Catalog entities that represent BigQuery tables and views which have been queried over the past 180 days.  
 
-The Query Cookbook tags contain two fields: 1) `top_queries`: the SQL from the most-frequently run queries that refer to the BigQuery entity; 2) `top_users`: the emails of the users or service accounts which run the frequent queries on the BigQuery entity.  
+For each BigQuery table or view, the Query Cookbook computes these tag fields: 
+1) `top_queries`: the SQL for the most frequent queries which reference the BigQuery entity in question. 
+2) `top_users`: the emails of the user or service accounts which have run the highest number of queries on the BigQuery entity in question.  
 
-The workflow creates one tag per BigQuery entity in Data Catalog that has been queried over the last 180 days. BigQuery entities with zero usage won't be tagged. 
+The workflow creates one tag per BigQuery entity in Data Catalog which has been queried over the last 180 days. BigQuery entities with zero usage will not be tagged. 
 
 ### Dependencies
 
-In order to implement this workflow, you must have a running instance of Tag Engine. Moreover, Tag Engine must be running on version 1.0.5 or later. 
+In order to implement this workflow, you must have a running instance of Tag Engine. Moreover, your instance must be running on Tag Engine version 1.0.5 or higher. 
 
 If you are new to Tag Engine, start with [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog). You can follow [this README](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/README.md) to deploy Tag Engine on Google Cloud Platform. 
 
@@ -66,8 +68,8 @@ For more details on the `INFORMATION_SCHEMA.JOBS` view, refer to the [product do
 #### Step 3: Create the BigQuery cloud resource connection 
 
 ```
-bq mk --connection --display_name='cloud function connection' --connection_type=CLOUD_RESOURCE --project_id=[PROJECT] --location=[REGION] \
-	cloud-function-connection
+bq mk --connection --display_name='cloud function connection' --connection_type=CLOUD_RESOURCE \
+	--project_id=[PROJECT] --location=[REGION] cloud-function-connection
 
 bq show --location=[REGION] --connection cloud-function-connection
 ```
@@ -81,18 +83,18 @@ For more details on creating cloud resource connections, refer to the [product d
 
 #### Step 4: Create the Cloud Functions
 
-Create the `top_queries` cloud function: 
+Create the `top_queries` function in Cloud Functions: 
 
 ```
 cd datacatalog-tag-engine/examples/query_cookbook/top_queries
 
 gcloud functions deploy top_queries \
     --region=[REGION] \
-	--source=archive.zip \
+    --source=archive.zip \
     --entry-point=event_handler \
     --runtime=python310 \
     --trigger-http \
-	--service-account=$TAG_ENGINE_SA 
+    --service-account=$TAG_ENGINE_SA 
 ```
 
 Create the `top_users` cloud function: 
@@ -105,7 +107,7 @@ gcloud functions deploy top_users \
     --entry-point=event_handler \
     --runtime=python310 \
     --trigger-http \
-	--service-account=[TAG_ENGINE_SA] 
+    --service-account=[TAG_ENGINE_SA] 
 ```
 
 In the above commands, replace [REGION] and [TAG_ENGINE_SA] with your BigQuery region and 
@@ -156,25 +158,35 @@ When passed in to the `top_users` function, it excludes any top users that match
 
 #### Step 6: Test the remote BigQuery functions
 
-Test both functions on a table that has been queried over the past 180 days. 
+Test both functions on a table that has been queried frequently over the past 180 days. 
 
 ```
-select `[PROJECT]`.remote_functions.top_queries('[PROJECT]', '[DATASET]', '[TABLE]', '[REGION]', 5, NULL);
-```
+select `[PROJECT]`.remote_functions.top_queries('[PROJECT]', '[DATASET]', '[TABLE]', '[REGION]', 6, NULL);
 
-```
-select `[PROJECT]`.remote_functions.top_users('[PROJECT]', '[DATASET]', '[TABLE]', '[REGION]', 5, NULL);
+select `[PROJECT]`.remote_functions.top_users('[PROJECT]', '[DATASET]', '[TABLE]', '[REGION]', 6, NULL);
 ```
 
 #### Step 7: Create the Tag Engine config
 
 ```
 cd datacatalog-tag-engine/examples/query_cookbook
+```
 
+Open `query_cookbook_config.json` and update the `"template_project"` and `"template_region"` fields to 
+the project and region in which you created the Query Cookbook tag template. 
+
+Replace the references to `tag-engine-develop` in the query expressions with your BigQuery project. 
+Replace the `"included_tables_uris"` value with the paths to your BigQuery datasets. 
+
+Create the Tag Engine dynamic tag config with your edited json file:
+
+```
 curl -X POST [TAG_ENGINE_URL]/dynamic_table_tags -d @query_cookbook_config.json
 ``` 
 
-The above command creates the Tag Engine config as well as creates and populates the Query Cookbook tags. 
+The above command creates and populates the Query Cookbook tags in Data Catalog. 
+The config also tells Tag Engine to update the tags every 24 hours using the `"refresh_mode"` field.  
+
 Wait a few minutes and open the Data Catalog UI to see the resulting tags. 
 
 
