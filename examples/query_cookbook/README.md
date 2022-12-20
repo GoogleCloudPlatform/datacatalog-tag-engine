@@ -1,23 +1,23 @@
 ## Query Cookbook Overview
 
-This folder contains a workflow that creates and populates the Query Cookbooks tags on all Data Catalog entities that represent BigQuery tables and views which have been queried over the past 180 days.  
+This folder contains a workflow that creates and populates the Query Cookbook tags on all Data Catalog entities representing BigQuery tables or views which have been recently queried.  
 
-For each BigQuery table or view, the Query Cookbook computes these tag fields: 
-1) `top_queries`: the SQL for the most frequent queries which reference the BigQuery entity in question. 
-2) `top_users`: the emails of the user or service accounts which have run the highest number of queries on the BigQuery entity in question.  
+For each BigQuery table or view, the Query Cookbook workflow computes these tag fields: 
+1) `top_queries`: the most frequent SQL queries which reference the BigQuery entity in question. 
+2) `top_users`: the user or service accounts with the highest number of queries on the BigQuery entity in question.  
 
-The workflow creates one tag per BigQuery entity in Data Catalog which has been queried over the last 180 days. BigQuery entities with zero usage will not be tagged. 
+The workflow creates one tag per BigQuery entity in Data Catalog which has been queried over the last 180 days. BigQuery entities which have not been referenced by any queries will not be tagged. 
 
 ### Dependencies
 
-In order to implement this workflow, you must have a running instance of Tag Engine. Moreover, your instance must be running on Tag Engine version 1.0.5 or higher. 
+In order to implement this workflow, you must have a running instance of Tag Engine. Moreover, your instance must be running Tag Engine version 1.0.5 or higher. You can check your version by opening the Tag Engine UI or by calling the `[TAG_ENGINE_URL]/version` endpoint. 
 
 If you are new to Tag Engine, start with [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog). You can follow [this README](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/README.md) to deploy Tag Engine on Google Cloud Platform. 
 
 
 ### Deployment Procedure
 
-The following procedure assumes that you have a running instance of Tag Engine. 
+The following procedure assumes that you have deployed Tag Engine in your Google Cloud project. 
 
 
 #### Step 1: Create the tag template
@@ -166,6 +166,9 @@ select `[PROJECT]`.remote_functions.top_queries('[PROJECT]', '[DATASET]', '[TABL
 select `[PROJECT]`.remote_functions.top_users('[PROJECT]', '[DATASET]', '[TABLE]', '[REGION]', 6, NULL);
 ```
 
+If you do not see the expected output, consult the Cloud Function logs for errors.
+
+
 #### Step 7: Create the Tag Engine config
 
 ```
@@ -189,10 +192,7 @@ The config also tells Tag Engine to update the tags every 24 hours using the `"r
 
 Wait a few minutes and open the Data Catalog UI to see the resulting tags. 
 
+If you don't see the expected out, consult the App Engine logs for errors:<br>
 
-### Troubleshooting:
-
-* Consult the Cloud Function logs for details if you do not see the expected output.<br> 
-* Consult the App Engine logs if you encounter any errors while running Tag Engine:<br>
 `gcloud app logs tail -s default`
 
