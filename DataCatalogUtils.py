@@ -1103,7 +1103,7 @@ class DataCatalogUtils:
                     tag.fields['sensitive_type'] = enum_field
                     field['field_value'] = classification_result
            
-            tag.column = infotype_field
+            tag.column = infotype_field # DLP has a bug and sometimes the infotype field does not equal to the column name in the table
             print('tag.column: ', infotype_field)
             
             # check if a tag already exists on this column
@@ -1166,25 +1166,28 @@ class DataCatalogUtils:
                             msg = 'Error occurred during tag create after sleep: ' + str(e)
                             print(msg)
                             store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'SENSITIVE_TAG', msg)
+                    else:
+                        # could not create the tag, could be due to a column mismatch
+                        creation_status = constants.ERROR
                     
-            if create_policy_tags and classification_result != 'Public_Information':
+            if creation_status == constants.SUCCESS and create_policy_tags and classification_result != 'Public_Information':
                 # add the column name and policy tag name to a list
                 for policy_tag_name, policy_tag_category in policy_tag_names:
                     if policy_tag_category == classification_result:
                         policy_tag_requests.append((infotype_field, policy_tag_name))
                     
                             
-            if tag_history:
+            if creation_status == constants.SUCCESS and tag_history:
                 bqu = bq.BigQueryUtils()
                 template_fields = self.get_template()
                 bqu.copy_tag(self.template_id, template_fields, uri, infotype_field, fields)
         
-            if tag_stream:
+            if creation_status == constants.SUCCESS and tag_stream:
                 psu = ps.PubSubUtils()
                 psu.copy_tag(self.template_id, uri, infotype_field, fields)
         
                 
-        # Once we have created the regular tags, we create/update the policy tags
+        # Once we have created the regular tags, we can create/update the policy tags
         if create_policy_tags and len(policy_tag_requests) > 0:
             table_id = uri.replace('/datasets/', '.').replace('/tables/', '.')
             self.apply_policy_tags(table_id, policy_tag_requests)

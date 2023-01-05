@@ -135,7 +135,7 @@ class BigQueryUtils:
             asset_name = tagged_table
             
         asset_name = asset_name.replace("datasets", "dataset").replace("tables", "table")
-        #print('asset_name: ', asset_name)
+        print('asset_name: ', asset_name)
                 
         success = self.insert_history_row(table_id, asset_name, tagged_values)  
         
@@ -321,6 +321,11 @@ class BigQueryUtils:
     # writes tag history record
     def insert_history_row(self, table_id, asset_name, tagged_values):
         
+        print('enter insert_history_row')
+        print('table_id:', table_id)
+        print('asset_name:', asset_name)
+        print('tagged_values:', tagged_values)
+        
         success = True
         
         row = {'event_time': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f') + ' UTC', 'asset_name': asset_name}
@@ -344,8 +349,10 @@ class BigQueryUtils:
         row_to_insert = [row,]
 
         try:
-            self.client.insert_rows_json(table_id, row_to_insert) 
-            print('Inserted record into tag history table') 
+            status = self.client.insert_rows_json(table_id, row_to_insert) 
+            
+            if len(status) > 0: 
+                print('Inserted row into tag history table. Return status: ', status) 
         
         except Exception as e:
             print('Error while writing to tag history table:', e)
@@ -354,19 +361,24 @@ class BigQueryUtils:
                 print('Tag history table not ready to be written to. Sleeping for 5 seconds.')
                 time.sleep(5)
                 try:
-                    errors = self.client.insert_rows_json(table_id, row_to_insert) 
+                    status = self.client.insert_rows_json(table_id, row_to_insert) 
+                    print('Retrying insert row into tag history table. Return status: ', status) 
                 except Exception as e:
-                     print('Error occurred while writing to tag history table: {}'.format(e))
-                     success = False
+                    print('Error occurred while writing to tag history table: {}'.format(e))
+                    success = False
         
         return success 
     
 if __name__ == '__main__':
     
     bqu = BigQueryUtils()
-    bqu.create_report_tables('tag-engine-develop', 'reporting')
+    #bqu.create_report_tables('tag-engine-develop', 'reporting')
     #bqu.truncate_report_tables('tag-engine-develop', 'reporting')
     
+    table_id = 'sdw-data-gov-b1927e-dd69.tag_history_logs.data_sensitivity'
+    asset_name = 'sdw-conf-b1927e-bcc1/dataset/sales/table/control14_test1/column/postalCode'
+    tagged_values = [{'field_type': 'bool', 'field_id': 'sensitive_field', 'is_required': True, 'field_value': True}, {'is_required': False, 'field_id': 'sensitive_type', 'field_type': 'enum', 'field_value': 'Personal_Identifiable_Information'}] 
+    bqu.insert_history_row(table_id, asset_name, tagged_values)
         
         
         
