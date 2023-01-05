@@ -11,7 +11,7 @@
 	   <div class="header">
 	   <h2>Update Sensitive Column Config using {{ template_id }}</h2>
  	   
- 	  	<h5>Make changes to your sensitive column config below. The fields <i>sensitive_field: BOOL</i> and <i>sensitive_type: ENUM</i> must be in the tag and are they are not editable. The remaining fields can be updated. </h5>
+ 	  	<h5>Make changes to your sensitive column config below. Note that the template fields <i>sensitive_field: BOOL</i> and <i>sensitive_type: ENUM</i> must be selected as they are required for this config.</h5>
  	
 	   </div>
 	  
@@ -25,19 +25,39 @@
 	   
          <form method="post" action="/process_sensitive_column_config">
 		    <table>
-			   {% for field in fields %}
-		        <tr>
-				<td>
-				{% if field['is_required'] == True %}
-				<span style="color:red;">*</span>
-				{% else: %}
-				&nbsp;
-				{% endif %}
-				{{ field['field_id'] }} (type {{ field['field_type'] }})
-				</td>
-			   </tr>
-			   {% endfor %}
-			   </table>
+			
+		   {% for field in fields %}
+	        <tr>
+	          <td>   
+			   {% set ns = namespace(found=false) %}
+			   
+			   {% for current_field in config['fields']  %}
+			      {% if current_field['field_id'] == field['field_id'] %}
+				      
+					 {% set ns.found = true %}
+                           
+					 <input type="checkbox" class="form-control move-left" name="selected" value="{{ field['field_id'] }}" checked>
+				 {% endif %}
+			    {% endfor %}
+			    
+			    {% if ns.found == false %}
+			       <input type="checkbox" class="form-control move-left" name="selected" value="{{ field['field_id'] }}">
+			    {% endif %}
+			    
+			    
+			</td>
+			<td>
+			{% if field['is_required'] == True %}
+			<span style="color:red;">*</span>
+			{% else: %}
+			&nbsp;
+			{% endif %}
+			{{ field['field_id'] }} (type {{ field['field_type'] }}):
+			</td>
+		  </tr>
+		  {% endfor %}	
+			
+			</table>
 		    <p>&nbsp;</p>
 			
 

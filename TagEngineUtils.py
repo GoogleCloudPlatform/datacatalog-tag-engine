@@ -1094,7 +1094,7 @@ class TagEngineUtils:
             for doc in docs:
                 config = doc.to_dict()
                 
-                if config['config_status'] == 'PENDING' or config['config_status'] == 'RUNNING':
+                if config['config_status'] == 'PENDING' or config['config_status'] == 'RUNNING' or 'PROCESSING:' in config['config_status']:
                     pending_running_configs.append(config)
                 else:
                     active_configs.append(config)

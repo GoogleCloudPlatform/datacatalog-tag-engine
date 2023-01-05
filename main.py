@@ -568,6 +568,9 @@ def create_export_option():
 
 @app.route('/update_config', methods=['POST'])
 def update_config():
+    
+    print('enter update_config')
+    
     template_id = request.form['template_id']
     template_project = request.form['template_project']
     template_region = request.form['template_region']
@@ -591,7 +594,7 @@ def update_config():
     
     dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
     template_fields = dcu.get_template()
-    #print("fields: " + str(template_fields))
+    print('template_fields:', template_fields)
     
     enabled, settings = teu.read_tag_history_settings()
     
@@ -2963,7 +2966,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 1.0.6"
+    return "Welcome to Tag Engine version 1.0.7"
 #[END ping]
     
 ####################### TEST METHOD ####################################  
