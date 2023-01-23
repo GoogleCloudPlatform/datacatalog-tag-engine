@@ -1855,7 +1855,7 @@ class DataCatalogUtils:
                 
                 # we have a datetime or timestamp 
                 if type(field_value) == datetime:
-                    timestamp = field_value.isoformat()
+                    timestamp = pytz.utc.localize(field_value)
                 # we have a date
                 elif type(field_value) == date:
                     dt = datetime.combine(field_value, datetime.min.time())
@@ -1883,7 +1883,7 @@ class DataCatalogUtils:
                     timestamp = Timestamp()
                     timestamp.FromJsonString(field_value[0])
                 
-                #print('timestamp:', timestamp)
+                print('timestamp:', timestamp)
                 datetime_field = datacatalog.TagField()
                 datetime_field.timestamp_value = timestamp
                 tag.fields[field_id] = datetime_field
@@ -2128,18 +2128,16 @@ class DataCatalogUtils:
         
 if __name__ == '__main__':
     
-    template_id='correctness_template'
-    template_project='sdw-data-gov-b1927e-dd69'
+    template_id='data_quality'
+    template_project='tag-engine-develop'
     template_region='us-central1'
     
     dcu = DataCatalogUtils(template_id, template_project, template_region)
     
-    fields = [{'display_name': 'column name', 'field_id': 'column_name', 'query_expression': "select distinct column_id from sdw-data-gov-b1927e-dd69.dq_crm.dq_summary where dimension = 'CORRECTNESS' and column_id = '$column' and ends_with(table_id, '$table')", 'field_type': 'string', 'order': 4, 'is_required': True}, {'display_name': 'metric', 'field_id': 'metric', 'field_type': 'string', 'query_expression': "select rule_id from sdw-data-gov-b1927e-dd69.dq_crm.dq_summary where dimension = 'CORRECTNESS' and column_id = '$column' and ends_with(table_id, '$table') order by last_modified desc limit 1", 'order': 3, 'is_required': False}, {'display_name': 'rows_validated', 'field_id': 'rows_validated', 'query_expression': "select rows_validated from sdw-data-gov-b1927e-dd69.dq_crm.dq_summary where dimension = 'CORRECTNESS' and column_id = '$column' and ends_with(table_id, '$table') order by last_modified desc limit 1", 'field_type': 'double', 'order': 2, 'is_required': False}, {'display_name': 'success_percentage', 'field_id': 'success_percentage', 'query_expression': "select success_percentage from sdw-data-gov-b1927e-dd69.dq_crm.dq_summary where dimension = 'CORRECTNESS' and column_id = '$column' and ends_with(table_id, '$table') order by last_modified desc limit 1", 'is_required': False, 'order': 1, 'field_type': 'double'}, {'display_name': 'most recent run', 'field_id': 'most_recent_run', 'query_expression': "select last_modified from sdw-data-gov-b1927e-dd69.dq_crm.dq_summary where dimension = 'CORRECTNESS' and column_id = '$column' and ends_with(table_id, '$table') order by last_modified desc limit 1", 'field_type': 'datetime', 'order': 0, 'is_required': False}]
-    columns_query = "select distinct column_id from sdw-data-gov-b1927e-dd69.dq_crm.dq_summary where dimension = 'CORRECTNESS'"
-    uri = 'sdw-conf-b1927e-bcc1/datasets/crm/tables/NewCust'
-    config_uuid = '6bd8370c7b0911ed8c74ffd08ee6545d'
-    template_uuid = '12d12f8c7afb11ed890a5354bcc8b2d9'
+    fields = [{'query_expression': 'select current_datetime', 'field_id': 'data_quality_timestamp', 'field_type': 'datetime', 'is_required': False}]
+    uri = 'tag-engine-develop/datasets/data_source/tables/usa'
+    config_uuid = '825be2bc9b2a11ed8c00cf85f89529bc'
+    template_uuid = 'f50c4e1a9b2911edb3d337a48af4f3ad'
     tag_history = False
     tag_stream = False
-    dcu.apply_dynamic_column_config(fields, columns_query, uri, config_uuid, template_uuid, tag_history, tag_stream)
-    
+    dcu.apply_dynamic_table_config(fields, uri, config_uuid, template_uuid, tag_history, tag_stream)
