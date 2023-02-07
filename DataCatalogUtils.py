@@ -1302,19 +1302,53 @@ class DataCatalogUtils:
                     continue
                     
                 tagged_field = tag.fields[field_id]
-  
-                if tagged_field.bool_value != None:
-                    field_value = str(tagged_field.bool_value)
-                if tagged_field.double_value != None:
-                    field_value = str(tagged_field.double_value)
-                if tagged_field.string_value != None:
-                    field_value = tagged_field.string_value
-                if tagged_field.enum_value != None:
-                    field_value = str(tagged_field.enum_value.display_name)
-                if tagged_field.timestamp_value != None:
-                    field_value = str(tagged_field.timestamp_value)
-                if tagged_field.richtext_value != None:
-                    field_value = str(tagged_field.richtext_value)
+                field_value = None
+                
+                if tagged_field.bool_value:
+                    field_value_bool = str(tagged_field.bool_value)
+                else:
+                    field_value_bool = None
+                    
+                if tagged_field.double_value:
+                    field_value_double = tagged_field.double_value
+                else:
+                    field_value_double = None
+                    
+                if tagged_field.string_value:
+                    field_value_str = tagged_field.string_value
+                else:
+                    field_value_str = None
+                
+                if tagged_field.enum_value:
+                    field_value_enum = tagged_field.enum_value.display_name
+                else:
+                    field_value_enum = None
+                    
+                if tagged_field.timestamp_value:
+                    field_value_timestamp = tagged_field.timestamp_value
+                else:
+                    field_value_timestamp = None
+                    
+                if tagged_field.richtext_value:
+                    field_value_richtext = tagged_field.richtext_value
+                else:
+                    field_value_richtext = None
+                
+
+                if field_value_bool:
+                    field_value = str(field_value_bool)
+                if field_value_double:
+                    field_value = str(field_value_double)
+                if field_value_str:
+                    field_value = str(field_value_str)
+                if field_value_enum:
+                    field_value = str(field_value_enum)
+                if field_value_timestamp:
+                    field_value = str(field_value_timestamp)
+                if field_value_richtext:
+                    field_value = str(field_value_richtext).replace('<br>', ', ')
+                 
+                print('field_value:', field_value)
                     
                 # write record to BQ
                 success = bqu.insert_exported_record(target_table_id, tagged_project, tagged_dataset, tagged_table, tagged_column, self.template_id, field_id, field_value)
@@ -2140,7 +2174,7 @@ if __name__ == '__main__':
     target_project = 'sdw-data-gov-b1927e-dd69'
     target_dataset = 'tag_exports'
     target_region = 'us-central1'
-    uri = 'sdw-conf-b1927e-bcc1/datasets/finwire/tables/FINWIRE2001Q1_FIN'
+    uri = 'sdw-conf-b1927e-bcc1/datasets/crm/tables/AddAcct'
     
     dcu = DataCatalogUtils()
     dcu.apply_export_config(config_uuid, target_project, target_dataset, target_region, uri)
