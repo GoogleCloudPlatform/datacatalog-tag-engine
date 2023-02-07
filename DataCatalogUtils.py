@@ -1237,6 +1237,10 @@ class DataCatalogUtils:
     def apply_export_config(self, config_uuid, target_project, target_dataset, target_region, uri):
         
         print('** enter apply_export_config **')
+        print('config_uuid:', config_uuid)
+        print('target_project:', target_project)
+        print('target_dataset:', target_dataset)
+        print('target_region:', target_region)
         print('uri:', uri)
         
         export_status = constants.SUCCESS
@@ -1298,18 +1302,18 @@ class DataCatalogUtils:
                     continue
                     
                 tagged_field = tag.fields[field_id]
-                    
-                if tagged_field.bool_value:
+  
+                if tagged_field.bool_value != None:
                     field_value = str(tagged_field.bool_value)
-                if tagged_field.double_value:
+                if tagged_field.double_value != None:
                     field_value = str(tagged_field.double_value)
-                if tagged_field.string_value:
+                if tagged_field.string_value != None:
                     field_value = tagged_field.string_value
-                if tagged_field.enum_value:
+                if tagged_field.enum_value != None:
                     field_value = str(tagged_field.enum_value.display_name)
-                if tagged_field.timestamp_value:
+                if tagged_field.timestamp_value != None:
                     field_value = str(tagged_field.timestamp_value)
-                if tagged_field.richtext_value:
+                if tagged_field.richtext_value != None:
                     field_value = str(tagged_field.richtext_value)
                     
                 # write record to BQ
@@ -2128,16 +2132,15 @@ class DataCatalogUtils:
         
 if __name__ == '__main__':
     
-    template_id='data_quality'
-    template_project='tag-engine-develop'
-    template_region='us-central1'
+    #template_id='data_quality'
+    #template_project='tag-engine-develop'
+    #template_region='us-central1'
     
-    dcu = DataCatalogUtils(template_id, template_project, template_region)
+    config_uuid = '7619fcaaa66f11ed83adc50169b5642d'
+    target_project = 'sdw-data-gov-b1927e-dd69'
+    target_dataset = 'tag_exports'
+    target_region = 'us-central1'
+    uri = 'sdw-conf-b1927e-bcc1/datasets/finwire/tables/FINWIRE2001Q1_FIN'
     
-    fields = [{'query_expression': 'select current_datetime', 'field_id': 'data_quality_timestamp', 'field_type': 'datetime', 'is_required': False}]
-    uri = 'tag-engine-develop/datasets/data_source/tables/usa'
-    config_uuid = '825be2bc9b2a11ed8c00cf85f89529bc'
-    template_uuid = 'f50c4e1a9b2911edb3d337a48af4f3ad'
-    tag_history = False
-    tag_stream = False
-    dcu.apply_dynamic_table_config(fields, uri, config_uuid, template_uuid, tag_history, tag_stream)
+    dcu = DataCatalogUtils()
+    dcu.apply_export_config(config_uuid, target_project, target_dataset, target_region, uri)
