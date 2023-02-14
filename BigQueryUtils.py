@@ -63,40 +63,32 @@ class BigQueryUtils:
         else:
             return False
     
-    # API method used by tag export function
-    def insert_exported_record(self, target_table_id, project, dataset, table, column, tag_template, tag_field, tag_value):    
+    # API method used by tag export function to insert records
+    def insert_exported_records(self, target_table_id, records):    
     
-        print("*** inside BigQueryUtils.insert_exported_record() ***")
+        print('*** insert_exported_records into', target_table_id)
         
         success = True
-        current_ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
-        
         
         if target_table_id.endswith('catalog_report_column_tags'):
             schema = self.get_report_column_schema()
-            rows_to_insert = [
-                {"project": project, "dataset": dataset, "table": table, "column": column, "tag_template": tag_template, "tag_field": tag_field, "tag_value": tag_value, "export_time": current_ts},
-            ]
-
+            rows_to_insert = records
+            
         elif target_table_id.endswith('catalog_report_table_tags'):
             schema = self.get_report_table_schema()
-            rows_to_insert = [
-                {"project": project, "dataset": dataset, "table": table, "tag_template": tag_template, "tag_field": tag_field, "tag_value": tag_value, "export_time": current_ts},
-            ]
+            rows_to_insert = records
         
         elif target_table_id.endswith('catalog_report_dataset_tags'):
             schema = self.get_report_dataset_schema()
-            rows_to_insert = [
-                {"project": project, "dataset": dataset, "tag_template": tag_template, "tag_field": tag_field, "tag_value": tag_value, "export_time": current_ts},
-            ]
-
-        
+            rows_to_insert = records
+            
         job_config = bigquery.LoadJobConfig(schema=schema, source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON)  
         table_ref = bigquery.table.TableReference.from_string(target_table_id)
 
         try:
             job = self.client.load_table_from_json(rows_to_insert, table_ref, job_config=job_config)
             print('Inserted record into reporting table')
+            print('job errors:', job.errors)
         
         except Exception as e:
             
