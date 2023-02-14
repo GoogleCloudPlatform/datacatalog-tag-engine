@@ -1243,6 +1243,10 @@ class DataCatalogUtils:
         print('target_region:', target_region)
         print('uri:', uri)
         
+        column_tag_records = []
+        table_tag_records = []
+        dataset_tag_records = []
+        
         export_status = constants.SUCCESS
         bqu = bq.BigQueryUtils(target_region)
         
@@ -1255,10 +1259,10 @@ class DataCatalogUtils:
         tagged_dataset = uri.split('/')[2]
         
         if '/tables/' in uri:
-            target_table_id = target_project + '.' + target_dataset + '.' + 'catalog_report_table_tags'
+            target_table_id = 'catalog_report_table_tags'
             tagged_table = uri.split('/')[4]
         else:
-            target_table_id = target_project + '.' + target_dataset + '.' + 'catalog_report_dataset_tags'
+            target_table_id = 'catalog_report_dataset_tags'
             tagged_table = None
             
         bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
@@ -1287,11 +1291,12 @@ class DataCatalogUtils:
             self.template_path = tag.template
             template_fields = self.get_template()
             
-            if tag.column and tag.column != '':
+            if tag.column and len(tag.column) > 1:
                 tagged_column = tag.column
-                target_table_id = target_project + '.' + target_dataset + '.' + 'catalog_report_column_tags'
+                target_table_id = 'catalog_report_column_tags'
             else:
                 tagged_column = None
+                target_table_id = 'catalog_report_table_tags'
             
             for template_field in template_fields:
     
@@ -1302,8 +1307,6 @@ class DataCatalogUtils:
                     continue
                     
                 tagged_field = tag.fields[field_id]
-                
-                print('tagged_field:', tagged_field)
                 tagged_field_str = str(tagged_field)
                 tagged_field_split = tagged_field_str.split('\n')
                 #print('tagged_field_split:', tagged_field_split)
@@ -1314,7 +1317,7 @@ class DataCatalogUtils:
                     if '_value:' in split:
                         start_index = split.index(':', 0) + 1
                         #print('start_index:', start_index)
-                        field_value = split[start_index:].strip().replace('"', '').replace('<br>', ', ')
+                        field_value = split[start_index:].strip().replace('"', '').replace('<br>', ',')
                         print('extracted field_value:', field_value)
                         break
                     elif 'enum_value' in split:
@@ -1324,13 +1327,31 @@ class DataCatalogUtils:
                     
                     split_index += 1                    
                     
-                # write record to BQ
-                success = bqu.insert_exported_record(target_table_id, tagged_project, tagged_dataset, tagged_table, tagged_column, self.template_id, field_id, field_value)
+                # format record to be written
+                current_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
                 
-                if success == False:
-                    print('Error occurred while writing to BigQuery report table.')
-                    export_status = constants.ERROR
+                if target_table_id in 'catalog_report_column_tags':
+                    column_tag_records.append({"project": tagged_project, "dataset": tagged_dataset, "table": tagged_table, "column": tagged_column, "tag_template": self.template_id, "tag_field": field_id, "tag_value": field_value, "export_time": current_ts})
+                
+                elif target_table_id in 'catalog_report_table_tags':
+                    table_tag_records.append({"project": tagged_project, "dataset": tagged_dataset, "table": tagged_table, "tag_template": self.template_id, "tag_field": field_id, "tag_value": field_value, "export_time": current_ts})
+                
+                elif target_table_id in 'catalog_report_dataset_tags':
+                    dataset_tag_records.append({"project": tagged_project, "dataset": tagged_dataset, "tag_template": self.template_id, "tag_field": field_id, "tag_value": field_value, "export_time": current_ts})
+                      
+        # write exported records to BQ
+        if len(dataset_tag_records) > 0:
+            target_table_id = target_project + '.' + target_dataset + '.catalog_report_dataset_tags'
+            success = bqu.insert_exported_records(target_table_id, dataset_tag_records)
         
+        if len(table_tag_records) > 0:
+            target_table_id = target_project + '.' + target_dataset + '.catalog_report_table_tags'
+            success = bqu.insert_exported_records(target_table_id, table_tag_records)
+                    
+        if len(column_tag_records) > 0:
+            target_table_id = target_project + '.' + target_dataset + '.catalog_report_column_tags'
+            success = bqu.insert_exported_records(target_table_id, column_tag_records)
+                     
         return export_status
         
             
