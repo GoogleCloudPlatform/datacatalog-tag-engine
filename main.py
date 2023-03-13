@@ -2966,7 +2966,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 1.0.8"
+    return "Welcome to Tag Engine version 1.0.9"
 #[END ping]
     
 ####################### TEST METHOD ####################################  
@@ -2985,4 +2985,4 @@ def server_error(e):
 
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
