@@ -37,8 +37,12 @@ app = Flask(__name__)
 teu = te.TagEngineUtils()
 
 # handles create requests from API and on-demand update requests from API (i.e. config contains refresh_mode = ON_DEMAND) 
-jm = jobm.JobManager(config['DEFAULT']['TAG_ENGINE_PROJECT'], config['DEFAULT']['QUEUE_REGION'], config['DEFAULT']['INJECTOR_QUEUE'], "/_split_work")
-tm = taskm.TaskManager(config['DEFAULT']['TAG_ENGINE_PROJECT'], config['DEFAULT']['QUEUE_REGION'], config['DEFAULT']['WORK_QUEUE'], "/_run_task")
+jm = jobm.JobManager(config['DEFAULT']['TAG_ENGINE_PROJECT'], config['DEFAULT']['SERVICE_ACCOUNT'], \
+                     config['DEFAULT']['QUEUE_REGION'], config['DEFAULT']['INJECTOR_QUEUE'], \
+                     "https://tag-engine-eshsagj3ta-uc.a.run.app/_split_work")
+tm = taskm.TaskManager(config['DEFAULT']['TAG_ENGINE_PROJECT'], config['DEFAULT']['SERVICE_ACCOUNT'], \
+                    config['DEFAULT']['QUEUE_REGION'], config['DEFAULT']['WORK_QUEUE'], \
+                    "https://tag-engine-eshsagj3ta-uc.a.run.app/_run_task")
 
 ##################### UI METHODS #################
 

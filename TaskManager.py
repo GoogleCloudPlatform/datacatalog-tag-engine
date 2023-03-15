@@ -24,19 +24,21 @@ class TaskManager:
     project = App Engine project id (e.g. tag-engine-project)
     region = App Engine region (e.g. us-central1)
     queue_name = Cloud Task queue (e.g. tag-engine-queue)
-    app_engine_uri = task handler uri set inside the 
+    task_handler_url = task handler uri set inside the 
                      App Engine project hosting the cloud task queue
     """
     def __init__(self,
                 tag_engine_project,
+                service_account,
                 queue_region,
                 queue_name, 
-                app_engine_uri):
+                task_handler_url):
 
         self.tag_engine_project = tag_engine_project
+        self.service_account = service_account
         self.queue_region = queue_region
         self.queue_name = queue_name
-        self.app_engine_uri = app_engine_uri
+        self.task_handler_url = task_handler_url
 
         self.db = firestore.Client()
         self.tasks_per_shard = 1000
@@ -239,18 +241,19 @@ class TaskManager:
         
         task = {
             'name': parent + '/tasks/' + task_id,
-            'app_engine_http_request': {  
+            'http_request': {  
                 'http_method':  tasks_v2.HttpMethod.POST,
-                'relative_uri': self.app_engine_uri
+                'url': self.task_handler_url,
+                'oidc_token': {'service_account_email': self.service_account}
             }
         }
         
-        task['app_engine_http_request']['headers'] = {'Content-type': 'application/json'}
+        task['http_request']['headers'] = {'Content-type': 'application/json'}
         payload = {'job_uuid': job_uuid, 'shard_uuid': shard_uuid, 'task_uuid': task_uuid, 'config_uuid': config_uuid, 'config_type': config_type, 'uri': uri}
         #print('payload: ' + str(payload))
         
         payload_utf8 = json.dumps(payload).encode()
-        task['app_engine_http_request']['body'] = payload_utf8
+        task['http_request']['body'] = payload_utf8
         #print('task: ', task)
 
         try:
@@ -275,19 +278,20 @@ class TaskManager:
         
         task = {
             'name': parent + '/tasks/' + task_id,
-            'app_engine_http_request': {  
+            'http_request': {  
                 'http_method':  tasks_v2.HttpMethod.POST,
-                'relative_uri': self.app_engine_uri
+                'url': self.task_handler_url,
+                'oidc_token': {'service_account_email': self.service_account}
             }
         }
         
-        task['app_engine_http_request']['headers'] = {'Content-type': 'application/json'}
+        task['http_request']['headers'] = {'Content-type': 'application/json'}
         
         payload = {'job_uuid': job_uuid, 'shard_uuid': shard_uuid, 'task_uuid': task_uuid, 'config_uuid': config_uuid, \
                    'config_type': config_type, 'tag_extract': extract}
                 
         payload_utf8 = json.dumps(payload).encode()
-        task['app_engine_http_request']['body'] = payload_utf8
+        task['http_request']['body'] = payload_utf8
 
         #print('task: ', task)
 
