@@ -1,4 +1,4 @@
-# Copyright 2020-2022 Google, LLC.
+# Copyright 2020-2023 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,10 +13,18 @@
 # limitations under the License.
 
 from flask import Flask, render_template, request, redirect, url_for, jsonify, json
-import datetime, configparser
+import datetime, time, configparser, os
+
+import google.auth
+from google.auth import impersonated_credentials
+
 from google.cloud import firestore
-import DataCatalogUtils as dc
-import TagEngineUtils as te
+from google.cloud import bigquery
+from google.cloud import tasks_v2
+from google.protobuf import timestamp_pb2
+
+import DataCatalogController as controller
+import TagEngineStoreHandler as tesh
 import Resources as res
 import BackupFileParser as bfp
 import CsvParser as cp
@@ -26,30 +34,34 @@ import JobManager as jobm
 import TaskManager as taskm
 import BigQueryUtils as bq
 
-from google.cloud import tasks_v2
-from google.protobuf import timestamp_pb2
-import datetime, time
-
+app = Flask(__name__)
+store = tesh.TagEngineStoreHandler()
 config = configparser.ConfigParser()
 config.read("tagengine.ini")
 
-app = Flask(__name__)
-teu = te.TagEngineUtils()
+OAUTH_SCOPE = 'https://www.googleapis.com/auth/cloud-platform'
+CLOUD_RUN_SA = config['DEFAULT']['CLOUD_RUN_ACCOUNT'].strip()
+TAG_CREATOR_SA = config['DEFAULT']['TAG_CREATOR_ACCOUNT'].strip()
 
-# handles create requests from API and on-demand update requests from API (i.e. config contains refresh_mode = ON_DEMAND) 
-jm = jobm.JobManager(config['DEFAULT']['TAG_ENGINE_PROJECT'], config['DEFAULT']['SERVICE_ACCOUNT'], \
-                     config['DEFAULT']['QUEUE_REGION'], config['DEFAULT']['INJECTOR_QUEUE'], \
-                     "https://tag-engine-eshsagj3ta-uc.a.run.app/_split_work")
-tm = taskm.TaskManager(config['DEFAULT']['TAG_ENGINE_PROJECT'], config['DEFAULT']['SERVICE_ACCOUNT'], \
-                    config['DEFAULT']['QUEUE_REGION'], config['DEFAULT']['WORK_QUEUE'], \
-                    "https://tag-engine-eshsagj3ta-uc.a.run.app/_run_task")
+SPLIT_WORK_HANDLER = config['DEFAULT']['CLOUD_RUN_SERVICE_URL'] + '/_split_work'
+RUN_TASK_HANDLER = config['DEFAULT']['CLOUD_RUN_SERVICE_URL'] + '/_run_task'
+
+jm = jobm.JobManager(config['DEFAULT']['TAG_ENGINE_PROJECT'], \
+                     config['DEFAULT']['QUEUE_REGION'], \
+                     config['DEFAULT']['INJECTOR_QUEUE'], \
+                     SPLIT_WORK_HANDLER)
+                     
+tm = taskm.TaskManager(config['DEFAULT']['TAG_ENGINE_PROJECT'], \
+                     config['DEFAULT']['QUEUE_REGION'], \
+                     config['DEFAULT']['WORK_QUEUE'], \
+                     RUN_TASK_HANDLER)
 
 ##################### UI METHODS #################
 
 @app.route("/")
 def homepage():
     
-    exists, settings = teu.read_default_tag_template_settings()
+    exists, settings = store.read_default_tag_template_settings()
     
     if exists:
         template_id = settings['template_id']
@@ -72,7 +84,7 @@ def homepage():
 @app.route("/default_tag_template_settings<int:saved>", methods=["GET"])
 def default_tag_template_settings(saved):
     
-    exists, settings = teu.read_default_tag_template_settings()
+    exists, settings = store.read_default_tag_template_settings()
     
     if exists:
         template_id = settings['template_id']
@@ -96,7 +108,7 @@ def default_tag_template_settings(saved):
 @app.route("/coverage_report_settings<int:saved>")
 def coverage_report_settings(saved):
     
-    exists, settings = teu.read_coverage_report_settings()
+    exists, settings = store.read_coverage_report_settings()
     
     if exists:
         included_bigquery_projects = settings['included_bigquery_projects']
@@ -120,7 +132,7 @@ def coverage_report_settings(saved):
 @app.route("/tag_history_settings<int:saved>", methods=["GET"])
 def tag_history_settings(saved):
     
-    enabled, settings = teu.read_tag_history_settings()
+    enabled, settings = store.read_tag_history_settings()
     
     if enabled:
         enabled = settings['enabled']
@@ -146,7 +158,7 @@ def tag_history_settings(saved):
 @app.route("/tag_stream_settings<int:saved>", methods=["GET"])
 def tag_stream_settings(saved):
     
-    enabled, settings = teu.read_tag_stream_settings()
+    enabled, settings = store.read_tag_stream_settings()
     
     if enabled:
         enabled = settings['enabled']
@@ -182,7 +194,7 @@ def set_default_tag_template():
         template_region = None
     
     if template_id != None or template_project != None or template_region != None:
-        teu.write_default_tag_template_settings(template_id, template_project, template_region)
+        store.write_default_tag_template_settings(template_id, template_project, template_region)
         
     return default_tag_template_settings(1)
         
@@ -217,7 +229,7 @@ def set_tag_history():
         enabled = False
     
     if bigquery_project != None or bigquery_region != None or bigquery_dataset != None:
-        teu.write_tag_history_settings(enabled, bigquery_project, bigquery_region, bigquery_dataset)
+        store.write_tag_history_settings(enabled, bigquery_project, bigquery_region, bigquery_dataset)
         
         return tag_history_settings(1)
     else:
@@ -250,7 +262,7 @@ def set_tag_stream():
         enabled = False
     
     if pubsub_project != None or pubsub_topic != None:
-        teu.write_tag_stream_settings(enabled, pubsub_project, pubsub_topic)
+        store.write_tag_stream_settings(enabled, pubsub_project, pubsub_topic)
         
         return tag_stream_settings(1)
     else:
@@ -284,19 +296,19 @@ def set_coverage_report():
         excluded_bigquery_tables = None
     
     if included_bigquery_projects != None:
-        teu.write_coverage_report_settings(included_bigquery_projects, excluded_bigquery_datasets, excluded_bigquery_tables)
+        store.write_coverage_report_settings(included_bigquery_projects, excluded_bigquery_datasets, excluded_bigquery_tables)
         
     return coverage_report_settings(1)  
      
 @app.route("/coverage_report")
 def coverage_report():
     
-    summary_report, detailed_report = teu.generate_coverage_report()
+    summary_report, detailed_report = store.generate_coverage_report()
     
     print('summary_report: ' + str(summary_report))
     print('detailed_report: ' + str(detailed_report))
     
-    exists, settings = teu.read_coverage_report_settings()
+    exists, settings = store.read_coverage_report_settings()
     included_bigquery_projects = settings['included_bigquery_projects']
     
     return render_template(
@@ -313,7 +325,7 @@ def coverage_details(res):
     bigquery_project = res.split('.')[0]
     resource = res.split('.')[1]
     
-    configs = teu.read_configs_on_res(res)
+    configs = store.read_configs_on_res(res)
     
     return render_template(
         'view_tags_on_res.html',
@@ -329,8 +341,8 @@ def search_tag_template():
     template_project = request.form['template_project']
     template_region = request.form['template_region']
     
-    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
-    fields = dcu.get_template()
+    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    fields = dcc.get_template()
     
     #print("fields: " + str(fields))
     
@@ -351,8 +363,8 @@ def choose_action():
     template_project = request.args.get('template_project')
     template_region = request.args.get('template_region')
     
-    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
-    fields = dcu.get_template()
+    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    fields = dcc.get_template()
     
     #print("fields: " + str(fields))
     
@@ -378,13 +390,13 @@ def view_configs():
     print("template_project: " + str(template_project))
     print("template_region: " + str(template_region))
     
-    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
-    template_fields = dcu.get_template()
+    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    template_fields = dcc.get_template()
     
-    history_enabled, history_settings = teu.read_tag_history_settings()
-    stream_enabled, stream_settings = teu.read_tag_stream_settings()
+    history_enabled, history_settings = store.read_tag_history_settings()
+    stream_enabled, stream_settings = store.read_tag_stream_settings()
     
-    configs = teu.read_configs(template_id, template_project, template_region)
+    configs = store.read_configs(template_id, template_project, template_region)
     
     #print('configs: ', configs)
     
@@ -402,13 +414,13 @@ def view_remaining_configs(template_id, template_project, template_region):
     print("template_project: " + str(template_project))
     print("template_region: " + str(template_region))
     
-    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
-    template_fields = dcu.get_template()
+    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    template_fields = dcc.get_template()
     
-    history_enabled, history_settings = teu.read_tag_history_settings()
-    stream_enabled, stream_settings = teu.read_tag_stream_settings()
+    history_enabled, history_settings = store.read_tag_history_settings()
+    stream_enabled, stream_settings = store.read_tag_stream_settings()
     
-    configs = teu.read_configs(template_id, template_project, template_region)
+    configs = store.read_configs(template_id, template_project, template_region)
     
     #print('configs: ', configs)
     
@@ -425,7 +437,7 @@ def view_remaining_configs(template_id, template_project, template_region):
 @app.route('/view_export_configs', methods=['GET'])
 def view_export_configs():
     
-    configs = teu.read_export_configs()
+    configs = store.read_export_configs()
     
     print('configs: ', configs)
     
@@ -447,15 +459,15 @@ def display_configuration():
     print("template_region: " + str(template_region))
     print("action: " + str(action))
     
-    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
-    template_fields = dcu.get_template()
+    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    template_fields = dcc.get_template()
     
-    history_enabled, history_settings = teu.read_tag_history_settings()
-    stream_enabled, stream_settings = teu.read_tag_stream_settings()
+    history_enabled, history_settings = store.read_tag_history_settings()
+    stream_enabled, stream_settings = store.read_tag_stream_settings()
     
     if action == "View and Edit Configurations":
 
-        configs = teu.read_configs(template_id, template_project, template_region)
+        configs = store.read_configs(template_id, template_project, template_region)
         
         print('configs: ', configs)
         
@@ -590,17 +602,17 @@ def update_config():
     print('action:', action)
     
     if action == "Delete Config":
-        teu.delete_config(config_uuid, config_type)
+        store.delete_config(config_uuid, config_type)
         return view_remaining_configs(template_id, template_project, template_region)
     
-    config = teu.read_config(config_uuid, config_type)
+    config = store.read_config(config_uuid, config_type)
     print("config: " + str(config))
     
-    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
-    template_fields = dcu.get_template()
+    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    template_fields = dcc.get_template()
     print('template_fields:', template_fields)
     
-    enabled, settings = teu.read_tag_history_settings()
+    enabled, settings = store.read_tag_history_settings()
     
     if enabled:
         tag_history = 1
@@ -609,7 +621,7 @@ def update_config():
     
     print("tag_history: " + str(tag_history))
 
-    enabled, settings = teu.read_tag_stream_settings()
+    enabled, settings = store.read_tag_stream_settings()
     
     if enabled:
         tag_stream = 1
@@ -716,10 +728,10 @@ def update_export_config():
     print('config_uuid: ', config_uuid)
     
     if action == "Delete Config":
-        teu.delete_config(config_uuid, 'EXPORT_TAG')
+        store.delete_config(config_uuid, 'EXPORT_TAG')
         return view_export_configs()
     
-    config = teu.read_config(config_uuid, 'EXPORT_TAG', reformat=True)
+    config = store.read_config(config_uuid, 'EXPORT_TAG', reformat=True)
     print("config: " + str(config))
     
     return render_template(
@@ -742,8 +754,8 @@ def process_static_asset_config():
     print('included_assets_uris: ' + included_assets_uris)
     print('excluded_assets_uris: ' + excluded_assets_uris)
     
-    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
-    template = dcu.get_template()
+    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    template = dcc.get_template()
     
     if action == "Cancel Changes":
         
@@ -809,8 +821,8 @@ def process_static_asset_config():
             tag_stream_option = True
             tag_stream_enabled = "ON"            
         
-    template_uuid = teu.write_tag_template(template_id, template_project, template_region)
-    config_uuid, included_tables_uris_hash = teu.write_static_asset_config('PENDING', fields, included_assets_uris, excluded_assets_uris, template_uuid, refresh_mode, \
+    template_uuid = store.write_tag_template(template_id, template_project, template_region)
+    config_uuid, included_tables_uris_hash = store.write_static_asset_config('PENDING', fields, included_assets_uris, excluded_assets_uris, template_uuid, refresh_mode, \
                                                                     refresh_frequency, refresh_unit, tag_history_option, tag_stream_option)
     
     if isinstance(config_uuid, str):
@@ -855,8 +867,8 @@ def process_dynamic_table_config():
     #print('refresh_frequency: ' + refresh_frequency)
     #print('refresh_unit: ' + refresh_unit)
     
-    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
-    template = dcu.get_template()
+    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    template = dcc.get_template()
     
     if action == "Cancel Changes":
         
@@ -914,8 +926,8 @@ def process_dynamic_table_config():
             tag_stream_option = True
             tag_stream_enabled = "ON"
     
-    template_uuid = teu.write_tag_template(template_id, template_project, template_region)
-    config_uuid, included_tables_uris_hash = teu.write_dynamic_table_config('PENDING', fields, included_tables_uris, excluded_tables_uris, template_uuid,\
+    template_uuid = store.write_tag_template(template_id, template_project, template_region)
+    config_uuid, included_tables_uris_hash = store.write_dynamic_table_config('PENDING', fields, included_tables_uris, excluded_tables_uris, template_uuid,\
                                                                            refresh_mode, refresh_frequency, refresh_unit, \
                                                                            tag_history_option, tag_stream_option)
     if isinstance(config_uuid, str): 
@@ -963,8 +975,8 @@ def process_dynamic_column_config():
     refresh_unit = request.form['refresh_unit']
     action = request.form['action']
     
-    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
-    template = dcu.get_template()
+    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    template = dcc.get_template()
     
     if action == "Cancel Changes":
         
@@ -1022,8 +1034,8 @@ def process_dynamic_column_config():
             tag_stream_option = True
             tag_stream_enabled = "ON"
     
-    template_uuid = teu.write_tag_template(template_id, template_project, template_region)
-    config_uuid, included_tables_uris_hash = teu.write_dynamic_column_config('PENDING', fields, included_columns_query, included_tables_uris, excluded_tables_uris, template_uuid,\
+    template_uuid = store.write_tag_template(template_id, template_project, template_region)
+    config_uuid, included_tables_uris_hash = store.write_dynamic_column_config('PENDING', fields, included_columns_query, included_tables_uris, excluded_tables_uris, template_uuid,\
                                                                            refresh_mode, refresh_frequency, refresh_unit, \
                                                                            tag_history_option, tag_stream_option)
     if isinstance(config_uuid, str): 
@@ -1074,8 +1086,8 @@ def process_entry_config():
     #print('refresh_frequency: ' + refresh_frequency)
     #print('refresh_unit: ' + refresh_unit)
     
-    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
-    template = dcu.get_template()
+    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    template = dcc.get_template()
     
     if action == "Cancel Changes":
         
@@ -1131,8 +1143,8 @@ def process_entry_config():
             tag_stream_option = True
             tag_stream_enabled = "ON"
     
-    template_uuid = teu.write_tag_template(template_id, template_project, template_region)
-    config_uuid, included_assets_uris_hash = teu.write_entry_config('PENDING', fields, included_assets_uris, excluded_assets_uris, template_uuid,\
+    template_uuid = store.write_tag_template(template_id, template_project, template_region)
+    config_uuid, included_assets_uris_hash = store.write_entry_config('PENDING', fields, included_assets_uris, excluded_assets_uris, template_uuid,\
                                                              refresh_mode, refresh_frequency, refresh_unit, \
                                                              tag_history_option, tag_stream_option)
     if isinstance(config_uuid, str): 
@@ -1185,8 +1197,8 @@ def process_glossary_asset_config():
     #print('refresh_frequency: ' + refresh_frequency)
     #print('refresh_unit: ' + refresh_unit)
     
-    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
-    template = dcu.get_template()
+    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    template = dcc.get_template()
     
     if action == "Cancel Changes":
         
@@ -1242,9 +1254,9 @@ def process_glossary_asset_config():
             tag_stream_option = True
             tag_stream_enabled = "ON"
     
-    template_uuid = teu.write_tag_template(template_id, template_project, template_region)
+    template_uuid = store.write_tag_template(template_id, template_project, template_region)
 
-    config_uuid, included_assets_uris_hash = teu.write_glossary_asset_config('PENDING', fields, mapping_table, included_assets_uris, excluded_assets_uris, template_uuid,\
+    config_uuid, included_assets_uris_hash = store.write_glossary_asset_config('PENDING', fields, mapping_table, included_assets_uris, excluded_assets_uris, template_uuid,\
                                                              refresh_mode, refresh_frequency, refresh_unit, \
                                                              tag_history_option, tag_stream_option, overwrite)
     if isinstance(config_uuid, str): 
@@ -1310,8 +1322,8 @@ def process_sensitive_column_config():
     #print('refresh_frequency: ' + refresh_frequency)
     #print('refresh_unit: ' + refresh_unit)
     
-    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
-    template = dcu.get_template()
+    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    template = dcc.get_template()
     
     if action == "Cancel Changes":
         
@@ -1367,9 +1379,9 @@ def process_sensitive_column_config():
             tag_stream_option = True
             tag_stream_enabled = "ON"
     
-    template_uuid = teu.write_tag_template(template_id, template_project, template_region)
+    template_uuid = store.write_tag_template(template_id, template_project, template_region)
 
-    config_uuid, included_tables_uris_hash = teu.write_sensitive_column_config('PENDING', fields, dlp_dataset, infotype_selection_table, \
+    config_uuid, included_tables_uris_hash = store.write_sensitive_column_config('PENDING', fields, dlp_dataset, infotype_selection_table, \
                                                                                 infotype_classification_table,
                                                                                 included_tables_uris, excluded_tables_uris, \
                                                                                 create_policy_tags, taxonomy_id, \
@@ -1419,8 +1431,8 @@ def process_restore_config():
     template_region = request.form['template_region']
     action = request.form['action']
     
-    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
-    template = dcu.get_template()
+    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    template = dcc.get_template()
     
     if action == "Cancel Changes":
         
@@ -1444,7 +1456,7 @@ def process_restore_config():
     action = request.form['action']
     
     dcu = dc.DataCatalogUtils(target_template_id, target_template_project, target_template_region)
-    template = dcu.get_template()
+    template = dcc.get_template()
         
     tag_history_option = False
     tag_history_enabled = "OFF"
@@ -1466,12 +1478,12 @@ def process_restore_config():
             tag_stream_option = True
             tag_stream_enabled = "ON"            
         
-    source_template_uuid = teu.write_tag_template(source_template_id, source_template_project, source_template_region)
-    target_template_uuid = teu.write_tag_template(target_template_id, target_template_project, target_template_region)
+    source_template_uuid = store.write_tag_template(source_template_id, source_template_project, source_template_region)
+    target_template_uuid = store.write_tag_template(target_template_id, target_template_project, target_template_region)
     
     overwrite = True
     
-    config_uuid = teu.write_restore_config('PENDING', source_template_uuid, source_template_id, source_template_project, source_template_region, \
+    config_uuid = store.write_restore_config('PENDING', source_template_uuid, source_template_id, source_template_project, source_template_region, \
                                            target_template_uuid, target_template_id, target_template_project, target_template_region, \
                                            metadata_export_location, \
                                            tag_history_option, tag_stream_option, overwrite)                                                      
@@ -1515,8 +1527,8 @@ def process_import_config():
     
     action = request.form['action']
     
-    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
-    template = dcu.get_template()
+    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    template = dcc.get_template()
     
     if action == "Cancel Changes":
         
@@ -1547,11 +1559,11 @@ def process_import_config():
             tag_stream_option = True
             tag_stream_enabled = "ON"            
         
-    template_uuid = teu.write_tag_template(template_id, template_project, template_region)
+    template_uuid = store.write_tag_template(template_id, template_project, template_region)
   
     overwrite = True
     
-    config_uuid = teu.write_import_config('PENDING', template_uuid, template_id, template_project, template_region, \
+    config_uuid = store.write_import_config('PENDING', template_uuid, template_id, template_project, template_region, \
                                            metadata_import_location, \
                                            tag_history_option, tag_stream_option, overwrite)                                                      
 
@@ -1610,7 +1622,7 @@ def process_export_config():
         project_list.append(project.strip())
     print('project_list:', project_list)
         
-    config_uuid = teu.write_export_config('PENDING', project_list, source_folder, source_region, \
+    config_uuid = store.write_export_config('PENDING', project_list, source_folder, source_region, \
                                           target_project, target_dataset, target_region, write_option, \
                                           refresh_mode, refresh_frequency, refresh_unit)                                                      
 
@@ -1698,6 +1710,19 @@ def check_template_parameters(request_name, json_request):
     return valid_parameters, template_id, template_project, template_region
 
 
+def get_target_credentials():
+    
+    print('*** enter get_target_credentials ***')
+    
+    source_credentials, _ = google.auth.default()
+
+    target_credentials = impersonated_credentials.Credentials(source_credentials=source_credentials,
+        target_principal=TAG_CREATOR_SA,
+        target_scopes=OAUTH_SCOPE,
+        lifetime=1200) # lifetime is in seconds -> 20 minutes should be enough time
+    
+    return target_credentials
+
 ##################### API METHODS #################
 
 """
@@ -1734,11 +1759,11 @@ def dynamic_table_tags():
     #print('template_project: ' + template_project)
     #print('template_region: ' + template_region)
     
-    template_uuid = teu.write_tag_template(template_id, template_project, template_region)
+    template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
-    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
     included_fields = json['fields']
-    fields = dcu.get_template(included_fields=included_fields)
+    fields = dcc.get_template(included_fields=included_fields)
     
     if 'included_tables_uris' in json:
         included_tables_uris = json['included_tables_uris']
@@ -1764,13 +1789,13 @@ def dynamic_table_tags():
     else:
         tag_stream = None
     
-    config_uuid, included_tables_uris_hash = teu.write_dynamic_table_config('PENDING', fields, included_tables_uris, excluded_tables_uris, \
+    config_uuid, included_tables_uris_hash = store.write_dynamic_table_config('PENDING', fields, included_tables_uris, excluded_tables_uris, \
                                                                      template_uuid,\
                                                                      refresh_mode, refresh_frequency, refresh_unit, \
                                                                      tag_history, tag_stream)                                                      
 
     if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(config_uuid, 'DYNAMIC_TABLE_TAG')
+        job_uuid = jm.create_job(CLOUD_RUN_SA, config_uuid, 'DYNAMIC_TABLE_TAG')
     else:
         job_uuid = None
     
@@ -1811,11 +1836,14 @@ def dynamic_column_tags():
     #print('template_project: ' + template_project)
     #print('template_region: ' + template_region)
     
-    template_uuid = teu.write_tag_template(template_id, template_project, template_region)
+    template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
-    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
+    credentials = get_target_credentials()
+    print('credentials:', credentials)
+
+    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
     included_fields = json['fields']
-    fields = dcu.get_template(included_fields=included_fields)
+    fields = dcc.get_template(included_fields=included_fields)
 
     if 'included_columns_query' in json:
         included_columns_query = json['included_columns_query']
@@ -1848,14 +1876,14 @@ def dynamic_column_tags():
     else:
         tag_stream = None
     
-    config_uuid, included_tables_uris_hash = teu.write_dynamic_column_config('PENDING', fields, included_columns_query, \
+    config_uuid, included_tables_uris_hash = store.write_dynamic_column_config('PENDING', fields, included_columns_query, \
                                                                             included_tables_uris, excluded_tables_uris, \
                                                                             template_uuid,\
                                                                             refresh_mode, refresh_frequency, refresh_unit, \
                                                                             tag_history, tag_stream)                                                      
 
     if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(config_uuid, 'DYNAMIC_COLUMN_TAG')
+        job_uuid = jm.create_job(CLOUD_RUN_SA, config_uuid, 'DYNAMIC_COLUMN_TAG')
     else:
         job_uuid = None
     
@@ -1880,6 +1908,8 @@ Returns:
 """
 @app.route("/static_asset_tags", methods=['POST'])
 def static_asset_tags():
+    
+    print('*** enter static_asset_tags ***')
     json = request.get_json(force=True) 
     print('json: ' + str(json))
        
@@ -1892,16 +1922,19 @@ def static_asset_tags():
         }
         return jsonify(response), 400
      
-    #print('template_id: ' + template_id)
-    #print('template_project: ' + template_project)
-    #print('template_region: ' + template_region)
+    print('template_id: ' + template_id)
+    print('template_project: ' + template_project)
+    print('template_region: ' + template_region)
     
-    template_uuid = teu.write_tag_template(template_id, template_project, template_region)
+    template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
-    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
-    included_fields = json['fields']
-    fields = dcu.get_template(included_fields=included_fields)
-
+    credentials = get_target_credentials()
+    print('credentials:', credentials)
+    
+    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
+    fields = dcc.get_template(included_fields=json['fields'])
+    print('fields:', fields)
+    
     if 'included_assets_uris' in json:
         included_assets_uris = json['included_assets_uris']
     else:
@@ -1929,12 +1962,12 @@ def static_asset_tags():
     # since we are creating a new config, we are overwriting any previously created tags
     overwrite = True
     
-    config_uuid, included_assets_uris_hash = teu.write_static_asset_config('PENDING', fields, included_assets_uris, excluded_assets_uris, template_uuid,\
+    config_uuid, included_assets_uris_hash = store.write_static_asset_config('PENDING', fields, included_assets_uris, excluded_assets_uris, template_uuid,\
                                                             refresh_mode, refresh_frequency, refresh_unit, \
                                                             tag_history, tag_stream, overwrite)
      
     if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(config_uuid, 'STATIC_ASSET_TAG')
+        job_uuid = jm.create_job(CLOUD_RUN_SA, config_uuid, 'STATIC_ASSET_TAG')
     else:
         job_uuid = None
 
@@ -1975,11 +2008,10 @@ def entries():
     #print('template_project: ' + template_project)
     #print('template_region: ' + template_region)
     
-    template_uuid = teu.write_tag_template(template_id, template_project, template_region)
+    template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
-    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
-    included_fields = json['fields']
-    fields = dcu.get_template(included_fields=included_fields)
+    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    fields = dcc.get_template(included_fields=json['fields'])
 
     if 'included_assets_uris' in json:
         included_assets_uris = json['included_assets_uris']
@@ -2005,12 +2037,12 @@ def entries():
     else:
         tag_stream = None
     
-    config_uuid, included_assets_uris_hash = teu.write_entry_config('PENDING', fields, included_assets_uris, excluded_assets_uris, template_uuid,\
+    config_uuid, included_assets_uris_hash = store.write_entry_config('PENDING', fields, included_assets_uris, excluded_assets_uris, template_uuid,\
                                                              refresh_mode, refresh_frequency, refresh_unit, \
                                                              tag_history, tag_stream)                                                      
 
     if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(config_uuid, 'ENTRY')
+        job_uuid = jm.create_job(CLOUD_RUN_SA, config_uuid, 'ENTRY')
     else:
         job_uuid = None
     
@@ -2052,11 +2084,10 @@ def glossary_asset_tags():
     #print('template_project: ' + template_project)
     #print('template_region: ' + template_region)
     
-    template_uuid = teu.write_tag_template(template_id, template_project, template_region)
+    template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
-    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
-    included_fields = json['fields']
-    fields = dcu.get_template(included_fields=included_fields)
+    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    fields = dcc.get_template(included_fields=json['fields'])
     
     # validate mapping_table field
     if 'mapping_table' in json:
@@ -2092,12 +2123,12 @@ def glossary_asset_tags():
 
     overwrite = True
     
-    config_uuid, included_assets_uris_hash = teu.write_glossary_asset_config('PENDING', fields, mapping_table, included_assets_uris, excluded_assets_uris, template_uuid,\
+    config_uuid, included_assets_uris_hash = store.write_glossary_asset_config('PENDING', fields, mapping_table, included_assets_uris, excluded_assets_uris, template_uuid,\
                                                                              refresh_mode, refresh_frequency, refresh_unit, \
                                                                              tag_history, tag_stream, overwrite)                                                      
 
     if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(config_uuid, 'GLOSSARY_ASSET_TAG')
+        job_uuid = jm.create_job(CLOUD_RUN_SA, config_uuid, 'GLOSSARY_ASSET_TAG')
     else:
         job_uuid = None
     
@@ -2143,11 +2174,10 @@ def sensitive_column_tags():
     #print('template_project: ' + template_project)
     #print('template_region: ' + template_region)
     
-    template_uuid = teu.write_tag_template(template_id, template_project, template_region)
+    template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
-    dcu = dc.DataCatalogUtils(template_id, template_project, template_region)
-    included_fields = json['fields']
-    fields = dcu.get_template(included_fields=included_fields)
+    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    fields = dcc.get_template(included_fields=json['fields'])
 
     # validate dlp_dataset parameter
     if 'dlp_dataset' in json:
@@ -2215,7 +2245,7 @@ def sensitive_column_tags():
 
     overwrite = True
     
-    config_uuid, included_tables_uris_hash = teu.write_sensitive_column_config('PENDING', fields, dlp_dataset, infotype_selection_table, \
+    config_uuid, included_tables_uris_hash = store.write_sensitive_column_config('PENDING', fields, dlp_dataset, infotype_selection_table, \
                                                                                 infotype_classification_table, \
                                                                                 included_tables_uris, excluded_tables_uris, \
                                                                                 create_policy_tags, taxonomy_id, template_uuid, \
@@ -2223,7 +2253,7 @@ def sensitive_column_tags():
                                                                                 tag_history, tag_stream, overwrite)                                                      
 
     if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(config_uuid, 'SENSITIVE_COLUMN_TAG')
+        job_uuid = jm.create_job(CLOUD_RUN_SA, config_uuid, 'SENSITIVE_COLUMN_TAG')
     else:
         job_uuid = None
     
@@ -2299,8 +2329,8 @@ def restore_tags():
         resp = jsonify(success=False)
         return resp
 
-    source_template_uuid = teu.write_tag_template(source_template_id, source_template_project, source_template_region)
-    target_template_uuid = teu.write_tag_template(target_template_id, target_template_project, target_template_region)
+    source_template_uuid = store.write_tag_template(source_template_id, source_template_project, source_template_region)
+    target_template_uuid = store.write_tag_template(target_template_id, target_template_project, target_template_region)
     
     if 'tag_history' in json:
         tag_history = json['tag_history']
@@ -2314,13 +2344,13 @@ def restore_tags():
 
     overwrite = True
     
-    config_uuid = teu.write_restore_config('PENDING', source_template_uuid, source_template_id, source_template_project, source_template_region, \
+    config_uuid = store.write_restore_config('PENDING', source_template_uuid, source_template_id, source_template_project, source_template_region, \
                                            target_template_uuid, target_template_id, target_template_project, target_template_region, \
                                            metadata_export_location, \
                                            tag_history, tag_stream, overwrite)                                                      
 
     if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(config_uuid, 'RESTORE_TAG')
+        job_uuid = jm.create_job(CLOUD_RUN_SA, config_uuid, 'RESTORE_TAG')
     else:
         job_uuid = None
     
@@ -2345,7 +2375,7 @@ def import_tags():
     #print('template_project: ', template_project)
     #print('template_region: ', template_region)
     
-    template_uuid = teu.write_tag_template(template_id, template_project, template_region)
+    template_uuid = store.write_tag_template(template_id, template_project, template_region)
 
     if 'metadata_import_location' in json:
         metadata_export_location = json['metadata_import_location']
@@ -2368,11 +2398,11 @@ def import_tags():
 
     overwrite = True
     
-    config_uuid = teu.write_import_config('PENDING', template_uuid, template_id, template_project, template_region, \
+    config_uuid = store.write_import_config('PENDING', template_uuid, template_id, template_project, template_region, \
                                            metadata_import_location, tag_history, tag_stream, overwrite)                                                      
 
     if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(config_uuid, 'IMPORT_TAG')
+        job_uuid = jm.create_job(CLOUD_RUN_SA, config_uuid, 'IMPORT_TAG')
     else:
         job_uuid = None
     
@@ -2461,12 +2491,12 @@ def export_tags():
         resp = jsonify(success=False)
         return resp
         
-    config_uuid = teu.write_export_config('PENDING', source_projects, source_folder, source_region, \
+    config_uuid = store.write_export_config('PENDING', source_projects, source_folder, source_region, \
                                           target_project, target_dataset, target_region, write_option, \
                                           refresh_mode, refresh_frequency, refresh_unit)                                                      
 
     if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(config_uuid, 'EXPORT_TAG')
+        job_uuid = jm.create_job(CLOUD_RUN_SA, config_uuid, 'EXPORT_TAG')
     else:
         job_uuid = None
     
@@ -2533,7 +2563,7 @@ def copy_tags():
          return jsonify(response), 400
 
     dcu = dc.DataCatalogUtils()
-    success = dcu.copy_tags(source_project, source_dataset, source_table, target_project, target_dataset, target_table)                                                      
+    success = dcc.copy_tags(source_project, source_dataset, source_table, target_project, target_dataset, target_table)                                                      
     
     if success:
         response = {"status": "success"}
@@ -2574,8 +2604,8 @@ def update_tag_subset():
      }
          return jsonify(response), 400
 
-    dcu = dc.DataCatalogUtils()
-    success = dcu.update_tag_subset(template_id, template_project, template_region, entry_name, changed_fields)
+    dcu = dc.DataCatalogUtils(get_target_credentials())
+    success = dcc.update_tag_subset(template_id, template_project, template_region, entry_name, changed_fields)
 
     if success:
         response = {"status": "success"}
@@ -2603,7 +2633,7 @@ def ondemand_updates():
     template_project = json['template_project']
     template_region = json['template_region']
         
-    template_exists, template_uuid = teu.read_tag_template(template_id, template_project, template_region)
+    template_exists, template_uuid = store.read_tag_template(template_id, template_project, template_region)
     
     # validate request
     if not template_exists:
@@ -2613,19 +2643,19 @@ def ondemand_updates():
     
     if 'included_tables_uris' in json:
        included_tables_uris = json['included_tables_uris']
-       success, config = teu.lookup_config_by_included_tables_uris(template_uuid, included_tables_uris, None)
+       success, config = store.lookup_config_by_included_tables_uris(template_uuid, included_tables_uris, None)
           
     elif 'included_tables_uris_hash' in json:
         included_tables_uris_hash = json['included_tables_uris_hash']
-        success, config = teu.lookup_config_by_included_tables_uris(template_uuid, None, included_tables_uris_hash)
+        success, config = store.lookup_config_by_included_tables_uris(template_uuid, None, included_tables_uris_hash)
  
     elif 'included_assets_uris' in json:
        included_assets_uris = json['included_assets_uris']
-       success, config = teu.lookup_config_by_included_assets_uris(template_uuid, included_assets_uris, None)
+       success, config = store.lookup_config_by_included_assets_uris(template_uuid, included_assets_uris, None)
           
     elif 'included_assets_uris_hash' in json:
         included_assets_uris_hash = json['included_assets_uris_hash']
-        success, config = teu.lookup_config_by_included_assets_uris(template_uuid, None, included_assets_uris_hash)
+        success, config = store.lookup_config_by_included_assets_uris(template_uuid, None, included_assets_uris_hash)
     
     else:
         resp = jsonify(success=False, message="Request is missing one of these required fields: included_tables_uris, included_tables_uris_hash, included_assets_uris, or included_assets_uris_hash.")
@@ -2644,7 +2674,7 @@ def ondemand_updates():
         
     # config is valid, create the job
     if isinstance(config['config_uuid'], str): 
-        job_uuid = jm.create_job(config['config_uuid'], config['config_type'])
+        job_uuid = jm.create_job(CLOUD_RUN_SA, config['config_uuid'], config['config_type'])
     else:
         job_uuid = None
     
@@ -2703,16 +2733,16 @@ def scheduled_auto_updates():
         
         jobs = []
         
-        ready_configs = teu.read_ready_configs()
+        ready_configs = store.read_ready_configs()
         
         for config_uuid, config_type in ready_configs:
         
             print('ready config: ', config_uuid, ', ', config_type)
             
             if isinstance(config_uuid, str): 
-                teu.update_config_status(config_uuid, config_type, 'PENDING')
-                teu.increment_version_next_run(config_uuid, config_type)
-                job_uuid = jm.create_job(config_uuid, config_type)
+                store.update_config_status(config_uuid, config_type, 'PENDING')
+                store.increment_version_next_run(config_uuid, config_type)
+                job_uuid = jm.create_job(CLOUD_RUN_SA, config_uuid, config_type)
                 jobs.append(job_uuid)
 
         print('created jobs: ' + str(jobs))
@@ -2733,44 +2763,46 @@ def _split_work():
     print('*** enter _split_work ***')
     
     json = request.get_json(force=True)
-    #print('json: ', json)
+    print('json: ', json)
     
     job_uuid = json['job_uuid']
     config_uuid = json['config_uuid']
     config_type = json['config_type']
 
-    config = teu.read_config(config_uuid, config_type)
+    config = store.read_config(config_uuid, config_type)
     
     print('config: ', config)
     
     if config == {}:
        resp = jsonify(success=False)
        return resp 
+       
+    re = res.Resources(get_target_credentials()) 
     
     # dynamic table and dynamic column and sensitive column configs
     if 'included_tables_uris' in config:
-        uris = list(res.Resources.get_resources(config.get('included_tables_uris'), config.get('excluded_tables_uris', None)))
+        uris = list(re.get_resources(config.get('included_tables_uris'), config.get('excluded_tables_uris', None)))
         
         print('inside _split_work() uris: ', uris)
         
         jm.record_num_tasks(job_uuid, len(uris))
         jm.update_job_running(job_uuid) 
-        tm.create_config_uuid_tasks(job_uuid, config_uuid, config_type, uris)
+        tm.create_config_uuid_tasks(CLOUD_RUN_SA, job_uuid, config_uuid, config_type, uris)
     
     # static asset config and glossary asset config    
     if 'included_assets_uris' in config:
-        uris = list(res.Resources.get_resources(config.get('included_assets_uris'), config.get('excluded_assets_uris', None)))
+        uris = list(re.get_resources(config.get('included_assets_uris'), config.get('excluded_assets_uris', None)))
         
         print('inside _split_work() uris: ', uris)
         
         jm.record_num_tasks(job_uuid, len(uris))
         jm.update_job_running(job_uuid) 
-        tm.create_config_uuid_tasks(job_uuid, config_uuid, config_type, uris)
+        tm.create_config_uuid_tasks(CLOUD_RUN_SA, job_uuid, config_uuid, config_type, uris)
     
     # export tag config
     if config_type == 'EXPORT_TAG':
         
-        bqu = bq.BigQueryUtils(config['target_region'])
+        bqu = bq.BigQueryUtils(get_target_credentials(), config['target_region'])
         
         # create report tables if they don't exist
         tables_created = bqu.create_report_tables(config['target_project'], config['target_dataset'])
@@ -2781,22 +2813,22 @@ def _split_work():
             print('Info: truncated report tables')
 
         if config['source_folder']:
-            uris = res.Resources.get_resources_by_folder(config['source_folder'])
+            uris = re.get_resources_by_folder(config['source_folder'])
         else:
-            uris = res.Resources.get_resources_by_project(config['source_projects'])
+            uris = re.get_resources_by_project(config['source_projects'])
         
         print('Info: Number of uris:', uris)
         print('Info: uris:', uris)
         
         jm.record_num_tasks(job_uuid, len(uris))
         jm.update_job_running(job_uuid) 
-        tm.create_config_uuid_tasks(job_uuid, config_uuid, config_type, uris)
+        tm.create_config_uuid_tasks(CLOUD_RUN_SA, job_uuid, config_uuid, config_type, uris)
     
     # import or restore tag configs
     if config_type == 'IMPORT_TAG' or config_type == 'RESTORE_TAG':
                     
         if config_type == 'IMPORT_TAG':
-            csv_files = list(res.Resources.get_resources(config.get('metadata_import_location'), None))
+            csv_files = list(re.get_resources(config.get('metadata_import_location'), None))
             #print('csv_files: ', csv_files)
         
             extracted_tags = []
@@ -2805,7 +2837,7 @@ def _split_work():
                 extracted_tags.extend(cp.CsvParser.extract_tags(csv_file))
     
         if config_type == 'RESTORE_TAG':
-            bkp_files = list(res.Resources.get_resources(config.get('metadata_export_location'), None))
+            bkp_files = list(re.get_resources(config.get('metadata_export_location'), None))
         
             #print('bkp_files: ', bkp_files)
             extracted_tags = []
@@ -2821,11 +2853,11 @@ def _split_work():
         
         jm.record_num_tasks(job_uuid, len(extracted_tags))
         jm.update_job_running(job_uuid) 
-        tm.create_tag_extract_tasks(job_uuid, config_uuid, config_type, extracted_tags)
+        tm.create_tag_extract_tasks(CLOUD_RUN_SA, job_uuid, config_uuid, config_type, extracted_tags)
     
 
     # update the status of the config, no matter which config type is running
-    teu.update_config_status(config_uuid, config_type, 'RUNNING')
+    store.update_config_status(config_uuid, config_type, 'RUNNING')
     
     resp = jsonify(success=True)
     return resp
@@ -2861,11 +2893,14 @@ def _run_task():
     tm.update_task_status(shard_uuid, task_uuid, 'RUNNING')
     
     # retrieve the config 
-    config = teu.read_config(config_uuid, config_type)
+    config = store.read_config(config_uuid, config_type)
     print('config: ', config)
+    
+    credentials = get_target_credentials()
+    print('credentials:', credentials)  
       
     if config_type == 'EXPORT_TAG':
-        dcu = dc.DataCatalogUtils()
+        dcc = controller.DataCatalogController(credentials)
     
     elif config_type == 'IMPORT_TAG':
         
@@ -2876,7 +2911,8 @@ def _run_task():
             }
             return jsonify(response), 400
         
-        dcu = dc.DataCatalogUtils(config['template_id'], config['template_project'], config['template_region'])
+        dcc = controller.DataCatalogController(credentials, config['template_id'], \
+                                               config['template_project'], config['template_region'])
     
     elif config_type == 'RESTORE_TAG':
         
@@ -2893,7 +2929,8 @@ def _run_task():
             }
             return jsonify(response), 400
         
-        dcu = dc.DataCatalogUtils(config['target_template_id'], config['target_template_project'], config['target_template_region'])
+        dcc = controller.DataCatalogController(credentials, config['target_template_id'], \
+                                                config['target_template_project'], config['target_template_region'])
     else:
         if 'template_uuid' not in config:
             response = {
@@ -2902,44 +2939,45 @@ def _run_task():
             }
             return jsonify(response), 400
             
-        template_config = teu.read_tag_template_config(config['template_uuid'])
-        dcu = dc.DataCatalogUtils(template_config['template_id'], template_config['template_project'], template_config['template_region'])
+        template_config = store.read_tag_template_config(config['template_uuid'])
+        dcc = controller.DataCatalogController(credentials, template_config['template_id'], \
+                                                template_config['template_project'], template_config['template_region'])
             
     
     if config_type == 'DYNAMIC_TABLE_TAG':
-        creation_status = dcu.apply_dynamic_table_config(config['fields'], uri, config['config_uuid'], \
+        creation_status = dcc.apply_dynamic_table_config(config['fields'], uri, config['config_uuid'], \
                                                          config['template_uuid'], config['tag_history'], \
                                                          config['tag_stream'])                                               
     if config_type == 'DYNAMIC_COLUMN_TAG':
-        creation_status = dcu.apply_dynamic_column_config(config['fields'], config['included_columns_query'], uri, config['config_uuid'], \
+        creation_status = dcc.apply_dynamic_column_config(config['fields'], config['included_columns_query'], uri, config['config_uuid'], \
                                                           config['template_uuid'], config['tag_history'], \
                                                           config['tag_stream'])
     if config_type == 'STATIC_ASSET_TAG':
-        creation_status = dcu.apply_static_asset_config(config['fields'], uri, config['config_uuid'], \
+        creation_status = dcc.apply_static_asset_config(config['fields'], uri, config['config_uuid'], \
                                                         config['template_uuid'], config['tag_history'], \
                                                         config['tag_stream'], config['overwrite'])                                                   
     if config_type == 'ENTRY':
-        creation_status = dcu.apply_entry_config(config['fields'], uri, config['config_uuid'], \
+        creation_status = dcc.apply_entry_config(config['fields'], uri, config['config_uuid'], \
                                                  config['template_uuid'], config['tag_history'], \
                                                  config['tag_stream']) 
     if config_type == 'GLOSSARY_ASSET_TAG':
-        creation_status = dcu.apply_glossary_asset_config(config['fields'], config['mapping_table'], uri, config['config_uuid'], \
+        creation_status = dcc.apply_glossary_asset_config(config['fields'], config['mapping_table'], uri, config['config_uuid'], \
                                                     config['template_uuid'], config['tag_history'], \
                                                     config['tag_stream'], config['overwrite'])
     if config_type == 'SENSITIVE_COLUMN_TAG':
-        creation_status = dcu.apply_sensitive_column_config(config['fields'], config['dlp_dataset'], config['infotype_selection_table'], \
+        creation_status = dcc.apply_sensitive_column_config(config['fields'], config['dlp_dataset'], config['infotype_selection_table'], \
                                                             config['infotype_classification_table'], uri, config['create_policy_tags'], \
                                                             config['taxonomy_id'], config['config_uuid'], \
                                                             config['template_uuid'], config['tag_history'], \
                                                             config['tag_stream'], config['overwrite'])
     if config_type == 'EXPORT_TAG':
-        creation_status = dcu.apply_export_config(config['config_uuid'], config['target_project'], config['target_dataset'], config['target_region'], uri)
+        creation_status = dcc.apply_export_config(config['config_uuid'], config['target_project'], config['target_dataset'], config['target_region'], uri)
     
     if config_type == 'IMPORT_TAG':
-        creation_status = dcu.apply_import_config(config['config_uuid'], tag_extract, \
+        creation_status = dcc.apply_import_config(config['config_uuid'], tag_extract, \
                                                   config['tag_history'], config['tag_stream'], config['overwrite'])
     if config_type == 'RESTORE_TAG':
-        creation_status = dcu.apply_restore_config(config['config_uuid'], tag_extract, \
+        creation_status = dcc.apply_restore_config(config['config_uuid'], tag_extract, \
                                                    config['tag_history'], config['tag_stream'], config['overwrite'])
                                               
     if creation_status == constants.SUCCESS:
@@ -2951,16 +2989,16 @@ def _run_task():
     is_success, is_failed, pct_complete = jm.calculate_job_completion(job_uuid)
         
     if pct_complete == 100 and is_success:
-        teu.update_config_status(config_uuid, config_type, 'ACTIVE')
-        teu.update_scheduling_status(config_uuid, config_type, 'READY')
-        teu.update_overwrite_flag(config_uuid, config_type)
+        store.update_config_status(config_uuid, config_type, 'ACTIVE')
+        store.update_scheduling_status(config_uuid, config_type, 'READY')
+        store.update_overwrite_flag(config_uuid, config_type)
         resp = jsonify(success=True)
     elif pct_complete == 100 and is_failed:
-        teu.update_config_status(config_uuid, config_type, 'ERROR')
+        store.update_config_status(config_uuid, config_type, 'ERROR')
         jm.update_job_failed(job_uuid)
         resp = jsonify(success=False)
     else:
-        teu.update_config_status(config_uuid, config_type, 'PROCESSING: {}% complete'.format(pct_complete))
+        store.update_config_status(config_uuid, config_type, 'PROCESSING: {}% complete'.format(pct_complete))
         resp = jsonify(success=True)
     
     return resp
@@ -2970,7 +3008,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 1.0.9"
+    return "Welcome to Tag Engine version 2.0.0"
 #[END ping]
     
 ####################### TEST METHOD ####################################  
@@ -2989,4 +3027,5 @@ def server_error(e):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    #app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080))) # required for Cloud Run
+    app.run() # for running locally

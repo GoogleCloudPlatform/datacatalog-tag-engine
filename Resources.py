@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import google.auth
 from google.cloud import bigquery
 from google.cloud import storage
 from google.cloud import resourcemanager_v3
@@ -22,9 +22,13 @@ class Resources:
     bigquery_resource = "bigquery"
     pubsub_resource = "pubsub"
     gcs_resource = "gs:"
-            
-    @staticmethod
-    def get_resources(included_uris, excluded_uris):
+    
+    def __init__(self, credentials):
+        
+        self.bq_client = bigquery.Client(credentials=credentials)
+        self.gcs_client = storage.Client(credentials=credentials)
+
+    def get_resources(self, included_uris, excluded_uris):
         
         #print('enter get_resources()')
         #print('included_uris: ' + included_uris)
@@ -34,28 +38,28 @@ class Resources:
         resource_type = included_uris_list[0].strip().split('/')[0]
         #print("resource_type: " + resource_type)
     
-        if resource_type == Resources.bigquery_resource:
+        if resource_type == self.bigquery_resource:
                     
-            included_resources = Resources.find_bq_resources(included_uris)
+            included_resources = self.find_bq_resources(included_uris)
             #print("included_resources: " + str(included_resources))
         
             if excluded_uris is None or excluded_uris == "" or excluded_uris.isspace():
                 return included_resources
             else:
                 #print("excluded_uris: " + excluded_uris)
-                excluded_resources = Resources.find_bq_resources(excluded_uris)
+                excluded_resources = self.find_bq_resources(excluded_uris)
                 #print("excluded_resources: " + str(excluded_resources))
         
         
-        elif resource_type == Resources.gcs_resource:
+        elif resource_type == self.gcs_resource:
             
-            included_resources = Resources.find_gcs_resources(included_uris)
+            included_resources = self.find_gcs_resources(included_uris)
         
             if excluded_uris is None or excluded_uris == "" or excluded_uris.isspace():
                 return included_resources
             else:
                 #print("excluded_uris: " + excluded_uris)
-                excluded_resources = Resources.find_gcs_resources(excluded_uris)
+                excluded_resources = self.find_gcs_resources(excluded_uris)
                 #print("excluded_resources: " + str(excluded_resources))
         
         else:
@@ -67,38 +71,34 @@ class Resources:
         return remaining_resources
 
 
-    @staticmethod
-    def get_resources_by_project(projects):
+    def get_resources_by_project(self, projects):
         
         print('projects:', projects)
         
         uris = []
         
-        bq_client = bigquery.client.Client()
-        
         for project in projects:
             
             print('project:', project)
-            datasets = list(bq_client.list_datasets(project=project))
+            datasets = list(self.bq_client.list_datasets(project=project))
             
             for dataset in datasets:
                 print('dataset:', dataset.dataset_id)
                 
-                formatted_dataset = Resources.format_dataset_resource(project + '.' + dataset.dataset_id)
+                formatted_dataset = self.format_dataset_resource(project + '.' + dataset.dataset_id)
                 uris.append(formatted_dataset)
                 
-                tables = bq_client.list_tables(project + '.' + dataset.dataset_id)
+                tables = self.bq_client.list_tables(project + '.' + dataset.dataset_id)
                 
                 for table in tables:
                     
-                    formatted_table = Resources.format_table_resource(table.full_table_id)
+                    formatted_table = self.format_table_resource(table.full_table_id)
                     uris.append(formatted_table)
                     
         return uris
             
 
-    @staticmethod
-    def get_resources_by_folder(folder):
+    def get_resources_by_folder(self, folder):
 
         if folder.replace('folders/', '').isnumeric() == False:
             print('Error: The folder parameter must be a numeric value')
@@ -120,13 +120,12 @@ class Resources:
         for project in resp:
             projects.append(project.project_id)
         
-        uris = Resources.get_resources_by_project(projects)
+        uris = self.get_resources_by_project(projects)
         
         return uris
         
-    
-    @staticmethod            
-    def format_table_resource(table_resource):
+              
+    def format_table_resource(self, table_resource):
          # BQ table format: project:dataset.table
          # DC expected resource format: project_id + '/datasets/' + dataset + '/tables/' + short_table
          
@@ -134,9 +133,8 @@ class Resources:
         #print("formatted: " + table_resource)
          
         return formatted
-        
-    @staticmethod            
-    def format_dataset_resource(dataset_resource):
+                  
+    def format_dataset_resource(self, dataset_resource):
          # BQ table format: project:dataset.table
          # DC expected resource format: project_id + '/datasets/' + dataset + '/tables/' + short_table
          
@@ -145,13 +143,12 @@ class Resources:
          
         return formatted
     
-    @staticmethod
-    def get_datasets(bq_client, dataset):
+    def get_datasets(self, dataset):
         
         dataset_list = []
         
         if dataset.endswith("*"):
-            datasets = list(bq_client.list_datasets())  
+            datasets = list(self.bq_client.list_datasets())  
 
             for ds in datasets:
                 if dataset[:-1] in ds.dataset_id:
@@ -162,8 +159,7 @@ class Resources:
         return dataset_list
         
     
-    @staticmethod     
-    def find_bq_resources(uris):
+    def find_bq_resources(self, uris):
        
         # @input uris: comma-separated list of uri representing a BQ resource
         # BQ resources are specified as:  
@@ -184,8 +180,7 @@ class Resources:
                 return None
             
             project_id = split_path[2]
-            bq_client = bigquery.client.Client(project=project_id)
-            
+   
             path_length = len(split_path)
             #print("path_length: " + str(path_length))
             
@@ -193,10 +188,10 @@ class Resources:
                 
                 print('uri ' + uri + ' is at the project level')
                 
-                datasets = list(bq_client.list_datasets())
+                datasets = list(self.bq_client.list_datasets(project=project_id))
                 
                 for dataset in datasets:
-                    tables = list(bq_client.list_tables(dataset.dataset_id))
+                    tables = list(self.bq_client.list_tables(dataset.dataset_id))
         
                     for table in tables:
                         table_resources.add(table.full_table_id)
@@ -206,7 +201,7 @@ class Resources:
             if path_length > 4:
                
                 dataset = split_path[4]
-                dataset_list = Resources.get_datasets(bq_client, dataset)                
+                dataset_list = self.get_datasets(dataset)                
                  
                 for dataset_name in dataset_list:            
                     dataset_id = project_id + "." + dataset_name
@@ -216,7 +211,7 @@ class Resources:
                 
                     if path_length == 5: 
                         tag_type = constants.BQ_DATASET_TAG
-                        dataset_resource = Resources.format_dataset_resource(dataset_id)
+                        dataset_resource = self.format_dataset_resource(dataset_id)
                         resources.add(dataset_resource)
                         continue
                 
@@ -231,7 +226,7 @@ class Resources:
 
                     if table_expression == "*":
                         #print("list tables in dataset")
-                        tables = list(bq_client.list_tables(bq_client.get_dataset(dataset_id)))
+                        tables = list(self.bq_client.list_tables(self.bq_client.get_dataset(dataset_id)))
             
                         for table in tables:
                             #print("full_table_id: " + str(table.full_table_id))
@@ -240,7 +235,7 @@ class Resources:
                     elif "*" in table_expression:
                         #print("table expression contains wildcard")
                         table_substrings = table_expression.split("*")
-                        tables = list(bq_client.list_tables(bq_client.get_dataset(dataset_id)))
+                        tables = list(self.bq_client.list_tables(self.bq_client.get_dataset(dataset_id)))
                     
                         for table in tables:
                             is_match = True
@@ -256,7 +251,7 @@ class Resources:
                         table_id = dataset_id + "." + table_expression
                 
                         try:
-                            table = bq_client.get_table(table_id)
+                            table = self.bq_client.get_table(table_id)
                             table_resources.add(table.full_table_id)
                     
                         except NotFound:
@@ -265,15 +260,13 @@ class Resources:
                     
             if tag_type == constants.BQ_TABLE_TAG:
                 for table in table_resources:
-                    formatted_table = Resources.format_table_resource(table)
+                    formatted_table = self.format_table_resource(table)
                     resources.add(formatted_table)
         
         return resources      
-                
-    @staticmethod     
-    def find_gcs_resources(uris):
+                  
+    def find_gcs_resources(self, uris):
     
-        gcs_client = storage.Client()
         resources = set()
         
         uris_list = uris.split(',')
@@ -300,7 +293,7 @@ class Resources:
                     folder = short_uri[folder_start_index:folder_end_index]
                     #print('folder: ' + folder)
                     
-                    for blob in gcs_client.list_blobs(bucket_name, prefix=folder):
+                    for blob in self.gcs_client.list_blobs(bucket_name, prefix=folder):
                         if blob.name == folder + '/' or blob.name.endswith('/'):
                             continue
                         resources.add((bucket_name, blob.name))
@@ -310,7 +303,7 @@ class Resources:
                 else:
                     filename = short_uri[folder_start_index:]
                     #print('filename: ' + filename) 
-                    bucket = gcs_client.get_bucket(bucket_name)
+                    bucket = self.gcs_client.get_bucket(bucket_name)
                     blob = bucket.blob(filename)
                     if blob.exists():
                         resources.add((bucket_name, blob.name))
@@ -320,7 +313,7 @@ class Resources:
             elif len(split_uri) == 2:    
                 
                 if short_uri.endswith('/*'):  
-                    for blob in gcs_client.list_blobs(bucket_name):
+                    for blob in self.gcs_client.list_blobs(bucket_name):
                         if blob.name.endswith('/'):
                             continue
                         #print('blob: ' + str(blob.name))
@@ -329,7 +322,7 @@ class Resources:
                     file_index_start = short_uri.index('/') + 1 
                     filename = short_uri[file_index_start:]
                     #print('filename: ' + filename)
-                    bucket = gcs_client.get_bucket(bucket_name)
+                    bucket = self.gcs_client.get_bucket(bucket_name)
                     blob = bucket.blob(filename)
                     if blob.exists():
                         if blob.name.endswith('/') == False:
@@ -341,7 +334,9 @@ class Resources:
         
 if __name__ == '__main__':
     
-    uris = Resources.get_resources_by_project(['record-manager-service'])
-    print(uris)
-    #uris = Resources.get_resources_by_folder('folders/a593258468753') 
-    #print(uris)   
+    credentials, _ = google.auth.default()
+    res = Resources(credentials)
+    uris = res.get_resources('bigquery/project/tag-engine-run/dataset/GCP_Mockup/*', None)
+    #uris = get_resources_by_project(['record-manager-service'])
+    #uris = get_resources_by_folder('folders/a593258468753') 
+    print(uris)   

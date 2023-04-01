@@ -17,7 +17,7 @@ import json, datetime
 from google.cloud import pubsub
 from google.cloud.exceptions import NotFound
 
-import TagEngineUtils as te
+import TagEngineStoreHandler as tesh
 
 class PubSubUtils:
     
@@ -25,7 +25,7 @@ class PubSubUtils:
         
         self.client = pubsub.PublisherClient()
         
-        store = te.TagEngineUtils()
+        store = tesh.TagEngineStoreHandler()
         enabled, settings = store.read_tag_stream_settings()
         
         self.enabled = enabled

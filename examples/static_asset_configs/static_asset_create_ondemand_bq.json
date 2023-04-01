@@ -1,6 +1,6 @@
 {
     "template_id": "data_governance",
-    "project_id": "tag-engine-develop",
+    "template_project": "tag-engine-run",
     "template_region": "us-central1",
     "fields": [
         {
@@ -21,7 +21,7 @@
         },
         {
             "field_id": "data_ownership",
-            "field_value": "THIRD_PARTY"
+            "field_value": "PUBLIC_DOMAIN"
         },
         {
             "field_id": "data_confidentiality",
@@ -33,14 +33,10 @@
         },
         {
             "field_id": "data_creation",
-            "field_value": "2022-06-17"
-        },
-	    {
-	        "field_id": "data_asset_documentation",
-            "field_value": "https://support.datasf.org/help/311-case-data-faq"
+            "field_value": "2023-03-27 14:27:00"
         }
     ],
-    "included_assets_uris": "bigquery/project/warehouse-337221/dataset/cities_311/*",
+    "included_assets_uris": "bigquery/project/tag-engine-run/dataset/GCP_Mockup/*",
     "excluded_assets_uris": "",
     "refresh_mode": "ON_DEMAND",
     "tag_history": true,

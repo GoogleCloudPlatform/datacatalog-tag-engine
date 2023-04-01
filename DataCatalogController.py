@@ -30,7 +30,7 @@ from google.cloud import bigquery
 from google.cloud import storage
 
 import Resources as res
-import TagEngineUtils as te
+import TagEngineStoreHandler as tesh
 import BigQueryUtils as bq
 import PubSubUtils as ps
 import constants
@@ -39,17 +39,20 @@ config = configparser.ConfigParser()
 config.read("tagengine.ini")
 BIGQUERY_REGION = config['DEFAULT']['BIGQUERY_REGION']
 
-class DataCatalogUtils:
+class DataCatalogController:
     
-    def __init__(self, template_id=None, template_project=None, template_region=None):
+    def __init__(self, credentials, template_id=None, template_project=None, template_region=None):
+        self.credentials = credentials
         self.template_id = template_id
         self.template_project = template_project
         self.template_region = template_region
         
-        self.client = DataCatalogClient()
+        self.client = DataCatalogClient(credentials=credentials)
         
-        if template_id is not None and template_project is not None and template_region is not None:
-            self.template_path = DataCatalogClient.tag_template_path(template_project, template_region, template_id)
+        if template_id != None and template_project != None and template_region != None:
+            self.template_path = self.client.tag_template_path(template_project, template_region, template_id)
+        else:
+            self.template_path = None
     
     def get_template(self, included_fields=None):
         
@@ -199,7 +202,7 @@ class DataCatalogUtils:
         print('tag_history: ', tag_history)
         
         # uri is either a BQ table/view path or GCS file path
-        store = te.TagEngineUtils()        
+        store = tesh.TagEngineStoreHandler()        
         creation_status = constants.SUCCESS
         column = ''
         
@@ -265,8 +268,8 @@ class DataCatalogUtils:
         print('tag_history:', tag_history)
         print('tag_stream:', tag_stream)
         
-        store = te.TagEngineUtils()
-        bq_client = bigquery.Client(location=BIGQUERY_REGION)
+        store = tesh.TagEngineStoreHandler()
+        bq_client = bigquery.Client(credentials=self.credentials, location=BIGQUERY_REGION)
         
         creation_status = constants.SUCCESS
         error_exists = False
@@ -360,7 +363,7 @@ class DataCatalogUtils:
                 creation_status = constants.ERROR
             
         if creation_status == constants.SUCCESS and tag_history:
-            bqu = bq.BigQueryUtils()
+            bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
             template_fields = self.get_template()
             bqu.copy_tag(self.template_id, template_fields, uri, None, fields)
             
@@ -383,8 +386,8 @@ class DataCatalogUtils:
         #print('tag_history:', tag_history)
         #print('tag_stream:', tag_stream)
                 
-        store = te.TagEngineUtils()
-        bq_client = bigquery.Client(location=BIGQUERY_REGION)
+        store = tesh.TagEngineStoreHandler()
+        bq_client = bigquery.Client(credentials=self.credentials, location=BIGQUERY_REGION)
         
         creation_status = constants.SUCCESS
         error_exists = False
@@ -510,7 +513,7 @@ class DataCatalogUtils:
                     creation_status = constants.ERROR
             
             if creation_status == constants.SUCCESS and tag_history:
-                bqu = bq.BigQueryUtils()
+                bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
                 template_fields = self.get_template()
                 bqu.copy_tag(self.template_id, template_fields, uri, column, fields)
             
@@ -522,14 +525,13 @@ class DataCatalogUtils:
                                  
         return creation_status
 
-        
 
     def apply_entry_config(self, fields, uri, config_uuid, template_uuid, tag_history, tag_stream):
         
         print('** apply_entry_config **')
         
         creation_status = constants.SUCCESS
-        store = te.TagEngineUtils()
+        store = tesh.TagEngineStoreHandler()
         gcs_client = storage.Client()
         
         bucket_name, filename = uri
@@ -697,7 +699,7 @@ class DataCatalogUtils:
             #print('created_tag: ', created_tag)
             
             if tag_history:
-                bqu = bq.BigQueryUtils()
+                bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
                 template_fields = self.get_template()
                 bqu.copy_tag(self.template_id, template_fields, '/'.join(uri), None, fields)
             
@@ -745,7 +747,7 @@ class DataCatalogUtils:
         #print('tag_stream: ', tag_stream)
  
         # uri is either a BQ table/view path or GCS file path
-        store = te.TagEngineUtils()        
+        store = tesh.TagEngineStoreHandler()        
         creation_status = constants.SUCCESS
         
         is_gcs = False
@@ -812,7 +814,7 @@ class DataCatalogUtils:
         #print('query_str: ', query_str)
 
         # run query against mapping table
-        bq_client = bigquery.Client(location=BIGQUERY_REGION)
+        bq_client = bigquery.Client(credentials=self.credentials, location=BIGQUERY_REGION)
         rows = bq_client.query(query_str).result()
         
         tag = datacatalog.Tag()
@@ -880,7 +882,7 @@ class DataCatalogUtils:
                         store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'GLOSSARY_ASSET_TAG', msg)
                     
         if tag_history:
-            bqu = bq.BigQueryUtils()
+            bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
             template_fields = self.get_template()
             if is_gcs:
                 bqu.copy_tag(self.template_id, template_fields, '/'.join(uri), None, fields)
@@ -937,7 +939,7 @@ class DataCatalogUtils:
                                      # so that we can create the policy tags on the various sensitive fields
  
         # uri is a BQ table path 
-        store = te.TagEngineUtils()        
+        store = tesh.TagEngineStoreHandler()        
         creation_status = constants.SUCCESS
         column = ''
         
@@ -979,7 +981,7 @@ class DataCatalogUtils:
         
         #print('dlp_sql: ', dlp_sql)
         
-        bq_client = bigquery.Client(location=BIGQUERY_REGION)
+        bq_client = bigquery.Client(credentials=self.credentials, location=BIGQUERY_REGION)
         
         try:
             dlp_rows = bq_client.query(dlp_sql).result()
@@ -1178,7 +1180,7 @@ class DataCatalogUtils:
                     
                             
             if creation_status == constants.SUCCESS and tag_history:
-                bqu = bq.BigQueryUtils()
+                bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
                 template_fields = self.get_template()
                 bqu.copy_tag(self.template_id, template_fields, uri, infotype_field, fields)
         
@@ -1200,7 +1202,7 @@ class DataCatalogUtils:
         
         success = True
         
-        bq_client = bigquery.Client(location=BIGQUERY_REGION)
+        bq_client = bigquery.Client(credentials=self.credentials, location=BIGQUERY_REGION)
         table = bq_client.get_table(table_id) 
         schema = table.schema
 
@@ -1248,7 +1250,7 @@ class DataCatalogUtils:
         dataset_tag_records = []
         
         export_status = constants.SUCCESS
-        bqu = bq.BigQueryUtils(target_region)
+        bqu = bq.BigQueryUtils(self.credentials, target_region)
         
         if isinstance(uri, str) == False:
             print('Error: url ' + str(url) + ' is not of type string.')
@@ -1522,7 +1524,7 @@ class DataCatalogUtils:
         
         creation_status = constants.SUCCESS
         valid_field = False
-        store = te.TagEngineUtils() 
+        store = tesh.TagEngineStoreHandler() 
         tag = datacatalog.Tag()
         tag.template = self.template_path
 
@@ -1659,7 +1661,7 @@ class DataCatalogUtils:
                         return creation_status
         
         if tag_history:
-            bqu = bq.BigQueryUtils()
+            bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
             template_fields = self.get_template()
             success = bqu.copy_tag(self.template_id, template_fields, uri, column_name, fields)
             
@@ -2043,7 +2045,7 @@ class DataCatalogUtils:
     
         success = True
     
-        bq_client = bigquery.Client(location=BIGQUERY_REGION)
+        bq_client = bigquery.Client(credentials=self.credentials, location=BIGQUERY_REGION)
 
         source_table_id = source_project + '.' + source_dataset + '.' + source_table
         target_table_id = target_project + '.' + target_dataset + '.' + target_table

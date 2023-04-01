@@ -18,20 +18,15 @@ import decimal
 from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
 
-import TagEngineUtils as te
-
-config = configparser.ConfigParser()
-config.read("tagengine.ini")
-BIGQUERY_REGION = config['DEFAULT']['BIGQUERY_REGION']
+import TagEngineStoreHandler as tesh
 
 class BigQueryUtils:
     
-    def __init__(self, region=None):
+    def __init__(self, credentials, region):
+
+        self.region = region
+        self.client = bigquery.Client(credentials=credentials, location=region)
         
-        if region:
-            self.client = bigquery.Client(location=region)
-        else:
-            self.client = bigquery.Client(location=BIGQUERY_REGION)
 
     # API method used by tag export function
     def create_report_tables(self, project, dataset):
@@ -108,8 +103,6 @@ class BigQueryUtils:
     # API method used by tag history function
     def copy_tag(self, table_name, table_fields, tagged_table, tagged_column, tagged_values):
         
-        print("*** inside BigQueryUtils.copy_tag() ***")
-
         exists, table_id, settings = self.history_table_exists(table_name)
         
         if exists != True:
@@ -141,7 +134,7 @@ class BigQueryUtils:
 
         success = True
         dataset_id = bigquery.Dataset(project + '.' + dataset)
-        dataset_id.location = BIGQUERY_REGION
+        dataset_id.location = self.region
         
         try:
             dataset_status = self.client.create_dataset(dataset_id, exists_ok=True)  
@@ -239,7 +232,7 @@ class BigQueryUtils:
     # used by tag history function
     def history_table_exists(self, table_name):
         
-        store = te.TagEngineUtils()
+        store = tesh.TagEngineStoreHandler()
         enabled, settings = store.read_tag_history_settings()
         
         if enabled == False:
@@ -255,7 +248,7 @@ class BigQueryUtils:
         try:
             self.client.get_table(table_id) 
             exists = True 
-            #print("Tag history table {} already exists.".format(table_name))
+            print("Tag history table {} already exists.".format(table_name))
         except NotFound:
             exists = False
             print("Tag history table {} not found.".format(table_name))

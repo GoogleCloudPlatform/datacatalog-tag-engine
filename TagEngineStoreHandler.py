@@ -1,4 +1,4 @@
-# Copyright 2020-2022 Google, LLC.
+# Copyright 2020-2023 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@ import uuid, pytz, os, requests
 import configparser, difflib, hashlib
 from datetime import datetime
 from datetime import timedelta
-import DataCatalogUtils as dc
 from google.cloud import bigquery
 from google.cloud import firestore
+import DataCatalogController as controller
 import constants
 
-class TagEngineUtils:
+class TagEngineStoreHandler:
     
     def __init__(self):
         
@@ -186,8 +186,8 @@ class TagEngineUtils:
                 table_list = []
                 tables = list(bq_client.list_tables(dataset_id))
                 
-                dcu = dc.DataCatalogUtils()
-                linked_resources = dcu.search_catalog(project_id, dataset_id)
+                dcc = controller.DataCatalogController()
+                linked_resources = dcc.search_catalog(project_id, dataset_id)
                 
                 print('linked_resources: ' + str(linked_resources))
             
@@ -328,6 +328,8 @@ class TagEngineUtils:
     def write_static_asset_config(self, config_status, fields, included_assets_uris, excluded_assets_uris, template_uuid, \
                                   refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite=False):
         
+        print('*** enter write_static_asset_config ***')
+        
         # hash the included_assets_uris string
         included_assets_uris_hash = hashlib.md5(included_assets_uris.encode()).hexdigest()
         
@@ -341,13 +343,13 @@ class TagEngineUtils:
         for match in matches:
             if match.exists:
                 config_uuid_match = match.id
-                #print('Static config already exists. Config_uuid: ' + str(config_uuid_match))
+                print('Static config already exists. Config_uuid: ' + str(config_uuid_match))
                 
                 # update status to INACTIVE 
                 self.db.collection('static_asset_configs').document(config_uuid_match).update({
                     'config_status' : "INACTIVE"
                 })
-                #print('Updated config status to INACTIVE.')
+                print('Updated config status to INACTIVE.')
         
         config_uuid = uuid.uuid1().hex
         

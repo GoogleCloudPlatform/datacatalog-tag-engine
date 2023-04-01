@@ -1,4 +1,4 @@
-# Copyright 2022 Google, LLC.
+# Copyright 2022-2023 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,31 +21,28 @@ from google.cloud import tasks_v2
 class TaskManager:
     """Class for creating and managing work requests in the form of cloud tasks 
     
-    project = App Engine project id (e.g. tag-engine-project)
-    region = App Engine region (e.g. us-central1)
+    project = Cloud Run project id (e.g. tag-engine-project)
+    region = Cloud Run region (e.g. us-central1)
     queue_name = Cloud Task queue (e.g. tag-engine-queue)
-    task_handler_url = task handler uri set inside the 
-                     App Engine project hosting the cloud task queue
+    task_handler_uri = task handler uri in the Flask app hosted by Cloud Run 
     """
     def __init__(self,
                 tag_engine_project,
-                service_account,
                 queue_region,
                 queue_name, 
-                task_handler_url):
+                task_handler_uri):
 
         self.tag_engine_project = tag_engine_project
-        self.service_account = service_account
         self.queue_region = queue_region
         self.queue_name = queue_name
-        self.task_handler_url = task_handler_url
+        self.task_handler_uri = task_handler_uri
 
         self.db = firestore.Client()
         self.tasks_per_shard = 1000
 
 ##################### API METHODS #################
         
-    def create_config_uuid_tasks(self, job_uuid, config_uuid, config_type, uris):
+    def create_config_uuid_tasks(self, service_account, job_uuid, config_uuid, config_type, uris):
         
         print('*** enter create_config_uuid_tasks ***')
         
@@ -76,7 +73,7 @@ class TaskManager:
                 task_id = hashlib.md5(task_id_raw.encode()).hexdigest()
             
                 task_uuid = self._record_config_uuid_task(job_uuid, shard_uuid, task_id, config_uuid, config_type, uri_val)
-                self._create_config_uuid_task(job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, uri_val)
+                self._create_config_uuid_task(service_account, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, uri_val)
                 
                 task_counter += 1
                 task_running_total += 1
@@ -91,7 +88,7 @@ class TaskManager:
             self._update_shard_tasks(job_uuid, shard_uuid, task_counter)
 
     
-    def create_tag_extract_tasks(self, job_uuid, config_uuid, config_type, tag_extract_list):
+    def create_tag_extract_tasks(self, service_account, job_uuid, config_uuid, config_type, tag_extract_list):
         
         print('*** enter create_tag_extract_tasks ***')
         #print('len(tag_extract_list): ', len(tag_extract_list))
@@ -124,7 +121,7 @@ class TaskManager:
                 print('task_id: ', task_id)
 
                 task_uuid = self._record_tag_extract_task(job_uuid, shard_uuid, task_id, config_uuid, config_type, extract_val)
-                self._create_tag_extract_task(job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, extract_val)
+                self._create_tag_extract_task(service_account, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, extract_val)
                 
                 task_counter += 1
                 task_running_total += 1
@@ -230,48 +227,48 @@ class TaskManager:
         return task_uuid
     
     
-    def _create_config_uuid_task(self, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, uri):
+    def _create_config_uuid_task(self, service_account, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, uri):
         
         print('*** enter _create_config_uuid_task ***')
  
         success = True
         
+        payload = {'job_uuid': job_uuid, 'shard_uuid': shard_uuid, 'task_uuid': task_uuid, 'config_uuid': config_uuid, 'config_type': config_type, 'uri': uri}
+        
         client = tasks_v2.CloudTasksClient()
         parent = client.queue_path(self.tag_engine_project, self.queue_region, self.queue_name)
-        
+                
         task = {
             'name': parent + '/tasks/' + task_id,
             'http_request': {  
-                'http_method':  tasks_v2.HttpMethod.POST,
-                'url': self.task_handler_url,
-                'oidc_token': {'service_account_email': self.service_account}
+                'http_method': 'POST',
+                'url': self.task_handler_uri,
+                'headers': {'content-type': 'application/json'},
+                'body': json.dumps(payload).encode(),
+                'oidc_token': {'service_account_email': service_account, 'audience': self.task_handler_uri}
             }
         }
-        
-        task['http_request']['headers'] = {'Content-type': 'application/json'}
-        payload = {'job_uuid': job_uuid, 'shard_uuid': shard_uuid, 'task_uuid': task_uuid, 'config_uuid': config_uuid, 'config_type': config_type, 'uri': uri}
-        #print('payload: ' + str(payload))
-        
-        payload_utf8 = json.dumps(payload).encode()
-        task['http_request']['body'] = payload_utf8
-        #print('task: ', task)
+        print('task: ', task)
 
         try:
             task = client.create_task(parent=parent, task=task)
         
         except Exception as e:
-            print('Error: could not create task for uri ', uri, '. Error: ', e)
+            print('Error: could not create task for uri', self.task_handler_uri, '. Error: ', e)
             self._set_task_failed(shard_uuid, task_uuid)
             success = False
             
         return success
                   
         
-    def _create_tag_extract_task(self, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, extract):
+    def _create_tag_extract_task(self, service_account, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, extract):
         
         print('*** enter _create_tag_extract_task ***')
  
         success = True
+    
+        payload = {'job_uuid': job_uuid, 'shard_uuid': shard_uuid, 'task_uuid': task_uuid, 'config_uuid': config_uuid, \
+                   'config_type': config_type, 'tag_extract': extract}
         
         client = tasks_v2.CloudTasksClient()
         parent = client.queue_path(self.tag_engine_project, self.queue_region, self.queue_name)
@@ -279,27 +276,19 @@ class TaskManager:
         task = {
             'name': parent + '/tasks/' + task_id,
             'http_request': {  
-                'http_method':  tasks_v2.HttpMethod.POST,
-                'url': self.task_handler_url,
-                'oidc_token': {'service_account_email': self.service_account}
+                'http_method': 'POST',
+                'url': self.task_handler_uri,
+                'headers': {'content-type': 'application/json'},
+                'body': json.dumps(payload).encode(),
+                'oidc_token': {'service_account_email': service_account, 'audience': self.task_handler_uri}
             }
         }
-        
-        task['http_request']['headers'] = {'Content-type': 'application/json'}
-        
-        payload = {'job_uuid': job_uuid, 'shard_uuid': shard_uuid, 'task_uuid': task_uuid, 'config_uuid': config_uuid, \
-                   'config_type': config_type, 'tag_extract': extract}
-                
-        payload_utf8 = json.dumps(payload).encode()
-        task['http_request']['body'] = payload_utf8
-
-        #print('task: ', task)
 
         try:
             task = client.create_task(parent=parent, task=task)
         
         except Exception as e:
-            print('Error: could not create task for task_uuid ', task_uuid, '. Error: ', e)
+            print('Error: could not create task for uri', self.task_handler_uri, '. Error: ', e)
             self._set_task_failed(shard_uuid, task_uuid)
             success = False
             

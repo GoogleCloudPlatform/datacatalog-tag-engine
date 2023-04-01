@@ -1,4 +1,4 @@
-# Copyright 2022 Google, LLC.
+# Copyright 2022-2023 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,36 +21,35 @@ from google.cloud import tasks_v2
 class JobManager:
     """Class for managing jobs for async task create and update requests
     
-    project = App Engine project id (e.g. tag-engine-project)
-    region = App Engine region (e.g. us-central1)
+    project = Cloud Run project id (e.g. tag-engine-project)
+    region = Cloud Run region (e.g. us-central1)
     queue_name = Cloud Task queue (e.g. tag-engine-queue)
-    task_handler_url = task handler url hosting the cloud task queue
+    task_handler_uri = task handler uri in the Flask app hosted by Cloud Run 
+    
     """
     def __init__(self,
                 tag_engine_project,
-                service_account,
                 queue_region,
                 queue_name, 
-                task_handler_url):
+                task_handler_uri):
 
         self.tag_engine_project = tag_engine_project
-        self.service_account = service_account
         self.queue_region = queue_region
         self.queue_name = queue_name
-        self.task_handler_url = task_handler_url
+        self.task_handler_uri = task_handler_uri
         
         self.db = firestore.Client()
 
 
 ##################### API METHODS #################
 
-    def create_job(self, config_uuid, config_type):
+    def create_job(self, service_account, config_uuid, config_type):
         
         print('*** enter create_job ***')
         print('config_uuid: ', config_uuid, ', config_type: ', config_type)
         
         job_uuid = self._create_job_record(config_uuid, config_type)
-        resp = self._create_job_task(job_uuid, config_uuid, config_type)
+        resp = self._create_job_task(service_account, job_uuid, config_uuid, config_type)
         
         return job_uuid 
         
@@ -201,34 +200,31 @@ class JobManager:
         return job_uuid
 
     
-    def _create_job_task(self, job_uuid, config_uuid, config_type):
+    def _create_job_task(self, service_account, job_uuid, config_uuid, config_type):
         
         print('*** enter _create_cloud_task ***')
-
-        client = tasks_v2.CloudTasksClient()
-        parent = client.queue_path(self.tag_engine_project, self.queue_region, self.queue_name)
+                
+        payload = {'job_uuid': job_uuid, 'config_uuid': config_uuid, 'config_type': config_type}
         
         task = {
             'http_request': {  
-                'http_method':  tasks_v2.HttpMethod.POST,
-                'url': self.task_handler_url,
-                'oidc_token': {'service_account_email': self.service_account}
+                'http_method': 'POST',
+                'url': self.task_handler_uri,
+                'headers': {'content-type': 'application/json'},
+                'body': json.dumps(payload).encode(),
+                'oidc_token': {'service_account_email': service_account, 'audience': self.task_handler_uri}
             }
         }
-
-        task['http_request']['headers'] = {'Content-type': 'application/json'}
-        payload = {'job_uuid': job_uuid, 'config_uuid': config_uuid, 'config_type': config_type}
-        print('payload: ' + str(payload))
         
-        payload_utf8 = json.dumps(payload).encode()
-        task['http_request']['body'] = payload_utf8
-
-        print('task:', task)
+        print('task create:', task)
         
+        client = tasks_v2.CloudTasksClient()
+        parent = client.queue_path(self.tag_engine_project, self.queue_region, self.queue_name)
         resp = client.create_task(parent=parent, task=task)
-        print('resp: ', resp)
+        print('task resp: ', resp)
         
         return resp
+      
         
     def _get_task_count(job_uuid):
         
@@ -273,8 +269,8 @@ if __name__ == '__main__':
     project = config['DEFAULT']['PROJECT']
     region = config['DEFAULT']['REGION']
     queue_name = config['DEFAULT']['INJECTOR_QUEUE']
-    app_engine_uri = '/_split_work'
-    jm = JobManager(project, region, queue_name, app_engine_uri)
+    task_handler_uri = '/_split_work'
+    jm = JobManager(project, region, queue_name, task_handler_uri)
     
     config_uuid = '1f1b4720839c11eca541e1ad551502cb'
     jm.create_async_job(config_uuid)
