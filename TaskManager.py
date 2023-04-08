@@ -142,11 +142,11 @@ class TaskManager:
             self._set_task_running(shard_uuid, task_uuid)
             self._set_rollup_tasks_running(shard_uuid)
         
-        if status == 'COMPLETED':
-            self._set_task_completed(shard_uuid, task_uuid)
-            self._set_rollup_tasks_completed(shard_uuid)
+        if status == 'SUCCESS':
+            self._set_task_success(shard_uuid, task_uuid)
+            self._set_rollup_tasks_success(shard_uuid)
             
-        if status == 'FAILED':
+        if status == 'ERROR':
             self._set_task_failed(shard_uuid, task_uuid)
             self._set_rollup_tasks_failed(shard_uuid)
 
@@ -164,7 +164,7 @@ class TaskManager:
             'shard_uuid': shard_uuid,   
             'job_uuid': job_uuid,
             'tasks_ran': 0,
-            'tasks_completed': 0,
+            'tasks_success': 0,
             'tasks_failed': 0,
             'creation_time': datetime.datetime.utcnow()
         })
@@ -315,24 +315,24 @@ class TaskManager:
         shard_ref.update({'tasks_running': firestore.Increment(1)})
     
     
-    def _set_task_completed(self, shard_uuid, task_uuid):
+    def _set_task_success(self, shard_uuid, task_uuid):
         
-        print('*** _set_task_completed ***')
+        print('*** _set_task_success ***')
         
         task_ref = self.db.collection('shards').document(shard_uuid).collection('tasks').document(task_uuid)
 
         task_ref.set({
-            'status':  'COMPLETED',
+            'status':  'SUCCESS',
             'end_time': datetime.datetime.utcnow()
         }, merge=True)
         
-        print('set task completed.')
+        print('set task success.')
 
 
-    def _set_rollup_tasks_completed(self, shard_uuid):
+    def _set_rollup_tasks_success(self, shard_uuid):
         
         shard_ref = self.db.collection('shards').document(shard_uuid)
-        shard_ref.update({'tasks_completed': firestore.Increment(1), 'tasks_running': firestore.Increment(-1)})
+        shard_ref.update({'tasks_success': firestore.Increment(1), 'tasks_running': firestore.Increment(-1)})
         
         
     def _set_task_failed(self, shard_uuid, task_uuid):
@@ -342,7 +342,7 @@ class TaskManager:
         task_ref = self.db.collection('shards').document(shard_uuid).collection('tasks').document(task_uuid)
 
         task_ref.set({
-            'status':  'FAILED',
+            'status':  'ERROR',
             'end_time': datetime.datetime.utcnow()
         }, merge=True)
         

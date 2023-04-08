@@ -1,6 +1,0 @@
-{
-	"template_id": "cities_311", 
-	"template_project": "tag-engine-develop", 
-	"template_region": "us-central1", 
-	"included_tables_uris": "bigquery/project/warehouse-337221/dataset/cities_311/*"
-}

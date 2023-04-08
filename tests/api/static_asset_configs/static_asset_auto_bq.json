@@ -1,6 +1,6 @@
 {
     "template_id": "data_governance",
-    "template_project": "tag-engine-develop",
+    "template_project": "tag-engine-run",
     "template_region": "us-central1",
     "fields": [
         {
@@ -38,7 +38,7 @@
     ],
     "included_assets_uris": "bigquery/project/tag-engine-run/dataset/GCP_Mockup/*",
     "excluded_assets_uris": "",
-    "refresh_mode": "ON_DEMAND",
+    "refresh_mode": "AUTO",
     "refresh_frequency": 24,
     "refresh_unit": "hours",
     "tag_history": true,

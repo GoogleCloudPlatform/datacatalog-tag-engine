@@ -1,6 +1,0 @@
-{
-	"template_id": "file_metadata", 
-	"template_project": "tag-engine-develop", 
-	"template_region": "us-central1", 
-	"included_assets_uris": "gs://discovery-area/sample_data/*"
-}

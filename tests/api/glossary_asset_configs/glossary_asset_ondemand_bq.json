@@ -1,6 +1,6 @@
 {
     "template_id": "enterprise_glossary",
-    "template_project": "tag-engine-develop",
+    "template_project": "tag-engine-run",
     "template_region": "us-central1",
     "fields": [
         {

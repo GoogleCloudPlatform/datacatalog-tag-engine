@@ -77,14 +77,15 @@ class JobManager:
     def calculate_job_completion(self, job_uuid):
         
         print('*** enter calculate_job_completion ***')
-        
-        is_success = False
-        is_failed = False
-        
-        tasks_completed = self._get_tasks_completed(job_uuid)
+
+        tasks_success = self._get_tasks_success(job_uuid)
         tasks_failed = self._get_tasks_failed(job_uuid)
-                
-        tasks_ran = tasks_completed + tasks_failed
+              
+        tasks_ran = tasks_success + tasks_failed
+        
+        print('tasks_success:', tasks_success)
+        print('tasks_failed:', tasks_failed)
+        print('tasks_ran:', tasks_ran)
         
         job_ref = self.db.collection('jobs').document(job_uuid)
         job = job_ref.get()
@@ -97,8 +98,10 @@ class JobManager:
             # job running
             if job_dict['task_count'] > tasks_ran:
                 job_ref.update({
-                    'tasks_ran': tasks_completed + tasks_failed,
-                    'tasks_completed': tasks_completed,
+                    'tasks_ran': tasks_success + tasks_failed,
+                    'job_status': 'RUNNING',
+                    'tasks_success': tasks_success,
+                    'tasks_failed': tasks_failed,
                 })
                 
                 pct_complete = round(tasks_ran / task_count * 100, 2)
@@ -106,64 +109,31 @@ class JobManager:
             # job completed
             if job_dict['task_count'] <= tasks_ran:
                 
-                if job_dict['tasks_failed'] > 0:
-                    
-                    is_failed = True
+                if tasks_failed > 0:
                     
                     job_ref.update({
-                        'tasks_ran': tasks_completed + tasks_failed,
-                        'tasks_completed': tasks_completed,
-                        'job_status': 'COMPLETED WITH ERRORS',
+                        'tasks_ran': tasks_success + tasks_failed,
+                        'tasks_success': tasks_success,
+                        'tasks_failed': tasks_failed,
+                        'job_status': 'ERROR',
                         'completion_time': datetime.datetime.utcnow()
                     })
                 
                 else:
-                    
-                    is_success = True
-                    
+
                     job_ref.update({
-                        'tasks_ran': tasks_completed + tasks_failed,
-                        'tasks_completed': tasks_completed,
-                        'job_status': 'COMPLETED',
+                        'tasks_ran': tasks_success + tasks_failed,
+                        'tasks_success': tasks_success,
+                        'tasks_failed': tasks_failed,
+                        'job_status': 'SUCCESS',
                         'completion_time': datetime.datetime.utcnow()
                     })
                 
                 pct_complete = 100     
 
-        return is_success, is_failed, pct_complete
+        return tasks_success, tasks_failed, pct_complete
                   
 
-    def update_job_failed(self, job_uuid):
-        
-        print('*** enter update_job_failed ***')
-        
-        tasks_completed = self._get_tasks_completed(job_uuid)
-        tasks_failed = self._get_tasks_failed(job_uuid)
-        
-        tasks_ran = tasks_completed + tasks_failed
-                
-        job_ref = self.db.collection('jobs').document(job_uuid)
-        job_doc = job_ref.get()
-
-        if job_doc.exists:
-            
-            job_dict = job_doc.to_dict()
-            
-            if job_dict['task_count'] > tasks_ran:
-                job_ref.update({
-                    'tasks_ran': tasks_completed + tasks_failed,
-                    'tasks_failed': tasks_failed,
-                })
-            
-            if job_dict['task_count'] == tasks_ran:
-                job_ref.update({
-                    'tasks_ran': tasks_completed + tasks_failed,
-                    'tasks_failed': tasks_failed,
-                    'job_status': 'FAILED',
-                    'completion_time': datetime.datetime.utcnow()
-                })
-
-    
     def get_job_status(self, job_uuid):
         
         job = self.db.collection('jobs').document(job_uuid).get()
@@ -190,7 +160,7 @@ class JobManager:
             'job_status':  'PENDING',
             'task_count': 0,
             'tasks_ran': 0,
-            'tasks_completed': 0,
+            'tasks_success': 0,
             'tasks_failed': 0,
             'creation_time': datetime.datetime.utcnow()
         })
@@ -237,16 +207,16 @@ class JobManager:
             return job_dict['task_count']
         
 
-    def _get_tasks_completed(self, job_uuid):
+    def _get_tasks_success(self, job_uuid):
         
-        tasks_completed = 0
+        tasks_success = 0
         
         shards = self.db.collection('shards').where('job_uuid', '==', job_uuid).stream()
         
         for shard in shards:
-            tasks_completed += shard.to_dict().get('tasks_completed', 0) 
+            tasks_success += shard.to_dict().get('tasks_success', 0) 
         
-        return tasks_completed
+        return tasks_success
    
       
     def _get_tasks_failed(self, job_uuid):

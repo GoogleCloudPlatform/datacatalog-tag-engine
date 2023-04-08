@@ -915,7 +915,7 @@ class DataCatalogController:
         print('template_uuid: ', template_uuid)
         
         if create_policy_tags:
-            ptm_client = datacatalog.PolicyTagManagerClient()
+            ptm_client = datacatalog.PolicyTagManagerClient(credentials=self.credentials)
             
             request = datacatalog.ListPolicyTagsRequest(
                 parent=taxonomy_id
@@ -1134,6 +1134,7 @@ class DataCatalogController:
                     
                 except Exception as e:
                     msg = 'Error occurred during tag update: ' + str(e) + '. Failed tag request = ' + str(tag)
+                    print(msg)
                     store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'SENSITIVE_TAG', msg)
                 
                     # sleep and retry the tag update
@@ -1170,6 +1171,7 @@ class DataCatalogController:
                             store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'SENSITIVE_TAG', msg)
                     else:
                         # could not create the tag, could be due to a column mismatch
+                        print('Error: could not create tag on', infotype_field)
                         creation_status = constants.ERROR
                     
             if creation_status == constants.SUCCESS and create_policy_tags and classification_result != 'Public_Information':
@@ -1189,11 +1191,13 @@ class DataCatalogController:
                 psu.copy_tag(self.template_id, uri, infotype_field, fields)
         
                 
-        # Once we have created the regular tags, we can create/update the policy tags
+        # once we have created the regular tags, we can create/update the policy tags
         if create_policy_tags and len(policy_tag_requests) > 0:
             table_id = uri.replace('/datasets/', '.').replace('/tables/', '.')
-            self.apply_policy_tags(table_id, policy_tag_requests)
-            
+            creation_status = self.apply_policy_tags(table_id, policy_tag_requests)
+        
+        if creation_status != constants.SUCCESS:
+            print('Error occurred when tagging ' + uri + '. See previous error for details.')    
            
         return creation_status
 

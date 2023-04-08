@@ -45,7 +45,9 @@
         }
     ],
     "included_tables_uris": "bigquery/project/data-mesh-343422/dataset/crm/*",
-    "refresh_mode": "ON_DEMAND",
+    "refresh_mode": "AUTO",
+    "refresh_frequency": 24,
+    "refresh_unit": "hours",
     "tag_history": true,
     "tag_stream": false  
 }

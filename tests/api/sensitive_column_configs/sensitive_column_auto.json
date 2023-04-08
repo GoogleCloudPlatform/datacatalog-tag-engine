@@ -1,0 +1,24 @@
+{
+    "template_id": "data_sensitivity",
+    "template_project": "tag-engine-run",
+    "template_region": "us-central1",
+    "fields": [
+        {
+            "field_id": "sensitive_field"
+        },
+        {
+            "field_id": "sensitive_type"
+        }
+    ],
+    "dlp_dataset": "bigquery/project/tag-engine-run/dataset/crm_dlp",
+    "infotype_selection_table": "bigquery/project/tag-engine-run/dataset/data_classification/infotype_selection",
+    "infotype_classification_table": "bigquery/project/tag-engine-run/dataset/data_classification/infotype_classification",
+    "included_tables_uris": "bigquery/project/tag-engine-run/dataset/crm/*",
+    "create_policy_tags": true,
+    "taxonomy_id": "projects/tag-engine-run/locations/us-central1/taxonomies/5608646722452187542",
+    "refresh_mode": "AUTO",
+    "refresh_frequency": 24,
+    "refresh_unit": "hours",
+    "tag_history": true,
+    "tag_stream": false   
+}

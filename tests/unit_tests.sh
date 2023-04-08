@@ -1,83 +1,210 @@
-export TAG_ENGINE_URL=https://tag-engine-develop.uc.r.appspot.com
+export TAG_ENGINE_URL="https://tag-engine-eshsagj3ta-uc.a.run.app" # Service URL from Cloud Run
+#export TAG_ENGINE_URL="http://127.0.0.1:5000"
 
-####### BQ section #######
+# Bearer token
+export IAM_TOKEN=$(gcloud auth print-identity-token)
 
-# static asset tags on BQ tables
+# OAuth TOKEN
+gcloud auth application-default login
+export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
 
-curl -X POST $TAG_ENGINE_URL/static_asset_tags -d @examples/static_asset_configs/static_asset_create_auto_bq.json
+####### tag template section #######
+# These tag templates are referenced by the unit tests. 
+# Create the tag templates before running the examples. 
 
-# dynamic table tags
+export TEMPLATE_PROJECT="tag-engine-run"
+export TEMPLATE_REGION="us-central1"
 
-curl -X POST $TAG_ENGINE_URL/dynamic_table_tags -d @examples/dynamic_table_configs/dynamic_table_create_auto.json
+cd datacatalog-templates/
+pip install -r requirements.txt
 
-# dynamic column tags
+python create_template.py $TEMPLATE_PROJECT $TEMPLATE_REGION data_governance.yaml
+python create_template.py $TEMPLATE_PROJECT $TEMPLATE_REGION data_sensitivity.yaml
+python create_template.py $TEMPLATE_PROJECT $TEMPLATE_REGION enterprise_glossary.yaml
+python create_template.py $TEMPLATE_PROJECT $TEMPLATE_REGION data_discovery.yaml
+python create_template.py $TEMPLATE_PROJECT $TEMPLATE_REGION compliance_template.yaml
 
-curl -X POST $TAG_ENGINE_URL/dynamic_column_tags -d @examples/dynamic_column_configs/dynamic_column_create_auto.json
+####### tag history #######
 
-# sensitive column tags on BQ tables
+cd datacatalog-tag-engine/
 
-curl -X POST $TAG_ENGINE_URL/sensitive_column_tags -d @examples/sensitive_column_configs/sensitive_column_create_auto.json
+curl -X POST $TAG_ENGINE_URL/configure_tag_history \
+	-d '{"bigquery_region":"us-central1", "bigquery_project":"tag-engine-run", "bigquery_dataset":"tag_history", "enabled":true}' \
+	-H "Authorization: Bearer $IAM_TOKEN"
 
-# glossary asset tags on BQ tables
+####### static tags #######
 
-curl -X POST $TAG_ENGINE_URL/glossary_asset_tags -d @examples/glossary_asset_configs/glossary_asset_create_ondemand_bq.json
+# create config 
+curl -X POST $TAG_ENGINE_URL/create_static_asset_config -d @tests/api/static_asset_configs/static_asset_auto_bq.json \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
 
-# get job status
+# trigger job
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+  -d '{"config_type":"STATIC_TAG_ASSET","config_uuid":"e885499ed64d11ed91ef3b0868acbb65"}' \
+  -H "Authorization: Bearer $IAM_TOKEN" \
+  -H "oauth_token: $OAUTH_TOKEN"
 
-curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"1404a2b04a6011ed9082eb6a49899340"}'
+####### dynamic tags #######
+
+# create config
+curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @tests/api/dynamic_table_configs/dynamic_table_ondemand.json \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
+
+# trigger job
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+  -d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"c255f764d56711edb96eb170f969c0af"}' \
+  -H "Authorization: Bearer $IAM_TOKEN" \
+  -H "oauth_token: $OAUTH_TOKEN"
+
+# create config
+curl -X POST $TAG_ENGINE_URL/create_dynamic_column_config -d @tests/api/dynamic_column_configs/dynamic_column_ondemand.json \
+  -H "Authorization: Bearer $IAM_TOKEN" \
+  -H "oauth_token: $OAUTH_TOKEN"
+
+# trigger job
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+  -d '{"config_type":"DYNAMIC_TAG_COLUMN","config_uuid":"18e06b5ad64e11edb9fdf1930a40c33e"}' \
+  -H "Authorization: Bearer $IAM_TOKEN" \
+  -H "oauth_token: $OAUTH_TOKEN"
+
+####### sensitive tags #######
+
+# create config 
+curl -X POST $TAG_ENGINE_URL/create_sensitive_column_config \
+	-d @tests/api/sensitive_column_configs/sensitive_column_auto.json \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
+
+# trigger job
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+  -d '{"config_type":"SENSITIVE_TAG_COLUMN","config_uuid":"96cb3764d5ab11ed936ef9fa48b6860b"}' \
+  -H "Authorization: Bearer $IAM_TOKEN" \
+  -H "oauth_token: $OAUTH_TOKEN"
+
+####### glossary tags #######
+
+# create config 
+curl -X POST $TAG_ENGINE_URL/create_glossary_asset_config -d @tests/api/glossary_asset_configs/glossary_asset_ondemand_bq.json \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
+
+# trigger job
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+  -d '{"config_type":"GLOSSARY_TAG_ASSET","config_uuid":"13bea024d56811ed95362762b95fd865"}' \
+  -H "Authorization: Bearer $IAM_TOKEN" \
+  -H "oauth_token: $OAUTH_TOKEN"
+
+####### export tags to BQ #######
+
+# create config
+curl -X POST $TAG_ENGINE_URL/create_export_config -d @tests/api/export_configs/export_by_project.json \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
+
+# trigger job
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+  -d '{"config_type":"TAG_EXPORT","config_uuid":"0ceb28d4d64f11edb9fdf1930a40c33e"}' \
+  -H "Authorization: Bearer $IAM_TOKEN" \
+  -H "oauth_token: $OAUTH_TOKEN"
+
+# create config
+curl -X POST $TAG_ENGINE_URL/create_export_config -d @api/export_configs/export_by_folder.json \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
+	
+# trigger job
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+  -d '{"config_type":"TAG_EXPORT","config_uuid":"13bea024d56811ed95362762b95fd865"}' \
+  -H "Authorization: Bearer $IAM_TOKEN" \
+  -H "oauth_token: $OAUTH_TOKEN"
+
+####### Import tags from CSV #######
+
+# create the config
+curl -X POST $TAG_ENGINE_URL/create_import_config -d @tests/api/import_configs/import_table.json \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
+
+# trigger job
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+  -d '{"config_type":"TAG_IMPORT","config_uuid":"13bea024d56811ed95362762b95fd865"}' \
+  -H "Authorization: Bearer $IAM_TOKEN" \
+  -H "oauth_token: $OAUTH_TOKEN"
+
+# create the config
+curl -X POST $TAG_ENGINE_URL/create_import_config -d @api/import_configs/import_column.json \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
+
+# trigger job
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+  -d '{"config_type":"TAG_IMPORT","config_uuid":"13bea024d56811ed95362762b95fd865"}' \
+  -H "Authorization: Bearer $IAM_TOKEN" \
+  -H "oauth_token: $OAUTH_TOKEN"
+
+####### Restore tags from metadata export #######
+
+# export the metadata
+curl --request POST 'https://datacatalog.googleapis.com/v1/projects/tag-engine-run/locations/us-central1:exportMetadata' \
+	--header "X-Goog-User-Project: tag-engine-run" \
+	--header "Authorization: Bearer $(gcloud auth print-access-token)" \
+	--header 'Accept: application/json' \
+	--header 'Content-Type: application/json' \
+	--data '{"bucket":"catalog_metadata_exports","notifyTopic":"projects/tag-engine-run/topics/catalog_metadata_exports"}' \
+	--compressed
+
+# create the config
+curl -X POST $TAG_ENGINE_URL/create_restore_config -d @tests/api/restore_configs/restore_table_tags.json \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
+
+# trigger job
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+  -d '{"config_type":"RESTORE_TAG","config_uuid":"13bea024d56811ed95362762b95fd865"}' \
+  -H "Authorization: Bearer $IAM_TOKEN" \
+  -H "oauth_token: $OAUTH_TOKEN"
+
+# create the config
+curl -X POST $TAG_ENGINE_URL/create_restore_config -d @tests/api/restore_configs/restore_column_tags.json \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
+
+# trigger job
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+  -d '{"config_type":"RESTORE_TAG","config_uuid":"13bea024d56811ed95362762b95fd865"}' \
+  -H "Authorization: Bearer $IAM_TOKEN" \
+  -H "oauth_token: $OAUTH_TOKEN"
 
 
-####### GCS section #######
+####### Job status #######
 
-# data catalog entries 
-
-curl -X POST $TAG_ENGINE_URL/entries -d @examples/entry_configs/entry_create_auto.json
-
-# static asset tags on GCS files
-
-curl -X POST $TAG_ENGINE_URL/static_asset_tags -d @examples/static_asset_configs/static_asset_create_auto_gcs.json
-
-# glossary asset tags on GCS files
-
-curl -X POST $TAG_ENGINE_URL/glossary_asset_tags -d @examples/glossary_asset_configs/glossary_asset_create_auto_gcs.json
+curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"37fa631ed65911ed953e7bcddcdbfdb4"}' \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
 
 
-####### export tags section #######
+####### Scheduled auto updates #######
 
-curl -X POST $TAG_ENGINE_URL/export_tags -d @examples/export_configs/export_tags_by_project.json
+curl -i -X POST $TAG_ENGINE_URL/scheduled_auto_updates \
+  -H "Authorization: Bearer $IAM_TOKEN" \
+  -H "oauth_token: $OAUTH_TOKEN"
 
-curl -X POST $TAG_ENGINE_URL/export_tags -d @examples/export_configs/export_tags_by_folder.json
+####### List configs #######
+curl -i -X POST $TAG_ENGINE_URL/list_configs \
+  -d '{"config_type":"ALL"}' \
+  -H "Authorization: Bearer $IAM_TOKEN" \
+  -H "oauth_token: $OAUTH_TOKEN"
 
+####### Read config #######
+curl -i -X POST $TAG_ENGINE_URL/get_config \
+  -d '{"config_type":"SENSITIVE_TAG_COLUMN", "config_uuid": "96cb3764d5ab11ed936ef9fa48b6860b"}' \
+  -H "Authorization: Bearer $IAM_TOKEN" \
+  -H "oauth_token: $OAUTH_TOKEN"
 
-####### import tags section #######
-
-# create the tag templates
-python create_template.py tag-engine-develop us-central1 data_discovery.yaml
-python create_template.py tag-engine-develop us-central1 compliance_template.yaml
-
-curl -X POST $TAG_ENGINE_URL/import_tags -d @examples/import_configs/import_table_tags.json
-
-curl -X POST $TAG_ENGINE_URL/import_tags -d @examples/import_configs/import_column_tags.json
-
-
-####### restore tags section #######
-
-curl --request POST 'https://datacatalog.googleapis.com/v1/projects/tag-engine-develop/locations/us-central1:exportMetadata' \
---header "X-Goog-User-Project: tag-engine-develop" \
---header "Authorization: Bearer $(gcloud auth print-access-token)" \
---header 'Accept: application/json' \
---header 'Content-Type: application/json' \
---data '{"bucket":"catalog_metadata_exports","notifyTopic":"projects/tag-engine-develop/topics/catalog_metadata_exports"}' \
---compressed
-
-curl -X POST $TAG_ENGINE_URL/restore_tags -d @examples/restore_configs/restore_table_tags.json
-
-curl --request POST 'https://datacatalog.googleapis.com/v1/projects/tag-engine-develop/locations/us-central1:exportMetadata' \
---header "X-Goog-User-Project: tag-engine-develop" \
---header "Authorization: Bearer $(gcloud auth print-access-token)" \
---header 'Accept: application/json' \
---header 'Content-Type: application/json' \
---data '{"bucket":"catalog_metadata_exports","notifyTopic":"projects/tag-engine-develop/topics/catalog_metadata_exports"}' \
---compressed
-
-curl -X POST $TAG_ENGINE_URL/restore_tags -d @examples/restore_configs/restore_column_tags.json
+####### Delete config #######
+curl -i -X POST $TAG_ENGINE_URL/delete_config \
+  -d '{"config_type":"DYNAMIC_TAG_COLUMN", "config_uuid": "13bea024d56811ed95362762b95fd865"}' \
+  -H "Authorization: Bearer $IAM_TOKEN" \
+  -H "oauth_token: $OAUTH_TOKEN"

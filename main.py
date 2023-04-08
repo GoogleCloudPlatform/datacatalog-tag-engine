@@ -15,8 +15,11 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, json
 import datetime, time, configparser, os
 
-import google.auth
-from google.auth import impersonated_credentials
+import google.auth # service account credentials
+from google.auth import impersonated_credentials # service account credentials
+import google.oauth2.service_account
+import google.oauth2.credentials # user credentials
+from googleapiclient import discovery
 
 from google.cloud import firestore
 from google.cloud import bigquery
@@ -33,18 +36,33 @@ import constants
 import JobManager as jobm
 import TaskManager as taskm
 import BigQueryUtils as bq
+import ConfigType as ct
 
 app = Flask(__name__)
 store = tesh.TagEngineStoreHandler()
 config = configparser.ConfigParser()
 config.read("tagengine.ini")
 
+##################### INIT METHOD #####################
+def check_service_url():
+    if os.environ['SERVICE_URL'] == None:
+        print('Fatal Error: SERVICE_URL environment variable not set. Please set it before running the Tag Engine app.')
+        return -1
+
+check_service_url()
+#######################################################
 OAUTH_SCOPE = 'https://www.googleapis.com/auth/cloud-platform'
+
+if config['DEFAULT']['ENABLE_AUTH'].lower() == 'true' or config['DEFAULT']['ENABLE_AUTH'] == 1:
+    ENABLE_AUTH = True
+else:
+    ENABLE_AUTH = False
+    
 CLOUD_RUN_SA = config['DEFAULT']['CLOUD_RUN_ACCOUNT'].strip()
 TAG_CREATOR_SA = config['DEFAULT']['TAG_CREATOR_ACCOUNT'].strip()
 
-SPLIT_WORK_HANDLER = config['DEFAULT']['CLOUD_RUN_SERVICE_URL'] + '/_split_work'
-RUN_TASK_HANDLER = config['DEFAULT']['CLOUD_RUN_SERVICE_URL'] + '/_run_task'
+SPLIT_WORK_HANDLER = os.environ['SERVICE_URL'] + '/_split_work'
+RUN_TASK_HANDLER = os.environ['SERVICE_URL'] + '/_run_task'
 
 jm = jobm.JobManager(config['DEFAULT']['TAG_ENGINE_PROJECT'], \
                      config['DEFAULT']['QUEUE_REGION'], \
@@ -341,7 +359,7 @@ def search_tag_template():
     template_project = request.form['template_project']
     template_region = request.form['template_region']
     
-    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     fields = dcc.get_template()
     
     #print("fields: " + str(fields))
@@ -363,7 +381,7 @@ def choose_action():
     template_project = request.args.get('template_project')
     template_region = request.args.get('template_region')
     
-    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     fields = dcc.get_template()
     
     #print("fields: " + str(fields))
@@ -390,13 +408,13 @@ def view_configs():
     print("template_project: " + str(template_project))
     print("template_region: " + str(template_region))
     
-    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     template_fields = dcc.get_template()
     
     history_enabled, history_settings = store.read_tag_history_settings()
     stream_enabled, stream_settings = store.read_tag_stream_settings()
     
-    configs = store.read_configs(template_id, template_project, template_region)
+    configs = store.read_configs(service_account, 'ALL', template_id, template_project, template_region)
     
     #print('configs: ', configs)
     
@@ -414,13 +432,13 @@ def view_remaining_configs(template_id, template_project, template_region):
     print("template_project: " + str(template_project))
     print("template_region: " + str(template_region))
     
-    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     template_fields = dcc.get_template()
     
     history_enabled, history_settings = store.read_tag_history_settings()
     stream_enabled, stream_settings = store.read_tag_stream_settings()
     
-    configs = store.read_configs(template_id, template_project, template_region)
+    configs = store.read_configs(service_account, 'ALL', template_id, template_project, template_region)
     
     #print('configs: ', configs)
     
@@ -459,7 +477,7 @@ def display_configuration():
     print("template_region: " + str(template_region))
     print("action: " + str(action))
     
-    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     template_fields = dcc.get_template()
     
     history_enabled, history_settings = store.read_tag_history_settings()
@@ -467,7 +485,7 @@ def display_configuration():
     
     if action == "View and Edit Configurations":
 
-        configs = store.read_configs(template_id, template_project, template_region)
+        configs = store.read_configs(service_account, 'ALL', template_id, template_project, template_region)
         
         print('configs: ', configs)
         
@@ -608,7 +626,7 @@ def update_config():
     config = store.read_config(config_uuid, config_type)
     print("config: " + str(config))
     
-    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     template_fields = dcc.get_template()
     print('template_fields:', template_fields)
     
@@ -754,7 +772,7 @@ def process_static_asset_config():
     print('included_assets_uris: ' + included_assets_uris)
     print('excluded_assets_uris: ' + excluded_assets_uris)
     
-    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -822,7 +840,7 @@ def process_static_asset_config():
             tag_stream_enabled = "ON"            
         
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
-    config_uuid, included_tables_uris_hash = store.write_static_asset_config('PENDING', fields, included_assets_uris, excluded_assets_uris, template_uuid, refresh_mode, \
+    config_uuid, included_tables_uris_hash = store.write_static_asset_config(service_account, fields, included_assets_uris, excluded_assets_uris, template_uuid, refresh_mode, \
                                                                     refresh_frequency, refresh_unit, tag_history_option, tag_stream_option)
     
     if isinstance(config_uuid, str):
@@ -867,7 +885,7 @@ def process_dynamic_table_config():
     #print('refresh_frequency: ' + refresh_frequency)
     #print('refresh_unit: ' + refresh_unit)
     
-    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -927,11 +945,11 @@ def process_dynamic_table_config():
             tag_stream_enabled = "ON"
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
-    config_uuid, included_tables_uris_hash = store.write_dynamic_table_config('PENDING', fields, included_tables_uris, excluded_tables_uris, template_uuid,\
-                                                                           refresh_mode, refresh_frequency, refresh_unit, \
-                                                                           tag_history_option, tag_stream_option)
+    config_uuid = store.write_dynamic_table_config(service_account, fields, included_tables_uris, excluded_tables_uris, \
+                                                   template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
+                                                   tag_history_option, tag_stream_option)
     if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(config_uuid, 'DYNAMIC_TABLE_TAG')
+        job_uuid = jm.create_job(config_uuid, 'DYNAMIC_TAG_TABLE')
     else:
         job_uuid = None
     
@@ -975,7 +993,7 @@ def process_dynamic_column_config():
     refresh_unit = request.form['refresh_unit']
     action = request.form['action']
     
-    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1035,11 +1053,12 @@ def process_dynamic_column_config():
             tag_stream_enabled = "ON"
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
-    config_uuid, included_tables_uris_hash = store.write_dynamic_column_config('PENDING', fields, included_columns_query, included_tables_uris, excluded_tables_uris, template_uuid,\
-                                                                           refresh_mode, refresh_frequency, refresh_unit, \
-                                                                           tag_history_option, tag_stream_option)
+    config_uuid = store.write_dynamic_column_config(service_account, fields, included_columns_query, \
+                                                    included_tables_uris, excluded_tables_uris, template_uuid,\
+                                                    refresh_mode, refresh_frequency, refresh_unit, \
+                                                    tag_history_option, tag_stream_option)
     if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(config_uuid, 'DYNAMIC_COLUMN_TAG')
+        job_uuid = jm.create_job(config_uuid, 'DYNAMIC_TAG_COLUMN')
     else:
         job_uuid = None
     
@@ -1086,7 +1105,7 @@ def process_entry_config():
     #print('refresh_frequency: ' + refresh_frequency)
     #print('refresh_unit: ' + refresh_unit)
     
-    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1144,9 +1163,9 @@ def process_entry_config():
             tag_stream_enabled = "ON"
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
-    config_uuid, included_assets_uris_hash = store.write_entry_config('PENDING', fields, included_assets_uris, excluded_assets_uris, template_uuid,\
-                                                             refresh_mode, refresh_frequency, refresh_unit, \
-                                                             tag_history_option, tag_stream_option)
+    config_uuid = store.write_entry_config(service_account, fields, included_assets_uris, excluded_assets_uris, template_uuid,\
+                                            refresh_mode, refresh_frequency, refresh_unit, \
+                                            tag_history_option, tag_stream_option)
     if isinstance(config_uuid, str): 
         job_uuid = jm.create_job(config_uuid, 'ENTRY')
     else:
@@ -1197,7 +1216,7 @@ def process_glossary_asset_config():
     #print('refresh_frequency: ' + refresh_frequency)
     #print('refresh_unit: ' + refresh_unit)
     
-    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1256,11 +1275,12 @@ def process_glossary_asset_config():
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
 
-    config_uuid, included_assets_uris_hash = store.write_glossary_asset_config('PENDING', fields, mapping_table, included_assets_uris, excluded_assets_uris, template_uuid,\
-                                                             refresh_mode, refresh_frequency, refresh_unit, \
-                                                             tag_history_option, tag_stream_option, overwrite)
+    config_uuid = store.write_glossary_asset_config(service_account, fields, mapping_table, included_assets_uris, \
+                                                    excluded_assets_uris, template_uuid,\
+                                                    refresh_mode, refresh_frequency, refresh_unit, \
+                                                    tag_history_option, tag_stream_option, overwrite)
     if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(config_uuid, 'GLOSSARY_ASSET_TAG')
+        job_uuid = jm.create_job(config_uuid, 'GLOSSARY_TAG_ASSET')
     else:
         job_uuid = None
     
@@ -1322,7 +1342,7 @@ def process_sensitive_column_config():
     #print('refresh_frequency: ' + refresh_frequency)
     #print('refresh_unit: ' + refresh_unit)
     
-    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1381,15 +1401,13 @@ def process_sensitive_column_config():
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
 
-    config_uuid, included_tables_uris_hash = store.write_sensitive_column_config('PENDING', fields, dlp_dataset, infotype_selection_table, \
-                                                                                infotype_classification_table,
-                                                                                included_tables_uris, excluded_tables_uris, \
-                                                                                create_policy_tags, taxonomy_id, \
-                                                                                template_uuid, \
-                                                                                refresh_mode, refresh_frequency, refresh_unit, \
-                                                                                tag_history_option, tag_stream_option, overwrite)
+    config_uuid = store.write_sensitive_column_config(service_account, fields, dlp_dataset, infotype_selection_table, \
+                                                      infotype_classification_table, included_tables_uris, excluded_tables_uris, \
+                                                      create_policy_tags, taxonomy_id, template_uuid, \
+                                                      refresh_mode, refresh_frequency, refresh_unit, \
+                                                      tag_history_option, tag_stream_option, overwrite)
     if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(config_uuid, 'SENSITIVE_COLUMN_TAG')
+        job_uuid = jm.create_job(config_uuid, 'SENSITIVE_TAG_COLUMN')
     else:
         job_uuid = None
     
@@ -1431,7 +1449,7 @@ def process_restore_config():
     template_region = request.form['template_region']
     action = request.form['action']
     
-    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1483,7 +1501,7 @@ def process_restore_config():
     
     overwrite = True
     
-    config_uuid = store.write_restore_config('PENDING', source_template_uuid, source_template_id, source_template_project, source_template_region, \
+    config_uuid = store.write_restore_config(service_account, source_template_uuid, source_template_id, source_template_project, source_template_region, \
                                            target_template_uuid, target_template_id, target_template_project, target_template_region, \
                                            metadata_export_location, \
                                            tag_history_option, tag_stream_option, overwrite)                                                      
@@ -1527,7 +1545,7 @@ def process_import_config():
     
     action = request.form['action']
     
-    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1563,7 +1581,7 @@ def process_import_config():
   
     overwrite = True
     
-    config_uuid = store.write_import_config('PENDING', template_uuid, template_id, template_project, template_region, \
+    config_uuid = store.write_import_config(service_account, template_uuid, template_id, template_project, template_region, \
                                            metadata_import_location, \
                                            tag_history_option, tag_stream_option, overwrite)                                                      
 
@@ -1622,7 +1640,7 @@ def process_export_config():
         project_list.append(project.strip())
     print('project_list:', project_list)
         
-    config_uuid = store.write_export_config('PENDING', project_list, source_folder, source_region, \
+    config_uuid = store.write_export_config(service_account, project_list, source_folder, source_region, \
                                           target_project, target_dataset, target_region, write_option, \
                                           refresh_mode, refresh_frequency, refresh_unit)                                                      
 
@@ -1710,19 +1728,112 @@ def check_template_parameters(request_name, json_request):
     return valid_parameters, template_id, template_project, template_region
 
 
-def get_target_credentials():
+def get_target_credentials(target_service_account):
     
     print('*** enter get_target_credentials ***')
     
-    source_credentials, _ = google.auth.default()
+    cloud_run_credentials, _ = google.auth.default() 
 
-    target_credentials = impersonated_credentials.Credentials(source_credentials=source_credentials,
-        target_principal=TAG_CREATOR_SA,
+    target_credentials = impersonated_credentials.Credentials(source_credentials=cloud_run_credentials,
+        target_principal=target_service_account,
         target_scopes=OAUTH_SCOPE,
         lifetime=1200) # lifetime is in seconds -> 20 minutes should be enough time
     
     return target_credentials
 
+# Param request contains the http headers, which includes an oauth token, not just an iam token. 
+# Needs to be created from client_id, client_secret, refresh_token, and token_uri
+# This must be generated from a key file
+def check_user_permissions(oauth_token, service_account):
+    
+    print('enter check_user_permissions')
+    
+    has_permission = False
+    
+    user_credentials = google.oauth2.credentials.Credentials(token=oauth_token)                                                                                                  
+    service = discovery.build('iam', 'v1', credentials=user_credentials)
+
+    # get the GCP project which owns the service account
+    start_index = service_account.index('@') + 1 
+    end_index = service_account.index('.') 
+    service_account_project = service_account[start_index:end_index]
+    resource = 'projects/{}/serviceAccounts/{}'.format(service_account_project, service_account)
+    permissions = ["iam.serviceAccounts.actAs", "iam.serviceAccounts.get"]
+    body={"permissions": permissions}
+
+    request = service.projects().serviceAccounts().testIamPermissions(resource=resource, body=body)
+    response = request.execute()
+    
+    if 'permissions' in response:
+        #print('allowed permissions:', response['permissions'])
+        user_permissions = response['permissions']
+        if "iam.serviceAccounts.actAs" in user_permissions and "iam.serviceAccounts.get" in user_permissions:
+            has_permission = True
+          
+    return has_permission
+ 
+ 
+# get the service account intended to process the request 
+def get_requested_service_account(json): 
+
+    if 'service_account' in json:
+        service_account = json['service_account']
+    else:
+        service_account = TAG_CREATOR_SA
+    
+    return service_account
+    
+    
+def check_config_type(requested_ct):
+    
+    print('*** enter check_config_type ***')
+    
+    for available_ct in (ct.ConfigType):
+        if available_ct.name == requested_ct:
+            return True
+    
+    return False
+
+
+def get_available_config_types():
+    
+    print('*** enter get_available_config_types ***')
+    config_types = ''
+    
+    for config_type in (ct.ConfigType):
+        config_types += config_type.name + ', '
+            
+    return config_types[0:-2]
+
+
+def do_authentication(json, headers):
+    
+    service_account = get_requested_service_account(json)
+    
+    if ENABLE_AUTH == False:
+        return True, None, service_account
+        
+    oauth_token = headers.get('oauth_token', None)
+
+    if oauth_token == None:
+        response = {
+            "status": "error",
+            "message": "Fatal error: oauth_token field missing from request header.",
+        }
+        return False, response, service_account
+        
+    has_permission  = check_user_permissions(oauth_token, service_account)   
+    print('has_permission:', has_permission)
+    
+    if has_permission == False:
+        response = {
+            "status": "error",
+            "message": "Fatal error: User does not have permission to use service account " + service_account,
+        }
+        return False, response, service_account
+       
+    return True, None, service_account
+    
 ##################### API METHODS #################
 
 """
@@ -1739,181 +1850,23 @@ Args:
     tag_history: true if tag history is on, false otherwise 
     tag_stream: true if tag stream is on, false otherwise
 Returns:
-    job_uuid 
+    config_uuid
 """
-@app.route("/dynamic_table_tags", methods=['POST'])
-def dynamic_table_tags():
+@app.route("/create_static_asset_config", methods=['POST'])
+def create_static_asset_config():
+    
+    print('*** enter create_static_asset_config ***')
+    #print('request: ', request)
+    
     json = request.get_json(force=True) 
-    #print('json: ' + str(json))
-       
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('dynamic_table_tags', json)
+    print('json request: ' + str(json))
     
-    if valid_parameters != True:
-        response = {
-                "status": "error",
-                "message": "Request JSON is missing some required tag template parameters",
-        }
+    status, response, service_account = do_authentication(json, request.headers)
+    
+    if status == False:
         return jsonify(response), 400
-     
-    #print('template_id: ' + template_id)
-    #print('template_project: ' + template_project)
-    #print('template_region: ' + template_region)
-    
-    template_uuid = store.write_tag_template(template_id, template_project, template_region)
-    
-    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
-    included_fields = json['fields']
-    fields = dcc.get_template(included_fields=included_fields)
-    
-    if 'included_tables_uris' in json:
-        included_tables_uris = json['included_tables_uris']
-    else:
-        print("The dynamic_table_tags request requires an included_tables_uris parameter.")
-        resp = jsonify(success=False)
-        return resp
-    
-    if 'excluded_tables_uris' in json:
-        excluded_tables_uris = json['excluded_tables_uris']
-    else:
-        excluded_tables_uris = ''
-    
-    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
-    
-    if 'tag_history' in json:
-        tag_history = json['tag_history']
-    else:
-        tag_history = None
-      
-    if 'tag_stream' in json:  
-        tag_stream = json['tag_stream']
-    else:
-        tag_stream = None
-    
-    config_uuid, included_tables_uris_hash = store.write_dynamic_table_config('PENDING', fields, included_tables_uris, excluded_tables_uris, \
-                                                                     template_uuid,\
-                                                                     refresh_mode, refresh_frequency, refresh_unit, \
-                                                                     tag_history, tag_stream)                                                      
-
-    if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(CLOUD_RUN_SA, config_uuid, 'DYNAMIC_TABLE_TAG')
-    else:
-        job_uuid = None
-    
-    return jsonify(job_uuid=job_uuid)
-    
-
-"""
-Args:
-    template_id: tag template to use
-    template_project: tag template's Google Cloud project 
-    template_region: tag template's region 
-    fields: list of all the template field names to include in the tag (no need to include the field type)
-    included_tables_uris: The paths to the resources (either in BQ or GCS) 
-    excluded_tables_uris: The paths to the resources to exclude (optional)
-    refresh_mode: AUTO or ON_DEMAND
-    refresh_frequency: positive integer
-    refresh_unit: minutes or hours
-    tag_history: true if tag history is on, false otherwise 
-    tag_stream: true if tag stream is on, false otherwise
-Returns:
-    job_uuid 
-"""
-@app.route("/dynamic_column_tags", methods=['POST'])
-def dynamic_column_tags():
-    json = request.get_json(force=True) 
-    #print('json: ' + str(json))
-       
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('dynamic_column_tags', json)
-    
-    if valid_parameters != True:
-        response = {
-                "status": "error",
-                "message": "Request JSON is missing some required tag template parameters",
-        }
-        return jsonify(response), 400
-     
-    #print('template_id: ' + template_id)
-    #print('template_project: ' + template_project)
-    #print('template_region: ' + template_region)
-    
-    template_uuid = store.write_tag_template(template_id, template_project, template_region)
-    
-    credentials = get_target_credentials()
-    print('credentials:', credentials)
-
-    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
-    included_fields = json['fields']
-    fields = dcc.get_template(included_fields=included_fields)
-
-    if 'included_columns_query' in json:
-        included_columns_query = json['included_columns_query']
-    else:
-        print("The dynamic_columns_tags request requires an included_columns_query parameter.")
-        resp = jsonify(success=False)
-        return resp
-    
-    if 'included_tables_uris' in json:
-        included_tables_uris = json['included_tables_uris']
-    else:
-        print("The dynamic_table_tags request requires an included_tables_uris parameter.")
-        resp = jsonify(success=False)
-        return resp
-    
-    if 'excluded_tables_uris' in json:
-        excluded_tables_uris = json['excluded_tables_uris']
-    else:
-        excluded_tables_uris = ''
-    
-    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
-    
-    if 'tag_history' in json:
-        tag_history = json['tag_history']
-    else:
-        tag_history = None
-      
-    if 'tag_stream' in json:  
-        tag_stream = json['tag_stream']
-    else:
-        tag_stream = None
-    
-    config_uuid, included_tables_uris_hash = store.write_dynamic_column_config('PENDING', fields, included_columns_query, \
-                                                                            included_tables_uris, excluded_tables_uris, \
-                                                                            template_uuid,\
-                                                                            refresh_mode, refresh_frequency, refresh_unit, \
-                                                                            tag_history, tag_stream)                                                      
-
-    if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(CLOUD_RUN_SA, config_uuid, 'DYNAMIC_COLUMN_TAG')
-    else:
-        job_uuid = None
-    
-    return jsonify(job_uuid=job_uuid)
-
         
-"""
-Args:
-    template_id: tag template to use
-    template_project: tag template's Google Cloud project 
-    template_region: tag template's region 
-    fields: list of all the template field names to include in the tag (no need to include the field type)
-    included_tables_uris: The paths to the resources (either in BQ or GCS) 
-    excluded_tables_uris: The paths to the resources to exclude (optional)
-    refresh_mode: AUTO or ON_DEMAND
-    refresh_frequency: positive integer
-    refresh_unit: minutes or hours
-    tag_history: true if tag history is on, false otherwise 
-    tag_stream: true if tag stream is on, false otherwise
-Returns:
-    job_uuid
-"""
-@app.route("/static_asset_tags", methods=['POST'])
-def static_asset_tags():
-    
-    print('*** enter static_asset_tags ***')
-    json = request.get_json(force=True) 
-    print('json: ' + str(json))
-       
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('static_asset_tags', json)
+    valid_parameters, template_id, template_project, template_region = check_template_parameters('static_asset_config', json)
     
     if valid_parameters != True:
         response = {
@@ -1927,18 +1880,14 @@ def static_asset_tags():
     print('template_region: ' + template_region)
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
-    
-    credentials = get_target_credentials()
-    print('credentials:', credentials)
-    
-    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     fields = dcc.get_template(included_fields=json['fields'])
-    print('fields:', fields)
+    #print('fields:', fields)
     
     if 'included_assets_uris' in json:
         included_assets_uris = json['included_assets_uris']
     else:
-        print("The static_asset_tags request requires an included_assets_uris parameter.")
+        print("The create_static_asset_config request requires an included_assets_uris parameter.")
         resp = jsonify(success=False)
         return resp
     
@@ -1959,43 +1908,42 @@ def static_asset_tags():
     
     refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
     
-    # since we are creating a new config, we are overwriting any previously created tags
-    overwrite = True
-    
-    config_uuid, included_assets_uris_hash = store.write_static_asset_config('PENDING', fields, included_assets_uris, excluded_assets_uris, template_uuid,\
-                                                            refresh_mode, refresh_frequency, refresh_unit, \
-                                                            tag_history, tag_stream, overwrite)
-     
-    if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(CLOUD_RUN_SA, config_uuid, 'STATIC_ASSET_TAG')
-    else:
-        job_uuid = None
+    overwrite = True  
+    config_uuid = store.write_static_asset_config(service_account, fields, included_assets_uris, \
+                                                  excluded_assets_uris, template_uuid,\
+                                                  refresh_mode, refresh_frequency, refresh_unit, \
+                                                  tag_history, tag_stream, overwrite)
 
-    return jsonify(job_uuid=job_uuid)
-    
+    return jsonify(config_uuid=config_uuid, config_type='STATIC_TAG_ASSET')
+
 
 """
 Args:
-    template_id: file metadata tag template id
+    template_id: tag template to use
     template_project: tag template's Google Cloud project 
     template_region: tag template's region 
     fields: list of all the template field names to include in the tag (no need to include the field type)
-    included_assets_uris: The paths to the GCS resources 
-    excluded_assets_uris: The paths to the GCS resources to exclude (optional)
+    included_tables_uris: The paths to the resources (either in BQ or GCS) 
+    excluded_tables_uris: The paths to the resources to exclude (optional)
     refresh_mode: AUTO or ON_DEMAND
     refresh_frequency: positive integer
     refresh_unit: minutes or hours
     tag_history: true if tag history is on, false otherwise 
     tag_stream: true if tag stream is on, false otherwise
 Returns:
-    job_uuid 
+    config_uuid 
 """
-@app.route("/entries", methods=['POST'])
-def entries():
+@app.route("/create_dynamic_table_config", methods=['POST'])
+def create_dynamic_table_config():
     json = request.get_json(force=True) 
-    print('json: ' + str(json))
+    #print('json: ' + str(json))
+    
+    status, response, service_account = do_authentication(json, request.headers)
+    
+    if status == False:
+        return jsonify(response), 400
        
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('entries', json)
+    valid_parameters, template_id, template_project, template_region = check_template_parameters('dynamic_table_config', json)
     
     if valid_parameters != True:
         response = {
@@ -2010,7 +1958,168 @@ def entries():
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
-    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
+    included_fields = json['fields']
+    fields = dcc.get_template(included_fields=included_fields)
+    
+    if 'included_tables_uris' in json:
+        included_tables_uris = json['included_tables_uris']
+    else:
+        print("The create_dynamic_table_config request requires an included_tables_uris parameter.")
+        resp = jsonify(success=False)
+        return resp
+    
+    if 'excluded_tables_uris' in json:
+        excluded_tables_uris = json['excluded_tables_uris']
+    else:
+        excluded_tables_uris = ''
+    
+    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
+    
+    if 'tag_history' in json:
+        tag_history = json['tag_history']
+    else:
+        tag_history = None
+      
+    if 'tag_stream' in json:  
+        tag_stream = json['tag_stream']
+    else:
+        tag_stream = None
+    
+    config_uuid = store.write_dynamic_table_config(service_account, fields, included_tables_uris, excluded_tables_uris, \
+                                                   template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
+                                                   tag_history, tag_stream)                                                      
+
+
+    return jsonify(config_uuid=config_uuid, config_type='DYNAMIC_TAG_TABLE')
+    
+
+"""
+Args:
+    template_id: tag template to use
+    template_project: tag template's Google Cloud project 
+    template_region: tag template's region 
+    fields: list of all the template field names to include in the tag (no need to include the field type)
+    included_tables_uris: The paths to the resources (either in BQ or GCS) 
+    excluded_tables_uris: The paths to the resources to exclude (optional)
+    refresh_mode: AUTO or ON_DEMAND
+    refresh_frequency: positive integer
+    refresh_unit: minutes or hours
+    tag_history: true if tag history is on, false otherwise 
+    tag_stream: true if tag stream is on, false otherwise
+Returns:
+    job_uuid 
+"""
+@app.route("/create_dynamic_column_config", methods=['POST'])
+def create_dynamic_column_config():
+    json = request.get_json(force=True) 
+    #print('json: ' + str(json))
+    
+    status, response, service_account = do_authentication(json, request.headers)
+    
+    if status == False:
+        return jsonify(response), 400
+       
+    valid_parameters, template_id, template_project, template_region = check_template_parameters('dynamic_column_config', json)
+    
+    if valid_parameters != True:
+        response = {
+                "status": "error",
+                "message": "Request JSON is missing some required tag template parameters",
+        }
+        return jsonify(response), 400
+     
+    #print('template_id: ' + template_id)
+    #print('template_project: ' + template_project)
+    #print('template_region: ' + template_region)
+    
+    template_uuid = store.write_tag_template(template_id, template_project, template_region)
+    
+    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
+    included_fields = json['fields']
+    fields = dcc.get_template(included_fields=included_fields)
+
+    if 'included_columns_query' in json:
+        included_columns_query = json['included_columns_query']
+    else:
+        print("The create_dynamic_columns_config request requires an included_columns_query parameter.")
+        resp = jsonify(success=False)
+        return resp
+    
+    if 'included_tables_uris' in json:
+        included_tables_uris = json['included_tables_uris']
+    else:
+        print("The create_dynamic_table_config request requires an included_tables_uris parameter.")
+        resp = jsonify(success=False)
+        return resp
+    
+    if 'excluded_tables_uris' in json:
+        excluded_tables_uris = json['excluded_tables_uris']
+    else:
+        excluded_tables_uris = ''
+    
+    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
+    
+    if 'tag_history' in json:
+        tag_history = json['tag_history']
+    else:
+        tag_history = None
+      
+    if 'tag_stream' in json:  
+        tag_stream = json['tag_stream']
+    else:
+        tag_stream = None
+    
+    config_uuid = store.write_dynamic_column_config(service_account, fields, included_columns_query, included_tables_uris, \
+                                                    excluded_tables_uris, template_uuid, refresh_mode, refresh_frequency, \
+                                                    refresh_unit, tag_history, tag_stream)                                                      
+
+
+    return jsonify(config_uuid=config_uuid, config_type='DYNAMIC_TAG_COLUMN')
+
+        
+"""
+Args:
+    template_id: file metadata tag template id
+    template_project: tag template's Google Cloud project 
+    template_region: tag template's region 
+    fields: list of all the template field names to include in the tag (no need to include the field type)
+    included_assets_uris: The paths to the GCS resources 
+    excluded_assets_uris: The paths to the GCS resources to exclude (optional)
+    refresh_mode: AUTO or ON_DEMAND
+    refresh_frequency: positive integer
+    refresh_unit: minutes or hours
+    tag_history: true if tag history is on, false otherwise 
+    tag_stream: true if tag stream is on, false otherwise
+Returns:
+    config_uuid 
+"""
+@app.route("/create_entry_config", methods=['POST'])
+def create_entry_config():
+    json = request.get_json(force=True) 
+    print('json: ' + str(json))
+       
+    status, response, service_account = do_authentication(json, request.headers)
+    
+    if status == False:
+        return jsonify(response), 400
+        
+    valid_parameters, template_id, template_project, template_region = check_template_parameters('entry_config', json)
+    
+    if valid_parameters != True:
+        response = {
+                "status": "error",
+                "message": "Request JSON is missing some required tag template parameters",
+        }
+        return jsonify(response), 400
+     
+    #print('template_id: ' + template_id)
+    #print('template_project: ' + template_project)
+    #print('template_region: ' + template_region)
+    
+    template_uuid = store.write_tag_template(template_id, template_project, template_region)
+    
+    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     fields = dcc.get_template(included_fields=json['fields'])
 
     if 'included_assets_uris' in json:
@@ -2037,16 +2146,11 @@ def entries():
     else:
         tag_stream = None
     
-    config_uuid, included_assets_uris_hash = store.write_entry_config('PENDING', fields, included_assets_uris, excluded_assets_uris, template_uuid,\
-                                                             refresh_mode, refresh_frequency, refresh_unit, \
-                                                             tag_history, tag_stream)                                                      
+    config_uuid = store.write_entry_config(service_account, fields, included_assets_uris, excluded_assets_uris,\
+                                            template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
+                                            tag_history, tag_stream)                                                      
 
-    if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(CLOUD_RUN_SA, config_uuid, 'ENTRY')
-    else:
-        job_uuid = None
-    
-    return jsonify(job_uuid=job_uuid)
+    return jsonify(config_uuid=config_uuid, config_type='ENTRY_CREATE')
 
 
 """
@@ -2064,14 +2168,19 @@ Args:
     tag_history: true if tag history is on, false otherwise 
     tag_stream: true if tag stream is on, false otherwise
 Returns:
-    job_uuid 
+    config_uuid 
 """
-@app.route("/glossary_asset_tags", methods=['POST'])
-def glossary_asset_tags():
+@app.route("/create_glossary_asset_config", methods=['POST'])
+def create_glossary_asset_config():
     json = request.get_json(force=True) 
     print('json: ' + str(json))
+    
+    status, response, service_account = do_authentication(json, request.headers)
+    
+    if status == False:
+        return jsonify(response), 400
        
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('glossary_asset_tags', json)
+    valid_parameters, template_id, template_project, template_region = check_template_parameters('glossary_asset_config', json)
     
     if valid_parameters != True:
         response = {
@@ -2080,27 +2189,23 @@ def glossary_asset_tags():
         }
         return jsonify(response), 400
      
-    #print('template_id: ' + template_id)
-    #print('template_project: ' + template_project)
-    #print('template_region: ' + template_region)
-    
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
-    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     fields = dcc.get_template(included_fields=json['fields'])
     
     # validate mapping_table field
     if 'mapping_table' in json:
         mapping_table = json['mapping_table']
     else:
-        print("glossary_asset_tags request doesn't include a mapping_table field. This is a required parameter.")
+        print("glossary_asset_configs request doesn't include a mapping_table field. This is a required parameter.")
         resp = jsonify(success=False)
         return resp
     
     if 'included_assets_uris' in json:
         included_assets_uris = json['included_assets_uris']
     else:
-        print("The glossary_asset_tags request requires an included_assets_uris parameter.")
+        print("The glossary_asset_config request requires an included_assets_uris parameter.")
         resp = jsonify(success=False)
         return resp
     
@@ -2123,16 +2228,11 @@ def glossary_asset_tags():
 
     overwrite = True
     
-    config_uuid, included_assets_uris_hash = store.write_glossary_asset_config('PENDING', fields, mapping_table, included_assets_uris, excluded_assets_uris, template_uuid,\
-                                                                             refresh_mode, refresh_frequency, refresh_unit, \
-                                                                             tag_history, tag_stream, overwrite)                                                      
-
-    if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(CLOUD_RUN_SA, config_uuid, 'GLOSSARY_ASSET_TAG')
-    else:
-        job_uuid = None
+    config_uuid = store.write_glossary_asset_config(service_account, fields, mapping_table, included_assets_uris, \
+                                                    excluded_assets_uris, template_uuid, refresh_mode, refresh_frequency, \
+                                                    refresh_unit, tag_history, tag_stream, overwrite)                                                      
     
-    return jsonify(job_uuid=job_uuid)
+    return jsonify(config_uuid=config_uuid, config_type='GLOSSARY_TAG_ASSET')
 
 
 """
@@ -2154,14 +2254,19 @@ Args:
     tag_history: true if tag history is on, false otherwise 
     tag_stream: true if tag stream is on, false otherwise
 Returns:
-    job_uuid 
+    config_uuid 
 """
-@app.route("/sensitive_column_tags", methods=['POST'])
-def sensitive_column_tags():
+@app.route("/create_sensitive_column_config", methods=['POST'])
+def create_sensitive_column_config():
     json = request.get_json(force=True) 
     print('json: ' + str(json))
     
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('sensitive_column_tags', json)
+    status, response, service_account = do_authentication(json, request.headers)
+    
+    if status == False:
+        return jsonify(response), 400
+    
+    valid_parameters, template_id, template_project, template_region = check_template_parameters('sensitive_column_config', json)
     
     if valid_parameters != True:
         response = {
@@ -2176,14 +2281,14 @@ def sensitive_column_tags():
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
-    dcc = controller.DataCatalogController(get_target_credentials(), template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     fields = dcc.get_template(included_fields=json['fields'])
 
     # validate dlp_dataset parameter
     if 'dlp_dataset' in json:
         dlp_dataset = json['dlp_dataset']
     else:
-        print("sensitive_column_config request doesn't include a dlp_dataset field. This is a required parameter.")
+        print("The sensitive_column_config request doesn't include a dlp_dataset field. This is a required parameter.")
         resp = jsonify(success=False)
         return resp
             
@@ -2191,7 +2296,7 @@ def sensitive_column_tags():
     if 'infotype_selection_table' in json:
         infotype_selection_table = json['infotype_selection_table']
     else:
-        print("sensitive_column_config request doesn't include an infotype_selection_table field. This is a required parameter.")
+        print("The sensitive_column_config request doesn't include an infotype_selection_table field. This is a required parameter.")
         resp = jsonify(success=False)
         return resp
         
@@ -2199,7 +2304,7 @@ def sensitive_column_tags():
     if 'infotype_classification_table' in json:
         infotype_classification_table = json['infotype_classification_table']
     else:
-        print("sensitive_column_config request doesn't include an infotype_classification_table field. This is a required parameter.")
+        print("The sensitive_column_config request doesn't include an infotype_classification_table field. This is a required parameter.")
         resp = jsonify(success=False)
         return resp
     
@@ -2245,19 +2350,13 @@ def sensitive_column_tags():
 
     overwrite = True
     
-    config_uuid, included_tables_uris_hash = store.write_sensitive_column_config('PENDING', fields, dlp_dataset, infotype_selection_table, \
-                                                                                infotype_classification_table, \
-                                                                                included_tables_uris, excluded_tables_uris, \
-                                                                                create_policy_tags, taxonomy_id, template_uuid, \
-                                                                                refresh_mode, refresh_frequency, refresh_unit, \
-                                                                                tag_history, tag_stream, overwrite)                                                      
-
-    if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(CLOUD_RUN_SA, config_uuid, 'SENSITIVE_COLUMN_TAG')
-    else:
-        job_uuid = None
+    config_uuid = store.write_sensitive_column_config(service_account, fields, dlp_dataset, infotype_selection_table,\
+                                                      infotype_classification_table, included_tables_uris, \
+                                                      excluded_tables_uris, create_policy_tags, \
+                                                      taxonomy_id, template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
+                                                      tag_history, tag_stream, overwrite)                                                      
     
-    return jsonify(job_uuid=job_uuid)
+    return jsonify(config_uuid=config_uuid, config_type='SENSITIVE_TAG_COLUMN')
 
 
 """
@@ -2272,12 +2371,17 @@ Args:
     tag_history: true if tag history is on, false otherwise 
     tag_stream: true if tag stream is on, false otherwise
 Returns:
-    job_uuid 
+    config_uuid 
 """
-@app.route("/restore_tags", methods=['POST'])
-def restore_tags():
+@app.route("/create_restore_config", methods=['POST'])
+def create_restore_config():
     json = request.get_json(force=True) 
     print('json: ' + str(json))
+    
+    status, response, service_account = do_authentication(json, request.headers)
+    
+    if status == False:
+        return jsonify(response), 400
     
     if 'source_template_id' in json:
         source_template_id = json['source_template_id']
@@ -2300,7 +2404,6 @@ def restore_tags():
         resp = jsonify(success=False)
         return resp
        
-
     if 'target_template_id' in json:
         target_template_id = json['target_template_id']
     else:
@@ -2344,25 +2447,26 @@ def restore_tags():
 
     overwrite = True
     
-    config_uuid = store.write_restore_config('PENDING', source_template_uuid, source_template_id, source_template_project, source_template_region, \
-                                           target_template_uuid, target_template_id, target_template_project, target_template_region, \
-                                           metadata_export_location, \
-                                           tag_history, tag_stream, overwrite)                                                      
-
-    if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(CLOUD_RUN_SA, config_uuid, 'RESTORE_TAG')
-    else:
-        job_uuid = None
+    config_uuid = store.write_tag_restore_config(service_account, source_template_uuid, source_template_id, \
+                                                source_template_project, source_template_region, \
+                                                target_template_uuid, target_template_id, \
+                                                target_template_project, target_template_region, \
+                                                metadata_export_location, tag_history, tag_stream, overwrite)                                                      
     
-    return jsonify(job_uuid=job_uuid)
+    return jsonify(config_uuid=config_uuid, config_type='TAG_RESTORE')
 
 
-@app.route("/import_tags", methods=['POST'])
-def import_tags():
+@app.route("/create_import_config", methods=['POST'])
+def create_import_config():
     json = request.get_json(force=True) 
     print('json: ' + str(json))
+    
+    status, response, service_account = do_authentication(json, request.headers)
+    
+    if status == False:
+        return jsonify(response), 400
        
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('import_tags', json)
+    valid_parameters, template_id, template_project, template_region = check_template_parameters('import_config', json)
     
     if valid_parameters != True:
         response = {
@@ -2398,21 +2502,21 @@ def import_tags():
 
     overwrite = True
     
-    config_uuid = store.write_import_config('PENDING', template_uuid, template_id, template_project, template_region, \
-                                           metadata_import_location, tag_history, tag_stream, overwrite)                                                      
-
-    if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(CLOUD_RUN_SA, config_uuid, 'IMPORT_TAG')
-    else:
-        job_uuid = None
+    config_uuid = store.write_tag_import_config(service_account, template_uuid, template_id, template_project, template_region, \
+                                                metadata_import_location, tag_history, tag_stream, overwrite)                                                      
     
-    return jsonify(job_uuid=job_uuid)
+    return jsonify(config_uuid=config_uuid, config_type='TAG_IMPORT')
 
 
-@app.route("/export_tags", methods=['POST'])
-def export_tags():
+@app.route("/create_export_config", methods=['POST'])
+def create_export_config():
     json = request.get_json(force=True) 
     print('json: ' + str(json))
+    
+    status, response, service_account = do_authentication(json, request.headers)
+    
+    if status == False:
+        return jsonify(response), 400
        
     if 'source_projects' in json:
         source_projects = json['source_projects']
@@ -2491,22 +2595,22 @@ def export_tags():
         resp = jsonify(success=False)
         return resp
         
-    config_uuid = store.write_export_config('PENDING', source_projects, source_folder, source_region, \
-                                          target_project, target_dataset, target_region, write_option, \
-                                          refresh_mode, refresh_frequency, refresh_unit)                                                      
-
-    if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(CLOUD_RUN_SA, config_uuid, 'EXPORT_TAG')
-    else:
-        job_uuid = None
+    config_uuid = store.write_tag_export_config(service_account, source_projects, source_folder, source_region, \
+                                              target_project, target_dataset, target_region, write_option, \
+                                              refresh_mode, refresh_frequency, refresh_unit)                                                      
     
-    return jsonify(job_uuid=job_uuid)
+    return jsonify(config_uuid=config_uuid, config_type='TAG_EXPORT')
 
 
 @app.route("/copy_tags", methods=['POST'])
 def copy_tags():
     json = request.get_json(force=True) 
     print('json: ' + str(json))
+    
+    status, response, service_account = do_authentication(json, request.headers)
+    
+    if status == False:
+        return jsonify(response), 400
        
     if 'source_project' in json:
         source_project = json['source_project']
@@ -2562,7 +2666,7 @@ def copy_tags():
      }
          return jsonify(response), 400
 
-    dcu = dc.DataCatalogUtils()
+    dcu = dc.DataCatalogUtils(get_target_credentials(service_account))
     success = dcc.copy_tags(source_project, source_dataset, source_table, target_project, target_dataset, target_table)                                                      
     
     if success:
@@ -2575,8 +2679,15 @@ def copy_tags():
 
 @app.route("/update_tag_subset", methods=['POST'])
 def update_tag_subset():
+    
     json = request.get_json(force=True) 
     print('json: ' + str(json))
+    
+    status, response, service_account = do_authentication(json, request.headers)
+    
+    if status == False:
+        return jsonify(response), 400
+    
     valid_parameters, template_id, template_project, template_region = check_template_parameters('update_tag_subset', json)
     
     if valid_parameters != True:
@@ -2604,7 +2715,7 @@ def update_tag_subset():
      }
          return jsonify(response), 400
 
-    dcu = dc.DataCatalogUtils(get_target_credentials())
+    dcu = dc.DataCatalogUtils(get_target_credentials(service_account))
     success = dcc.update_tag_subset(template_id, template_project, template_region, entry_name, changed_fields)
 
     if success:
@@ -2617,76 +2728,58 @@ def update_tag_subset():
 
 """
 Args:
-    template_id: tag template to use
-    template_project: tag template's Google Cloud project 
-    template_region: tag template's region 
-    included_tables_uris: tag config's included uris or
-    included_tables_uris_hash: tag config's md5 hash value (in place of the included_tables_uris)
-Note: caller must provide either the included_tables_uris_hash or included_tables_uris
+    config_type = on of (STATIC_TAG_ASSET, DYNAMIC_TAG_TABLE, DYNAMIC_TAG_COLUMN, etc.) 
+    config_id = config identifier
 Returns:
-    job_uuid = unique identifer for job
-"""
-@app.route("/ondemand_updates", methods=['POST'])
-def ondemand_updates():
-    json = request.get_json(force=True)    
-    template_id = json['template_id']
-    template_project = json['template_project']
-    template_region = json['template_region']
-        
-    template_exists, template_uuid = store.read_tag_template(template_id, template_project, template_region)
+    True if request succeeded, False otherwise
+""" 
+@app.route("/trigger_job", methods=['POST'])
+def trigger_job(): 
     
-    # validate request
-    if not template_exists:
-        print("tag_template " + template_id + " doesn't exist")
+    json = request.get_json(force=True)
+    
+    status, response, service_account = do_authentication(json, request.headers)
+    
+    if status == False:
+        return jsonify(response), 400
+    
+    if 'config_type' in json:
+        config_type = json['config_type']
+        is_valid = check_config_type(json['config_type'])
+    else:
+        print("trigger_job request is missing the required parameter config_type. Please add this parameter to the json object.")
+        resp = jsonify(success=False)
+        return resp
+        
+    if is_valid == False:
+        print("Invalid config_type parameter. Please choose a config_type from this list: " + get_available_config_types())
         resp = jsonify(success=False)
         return resp
     
-    if 'included_tables_uris' in json:
-       included_tables_uris = json['included_tables_uris']
-       success, config = store.lookup_config_by_included_tables_uris(template_uuid, included_tables_uris, None)
-          
-    elif 'included_tables_uris_hash' in json:
-        included_tables_uris_hash = json['included_tables_uris_hash']
-        success, config = store.lookup_config_by_included_tables_uris(template_uuid, None, included_tables_uris_hash)
- 
-    elif 'included_assets_uris' in json:
-       included_assets_uris = json['included_assets_uris']
-       success, config = store.lookup_config_by_included_assets_uris(template_uuid, included_assets_uris, None)
-          
-    elif 'included_assets_uris_hash' in json:
-        included_assets_uris_hash = json['included_assets_uris_hash']
-        success, config = store.lookup_config_by_included_assets_uris(template_uuid, None, included_assets_uris_hash)
-    
-    else:
-        resp = jsonify(success=False, message="Request is missing one of these required fields: included_tables_uris, included_tables_uris_hash, included_assets_uris, or included_assets_uris_hash.")
-        return resp
-    
-    if success != True:
-        print("config not found " + str(config))
-        resp = jsonify(success=False, message="Config not found.")
-        return resp
-    
-    # validate the matching config, i.e. make sure the scheduling mode is set to ON_DEMAND and not AUTO
-    if config['refresh_mode'] == 'AUTO':
-        print("config == AUTO: " + str(config))
-        resp = jsonify(success=False, message="Config has refresh_mode='AUTO'. Please update your config to refresh_mode='ON_DEMAND' prior to calling this method.")
-        return resp
+    if 'config_uuid' in json:
+        config_id = json['config_uuid']
         
-    # config is valid, create the job
-    if isinstance(config['config_uuid'], str): 
-        job_uuid = jm.create_job(CLOUD_RUN_SA, config['config_uuid'], config['config_type'])
+        if isinstance(json['config_uuid'], str):
+            is_active = store.check_active_config(json['config_uuid'], json['config_type'])
+        
+    else:
+        print("trigger_job request is missing the required parameter config_id. Please add this parameter to the json object.")
+        resp = jsonify(success=False)
+        return resp
+    
+    if is_active == True:
+        job_uuid = jm.create_job(CLOUD_RUN_SA, json['config_uuid'], json['config_type'])
     else:
         job_uuid = None
     
     return jsonify(job_uuid=job_uuid)
-    
-    #[END ondemand_updates]
+
    
 """
 Args:
     job_uuid = unique identifer for job
 Returns:
-    job_status = one of (PENDING, RUNNING, COMPLETE, ERROR)
+    job_status = one of (PENDING, RUNNING, COMPLETED, ERROR)
     task_count = number of tasks associates with this jobs
     tasks_ran = number of tasks that have run
     tasks_completed = number of tasks which have completed
@@ -2696,6 +2789,11 @@ Returns:
 def get_job_status(): 
     
     json = request.get_json(force=True)
+    
+    status, response, service_account = do_authentication(json, request.headers)
+    
+    if status == False:
+        return jsonify(response), 400
     
     if 'job_uuid' in json:
         job_uuid = json['job_uuid']
@@ -2712,10 +2810,10 @@ def get_job_status():
         
     elif job['job_status'] == 'COMPLETED':
         return jsonify(success=True, job_status=job['job_status'], task_count=job['task_count'], tasks_ran=job['tasks_ran'],\
-                       tasks_completed=job['tasks_completed'], tasks_failed=job['tasks_failed'])
+                       tasks_completed=job['tasks_success'], tasks_failed=job['tasks_failed'])
     else:
         return jsonify(job_status=job['job_status'], task_count=job['task_count'], tasks_ran=job['tasks_ran'],\
-                       tasks_completed=job['tasks_completed'], tasks_failed=job['tasks_failed'])
+                       tasks_completed=job['tasks_success'], tasks_failed=job['tasks_failed'])
     
 
 """
@@ -2740,7 +2838,7 @@ def scheduled_auto_updates():
             print('ready config: ', config_uuid, ', ', config_type)
             
             if isinstance(config_uuid, str): 
-                store.update_config_status(config_uuid, config_type, 'PENDING')
+                store.update_job_status(config_uuid, config_type, 'PENDING')
                 store.increment_version_next_run(config_uuid, config_type)
                 job_uuid = jm.create_job(CLOUD_RUN_SA, config_uuid, config_type)
                 jobs.append(job_uuid)
@@ -2753,6 +2851,196 @@ def scheduled_auto_updates():
         resp = jsonify(success=False, message='failed scheduled_auto_updates ' + str(e))
     
     return resp
+
+
+"""
+Method called to configure tag history settings
+Args:
+    bigquery_region = The BigQuery region
+    bigquery_project = The BigQuery project id
+    bigquery_dataset = The BigQuery dataset
+    enabled = one of True or False
+Returns:
+    True if the request succeeded, False otherwise
+""" 
+@app.route("/configure_tag_history", methods=['POST'])
+def configure_tag_history(): 
+    
+    json = request.get_json(force=True)
+    print(json)
+    
+    status, response, _ = do_authentication(json, request.headers)
+    
+    if status == False:
+        return jsonify(response), 400
+    
+    if 'bigquery_region' in json:
+        bigquery_region = json['bigquery_region']
+    else:
+        print("The configure_tag_history request is missing the required parameter bigquery_region. Please add this parameter to the json object.")
+        resp = jsonify(success=False)
+        return resp
+    
+    if 'bigquery_project' in json:
+        bigquery_project = json['bigquery_project']
+    else:
+        print("The configure_tag_history request is missing the required parameter bigquery_project. Please add this parameter to the json object.")
+        resp = jsonify(success=False)
+        return resp
+        
+    if 'bigquery_dataset' in json:
+        bigquery_dataset = json['bigquery_dataset']
+    else:
+        print("The configure_tag_history request is missing the required parameter bigquery_dataset. Please add this parameter to the json object.")
+        resp = jsonify(success=False)
+        return resp
+    
+    if 'enabled' in json:
+        enabled = json['enabled']
+    else:
+        print("set_tag_history request is missing the required parameter enabled. Please add this parameter to the json object.")
+        resp = jsonify(success=False)
+        return resp
+        
+    status = store.write_tag_history_settings(enabled, bigquery_project, bigquery_region, bigquery_dataset)
+    print('status: ', status)
+    
+    if status == False:
+        return jsonify(success=False, message="Error occurred while writing to Firestore.")
+    else:
+        return jsonify(success=True)
+
+
+"""
+Method called to list the configs
+Args:
+    config_type = one of (ALL, STATIC_TAG_ASSET, DYNAMIC_TAG_TABLE, DYNAMIC_TAG_COLUMN, SENSITIVE_TAG_COLUMN, etc.)
+    service_account (Optional) = the service account attached to the config
+Returns:
+    True if the request succeeded, False otherwise
+""" 
+@app.route("/list_configs", methods=['POST'])
+def list_configs():
+    json = request.get_json(force=True) 
+    print('json: ' + str(json))
+    
+    status, response, service_account = do_authentication(json, request.headers)
+    
+    if status == False:
+        return jsonify(response), 400
+       
+    if 'config_type' in json:
+        config_type = json['config_type']
+        
+        if config_type == 'ALL':
+            is_valid = True
+        else:
+            is_valid = check_config_type(config_type)
+    else:
+        print("list_configs request is missing the required parameter config_type. Please add this parameter to the json object.")
+        resp = jsonify(success=False)
+        return resp
+        
+    if is_valid == False:
+        print("Invalid config_type parameter. Please choose a config_type from this list: " + get_available_config_types() + " or use ALL.")
+        resp = jsonify(success=False)
+        return resp
+                      
+    configs = store.read_configs(service_account, config_type) 
+    
+    configs_trimmed = []
+    
+    for config in configs:
+        config_trimmed = {'config_uuid': config['config_uuid'], 'config_type': config['config_type']}
+        configs_trimmed.append(config_trimmed)
+    
+    return jsonify(configs=configs_trimmed)
+
+"""
+Method called to get a specific config
+Args:
+    config_type = one of (ALL, STATIC_TAG_ASSET, DYNAMIC_TAG_TABLE, DYNAMIC_TAG_COLUMN, SENSITIVE_TAG_COLUMN, etc.)
+    config_uuid = the unique identifier of the config 
+    service_account (Optional) = the service account attached to the config
+Returns:
+    True if the request succeeded, False otherwise
+""" 
+@app.route("/get_config", methods=['POST'])
+def get_config():
+    json = request.get_json(force=True) 
+    print('json: ' + str(json))
+    
+    status, response, service_account = do_authentication(json, request.headers)
+    
+    if status == False:
+        return jsonify(response), 400
+       
+    if 'config_type' in json:
+        config_type = json['config_type']
+        is_valid = check_config_type(config_type)
+    else:
+        print("read_config request is missing the required parameter config_type. Please add this parameter to the json object.")
+        resp = jsonify(success=False)
+        return resp
+        
+    if is_valid == False:
+        print("Invalid config_type parameter. Please choose a config_type from this list: " + get_available_config_types() + " or use ALL.")
+        resp = jsonify(success=False)
+        return resp
+    
+    if 'config_uuid' in json:
+        config_uuid = json['config_uuid']
+    else:
+        print("read_config request is missing the required parameter config_uuid. Please add this parameter to the json object.")
+        resp = jsonify(success=False)
+        return resp
+                     
+    config = store.read_config(service_account, config_uuid, config_type) 
+    
+    return jsonify(configs=config)
+
+"""
+Method called to delete a specific config
+Args:
+    config_type = one of (ALL, STATIC_TAG_ASSET, DYNAMIC_TAG_TABLE, DYNAMIC_TAG_COLUMN, SENSITIVE_TAG_COLUMN, etc.)
+    config_uuid = the unique identifier of the config 
+    service_account (Optional) = the service account attached to the config
+Returns:
+    True if the request succeeded, False otherwise
+""" 
+@app.route("/delete_config", methods=['POST'])
+def delete_config():
+    json = request.get_json(force=True) 
+    print('json: ' + str(json))
+    
+    status, response, service_account = do_authentication(json, request.headers)
+    
+    if status == False:
+        return jsonify(response), 400
+       
+    if 'config_type' in json:
+        config_type = json['config_type']
+        is_valid = check_config_type(config_type)
+    else:
+        print("read_config request is missing the required parameter config_type. Please add this parameter to the json object.")
+        resp = jsonify(success=False)
+        return resp
+        
+    if is_valid == False:
+        print("Invalid config_type parameter. Please choose a config_type from this list: " + get_available_config_types() + " or use ALL.")
+        resp = jsonify(success=False)
+        return resp
+    
+    if 'config_uuid' in json:
+        config_uuid = json['config_uuid']
+    else:
+        print("read_config request is missing the required parameter config_uuid. Please add this parameter to the json object.")
+        resp = jsonify(success=False)
+        return resp
+                     
+    status = store.delete_config(service_account, config_uuid, config_type) 
+    
+    return jsonify(status=status)
 
 
 ################ INTERNAL PROCESSING METHODS #################
@@ -2777,7 +3065,7 @@ def _split_work():
        resp = jsonify(success=False)
        return resp 
        
-    re = res.Resources(get_target_credentials()) 
+    re = res.Resources(get_target_credentials(config.get('service_account'))) 
     
     # dynamic table and dynamic column and sensitive column configs
     if 'included_tables_uris' in config:
@@ -2800,9 +3088,9 @@ def _split_work():
         tm.create_config_uuid_tasks(CLOUD_RUN_SA, job_uuid, config_uuid, config_type, uris)
     
     # export tag config
-    if config_type == 'EXPORT_TAG':
+    if config_type == 'TAG_EXPORT':
         
-        bqu = bq.BigQueryUtils(get_target_credentials(), config['target_region'])
+        bqu = bq.BigQueryUtils(get_target_credentials(config.get('service_account')), config['target_region'])
         
         # create report tables if they don't exist
         tables_created = bqu.create_report_tables(config['target_project'], config['target_dataset'])
@@ -2825,9 +3113,9 @@ def _split_work():
         tm.create_config_uuid_tasks(CLOUD_RUN_SA, job_uuid, config_uuid, config_type, uris)
     
     # import or restore tag configs
-    if config_type == 'IMPORT_TAG' or config_type == 'RESTORE_TAG':
+    if config_type == 'TAG_IMPORT' or config_type == 'TAG_RESTORE':
                     
-        if config_type == 'IMPORT_TAG':
+        if config_type == 'TAG_IMPORT':
             csv_files = list(re.get_resources(config.get('metadata_import_location'), None))
             #print('csv_files: ', csv_files)
         
@@ -2836,14 +3124,15 @@ def _split_work():
             for csv_file in csv_files:
                 extracted_tags.extend(cp.CsvParser.extract_tags(csv_file))
     
-        if config_type == 'RESTORE_TAG':
+        if config_type == 'TAG_RESTORE':
             bkp_files = list(re.get_resources(config.get('metadata_export_location'), None))
         
             #print('bkp_files: ', bkp_files)
             extracted_tags = []
         
             for bkp_file in bkp_files:
-                extracted_tags.append(bfp.BackupFileParser.extract_tags(config.get('source_template_id'), config.get('source_template_project'), \
+                extracted_tags.append(bfp.BackupFileParser.extract_tags(config.get('source_template_id'), \
+                                                                        config.get('source_template_project'), \
                                                                         bkp_file))
              
         # no tags were extracted from the CSV files
@@ -2857,7 +3146,7 @@ def _split_work():
     
 
     # update the status of the config, no matter which config type is running
-    store.update_config_status(config_uuid, config_type, 'RUNNING')
+    store.update_job_status(config_uuid, config_type, 'RUNNING')
     
     resp = jsonify(success=True)
     return resp
@@ -2896,13 +3185,12 @@ def _run_task():
     config = store.read_config(config_uuid, config_type)
     print('config: ', config)
     
-    credentials = get_target_credentials()
-    print('credentials:', credentials)  
-      
-    if config_type == 'EXPORT_TAG':
+    credentials = get_target_credentials(config.get('service_account'))
+       
+    if config_type == 'TAG_EXPORT':
         dcc = controller.DataCatalogController(credentials)
     
-    elif config_type == 'IMPORT_TAG':
+    elif config_type == 'TAG_IMPORT':
         
         if 'template_id' not in config or 'template_project' not in config or 'template_region' not in config:
             response = {
@@ -2914,7 +3202,7 @@ def _run_task():
         dcc = controller.DataCatalogController(credentials, config['template_id'], \
                                                config['template_project'], config['template_region'])
     
-    elif config_type == 'RESTORE_TAG':
+    elif config_type == 'TAG_RESTORE':
         
         if 'target_template_id' not in config or 'target_template_project' not in config or 'target_template_region' not in config:
             response = {
@@ -2944,61 +3232,64 @@ def _run_task():
                                                 template_config['template_project'], template_config['template_region'])
             
     
-    if config_type == 'DYNAMIC_TABLE_TAG':
+    if config_type == 'DYNAMIC_TAG_TABLE':
         creation_status = dcc.apply_dynamic_table_config(config['fields'], uri, config['config_uuid'], \
                                                          config['template_uuid'], config['tag_history'], \
                                                          config['tag_stream'])                                               
-    if config_type == 'DYNAMIC_COLUMN_TAG':
+    if config_type == 'DYNAMIC_TAG_COLUMN':
         creation_status = dcc.apply_dynamic_column_config(config['fields'], config['included_columns_query'], uri, config['config_uuid'], \
                                                           config['template_uuid'], config['tag_history'], \
                                                           config['tag_stream'])
-    if config_type == 'STATIC_ASSET_TAG':
+    if config_type == 'STATIC_TAG_ASSET':
         creation_status = dcc.apply_static_asset_config(config['fields'], uri, config['config_uuid'], \
                                                         config['template_uuid'], config['tag_history'], \
                                                         config['tag_stream'], config['overwrite'])                                                   
-    if config_type == 'ENTRY':
+    if config_type == 'ENTRY_CREATE':
         creation_status = dcc.apply_entry_config(config['fields'], uri, config['config_uuid'], \
                                                  config['template_uuid'], config['tag_history'], \
                                                  config['tag_stream']) 
-    if config_type == 'GLOSSARY_ASSET_TAG':
+    if config_type == 'GLOSSARY_TAG_ASSET':
         creation_status = dcc.apply_glossary_asset_config(config['fields'], config['mapping_table'], uri, config['config_uuid'], \
                                                     config['template_uuid'], config['tag_history'], \
                                                     config['tag_stream'], config['overwrite'])
-    if config_type == 'SENSITIVE_COLUMN_TAG':
+    if config_type == 'SENSITIVE_TAG_COLUMN':
         creation_status = dcc.apply_sensitive_column_config(config['fields'], config['dlp_dataset'], config['infotype_selection_table'], \
                                                             config['infotype_classification_table'], uri, config['create_policy_tags'], \
                                                             config['taxonomy_id'], config['config_uuid'], \
                                                             config['template_uuid'], config['tag_history'], \
                                                             config['tag_stream'], config['overwrite'])
-    if config_type == 'EXPORT_TAG':
+    if config_type == 'TAG_EXPORT':
         creation_status = dcc.apply_export_config(config['config_uuid'], config['target_project'], config['target_dataset'], config['target_region'], uri)
     
-    if config_type == 'IMPORT_TAG':
+    if config_type == 'TAG_IMPORT':
         creation_status = dcc.apply_import_config(config['config_uuid'], tag_extract, \
                                                   config['tag_history'], config['tag_stream'], config['overwrite'])
-    if config_type == 'RESTORE_TAG':
+    if config_type == 'TAG_RESTORE':
         creation_status = dcc.apply_restore_config(config['config_uuid'], tag_extract, \
                                                    config['tag_history'], config['tag_stream'], config['overwrite'])
                                               
     if creation_status == constants.SUCCESS:
-        tm.update_task_status(shard_uuid, task_uuid, 'COMPLETED')
+        tm.update_task_status(shard_uuid, task_uuid, 'SUCCESS')
     else:
-        tm.update_task_status(shard_uuid, task_uuid, 'FAILED')
+        tm.update_task_status(shard_uuid, task_uuid, 'ERROR')
     
     # fan-in
-    is_success, is_failed, pct_complete = jm.calculate_job_completion(job_uuid)
+    tasks_success, tasks_failed, pct_complete = jm.calculate_job_completion(job_uuid)
+    print('tasks_success:', tasks_success)
+    print('tasks_failed:', tasks_failed)
+    print('pct_complete:', pct_complete)
         
-    if pct_complete == 100 and is_success:
-        store.update_config_status(config_uuid, config_type, 'ACTIVE')
-        store.update_scheduling_status(config_uuid, config_type, 'READY')
-        store.update_overwrite_flag(config_uuid, config_type)
-        resp = jsonify(success=True)
-    elif pct_complete == 100 and is_failed:
-        store.update_config_status(config_uuid, config_type, 'ERROR')
-        jm.update_job_failed(job_uuid)
-        resp = jsonify(success=False)
+    if pct_complete == 100:
+        if tasks_failed > 0:
+            store.update_job_status(config_uuid, config_type, 'ERROR')
+            store.update_scheduling_status(config_uuid, config_type, 'READY')
+            store.update_overwrite_flag(config_uuid, config_type)
+            resp = jsonify(success=True)
+        else:
+            store.update_job_status(config_uuid, config_type, 'SUCCESS')
+            resp = jsonify(success=False)
     else:
-        store.update_config_status(config_uuid, config_type, 'PROCESSING: {}% complete'.format(pct_complete))
+        store.update_job_status(config_uuid, config_type, 'RUNNING: {}% complete'.format(pct_complete))
         resp = jsonify(success=True)
     
     return resp

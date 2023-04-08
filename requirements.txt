@@ -8,6 +8,7 @@ google-cloud-storage
 google-cloud-tasks==2.13.1
 google-cloud-pubsub
 google-cloud-resource-manager
+google-api-python-client
 pytz
 pandas
 pyarrow

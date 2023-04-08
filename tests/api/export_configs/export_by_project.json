@@ -1,7 +1,7 @@
 {
-    "source_projects": ["tag-engine-develop"],
+    "source_projects": ["tag-engine-run"],
 	"source_region": "us-central1", 
-	"target_project": "tag-engine-develop",
+	"target_project": "tag-engine-run",
 	"target_dataset": "reporting",
 	"target_region": "us-central1",
 	"write_option": "truncate",
