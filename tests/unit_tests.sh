@@ -110,7 +110,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
   -H "oauth_token: $OAUTH_TOKEN"
 
 # create config
-curl -X POST $TAG_ENGINE_URL/create_export_config -d @api/export_configs/export_by_folder.json \
+curl -X POST $TAG_ENGINE_URL/create_export_config -d @tests/api/export_configs/export_by_folder.json \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 	
@@ -206,5 +206,11 @@ curl -i -X POST $TAG_ENGINE_URL/get_config \
 ####### Delete config #######
 curl -i -X POST $TAG_ENGINE_URL/delete_config \
   -d '{"config_type":"DYNAMIC_TAG_COLUMN", "config_uuid": "13bea024d56811ed95362762b95fd865"}' \
+  -H "Authorization: Bearer $IAM_TOKEN" \
+  -H "oauth_token: $OAUTH_TOKEN"
+
+####### Purge inactive configs #######
+curl -i -X POST $TAG_ENGINE_URL/purge_inactive_configs \
+  -d '{"config_type":"ALL"}' \
   -H "Authorization: Bearer $IAM_TOKEN" \
   -H "oauth_token: $OAUTH_TOKEN"

@@ -1180,6 +1180,33 @@ class TagEngineStoreHandler:
             return False
         
         return True
+    
+    
+    def purge_inactive_configs(self, service_account, config_type):
+        
+        config_uuids = []
+        coll_names = []
+        running_count = 0 
+        
+        if config_type == 'ALL':
+            coll_names = self.get_config_collections()
+        else:
+            coll_names.append(self.lookup_config_collection(config_type))
+        
+        for coll_name in coll_names:
+            config_ref = self.db.collection(coll_name)
+            config_stream = config_ref.where('config_status', '==', 'INACTIVE').where('service_account', '==', service_account).stream()
+
+            for inactive_config in config_stream:
+                config_uuids.append(inactive_config.id)
+        
+            for config_uuid in config_uuids:
+                self.db.collection(coll_name).document(config_uuid).delete()
+                running_count += 1
+            
+            config_uuids.clear()
+        
+        return running_count
             
     
     def read_export_configs(self):

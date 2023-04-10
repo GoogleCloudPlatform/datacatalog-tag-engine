@@ -2959,9 +2959,9 @@ def list_configs():
 """
 Method called to get a specific config
 Args:
+    service_account (Optional) = the service account attached to the config. Defaults to TAG_CREATOR_ACCOUNT. 
     config_type = one of (ALL, STATIC_TAG_ASSET, DYNAMIC_TAG_TABLE, DYNAMIC_TAG_COLUMN, SENSITIVE_TAG_COLUMN, etc.)
     config_uuid = the unique identifier of the config 
-    service_account (Optional) = the service account attached to the config
 Returns:
     True if the request succeeded, False otherwise
 """ 
@@ -3002,9 +3002,9 @@ def get_config():
 """
 Method called to delete a specific config
 Args:
+    service_account (Optional) = the service account attached to the config. Defaults to TAG_CREATOR_ACCOUNT. 
     config_type = one of (ALL, STATIC_TAG_ASSET, DYNAMIC_TAG_TABLE, DYNAMIC_TAG_COLUMN, SENSITIVE_TAG_COLUMN, etc.)
     config_uuid = the unique identifier of the config 
-    service_account (Optional) = the service account attached to the config
 Returns:
     True if the request succeeded, False otherwise
 """ 
@@ -3022,7 +3022,7 @@ def delete_config():
         config_type = json['config_type']
         is_valid = check_config_type(config_type)
     else:
-        print("read_config request is missing the required parameter config_type. Please add this parameter to the json object.")
+        print("delete_config request is missing the required parameter config_type. Please add this parameter to the json object.")
         resp = jsonify(success=False)
         return resp
         
@@ -3034,13 +3034,53 @@ def delete_config():
     if 'config_uuid' in json:
         config_uuid = json['config_uuid']
     else:
-        print("read_config request is missing the required parameter config_uuid. Please add this parameter to the json object.")
+        print("delete_config request is missing the required parameter config_uuid. Please add this parameter to the json object.")
         resp = jsonify(success=False)
         return resp
                      
     status = store.delete_config(service_account, config_uuid, config_type) 
     
     return jsonify(status=status)
+
+
+"""
+Method called to purge the inactive configs from Firestore
+Args:
+    service_account (Optional) = the service account attached to the config. Defaults to TAG_CREATOR_ACCOUNT. 
+    config_type = one of (ALL, STATIC_TAG_ASSET, DYNAMIC_TAG_TABLE, DYNAMIC_TAG_COLUMN, SENSITIVE_TAG_COLUMN, etc.)
+Returns:
+    True if the request succeeded, False otherwise
+""" 
+@app.route("/purge_inactive_configs", methods=['POST'])
+def purge_inactive_configs():
+    json = request.get_json(force=True) 
+    print('json: ' + str(json))
+    
+    status, response, service_account = do_authentication(json, request.headers)
+    
+    if status == False:
+        return jsonify(response), 400
+       
+    if 'config_type' in json:
+        config_type = json['config_type']
+        
+        if config_type == 'ALL':
+            is_valid = True
+        else:
+            is_valid = check_config_type(config_type)
+    else:
+        print("purge_inactive_configs request is missing the required parameter config_type. Please add this parameter to the json object.")
+        resp = jsonify(success=False)
+        return resp
+        
+    if is_valid == False:
+        print("Invalid config_type parameter. Please choose a config_type from this list: " + get_available_config_types() + " or use ALL.")
+        resp = jsonify(success=False)
+        return resp
+                      
+    deleted_count = store.purge_inactive_configs(service_account, config_type) 
+    
+    return jsonify(deleted_count=deleted_count)
 
 
 ################ INTERNAL PROCESSING METHODS #################
