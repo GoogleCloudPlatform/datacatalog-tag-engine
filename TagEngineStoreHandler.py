@@ -1132,7 +1132,7 @@ class TagEngineStoreHandler:
             for doc in docs:
                 config = doc.to_dict()
                 
-                if 'PENDING' in config['job_status'] or 'RUNNING' in config['job_status']:
+                if 'job_status' not in config or 'PENDING' in config['job_status'] or 'RUNNING' in config['job_status']:
                     pending_running_configs.append(config)
                 else:
                     active_configs.append(config)

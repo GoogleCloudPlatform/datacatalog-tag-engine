@@ -64,12 +64,12 @@ TAG_CREATOR_SA = config['DEFAULT']['TAG_CREATOR_ACCOUNT'].strip()
 SPLIT_WORK_HANDLER = os.environ['SERVICE_URL'] + '/_split_work'
 RUN_TASK_HANDLER = os.environ['SERVICE_URL'] + '/_run_task'
 
-jm = jobm.JobManager(config['DEFAULT']['TAG_ENGINE_PROJECT'], \
+jm = jobm.JobManager(CLOUD_RUN_SA, config['DEFAULT']['TAG_ENGINE_PROJECT'], \
                      config['DEFAULT']['QUEUE_REGION'], \
                      config['DEFAULT']['INJECTOR_QUEUE'], \
                      SPLIT_WORK_HANDLER)
                      
-tm = taskm.TaskManager(config['DEFAULT']['TAG_ENGINE_PROJECT'], \
+tm = taskm.TaskManager(CLOUD_RUN_SA, config['DEFAULT']['TAG_ENGINE_PROJECT'], \
                      config['DEFAULT']['QUEUE_REGION'], \
                      config['DEFAULT']['WORK_QUEUE'], \
                      RUN_TASK_HANDLER)
@@ -623,7 +623,7 @@ def update_config():
         store.delete_config(config_uuid, config_type)
         return view_remaining_configs(template_id, template_project, template_region)
     
-    config = store.read_config(config_uuid, config_type)
+    config = store.read_config(service_account, config_uuid, config_type)
     print("config: " + str(config))
     
     dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
@@ -1808,6 +1808,10 @@ def get_available_config_types():
 
 def do_authentication(json, headers):
     
+    print('** enter do_authentication **')
+    print('json:', json)
+    print('headers:', headers)
+    
     service_account = get_requested_service_account(json)
     
     if ENABLE_AUTH == False:
@@ -2768,7 +2772,7 @@ def trigger_job():
         return resp
     
     if is_active == True:
-        job_uuid = jm.create_job(CLOUD_RUN_SA, json['config_uuid'], json['config_type'])
+        job_uuid = jm.create_job(service_account, json['config_uuid'], json['config_type'])
     else:
         job_uuid = None
     
@@ -2817,7 +2821,7 @@ def get_job_status():
     
 
 """
-Method called by Cloud Scheduler to update tags set to auto refresh
+Method called by Cloud Scheduler to update all the tags set to auto refresh (regardless of the service account attached to the config)
 Args:
     None
 Returns:
@@ -2828,6 +2832,11 @@ def scheduled_auto_updates():
     
     try:    
         print('*** enter scheduled_auto_updates ***')
+        
+        status, response, service_account = do_authentication(json, request.headers)
+        
+        if status == False:
+            return jsonify(response), 400
         
         jobs = []
         
@@ -2840,7 +2849,7 @@ def scheduled_auto_updates():
             if isinstance(config_uuid, str): 
                 store.update_job_status(config_uuid, config_type, 'PENDING')
                 store.increment_version_next_run(config_uuid, config_type)
-                job_uuid = jm.create_job(CLOUD_RUN_SA, config_uuid, config_type)
+                job_uuid = jm.create_job(service_account, config_uuid, config_type)
                 jobs.append(job_uuid)
 
         print('created jobs: ' + str(jobs))
@@ -2951,7 +2960,8 @@ def list_configs():
     configs_trimmed = []
     
     for config in configs:
-        config_trimmed = {'config_uuid': config['config_uuid'], 'config_type': config['config_type']}
+        config_trimmed = {'config_uuid': config['config_uuid'], 'config_type': config['config_type'], \
+                         'config_status': config['config_status'], 'creation_time': config['creation_time']}
         configs_trimmed.append(config_trimmed)
     
     return jsonify(configs=configs_trimmed)
@@ -3096,8 +3106,9 @@ def _split_work():
     job_uuid = json['job_uuid']
     config_uuid = json['config_uuid']
     config_type = json['config_type']
+    service_account = json['service_account']
 
-    config = store.read_config(config_uuid, config_type)
+    config = store.read_config(service_account, config_uuid, config_type)
     
     print('config: ', config)
     
@@ -3115,7 +3126,7 @@ def _split_work():
         
         jm.record_num_tasks(job_uuid, len(uris))
         jm.update_job_running(job_uuid) 
-        tm.create_config_uuid_tasks(CLOUD_RUN_SA, job_uuid, config_uuid, config_type, uris)
+        tm.create_config_uuid_tasks(service_account, job_uuid, config_uuid, config_type, uris)
     
     # static asset config and glossary asset config    
     if 'included_assets_uris' in config:
@@ -3125,7 +3136,7 @@ def _split_work():
         
         jm.record_num_tasks(job_uuid, len(uris))
         jm.update_job_running(job_uuid) 
-        tm.create_config_uuid_tasks(CLOUD_RUN_SA, job_uuid, config_uuid, config_type, uris)
+        tm.create_config_uuid_tasks(service_account, job_uuid, config_uuid, config_type, uris)
     
     # export tag config
     if config_type == 'TAG_EXPORT':
@@ -3150,7 +3161,7 @@ def _split_work():
         
         jm.record_num_tasks(job_uuid, len(uris))
         jm.update_job_running(job_uuid) 
-        tm.create_config_uuid_tasks(CLOUD_RUN_SA, job_uuid, config_uuid, config_type, uris)
+        tm.create_config_uuid_tasks(service_account, job_uuid, config_uuid, config_type, uris)
     
     # import or restore tag configs
     if config_type == 'TAG_IMPORT' or config_type == 'TAG_RESTORE':
@@ -3182,7 +3193,7 @@ def _split_work():
         
         jm.record_num_tasks(job_uuid, len(extracted_tags))
         jm.update_job_running(job_uuid) 
-        tm.create_tag_extract_tasks(CLOUD_RUN_SA, job_uuid, config_uuid, config_type, extracted_tags)
+        tm.create_tag_extract_tasks(service_account, job_uuid, config_uuid, config_type, extracted_tags)
     
 
     # update the status of the config, no matter which config type is running
@@ -3205,6 +3216,7 @@ def _run_task():
     config_type = json['config_type']
     shard_uuid = json['shard_uuid']
     task_uuid = json['task_uuid']
+    service_account = json['service_account']
     
     if 'uri' in json:
         uri = json['uri']
@@ -3222,7 +3234,7 @@ def _run_task():
     tm.update_task_status(shard_uuid, task_uuid, 'RUNNING')
     
     # retrieve the config 
-    config = store.read_config(config_uuid, config_type)
+    config = store.read_config(service_account, config_uuid, config_type)
     print('config: ', config)
     
     credentials = get_target_credentials(config.get('service_account'))

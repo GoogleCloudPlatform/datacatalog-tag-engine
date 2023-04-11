@@ -21,6 +21,7 @@ from google.cloud import tasks_v2
 class JobManager:
     """Class for managing jobs for async task create and update requests
     
+    cloud_run_sa = Cloud Run service account
     project = Cloud Run project id (e.g. tag-engine-project)
     region = Cloud Run region (e.g. us-central1)
     queue_name = Cloud Task queue (e.g. tag-engine-queue)
@@ -28,11 +29,13 @@ class JobManager:
     
     """
     def __init__(self,
+                cloud_run_sa,
                 tag_engine_project,
                 queue_region,
                 queue_name, 
                 task_handler_uri):
 
+        self.cloud_run_sa = cloud_run_sa
         self.tag_engine_project = tag_engine_project
         self.queue_region = queue_region
         self.queue_name = queue_name
@@ -174,7 +177,7 @@ class JobManager:
         
         print('*** enter _create_cloud_task ***')
                 
-        payload = {'job_uuid': job_uuid, 'config_uuid': config_uuid, 'config_type': config_type}
+        payload = {'job_uuid': job_uuid, 'config_uuid': config_uuid, 'config_type': config_type, 'service_account': service_account}
         
         task = {
             'http_request': {  
@@ -182,7 +185,7 @@ class JobManager:
                 'url': self.task_handler_uri,
                 'headers': {'content-type': 'application/json'},
                 'body': json.dumps(payload).encode(),
-                'oidc_token': {'service_account_email': service_account, 'audience': self.task_handler_uri}
+                'oidc_token': {'service_account_email': self.cloud_run_sa, 'audience': self.task_handler_uri}
             }
         }
         

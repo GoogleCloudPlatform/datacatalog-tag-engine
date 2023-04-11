@@ -35,7 +35,7 @@ curl -X POST $TAG_ENGINE_URL/configure_tag_history \
 ####### static tags #######
 
 # create config 
-curl -X POST $TAG_ENGINE_URL/create_static_asset_config -d @tests/api/static_asset_configs/static_asset_auto_bq.json \
+curl -X POST $TAG_ENGINE_URL/create_static_asset_config -d @tests/configs/static_asset/static_asset_auto_bq.json \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 
@@ -48,7 +48,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
 ####### dynamic tags #######
 
 # create config
-curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @tests/api/dynamic_table_configs/dynamic_table_ondemand.json \
+curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @tests/configs/dynamic_table/dynamic_table_ondemand.json \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 
@@ -59,7 +59,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
   -H "oauth_token: $OAUTH_TOKEN"
 
 # create config
-curl -X POST $TAG_ENGINE_URL/create_dynamic_column_config -d @tests/api/dynamic_column_configs/dynamic_column_ondemand.json \
+curl -X POST $TAG_ENGINE_URL/create_dynamic_column_config -d @tests/configs/dynamic_column/dynamic_column_ondemand.json \
   -H "Authorization: Bearer $IAM_TOKEN" \
   -H "oauth_token: $OAUTH_TOKEN"
 
@@ -73,7 +73,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
 
 # create config 
 curl -X POST $TAG_ENGINE_URL/create_sensitive_column_config \
-	-d @tests/api/sensitive_column_configs/sensitive_column_auto.json \
+	-d @tests/configs/sensitive_column/sensitive_column_auto.json \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 
@@ -86,7 +86,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
 ####### glossary tags #######
 
 # create config 
-curl -X POST $TAG_ENGINE_URL/create_glossary_asset_config -d @tests/api/glossary_asset_configs/glossary_asset_ondemand_bq.json \
+curl -X POST $TAG_ENGINE_URL/create_glossary_asset_config -d @tests/configs/glossary_asset/glossary_asset_ondemand_bq.json \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 
@@ -99,7 +99,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
 ####### export tags to BQ #######
 
 # create config
-curl -X POST $TAG_ENGINE_URL/create_export_config -d @tests/api/export_configs/export_by_project.json \
+curl -X POST $TAG_ENGINE_URL/create_export_config -d @tests/configs/export/export_by_project.json \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 
@@ -110,7 +110,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
   -H "oauth_token: $OAUTH_TOKEN"
 
 # create config
-curl -X POST $TAG_ENGINE_URL/create_export_config -d @tests/api/export_configs/export_by_folder.json \
+curl -X POST $TAG_ENGINE_URL/create_export_config -d @tests/configs/export/export_by_folder.json \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 	
@@ -123,7 +123,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
 ####### Import tags from CSV #######
 
 # create the config
-curl -X POST $TAG_ENGINE_URL/create_import_config -d @tests/api/import_configs/import_table.json \
+curl -X POST $TAG_ENGINE_URL/create_import_config -d @tests/configs/import/import_table.json \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 
@@ -134,7 +134,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
   -H "oauth_token: $OAUTH_TOKEN"
 
 # create the config
-curl -X POST $TAG_ENGINE_URL/create_import_config -d @api/import_configs/import_column.json \
+curl -X POST $TAG_ENGINE_URL/create_import_config -d @api/import/import_column.json \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 
@@ -156,7 +156,7 @@ curl --request POST 'https://datacatalog.googleapis.com/v1/projects/tag-engine-r
 	--compressed
 
 # create the config
-curl -X POST $TAG_ENGINE_URL/create_restore_config -d @tests/api/restore_configs/restore_table_tags.json \
+curl -X POST $TAG_ENGINE_URL/create_restore_config -d @tests/configs/restore/restore_table_tags.json \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 
@@ -167,7 +167,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
   -H "oauth_token: $OAUTH_TOKEN"
 
 # create the config
-curl -X POST $TAG_ENGINE_URL/create_restore_config -d @tests/api/restore_configs/restore_column_tags.json \
+curl -X POST $TAG_ENGINE_URL/create_restore_config -d @tests/configs/restore/restore_column_tags.json \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 
@@ -192,7 +192,7 @@ curl -i -X POST $TAG_ENGINE_URL/scheduled_auto_updates \
   -H "oauth_token: $OAUTH_TOKEN"
 
 ####### List configs #######
-curl -i -X POST $TAG_ENGINE_URL/list_configs \
+curl -i -X POST http://127.0.0.1:5000/list_configs \
   -d '{"config_type":"ALL"}' \
   -H "Authorization: Bearer $IAM_TOKEN" \
   -H "oauth_token: $OAUTH_TOKEN"
