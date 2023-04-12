@@ -1,5 +1,5 @@
-# Be sure to set GOOGLE_APPLICATION_CREDENTIALS before running script
-# export GOOGLE_APPLICATION_CREDENTIALS="/Users/scohen/keys/python-client-tag-engine-run.json"
+# Be sure to set GOOGLE_APPLICATION_CREDENTIALS to your CLIENT_SA keyfile before running script
+# export GOOGLE_APPLICATION_CREDENTIALS="/Users/scohen/keys/python-client.json"
 import urllib
 import json
 import google
