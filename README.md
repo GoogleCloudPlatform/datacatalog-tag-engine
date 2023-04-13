@@ -5,22 +5,22 @@ Tag Engine is an open-source extension to Google Cloud's Data Catalog. Tag Engin
 
 ### Deployment Procedure
 
-1. Create (or designate) three service accounts:
+1. Create (or designate) these 3 service accounts:
 
 - A service account that runs the Tag Engine Cloud Run service, referred to below as `CLOUD_RUN_SA`. 
 - A service account that performs the tagging in Data Catalog, and sourcing the contents of those tags from BigQuery, referred to below as `TAG_CREATOR_SA`. 
 - A service account that interacts with the Tag Engine API, referred to below as `CLIENT_SA`. 
 
 
-2. Set environment variables:
+2. Set these 5 environment variables:
 
 ```
-export TAG_ENGINE_PROJECT="tag-engine-run"
-export TAG_ENGINE_REGION="us-central1"
+export TAG_ENGINE_PROJECT="<PROJECT>"  # your GCP project id, e.g. tag-engine-project
+export TAG_ENGINE_REGION="<REGION>"    # your GCP region, e.g. us-central1
 
-export CLOUD_RUN_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"     # used for running the Tag Engine service
-export TAG_CREATOR_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"   # used for running BQ queries and creating DC tags
-export CLIENT_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"        # used for calling the Tag Engine API from a script
+export CLOUD_RUN_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"     # email of your Cloud Run service account for running Tag Engine service
+export TAG_CREATOR_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"   # email of your Tag creator service account for running BQ queries and creating DC tags
+export CLIENT_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"        # email of your client service account for calling the Tag Engine API from a script
 ```
 
 3. Open `tagengine.ini` and set the values of these 6 variables:
@@ -158,7 +158,7 @@ gcloud run services add-iam-policy-binding tag-engine \
 		b) open `tests/configs/static_asset/create_static_config_trigger_job.py`
 		and update the variable `TAG_ENGINE_URL` on line 11 to your Cloud Run service URL from step 8. <br>
 		c) set the environment variable `GOOGLE_APPLICATION_CREDENTIALS` to the keyfile for your `$CLIENT_SA`
-		   e.g. `export GOOGLE_APPLICATION_CREDENTIALS="/Users/scohen/keys/python-client.json"` <br>
+		   e.g. `export GOOGLE_APPLICATION_CREDENTIALS="python-client.json"` <br>
 		d) run the script: `python tests/scripts/create_static_config_trigger_job.py` <br>
 		e) if the job succeeds, go to the Data Catalog UI and check out the tags. If the job fails, go to the Cloud Run UI and open the logs for the Tag Engine service to see the cause of the error. <br><br>		
 		
@@ -167,6 +167,6 @@ gcloud run services add-iam-policy-binding tag-engine \
 		b) open `tests/configs/dynamic_table/create_dynamic_table_config_trigger_job.py`
 		and update the variable `TAG_ENGINE_URL` on line 11 to your Cloud Run service URL from step 8. <br>
 		c) set the environment variable `GOOGLE_APPLICATION_CREDENTIALS` to the keyfile for your `$CLIENT_SA`
-		   e.g. `export GOOGLE_APPLICATION_CREDENTIALS="/Users/scohen/keys/python-client.json"`. <br>
+		   e.g. `export GOOGLE_APPLICATION_CREDENTIALS="python-client.json"`. <br>
 		d) run the script: `python tests/scripts/create_dynamic_table_config_trigger_job.py` <br>
 		e) If the job succeeds, go to the Data Catalog UI and check out the tags. If the job fails, go to the Cloud Run UI and open the logs for your Tag Engine service to see the cause of the error.	<br>   
