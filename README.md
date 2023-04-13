@@ -18,9 +18,9 @@ Tag Engine is an open-source extension to Google Cloud's Data Catalog. Tag Engin
 export TAG_ENGINE_PROJECT="tag-engine-run"
 export TAG_ENGINE_REGION="us-central1"
 
-export CLOUD_RUN_SA=cloud-run@tag-engine-run.iam.gserviceaccount.com # used for running the Tag Engine service
-export TAG_CREATOR_SA=tag-creator@tag-engine-run.iam.gserviceaccount.com # used for running BQ queries and creating DC tags
-export CLIENT_SA=tag-creator@tag-engine-run.iam.gserviceaccount.com # used for calling the Tag Engine API from a script
+export CLOUD_RUN_SA=CLOUD_RUN_SERVICE_ACCOUNT 		# used for running the Tag Engine service
+export TAG_CREATOR_SA=TAG_CREATOR_SERVICE_ACCOUNT   # used for running BQ queries and creating DC tags
+export CLIENT_SA=CLIENT_SERVICE_ACCOUNT             # used for calling the Tag Engine API from a script
 ```
 
 3. Open `tagengine.ini` and set the values of these 6 variables:
