@@ -41,9 +41,6 @@ def read_config(id_token, oauth_token, config_uuid, config_type):
     
 if __name__ == '__main__':
     
-    config_type = 'DYNAMIC_TAG_COLUMN'
-    config_uuid = 'f7fd7ee4d89311ed8d4f5d52120cae96'
-    
     id_token = get_id_token()
     oauth_token = get_oauth_token()
 
