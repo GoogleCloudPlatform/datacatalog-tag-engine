@@ -110,13 +110,13 @@ indexes:
   - collection: static_asset_configs
     fields:
       - field: config_type
-      - field: included_tables_uris_hash
+      - field: included_assets_uris_hash
       - field: template_uuid
       - field: config_status
   - collection: glossary_asset_configs
     fields:
       - field: config_type
-      - field: included_tables_uris_hash
+      - field: included_assets_uris_hash
       - field: template_uuid
       - field: config_status
   - collection: dynamic_column_configs
