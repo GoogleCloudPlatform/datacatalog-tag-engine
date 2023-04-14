@@ -5,14 +5,14 @@ Tag Engine is an open-source extension to Google Cloud's Data Catalog. Tag Engin
 
 ### Deployment Procedure
 
-1. Create (or designate) these 3 service accounts:
+1. Create (or designate) 3 service accounts:
 
 - A service account that runs the Tag Engine Cloud Run service, referred to below as `CLOUD_RUN_SA`. 
 - A service account that performs the tagging in Data Catalog, and sourcing the contents of those tags from BigQuery, referred to below as `TAG_CREATOR_SA`. 
 - A service account that interacts with the Tag Engine API, referred to below as `CLIENT_SA`. 
 
 
-2. Set these 5 environment variables:
+2. Set 5 environment variables:
 
 ```
 export TAG_ENGINE_PROJECT="<PROJECT>"  # your GCP project id, e.g. tag-engine-project
@@ -23,7 +23,7 @@ export TAG_CREATOR_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"   # email of your
 export CLIENT_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"        # email of your client service account for calling the Tag Engine API from a script
 ```
 
-3. Open `tagengine.ini` and set the values of these 6 variables:
+3. Open `tagengine.ini` and set 6 variables:
 
 ```
 TAG_ENGINE_PROJECT  
@@ -33,6 +33,9 @@ QUEUE_REGION
 BIGQUERY_REGION
 ENABLE_AUTH  
 ```
+
+Note: `ENABLE_AUTH` is a boolean. When set to True, Tag Engine verifies that the client is authorized to use TAG_CREATOR_SA prior to processing a request. 
+
 
 4. Enable the required APIs:
 
@@ -71,14 +74,14 @@ gcloud beta run deploy tag-engine \
 	--service-account=$CLOUD_RUN_SA
 ```
 
-8. Set Cloud Run environment variable:
+8. Set one Cloud Run environment variable:
 
 ```
 export SERVICE_URL=`gcloud run services describe tag-engine --format="value(status.url)"`
 gcloud run services update tag-engine --set-env-vars SERVICE_URL=$SERVICE_URL
 ```
 
-9. Create two custom roles:
+9. Create two custom roles (required by the SENSITIVE_COLUMN_CONFIG):
 
 ```
 gcloud iam roles create BigQuerySchemaUpdate \
@@ -96,11 +99,11 @@ gcloud iam roles create PolicyTagReader \
 	--permissions datacatalog.taxonomies.get,datacatalog.taxonomies.list
 ```
 	
-10. Grant the required roles:
+10. Grant the required roles to CLOUD_RUN_SA, TAG_CREATOR_SA, and :
 
 ```
 gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
-	--member='serviceAccount:$CLOUD_RUN_SA' \
+	--member='serviceAccount:${CLOUD_RUN_SA}' \
 	--role='projects/$TAG_ENGINE_PROJECT/roles/cloudtasks.enqueuer' \
 	--role='projects/$TAG_ENGINE_PROJECT/roles/cloudtasks.taskRunner' \
 	--role='projects/$TAG_ENGINE_PROJECT/roles/datastore.user' \
@@ -108,7 +111,7 @@ gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
 ```
 ```
 gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
-	--member='serviceAccount:$TAG_CREATOR_SA' \
+	--member='serviceAccount:${TAG_CREATOR_SA}' \
 	--role='projects/$TAG_ENGINE_PROJECT/roles/datacatalog.tagEditor' \
 	--role='projects/$TAG_ENGINE_PROJECT/roles/datacatalog.tagTemplateUser' \
 	--role='projects/$TAG_ENGINE_PROJECT/roles/datacatalog.tagTemplateViewer' \
@@ -122,27 +125,27 @@ gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
 
 ```
 gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-	--member=serviceAccount:$CLOUD_RUN_SA --role=roles/iam.serviceAccountUser
+	--member='serviceAccount:${CLOUD_RUN_SA}' --role=roles/iam.serviceAccountUser
 ```
 
 ```
 gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-    --member=serviceAccount:$CLOUD_RUN_SA --role=roles/iam.serviceAccountTokenCreator 
+    --member='serviceAccount:${CLOUD_RUN_SA}' --role=roles/iam.serviceAccountTokenCreator 
 ```
 
 ```
 gcloud iam service-accounts add-iam-policy-binding $CLOUD_RUN_SA \
-	--member=serviceAccount:$CLOUD_RUN_SA --role roles/iam.serviceAccountUser
+	--member='serviceAccount:${CLOUD_RUN_SA}' --role roles/iam.serviceAccountUser
 ```
 
 ```
 gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-    --member=serviceAccount:$CLIENT_SA --role=roles/iam.serviceAccountUser 
+    --member='serviceAccount:${CLIENT_SA}' --role=roles/iam.serviceAccountUser 
 ```
 
 ```
 gcloud run services add-iam-policy-binding tag-engine \
-    --member=serviceAccount:$CLIENT_SA --role=roles/run.invoker \
+    --member='serviceAccount:${CLIENT_SA}' --role=roles/run.invoker \
     --region=$TAG_ENGINE_REGION	
 ```
 	
@@ -155,18 +158,20 @@ gcloud run services add-iam-policy-binding tag-engine \
 		
 - Create a static asset config: <br>
 		a) open `tests/configs/static_asset/static_asset_ondemand_bq.json` and update the `template_project`, `template_region`, and `included_assets_uris` values. <br>
-		b) open `tests/configs/static_asset/create_static_config_trigger_job.py`
+		b) open `tests/scripts/static_asset/create_static_config_trigger_job.py`
 		and update the variable `TAG_ENGINE_URL` on line 11 to your Cloud Run service URL from step 8. <br>
-		c) set the environment variable `GOOGLE_APPLICATION_CREDENTIALS` to the keyfile for your `$CLIENT_SA`
+		c) set environment variable `GOOGLE_APPLICATION_CREDENTIALS` to the keyfile of your `$CLIENT_SA`
 		   e.g. `export GOOGLE_APPLICATION_CREDENTIALS="python-client.json"` <br>
 		d) run the script: `python tests/scripts/create_static_config_trigger_job.py` <br>
 		e) if the job succeeds, go to the Data Catalog UI and check out the tags. If the job fails, go to the Cloud Run UI and open the logs for the Tag Engine service to see the cause of the error. <br><br>		
 		
 - Create a dynamic table config: <br>
 		a) open `tests/configs/dynamic_table/dynamic_table_ondemand_bq.json` and update the `template_project`, `template_region`, and `included_assets_uris` values. <br>
-		b) open `tests/configs/dynamic_table/create_dynamic_table_config_trigger_job.py`
+		b) open `tests/scripts/dynamic_table/create_dynamic_table_config_trigger_job.py`
 		and update the variable `TAG_ENGINE_URL` on line 11 to your Cloud Run service URL from step 8. <br>
-		c) set the environment variable `GOOGLE_APPLICATION_CREDENTIALS` to the keyfile for your `$CLIENT_SA`
+		c) set environment variable `GOOGLE_APPLICATION_CREDENTIALS` to the keyfile of your `$CLIENT_SA`
 		   e.g. `export GOOGLE_APPLICATION_CREDENTIALS="python-client.json"`. <br>
 		d) run the script: `python tests/scripts/create_dynamic_table_config_trigger_job.py` <br>
-		e) If the job succeeds, go to the Data Catalog UI and check out the tags. If the job fails, go to the Cloud Run UI and open the logs for your Tag Engine service to see the cause of the error.	<br>   
+		e) If the job succeeds, go to the Data Catalog UI and check out the resulting tags. If the job fails, go to the Cloud Run UI and open the logs for your Tag Engine service to see the cause of the error.	<br> 
+			
+12. You are now ready to create your own Tag Engine configs. For additional examples, check out `tests/configs/*` and `tests/scripts/*`. If you are new to Tag Engine, you may also want to go through [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog). Note that the tutorial is based on Tag Engine 1.0 (not 2.0.), but it will still give you a general idea of how Tag Engine works.  
