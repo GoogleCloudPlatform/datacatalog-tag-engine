@@ -5,14 +5,14 @@ Tag Engine is an open-source extension to Google Cloud's Data Catalog. Tag Engin
 
 ### Deployment Procedure
 
-1. Create (or designate) 3 service accounts:
+1. Create (or designate) three service accounts:
 
 - A service account that runs the Tag Engine Cloud Run service, referred to below as `CLOUD_RUN_SA`. 
 - A service account that performs the tagging in Data Catalog, and sourcing the contents of those tags from BigQuery, referred to below as `TAG_CREATOR_SA`. 
 - A service account that interacts with the Tag Engine API, referred to below as `CLIENT_SA`. 
 
 
-2. Set 5 environment variables:
+2. Set five environment variables:
 
 ```
 export TAG_ENGINE_PROJECT="<PROJECT>"  # your GCP project id, e.g. tag-engine-project
@@ -23,7 +23,7 @@ export TAG_CREATOR_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"   # email of your
 export CLIENT_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"        # email of your client service account for calling the Tag Engine API from a script
 ```
 
-3. Open `tagengine.ini` and set 6 variables:
+3. Open `tagengine.ini` and set six variables:
 
 ```
 TAG_ENGINE_PROJECT  
