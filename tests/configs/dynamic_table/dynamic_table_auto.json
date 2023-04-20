@@ -1,50 +1,55 @@
 {
-    "template_id": "data_resource",
-    "template_project": "data-mesh-344315",
+    "template_id": "cities_311",
+    "template_project": "tag-engine-run",
     "template_region": "us-central1",
     "fields": [
         {
-            "field_id": "data_sensitivity",
-            "query_expression": "select sensitive_type from tag-engine-develop.tag_history.data_sensitivity ds join $project.reference.infotype_classification ic on ds.sensitive_type = ic.classification_result where starts_with(asset_name, '$project/dataset/$dataset/table/$table/')"
+            "field_id": "avg_daily_total_requests",
+            "query_expression": "select ifnull(round(avg(daily_requests), 2), 0) from (select date_created, count(*) as daily_requests from (select extract(date from timestamp_micros(created_date)) as date_created from $table) group by date_created)"
         },
         {
-            "field_id": "num_fields",
-            "query_expression": "select count(*) from $project.$dataset.INFORMATION_SCHEMA.COLUMNS where table_name = '$table'"
+            "field_id": "avg_daily_open_requests",
+            "query_expression": "select ifnull(round(avg(daily_requests), 2), 0) from (select date_created, count(*) as daily_requests from (select extract(date from timestamp_micros(created_date)) as date_created from $table where status = 'Open') group by date_created)"
         },
         {
-            "field_id": "num_records",
-            "query_expression": "select row_count from `$project.$dataset.__TABLES__` where table_id = '$table'"
+            "field_id": "avg_daily_closed_requests",
+            "query_expression": "select ifnull(round(avg(daily_requests), 2), 0) from (select date_created, count(*) as daily_requests from (select extract(date from timestamp_micros(created_date)) as date_created from $table where status = 'Closed') group by date_created)"
         },
         {
-            "field_id": "size",
-            "query_expression": "select round(size_bytes/1048576, 2) from `$project.$dataset.__TABLES__` where table_id = '$table'"
+            "field_id": "avg_daily_unknown_requests",
+            "query_expression": "select ifnull(round(avg(daily_requests), 2), 0) from (select date_created, count(*) as daily_requests from (select extract(date from timestamp_micros(created_date)) as date_created from $table where status not in ('Open', 'Closed')) group by date_created)"
         },
         {
-            "field_id": "recent_data_update",
-            "query_expression": "select cast(timestamp_millis(last_modified_time) as datetime) from `$project.$dataset.__TABLES__` where table_id = '$table'"
+            "field_id": "sum_total_requests",
+            "query_expression": "select count(*) from $table"
         },
         {
-            "field_id": "actual_data_latency",
-            "query_expression": "select round(safe_divide(delta, count)/60/60) from(select timestamp_diff(max(start_time), min(start_time), second) as delta, count(*) as count from `$project`.`region-us-central1`.INFORMATION_SCHEMA.JOBS where query like '%$project.$dataset.$table%')"			
-        }, 
-        {
-            "field_id": "global_id_customer",
-            "query_expression": "select False"
+            "field_id": "unique_total_requests",
+            "query_expression": "select count(distinct unique_key) from $table"
         },
         {
-            "field_id": "global_id_account",
-            "query_expression": "select False"
+            "field_id": "closed_total_requests",
+            "query_expression": "select count(*) from $table where status = 'Closed'"
         },
         {
-            "field_id": "global_id_location",
-            "query_expression": "select True"
+            "field_id": "open_total_requests",
+            "query_expression": "select count(*) from $table where status = 'Open'"
         },
         {
-            "field_id": "global_id_product",
-            "query_expression": "select False"
+            "field_id": "unknown_total_requests",
+            "query_expression": "select count(*) from $table where status not in ('Closed', 'Open')"
+        },
+        {
+            "field_id": "unique_total_complaints",
+            "query_expression": "select count(distinct complaint_type) from $table"
+        },
+        {
+            "field_id": "tag_snapshot_time",
+            "query_expression": "select current_datetime"
         }
     ],
-    "included_tables_uris": "bigquery/project/data-mesh-343422/dataset/crm/*",
+    "included_tables_uris": "bigquery/project/tag-engine-run/dataset/cities_311/*",
+    "excluded_tables_uris": "",
     "refresh_mode": "AUTO",
     "refresh_frequency": 24,
     "refresh_unit": "hours",
