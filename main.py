@@ -1775,8 +1775,8 @@ def check_user_permissions(oauth_token, service_account):
  
 # get the service account intended to process the request 
 def get_requested_service_account(json): 
-
-    if 'service_account' in json:
+    
+    if isinstance(json, dict) and 'service_account' in json:
         service_account = json['service_account']
     else:
         service_account = TAG_CREATOR_SA
@@ -1810,9 +1810,11 @@ def do_authentication(json, headers):
     
     print('** enter do_authentication **')
     print('json:', json)
+    print('json type:', type(json))
     print('headers:', headers)
     
     service_account = get_requested_service_account(json)
+    print('service_account:', service_account)
     
     if ENABLE_AUTH == False:
         return True, None, service_account
@@ -2761,20 +2763,44 @@ def trigger_job():
         return resp
     
     if 'config_uuid' in json:
-        config_id = json['config_uuid']
         
-        if isinstance(json['config_uuid'], str):
-            is_active = store.check_active_config(json['config_uuid'], json['config_type'])
+        config_uuid = json['config_uuid']
         
+        if isinstance(config_uuid, str):
+            is_active = store.check_active_config(config_uuid, json['config_type'])
+            
+            if is_active != True:
+                print('Error: The config_uuid', config_uuid, 'is not active and cannot be used to run a job.')
+                resp = jsonify(success=False)
+                return resp
+    
+    elif 'template_id' in json and 'template_project' in json and 'template_region' in json:
+         template_id = json['template_id']
+         template_project = json['template_project']
+         template_region = json['template_region']
+         
+         if 'included_tables_uris' in json:
+             included_uris = json['included_tables_uris']
+         elif 'included_assets_uris' in json:
+             included_uris = json['included_assets_uris'] 
+         else:
+             print("trigger_job request is missing the required parameter included_tables_uris or included_assets_uris. Please add this parameter to the json object.")
+             resp = jsonify(success=False)
+             return resp 
+             
+         success, config_uuid = store.lookup_config_by_uris(template_id, template_project, template_region, config_type, included_uris)
+         
+         if success != True or config_uuid == '':
+             print('Error: could not locate the config based on the parameters provided in json request.')
+             resp = jsonify(success=False)
+             return resp
+
     else:
-        print("trigger_job request is missing the required parameter config_id. Please add this parameter to the json object.")
+        print("trigger_job request is missing the required parameters. Please add the config_uuid or the template_id, template_project, template_region, and included_uris to the json object.")
         resp = jsonify(success=False)
         return resp
     
-    if is_active == True:
-        job_uuid = jm.create_job(service_account, json['config_uuid'], json['config_type'])
-    else:
-        job_uuid = None
+    job_uuid = jm.create_job(service_account, config_uuid, json['config_type'])
     
     return jsonify(job_uuid=job_uuid)
 
@@ -2842,17 +2868,19 @@ def scheduled_auto_updates():
         
         ready_configs = store.read_ready_configs()
         
+        print('ready_configs:', ready_configs)
+        
         for config_uuid, config_type in ready_configs:
         
-            print('ready config: ', config_uuid, ', ', config_type)
+            print('ready config:', config_uuid, ',', config_type)
             
             if isinstance(config_uuid, str): 
                 store.update_job_status(config_uuid, config_type, 'PENDING')
-                store.increment_version_next_run(config_uuid, config_type)
+                store.increment_version_next_run(service_account, config_uuid, config_type)
                 job_uuid = jm.create_job(service_account, config_uuid, config_type)
                 jobs.append(job_uuid)
 
-        print('created jobs: ' + str(jobs))
+        print('created jobs:', jobs)
         resp = jsonify(success=True, job_ids=json.dumps(jobs))
     
     except Exception as e:

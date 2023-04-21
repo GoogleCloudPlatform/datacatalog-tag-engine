@@ -263,9 +263,9 @@ class TagEngineStoreHandler:
                 config_ref.update({'scheduling_status': status})
                          
     
-    def increment_version_next_run(self, config_uuid, config_type):
+    def increment_version_next_run(self, service_account, config_uuid, config_type):
         
-        config = self.read_config(config_uuid, config_type)
+        config = self.read_config(service_account, config_uuid, config_type)
         
         version = config.get('version', 0) + 1
         delta = config.get('refresh_frequency', 24)
@@ -1258,60 +1258,40 @@ class TagEngineStoreHandler:
         return ready_configs  
         
         
-    def lookup_config_by_included_tables_uris(self, template_uuid, included_tables_uris, included_tables_uris_hash):
+    def lookup_config_by_uris(self, template_id, template_project, template_region, config_type, included_uris):
         
         success = False
-        config_result = {}
+        config = None
+        config_uuid = ''
         
-        colls = ['dynamic_table_configs', 'dynamic_column_configs', 'sensitive_column_configs']
+        template_exists, template_uuid = self.read_tag_template(template_id, template_project, template_region)
         
-        for coll_name in colls:
-            
-            config_ref = self.db.collection(coll_name)
+        if template_exists != True:
+            print('Error: tag template', template_id, 'does not exist in', template_project, 'and', template_region)
+            return success, config_uuid
         
-            if included_tables_uris is not None:
-                docs = config_ref.where('template_uuid', '==', template_uuid).where('config_status', '==', 'ACTIVE')\
-                .where('included_tables_uris', '==', included_tables_uris).stream()
-            if included_tables_uris_hash is not None:
-                docs = config_ref.where('template_uuid', '==', template_uuid).where('config_status', '==', 'ACTIVE')\
-                .where('included_tables_uris_hash', '==', included_tables_uris_hash).stream()
+        coll_name = self.lookup_config_collection(config_type)
+           
+        config_ref = self.db.collection(coll_name)
         
-            for doc in docs:
-                config_result = doc.to_dict()
+        if 'asset' in coll_name:
+            config = config_ref.where('template_uuid', '==', template_uuid).where('config_status', '==', 'ACTIVE')\
+                    .where('included_assets_uris', '==', included_uris).get()
+        else:
+            config = config_ref.where('template_uuid', '==', template_uuid).where('config_status', '==', 'ACTIVE')\
+                    .where('included_tables_uris', '==', included_uris).get()
+        
+        if config == None:
+            print('Error: config could not be found')
+            return success, config_uuid
+        else:
+            if len(config) == 1:
+                config_uuid = config[0].id
                 success = True
-                return success, config_result
-                
-        
-        return success, config_result
+                 
+        return success, config_uuid
         
 
-    def lookup_config_by_included_assets_uris(self, template_uuid, included_assets_uris, included_assets_uris_hash):
-        
-        success = False
-        config_result = {}
-        
-        colls = ['static_asset_configs', 'entry_configs', 'glossary_asset_configs']
-        
-        for coll_name in colls:
-            
-            config_ref = self.db.collection(coll_name)
-        
-            if included_assets_uris is not None:
-                docs = config_ref.where('template_uuid', '==', template_uuid).where('config_status', '==', 'ACTIVE')\
-                .where('included_assets_uris', '==', included_assets_uris).stream()
-            if included_assets_uris_hash is not None:
-                docs = config_ref.where('template_uuid', '==', template_uuid).where('config_status', '==', 'ACTIVE')\
-                .where('included_assets_uris_hash', '==', included_assets_uris_hash).stream()
-        
-            for doc in docs:
-                config_result = doc.to_dict()
-                success = True
-                return success, config_result
-                
-        
-        return success, config_result
-
-    
     def update_config(self, old_config_uuid, config_type, config_status, fields, included_uris, excluded_uris, template_uuid, \
                       refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite=False, mapping_table=None):
         

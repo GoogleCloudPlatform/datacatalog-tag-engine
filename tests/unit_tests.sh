@@ -134,7 +134,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
   -H "oauth_token: $OAUTH_TOKEN"
 
 # create the config
-curl -X POST $TAG_ENGINE_URL/create_import_config -d @api/import/import_column.json \
+curl -X POST $TAG_ENGINE_URL/create_import_config -d @tests/configs/import/import_column.json \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 
@@ -171,9 +171,17 @@ curl -X POST $TAG_ENGINE_URL/create_restore_config -d @tests/configs/restore/res
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 
-# trigger job
+# trigger job 
 curl -i -X POST $TAG_ENGINE_URL/trigger_job \
   -d '{"config_type":"RESTORE_TAG","config_uuid":"13bea024d56811ed95362762b95fd865"}' \
+  -H "Authorization: Bearer $IAM_TOKEN" \
+  -H "oauth_token: $OAUTH_TOKEN"
+
+
+####### Trigger job by uris #######
+
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+  -d '{"config_type":"DYNAMIC_TAG_TABLE","included_tables_uris":"bigquery/project/tag-engine-run/dataset/GCP_Mockup/*","template_id":"data_governance","template_project":"tag-engine-run","template_region":"us-central1"}' \
   -H "Authorization: Bearer $IAM_TOKEN" \
   -H "oauth_token: $OAUTH_TOKEN"
 
@@ -191,17 +199,20 @@ curl -i -X POST $TAG_ENGINE_URL/scheduled_auto_updates \
   -H "Authorization: Bearer $IAM_TOKEN" \
   -H "oauth_token: $OAUTH_TOKEN"
 
+
 ####### List configs #######
-curl -i -X POST http://127.0.0.1:5000/list_configs \
+curl -i -X POST $TAG_ENGINE_URL/list_configs \
   -d '{"config_type":"ALL"}' \
   -H "Authorization: Bearer $IAM_TOKEN" \
   -H "oauth_token: $OAUTH_TOKEN"
+
 
 ####### Read config #######
 curl -i -X POST $TAG_ENGINE_URL/get_config \
   -d '{"config_type":"SENSITIVE_TAG_COLUMN", "config_uuid": "96cb3764d5ab11ed936ef9fa48b6860b"}' \
   -H "Authorization: Bearer $IAM_TOKEN" \
   -H "oauth_token: $OAUTH_TOKEN"
+
 
 ####### Delete config #######
 curl -i -X POST $TAG_ENGINE_URL/delete_config \

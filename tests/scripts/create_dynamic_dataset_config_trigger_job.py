@@ -5,6 +5,7 @@ import json
 import google
 import requests
 import time
+import sys
 import google.auth.transport.requests
 import google.oauth2.id_token
 
@@ -56,6 +57,20 @@ def trigger_job(id_token, oauth_token, payload):
     return response.json()
 
 
+def poll_job(id_token, oauth_token, payload):
+    
+    while True:
+        job_status = get_job_status(id_token, oauth_token, payload)
+        if job_status['job_status'] != 'SUCCESS' and job_status['job_status'] != 'ERROR':
+            print('sleeping for 10 seconds...')
+            time.sleep(10)
+        else:
+            print('done.')
+            break
+    
+    return response
+
+
 def get_job_status(id_token, oauth_token, payload):
     endpoint = TAG_ENGINE_URL + '/get_job_status'
 
@@ -68,7 +83,7 @@ def get_job_status(id_token, oauth_token, payload):
     
     print('job status:', response.json())
     
-    return response
+    return response.json()
 
     
 if __name__ == '__main__':
@@ -76,8 +91,10 @@ if __name__ == '__main__':
     oauth_token = get_oauth_token()
     response = create_config(id_token, oauth_token)
     response = trigger_job(id_token, oauth_token, response)
-    get_job_status(id_token, oauth_token, response)
-    print('sleeping for 10 seconds...')
-    time.sleep(10)
-    get_job_status(id_token, oauth_token, response)
-    print('done.')
+    
+    if 'job_uuid' in response:
+        poll_job(id_token, oauth_token, response)
+    else:
+        print('Error: trigger_dynamic_table_job failed. Consult Cloud Run logs for details. ')
+        sys.exit()
+    

@@ -5,6 +5,7 @@ import json
 import google
 import requests
 import time
+import sys
 import google.auth.transport.requests
 import google.oauth2.id_token
 
@@ -88,4 +89,9 @@ if __name__ == '__main__':
     oauth_token = get_oauth_token()
     response = create_config(id_token, oauth_token)
     response = trigger_job(id_token, oauth_token, response)
-    poll_job(id_token, oauth_token, response)
+    
+    if 'job_uuid' in response:
+        poll_job(id_token, oauth_token, response)
+    else:
+        print('Error: trigger_job failed. Consult Cloud Run logs for details. ')
+        sys.exit()
