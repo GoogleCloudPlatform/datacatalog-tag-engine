@@ -12,7 +12,7 @@ Tag Engine is an open-source extension to Google Cloud's Data Catalog. Tag Engin
 - A service account that interacts with the Tag Engine API, referred to below as `CLIENT_SA`. 
 
 
-2. Set five environment variables:
+2. Set six environment variables:
 
 ```
 export TAG_ENGINE_PROJECT="<PROJECT>"  # GCP project id for Tag Engine service, e.g. tag-engine-project
