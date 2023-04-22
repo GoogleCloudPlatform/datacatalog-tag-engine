@@ -53,7 +53,12 @@ gcloud services enable datacatalog.googleapis.com
 
 5. Create the Firestore database: 
 
-`gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --region=$TAG_ENGINE_REGION`
+This command requires gcloud alpha. You can install it by running `gcloud components install alpha`.  
+
+`gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location=$TAG_ENGINE_REGION`
+
+Note that Firestore is not available in every region. Consult [this list](https://cloud.google.com/firestore/docs/locations)
+to see where it's available and choose a different region if you can't run it in your preferred one. 
 
 
 6. Create the Firestore indexes:
