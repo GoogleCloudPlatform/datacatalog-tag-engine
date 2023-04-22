@@ -63,9 +63,12 @@ to see where it's available and choose a different region if you can't run it in
 
 6. Create the Firestore indexes:
 
-`python deploy/create_indexes.py $TAG_ENGINE_PROJECT`
+````
+cd deploy
+python create_indexes.py $TAG_ENGINE_PROJECT
+```
 
-This script is expected to take ~10 minutes. There are 30+ indexes that must be built in Firestore. 
+This script is expected to run for 8-10 minutes. It creates 30+ composite indexes in Firestore which are needed for serving Tag Engine requests. 
 
 
 7. Build and deploy the Cloud Run service:

@@ -139,10 +139,6 @@ indexes:
     fields:
       - field: template_uuid
       - field: config_status
-  - collection: glossary_asset_configs
-    fields:
-      - field: template_uuid
-      - field: config_status
   - collection: entry_configs
     fields:
       - field: template_uuid
