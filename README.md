@@ -157,7 +157,6 @@ this permission or assign the `storage.legacyBucketReader` role:
 gcloud storage buckets add-iam-policy-binding gs://<BUCKET> \
 	--member=serviceAccount:${TAG_CREATOR_SA} \
 	--role=roles/storage.legacyBucketReader
-
 ```
 	
 11. Test the setup by creating a couple of simple configs (static and dynamic tags):
