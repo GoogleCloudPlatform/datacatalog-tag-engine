@@ -53,7 +53,7 @@ gcloud services enable datacatalog.googleapis.com
 
 5. Create the Firestore database: 
 
-This command requires gcloud alpha. You can install it by running `gcloud components install alpha`.  
+This command currently requires gcloud alpha. You can install it by running `gcloud components install alpha`.  
 
 `gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location=$TAG_ENGINE_REGION`
 
@@ -72,6 +72,8 @@ This script is expected to run for 8-10 minutes. It creates 30+ composite indexe
 
 
 7. Build and deploy the Cloud Run service:
+
+This command currently requires gcloud beta. You can install it by running `gcloud components install beta`.  
 
 ```
 gcloud beta run deploy tag-engine \
