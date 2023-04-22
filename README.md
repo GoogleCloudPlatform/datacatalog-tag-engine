@@ -124,49 +124,44 @@ gcloud iam roles create PolicyTagReader \
 
 ```
 gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
-	--member='serviceAccount:${CLOUD_RUN_SA}' \
-	--role='projects/$TAG_ENGINE_PROJECT/roles/cloudtasks.enqueuer' \
-	--role='projects/$TAG_ENGINE_PROJECT/roles/cloudtasks.taskRunner' \
-	--role='projects/$TAG_ENGINE_PROJECT/roles/datastore.user' \
-	--role='projects/$TAG_ENGINE_PROJECT/roles/run.invoker' 
+	--member=serviceAccount:$CLOUD_RUN_SA \
+	--role=projects/$TAG_ENGINE_PROJECT/roles/cloudtasks.enqueuer \
+	--role=projects/$TAG_ENGINE_PROJECT/roles/cloudtasks.taskRunner \
+	--role=projects/$TAG_ENGINE_PROJECT/roles/datastore.user \
+	--role=projects/$TAG_ENGINE_PROJECT/roles/run.invoker 
 ```
 ```
 gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
-	--member='serviceAccount:${TAG_CREATOR_SA}' \
-	--role='projects/$TAG_ENGINE_PROJECT/roles/datacatalog.tagEditor' \
-	--role='projects/$TAG_ENGINE_PROJECT/roles/datacatalog.tagTemplateUser' \
-	--role='projects/$TAG_ENGINE_PROJECT/roles/datacatalog.tagTemplateViewer' \
-	--role='projects/$TAG_ENGINE_PROJECT/roles/datacatalog.viewer' \
-	--role='projects/$TAG_ENGINE_PROJECT/roles/bigquery.dataEditor' \
-	--role='projects/$TAG_ENGINE_PROJECT/roles/bigquery.jobUser' \
-	--role='projects/$TAG_ENGINE_PROJECT/roles/bigquery.metadataViewer' \	  
-	--role='projects/$TAG_ENGINE_PROJECT/roles/BigQuerySchemaUpdate' \
-	--role='projects/$TAG_ENGINE_PROJECT/roles/PolicyTagReader' \
+	--member=serviceAccount:$TAG_CREATOR_SA \
+	--role=projects/$TAG_ENGINE_PROJECT/roles/datacatalog.tagEditor \
+	--role=projects/$TAG_ENGINE_PROJECT/roles/datacatalog.tagTemplateUser \
+	--role=projects/$TAG_ENGINE_PROJECT/roles/datacatalog.tagTemplateViewer \
+	--role=projects/$TAG_ENGINE_PROJECT/roles/datacatalog.viewer \
+	--role=projects/$TAG_ENGINE_PROJECT/roles/bigquery.dataEditor \
+	--role=projects/$TAG_ENGINE_PROJECT/roles/bigquery.jobUser \
+	--role=projects/$TAG_ENGINE_PROJECT/roles/bigquery.metadataViewer \	  
+	--role=projects/$TAG_ENGINE_PROJECT/roles/BigQuerySchemaUpdate \
+	--role=projects/$TAG_ENGINE_PROJECT/roles/PolicyTagReader \
 ```
-
-```
-gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-	--member='serviceAccount:${CLOUD_RUN_SA}' --role=roles/iam.serviceAccountUser
-```
-
 ```
 gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-    --member='serviceAccount:${CLOUD_RUN_SA}' --role=roles/iam.serviceAccountTokenCreator 
+	--member=serviceAccount:$CLOUD_RUN_SA --role=roles/iam.serviceAccountUser
 ```
-
+```
+gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
+    --member=serviceAccount:$CLOUD_RUN_SA --role=roles/iam.serviceAccountTokenCreator 
+```
 ```
 gcloud iam service-accounts add-iam-policy-binding $CLOUD_RUN_SA \
-	--member='serviceAccount:${CLOUD_RUN_SA}' --role roles/iam.serviceAccountUser
+	--member=serviceAccount:$CLOUD_RUN_SA --role roles/iam.serviceAccountUser
 ```
-
 ```
 gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-    --member='serviceAccount:${CLIENT_SA}' --role=roles/iam.serviceAccountUser 
+    --member=serviceAccount:$CLIENT_SA --role=roles/iam.serviceAccountUser 
 ```
-
 ```
 gcloud run services add-iam-policy-binding tag-engine \
-    --member='serviceAccount:${CLIENT_SA}' --role=roles/run.invoker \
+    --member=serviceAccount:$CLIENT_SA --role=roles/run.invoker \
     --region=$TAG_ENGINE_REGION	
 ```
 
@@ -176,7 +171,7 @@ this permission or assign the `storage.legacyBucketReader` role:
 
 ```
 gcloud storage buckets add-iam-policy-binding gs://<BUCKET> \
-	--member='serviceAccount:${TAG_CREATOR_SA}' \
+	--member=serviceAccount:$TAG_CREATOR_SA' \
 	--role=roles/storage.legacyBucketReader
 ```
 
