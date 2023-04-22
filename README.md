@@ -195,7 +195,6 @@ To generate the OAUTH_TOKEN, you can run these two commands:
 ```
 gcloud auth application-default login
 export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
-
 ```
 
 Be sure to generate an OAUTH_TOKEN from an account which has privileges to use TAG_CREATOR_SA. 	
