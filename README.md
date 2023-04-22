@@ -15,15 +15,16 @@ Tag Engine is an open-source extension to Google Cloud's Data Catalog. Tag Engin
 2. Set five environment variables:
 
 ```
-export TAG_ENGINE_PROJECT="<PROJECT>"  # your GCP project id, e.g. tag-engine-project
-export TAG_ENGINE_REGION="<REGION>"    # your GCP region, e.g. us-central1
+export TAG_ENGINE_PROJECT="<PROJECT>"  # GCP project id for Tag Engine service, e.g. tag-engine-project
+export TAG_ENGINE_REGION="<REGION>"    # GCP region for Tag Engine service, e.g. us-central1
+export BIGQUERY_REGION="<REGION>"      # GCP region for BigQuery, e.g. us-central1
 
 export CLOUD_RUN_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"     # email of your Cloud Run service account for running Tag Engine service
 export TAG_CREATOR_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"   # email of your Tag creator service account for running BQ queries and creating DC tags
 export CLIENT_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"        # email of your client service account for calling the Tag Engine API from a script
 ```
 
-3. Open `tagengine.ini` and set six variables:
+3. Open `tagengine.ini` and set the six variables in the file. They should be equal to the same values as the environment variables you set above:
 
 ```
 TAG_ENGINE_PROJECT  
@@ -34,7 +35,7 @@ BIGQUERY_REGION
 ENABLE_AUTH  
 ```
 
-Note: `ENABLE_AUTH` is a boolean. When set to True, Tag Engine verifies that the client is authorized to use TAG_CREATOR_SA prior to processing a request. 
+Note: `ENABLE_AUTH` is a boolean. When set to True, Tag Engine verifies that the client is authorized to use the TAG_CREATOR_SA prior to processing an API request. 
 
 
 4. Enable the required APIs:
@@ -81,7 +82,17 @@ export SERVICE_URL=`gcloud run services describe tag-engine --format="value(stat
 gcloud run services update tag-engine --set-env-vars SERVICE_URL=$SERVICE_URL
 ```
 
-9. Create two custom roles (required by the SENSITIVE_COLUMN_CONFIG):
+9. Create two task queues:
+
+```
+gcloud tasks queues create tag-engine-injector-queue \
+	--location=$TAG_ENGINE_REGION --max-attempts=1 --max-concurrent-dispatches=100
+
+gcloud tasks queues create tag-engine-work-queue \
+	--location=$TAG_ENGINE_REGION --max-attempts=1 --max-concurrent-dispatches=100
+```
+
+10. Create two custom roles (required by the SENSITIVE_COLUMN_CONFIG):
 
 ```
 gcloud iam roles create BigQuerySchemaUpdate \
@@ -99,7 +110,7 @@ gcloud iam roles create PolicyTagReader \
 	--permissions datacatalog.taxonomies.get,datacatalog.taxonomies.list
 ```
 	
-10. Grant the required roles to CLOUD_RUN_SA, TAG_CREATOR_SA, and :
+11. Grant the required roles to CLOUD_RUN_SA, TAG_CREATOR_SA, and :
 
 ```
 gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
@@ -155,11 +166,37 @@ this permission or assign the `storage.legacyBucketReader` role:
 
 ```
 gcloud storage buckets add-iam-policy-binding gs://<BUCKET> \
-	--member=serviceAccount:${TAG_CREATOR_SA} \
+	--member='serviceAccount:${TAG_CREATOR_SA}' \
 	--role=roles/storage.legacyBucketReader
 ```
+
+12. This is an optional step. If you plan to create any configurations which are set to auto update, you'll also need to create a Cloud Scheduler entry:
+
+```
+gcloud scheduler jobs create http scheduled_auto_updates1 \
+	--description="Tag Engine scheduled jobs" \
+	--location=$TAG_ENGINE_REGION --time-zone=America/Chicago \
+	--schedule="0 */1 * * *" --uri="${SERVICE_URL}/scheduled_auto_updates" 	\
+	--http-method=POST \
+	--headers oauth_token=$OAUTH_TOKEN \
+	--oidc-service-account-email=$CLIENT_SA \
+	--oidc-token-audience=$SERVICE_URL 
+```
+
+With this command, the Cloud Scheduler will trigger tag updates every hour. If you want them updates to occur on a different schedule, you can adjust the value for the `schedule` parameter. 
+
+To generate the OAUTH_TOKEN, you can run these two commands:
+
+```
+gcloud auth application-default login
+export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
+
+```
+
+Be sure to generate an OAUTH_TOKEN from an account which has privileges to use TAG_CREATOR_SA. 	
 	
-11. Test the setup by creating a couple of simple configs (static and dynamic tags):
+	
+13. Test you Tag Engine setup by creating a couple of simple configs (static and dynamic tags):
 
 - Create the data_governance tag template: <br>
 		`git clone https://github.com/GoogleCloudPlatform/datacatalog-templates.git` <br>
@@ -184,4 +221,4 @@ gcloud storage buckets add-iam-policy-binding gs://<BUCKET> \
 		d) run the script: `python tests/scripts/create_dynamic_table_config_trigger_job.py` <br>
 		e) If the job succeeds, go to the Data Catalog UI and check out the resulting tags. If the job fails, go to the Cloud Run UI and open the logs for your Tag Engine service to see the cause of the error.	<br> <br> 
 			
-12. You are now ready to create your own Tag Engine configs. For additional examples, check out `tests/configs/*` and `tests/scripts/*`. If you are new to Tag Engine, you may also want to go through [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog). Note that the tutorial is based on Tag Engine 1.0 (not 2.0.), but it will still give you a general idea of how Tag Engine works.  
+14. You have completed the setup and are ready to create your own Tag Engine configs. For additional examples, check out `tests/configs/*` and `tests/scripts/*`. If you are new to Tag Engine, you may also want to walk through [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog). Note that the tutorial is for Tag Engine v1 (as opposed to v2), but it will still give you a general understanding of how Tag Engine works. We plan to publish another tutorial for Tag Engine v2 soon. Stay tuned!  

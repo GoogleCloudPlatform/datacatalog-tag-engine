@@ -65,12 +65,12 @@ SPLIT_WORK_HANDLER = os.environ['SERVICE_URL'] + '/_split_work'
 RUN_TASK_HANDLER = os.environ['SERVICE_URL'] + '/_run_task'
 
 jm = jobm.JobManager(CLOUD_RUN_SA, config['DEFAULT']['TAG_ENGINE_PROJECT'], \
-                     config['DEFAULT']['QUEUE_REGION'], \
+                     config['DEFAULT']['TAG_ENGINE_REGION'], \
                      config['DEFAULT']['INJECTOR_QUEUE'], \
                      SPLIT_WORK_HANDLER)
                      
 tm = taskm.TaskManager(CLOUD_RUN_SA, config['DEFAULT']['TAG_ENGINE_PROJECT'], \
-                     config['DEFAULT']['QUEUE_REGION'], \
+                     config['DEFAULT']['TAG_ENGINE_REGION'], \
                      config['DEFAULT']['WORK_QUEUE'], \
                      RUN_TASK_HANDLER)
 
