@@ -219,6 +219,6 @@ Be sure to generate an OAUTH_TOKEN from an account which has privileges to use T
 		c) set environment variable `GOOGLE_APPLICATION_CREDENTIALS` to the keyfile of your `$CLIENT_SA`
 		   e.g. `export GOOGLE_APPLICATION_CREDENTIALS="python-client.json"`. <br>
 		d) run the script: `python tests/scripts/create_dynamic_table_config_trigger_job.py` <br>
-		e) If the job succeeds, go to the Data Catalog UI and check out the resulting tags. If the job fails, go to the Cloud Run UI and open the logs for your Tag Engine service to see the cause of the error.	<br> <br> 
-			
+		e) If the job succeeds, go to the Data Catalog UI and check out the resulting tags. If the job fails, go to the Cloud Run UI and open the logs for your Tag Engine service to see the cause of the error.	<br> 
+					
 14. Congrats! If you made it this far, you've completed the setup and are ready to create your own Tag Engine configs. For additional examples, check out `tests/configs/*` and `tests/scripts/*`. If you are new to Tag Engine, you may also want to walk through [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog). Note that the tutorial is for Tag Engine v1 (as opposed to v2), but it will still give you a general understanding of how Tag Engine works. We plan to publish another tutorial for Tag Engine v2 soon. Stay tuned!  
