@@ -63,7 +63,7 @@ to see where it's available and choose a different region if you can't run it in
 
 6. Create the Firestore indexes:
 
-````
+```
 cd deploy
 python create_indexes.py $TAG_ENGINE_PROJECT
 ```
