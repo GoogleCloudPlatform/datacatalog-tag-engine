@@ -18,9 +18,9 @@ import csv
 class CsvParser:
 
     @staticmethod
-    def extract_tags(csv_file):
+    def extract_tags(credentials, csv_file):
         
-        gcs_client = storage.Client()
+        gcs_client = storage.Client(credentials=credentials)
         extracted_tags = [] # stores the result set
 
         # download the CSV file from GCS
@@ -50,17 +50,5 @@ class CsvParser:
                     extracted_tags.append(tag_extract)       
         
         return extracted_tags
-    
-if __name__ == '__main__':
-    
-    csv_file = ('catalog_metadata_imports', 'finwire_table_tags.csv')
-    extracted_tags = CsvParser.extract_tags(csv_file)
-    print('length of extracted_tags: ', len(extracted_tags))
-    
-    #for tag in extracted_tags:
-        #print('tag: ', tag)
-    
-    #csv_file = ('catalog_metadata_imports', 'finwire_column_tags.csv')
-    #extracted_tags = BackupFileParser.extract_tags(csv_file)
-    #print('extracted_tags: ', extracted_tags)
+
         

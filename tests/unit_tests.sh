@@ -123,24 +123,28 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
 ####### Import tags from CSV #######
 
 # create the config
-curl -X POST $TAG_ENGINE_URL/create_import_config -d @tests/configs/import/import_table.json \
+curl -X POST $TAG_ENGINE_URL/create_import_config -d @tests/configs/import/import_table_tags.json \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 
 # trigger job
 curl -i -X POST $TAG_ENGINE_URL/trigger_job \
-  -d '{"config_type":"TAG_IMPORT","config_uuid":"13bea024d56811ed95362762b95fd865"}' \
+  -d '{"config_type":"TAG_IMPORT","config_uuid":"4ac0fb9ee09411edb235eba06dc7096f"}' \
   -H "Authorization: Bearer $IAM_TOKEN" \
   -H "oauth_token: $OAUTH_TOKEN"
 
+curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"6acb30b2e09411ed80416b1ac85cbc14"}' \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
+
 # create the config
-curl -X POST $TAG_ENGINE_URL/create_import_config -d @tests/configs/import/import_column.json \
+curl -X POST $TAG_ENGINE_URL/create_import_config -d @tests/configs/import/import_column_tags.json \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 
 # trigger job
 curl -i -X POST $TAG_ENGINE_URL/trigger_job \
-  -d '{"config_type":"TAG_IMPORT","config_uuid":"13bea024d56811ed95362762b95fd865"}' \
+  -d '{"config_type":"TAG_IMPORT","config_uuid":"004d023ce0a911edac6f9d2f379f9994"}' \
   -H "Authorization: Bearer $IAM_TOKEN" \
   -H "oauth_token: $OAUTH_TOKEN"
 
@@ -188,7 +192,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
 
 ####### Job status #######
 
-curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"37fa631ed65911ed953e7bcddcdbfdb4"}' \
+curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"0d5cee42e0a911edb2ec3becb01f33e6"}' \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 

@@ -3201,7 +3201,7 @@ def _split_work():
             extracted_tags = []
         
             for csv_file in csv_files:
-                extracted_tags.extend(cp.CsvParser.extract_tags(csv_file))
+                extracted_tags.extend(cp.CsvParser.extract_tags(get_target_credentials(config.get('service_account')), csv_file))
     
         if config_type == 'TAG_RESTORE':
             bkp_files = list(re.get_resources(config.get('metadata_export_location'), None))
@@ -3210,7 +3210,8 @@ def _split_work():
             extracted_tags = []
         
             for bkp_file in bkp_files:
-                extracted_tags.append(bfp.BackupFileParser.extract_tags(config.get('source_template_id'), \
+                extracted_tags.append(bfp.BackupFileParser.extract_tags(get_target_credentials(config.get('service_account')), \
+                                                                        config.get('source_template_id'), \
                                                                         config.get('source_template_project'), \
                                                                         bkp_file))
              

@@ -148,6 +148,17 @@ gcloud run services add-iam-policy-binding tag-engine \
     --member='serviceAccount:${CLIENT_SA}' --role=roles/run.invoker \
     --region=$TAG_ENGINE_REGION	
 ```
+
+Note: If you plan to create your tags from CSV files, you also need to ensure that `$TAG_CREATOR_SA` has the 
+`storage.buckets.get` permission on the GCS bucket where the CSV files are stored. You can create a custom role with 
+this permission or assign the `storage.legacyBucketReader` role:
+
+```
+gcloud storage buckets add-iam-policy-binding gs://<BUCKET> \
+	--member=serviceAccount:${TAG_CREATOR_SA} \
+	--role=roles/storage.legacyBucketReader
+
+```
 	
 11. Test the setup by creating a couple of simple configs (static and dynamic tags):
 

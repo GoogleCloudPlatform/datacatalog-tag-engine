@@ -52,9 +52,9 @@ class BackupFileParser:
 
     
     @staticmethod
-    def extract_tags(source_template_id, source_template_project, backup_file):
+    def extract_tags(credentials, source_template_id, source_template_project, backup_file):
         
-        gcs_client = storage.Client()
+        gcs_client = storage.Client(credentials=credentials)
         extracted_tags = [] # stores the result set
 
         # download the backup file from GCS

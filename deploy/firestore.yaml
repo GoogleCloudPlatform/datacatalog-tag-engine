@@ -162,3 +162,8 @@ indexes:
       - field: target_dataset
       - field: target_project
       - field: config_status
+  - collection: import_configs
+    fields:
+      - field: metadata_import_location
+      - field: template_uuid
+      - field: config_status

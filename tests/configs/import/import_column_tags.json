@@ -1,8 +1,8 @@
 {
     "template_id": "compliance_template",
-    "template_project": "tag-engine-develop",
+    "template_project": "tag-engine-run",
     "template_region": "us-central1",
-    "metadata_import_location": "gs://catalog_metadata_imports/finwire_column_tags.csv",
+    "metadata_import_location": "gs://csv-meta-tags/finwire_column_tags.csv",
     "tag_history": true, 
     "tag_stream": false   
 }
