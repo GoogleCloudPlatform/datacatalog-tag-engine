@@ -175,7 +175,7 @@ gcloud storage buckets add-iam-policy-binding gs://<BUCKET> \
 	--role=roles/storage.legacyBucketReader
 ```
 
-12. This is an optional step. If you plan to create any configurations which are set to auto update, you'll also need to create a Cloud Scheduler entry:
+12. This is an optional step. If you plan to create Tag Engine configs with auto refresh, you'll also need to create a Cloud Scheduler entry to trigger the tag updates:
 
 ```
 gcloud scheduler jobs create http scheduled_auto_updates1 \
@@ -188,7 +188,7 @@ gcloud scheduler jobs create http scheduled_auto_updates1 \
 	--oidc-token-audience=$SERVICE_URL 
 ```
 
-With this command, the Cloud Scheduler will trigger tag updates every hour. If you want them updates to occur on a different schedule, you can adjust the value for the `schedule` parameter. 
+Cloud Scheduler will trigger tag updates every hour. If you want updates to occur on a different schedule, you can adjust the value of the `schedule` parameter in the above command. 
 
 To generate the OAUTH_TOKEN, you can run these two commands:
 
