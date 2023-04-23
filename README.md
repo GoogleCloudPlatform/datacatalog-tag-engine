@@ -26,6 +26,7 @@ export TAG_CREATOR_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"   # email of your
 export CLIENT_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"        # email of your client service account for calling the Tag Engine API from a script
 ```
 
+
 3. Open `tagengine.ini` and set the following six variables in the file. The first five should be equal to the environment variables you set above in step 2:
 
 ```
@@ -51,6 +52,7 @@ gcloud services enable firestore.googleapis.com
 gcloud services enable cloudtasks.googleapis.com
 gcloud services enable datacatalog.googleapis.com
 ```
+
 
 5. Create the Firestore database: 
 
@@ -87,12 +89,14 @@ gcloud beta run deploy tag-engine \
 	--service-account=$CLOUD_RUN_SA
 ```
 
+
 8. Set one Cloud Run environment variable:
 
 ```
 export SERVICE_URL=`gcloud run services describe tag-engine --format="value(status.url)"`
 gcloud run services update tag-engine --set-env-vars SERVICE_URL=$SERVICE_URL
 ```
+
 
 9. Create two task queues:
 
@@ -103,6 +107,7 @@ gcloud tasks queues create tag-engine-injector-queue \
 gcloud tasks queues create tag-engine-work-queue \
 	--location=$TAG_ENGINE_REGION --max-attempts=1 --max-concurrent-dispatches=100
 ```
+
 
 10. Create two custom roles (required by the SENSITIVE_COLUMN_CONFIG):
 
@@ -120,6 +125,7 @@ gcloud iam roles create PolicyTagReader \
 	--description "Read Policy Tag Taxonomy" \
 	--permissions datacatalog.taxonomies.get,datacatalog.taxonomies.list
 ```
+
 	
 11. Grant the required roles to `CLOUD_RUN_SA`, `TAG_CREATOR_SA`, and `CLIENT_SA`:
 
@@ -179,11 +185,20 @@ gcloud storage buckets add-iam-policy-binding gs://<BUCKET> \
 	--role=roles/storage.legacyBucketReader
 ```
 
-12. This is an optional step. If you plan to create Tag Engine configs which auto refresh the tags, you'll also need to make a Cloud Scheduler entry to trigger the tag updates:
+
+12. This is an optional step. If you plan to create Tag Engine configs which auto refresh your tags, you'll also need to make a Cloud Scheduler entry to trigger the tag updates:
 
 ```
 gcloud services enable cloudscheduler.googleapis.com
+```
 
+To generate the `OAUTH_TOKEN` for the Cloud Scheduler entry, choose an account which has privileges to use `TAG_CREATOR_SA` and then you can run these two commands:
+```
+gcloud auth application-default login
+export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
+```
+
+```
 gcloud scheduler jobs create http scheduled_auto_updates1 \
 	--description="Tag Engine scheduled jobs" \
 	--location=$TAG_ENGINE_REGION --time-zone=America/Chicago \
@@ -196,12 +211,6 @@ gcloud scheduler jobs create http scheduled_auto_updates1 \
 
 This command created a Cloud Scheduler entry that will trigger tag updates every hour. If you want the tag updates to occur on a different schedule, you can adjust the value of the `schedule` parameter in the above command. 
 
-Note: to generate the `OAUTH_TOKEN`, you'll need to choose an account which has privileges to use `TAG_CREATOR_SA` and then run these two commands:
-
-```
-gcloud auth application-default login
-export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
-```
 
 13. Test your Tag Engine setup by creating a couple of simple configs (static and dynamic tags):
 
