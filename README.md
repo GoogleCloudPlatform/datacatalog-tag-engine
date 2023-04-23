@@ -1,5 +1,7 @@
 ## Tag Engine
-This repository contains the Tag Engine application, which is an open-source extension to Google Cloud's Data Catalog. Tag Engine automates the tagging of BigQuery and Cloud Storage assets. 
+This branch contains the Tag Engine 1.0 application which is hosted on App Engine. An early release of Tag Engine 2.0 which is hosted on Cloud Run instead of App Engine is available from the [cloud-run](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/cloud-run) branch. 
+
+Tag Engine is an open-source extension to Google Cloud's Data Catalog. Tag Engine automates the tagging of BigQuery tables and views as well as data lake files in Cloud Storage. You create a configuration, which contains SQL expressions that define how to populate the fields in the tags. Tag Engine runs the configuration either on demand or on a pre-defined schedule. 
 
 ### Documentation
 
@@ -10,7 +12,7 @@ This repository contains the Tag Engine application, which is an open-source ext
 
 ### Deployment Procedure
 
-Tag Engine requires both Google App Engine and Firestore. It also assumes that you will be tagging assets in BigQuery or Google Cloud Storage. Follow the steps below to deploy the Tag Engine application in your Google Cloud project.
+Tag Engine 1.0 is a Flask application that is hosted on Google App Engine and Firestore. It assumes that you will be tagging assets in BigQuery or Google Cloud Storage. Follow the steps below to deploy the Tag Engine application in your Google Cloud project.
 
 Note: In the deployment procedure below, we use one GCP project for running Tag Engine and Data Catalog and another project for storing data assets in BigQuery. If this is your first time running Tag Engine, you may want to keep everything in one project for simplicity. 
 
