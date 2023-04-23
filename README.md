@@ -214,7 +214,7 @@ This command created a Cloud Scheduler entry that will trigger tag updates every
 
 13. Test your Tag Engine setup by creating a couple of simple configs (static and dynamic tags):
 
-- Create the data_governance tag template: <br>
+- Create the `data_governance` tag template: <br>
 		`git clone https://github.com/GoogleCloudPlatform/datacatalog-templates.git` <br>
 		`cd datacatalog-templates` <br>
 		`python create_template.py $TAG_ENGINE_PROJECT $TAG_ENGINE_REGION data_governance.yaml` <br>
