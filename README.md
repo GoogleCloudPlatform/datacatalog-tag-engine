@@ -147,12 +147,12 @@ gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
 ```
 ```
 gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
+	--member=serviceAccount:$TAG_CREATOR_SA \
 	--role=roles/bigquery.dataEditor \
 	--role=roles/bigquery.jobUser \
 	--role=roles/bigquery.metadataViewer \
-	--role=roles/PolicyTagReader \	  
-	--role=projects/$BIGQUERY_PROJECT/roles/BigQuerySchemaUpdate
- 
+	--role=roles/PolicyTagReader \
+	--role=projects/$BIGQUERY_PROJECT/roles/BigQuerySchemaUpdate	   
 ```
 ```
 gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
