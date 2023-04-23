@@ -37,7 +37,7 @@ BIGQUERY_REGION
 ENABLE_AUTH  
 ```
 
-Note: `ENABLE_AUTH` is a boolean. When set to True, Tag Engine verifies that the client is authorized to use the TAG_CREATOR_SA prior to processing requests. 
+Note: `ENABLE_AUTH` is a boolean. When set to True, Tag Engine verifies that the client is authorized to use the `TAG_CREATOR_SA` prior to processing requests. 
 
 
 4. Enable the required APIs:
@@ -60,7 +60,7 @@ This command currently requires gcloud alpha. You can install it by running `gcl
 
 Note that Firestore is not available in every region. Consult [this list](https://cloud.google.com/firestore/docs/locations)
 to see where it's available and choose the closest region if you can't run it in your preferred one. It's perfectly fine 
-for the Firestore region to be different from the TAG_ENGINE_REGION. 
+for the Firestore region to be different from the `TAG_ENGINE_REGION`. 
 
 
 6. Create the Firestore indexes:
@@ -169,7 +169,7 @@ gcloud run services add-iam-policy-binding tag-engine \
     --region=$TAG_ENGINE_REGION	
 ```
 
-Note: If you plan to create tags from CSV files, you also need to ensure that `$TAG_CREATOR_SA` has the 
+Note: If you plan to create tags from CSV files, you also need to ensure that `TAG_CREATOR_SA` has the 
 `storage.buckets.get` permission on the GCS bucket where the CSV files are stored. To do that, you can create a custom role with 
 this permission or assign the `storage.legacyBucketReader` role:
 
@@ -196,7 +196,7 @@ gcloud scheduler jobs create http scheduled_auto_updates1 \
 
 This command created a Cloud Scheduler entry that will trigger tag updates every hour. If you want the tag updates to occur on a different schedule, you can adjust the value of the `schedule` parameter in the above command. 
 
-Note: to generate the OAUTH_TOKEN, you'll need to choose an account which has privileges to use TAG_CREATOR_SA and then run these two commands:
+Note: to generate the `OAUTH_TOKEN`, you'll need to choose an account which has privileges to use `TAG_CREATOR_SA` and then run these two commands:
 
 ```
 gcloud auth application-default login
