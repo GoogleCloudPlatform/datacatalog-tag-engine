@@ -18,7 +18,7 @@ Tag Engine is an open-source extension to Google Cloud's Data Catalog. Tag Engin
 export TAG_ENGINE_PROJECT="<PROJECT>"  # GCP project id for running the Tag Engine service
 export TAG_ENGINE_REGION="<REGION>"    # GCP region for running Tag Engine service, e.g. us-central1
 
-export BIGQUERY_PROJECT="<PROJECT>"    # GCP project used by BigQuery data assets, can be equal to TAG_ENGINE_PROJECT. This variable is used for setting permissions in step 11 
+export BIGQUERY_PROJECT="<PROJECT>"    # GCP project used by BigQuery data assets, can be equal to TAG_ENGINE_PROJECT. This variable is used for setting permissions in steps 10 and 11 
 export BIGQUERY_REGION="<REGION>"      # GCP region in which data assets in BigQuery are stored, e.g. us-central1
 
 export CLOUD_RUN_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"     # email of your Cloud Run service account for running Tag Engine service
@@ -108,7 +108,7 @@ gcloud tasks queues create tag-engine-work-queue \
 
 ```
 gcloud iam roles create BigQuerySchemaUpdate \
-	 --project $TAG_ENGINE_PROJECT \
+	 --project $BIGQUERY_PROJECT \
 	 --title BigQuerySchemaUpdate \
 	 --description "Update table schema with policy tags" \
 	 --permissions bigquery.tables.setCategory
@@ -121,7 +121,7 @@ gcloud iam roles create PolicyTagReader \
 	--permissions datacatalog.taxonomies.get,datacatalog.taxonomies.list
 ```
 	
-11. Grant the required roles to CLOUD_RUN_SA, TAG_CREATOR_SA, and CLIENT_SA:
+11. Grant the required roles to `CLOUD_RUN_SA`, `TAG_CREATOR_SA`, and `CLIENT_SA`:
 
 ```
 gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
@@ -144,7 +144,7 @@ gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
 	--role=roles/bigquery.dataEditor \
 	--role=roles/bigquery.jobUser \
 	--role=roles/bigquery.metadataViewer \	  
-	--role=roles/BigQuerySchemaUpdate \
+	--role=projects/$BIGQUERY_PROJECT/roles/BigQuerySchemaUpdate \
 	--role=roles/PolicyTagReader \
 ```
 ```
