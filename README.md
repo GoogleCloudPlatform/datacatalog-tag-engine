@@ -18,7 +18,7 @@ Tag Engine is an open-source extension to Google Cloud's Data Catalog. Tag Engin
 export TAG_ENGINE_PROJECT="<PROJECT>"  # GCP project id for running the Tag Engine service
 export TAG_ENGINE_REGION="<REGION>"    # GCP region for running Tag Engine service, e.g. us-central1
 
-export BIGQUERY_PROJECT="<PROJECT>"    # GCP project used by BigQuery data assets, can be equal to TAG_ENGINE_PROJECT. This variable is used for setting permissions in steps 10 and 11 
+export BIGQUERY_PROJECT="<PROJECT>"    # GCP project used by BigQuery data assets, can be equal to TAG_ENGINE_PROJECT. This variable is only used for setting IAM permissions in steps 10 and 11 
 export BIGQUERY_REGION="<REGION>"      # GCP region in which data assets in BigQuery are stored, e.g. us-central1
 
 export CLOUD_RUN_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"     # email of your Cloud Run service account for running Tag Engine service
@@ -30,15 +30,19 @@ export CLIENT_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"        # email of your
 3. Open `tagengine.ini` and set the following six variables in the file. The first five should be equal to the environment variables you set above in step 2:
 
 ```
-TAG_ENGINE_PROJECT  
+TAG_ENGINE_PROJECT
+TAG_ENGINE_REGION  
+BIGQUERY_REGION
 CLOUD_RUN_ACCOUNT
 TAG_CREATOR_ACCOUNT
-QUEUE_REGION
-BIGQUERY_REGION
 ENABLE_AUTH  
 ```
 
-Note: `ENABLE_AUTH` is a boolean. When set to True, Tag Engine verifies that the client is authorized to use the `TAG_CREATOR_SA` prior to processing requests. 
+A couple of notes:
+
+- `ENABLE_AUTH` is a boolean. When set to True, Tag Engine verifies that the client is authorized to use the `TAG_CREATOR_SA` prior to processing requests. 
+
+- The `tagengine.ini` file also has two additional variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. Those determine the names of the tasks queues. You do not need to change them. They are used in step 9 of the setup.  
 
 
 4. Enable the required APIs:
