@@ -53,6 +53,7 @@ check_service_url()
 #######################################################
 OAUTH_SCOPE = 'https://www.googleapis.com/auth/cloud-platform'
 
+print('enable_auth variable:', config['DEFAULT']['ENABLE_AUTH'].lower())
 if config['DEFAULT']['ENABLE_AUTH'].lower() == 'true' or config['DEFAULT']['ENABLE_AUTH'] == 1:
     ENABLE_AUTH = True
 else:
@@ -1810,11 +1811,12 @@ def do_authentication(json, headers):
     
     print('** enter do_authentication **')
     print('json:', json)
-    print('json type:', type(json))
     print('headers:', headers)
     
     service_account = get_requested_service_account(json)
+    
     print('service_account:', service_account)
+    print('ENABLE_AUTH:', ENABLE_AUTH)
     
     if ENABLE_AUTH == False:
         return True, None, service_account
@@ -3380,7 +3382,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 2.0.0"
+    return "Welcome to Tag Engine version 2.0.1"
 #[END ping]
     
 ####################### TEST METHOD ####################################  

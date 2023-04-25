@@ -229,3 +229,46 @@ curl -i -X POST $TAG_ENGINE_URL/purge_inactive_configs \
   -d '{"config_type":"ALL"}' \
   -H "Authorization: Bearer $IAM_TOKEN" \
   -H "oauth_token: $OAUTH_TOKEN"
+
+####### Testing with dummy account #######
+
+export IAM_TOKEN=$(gcloud auth print-identity-token)
+
+# authenticate with gmail account
+unset GOOGLE_APPLICATION_CREDENTIALS
+gcloud auth application-default login 
+export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
+
+# create config
+curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @tests/configs/dynamic_table/dynamic_dataset_ondemand.json \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
+
+# trigger job
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+  -d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"c255f764d56711edb96eb170f969c0af"}' \
+  -H "Authorization: Bearer $IAM_TOKEN" \
+  -H "oauth_token: $OAUTH_TOKEN"
+
+####### Testing with service account override #######
+
+export IAM_TOKEN=$(gcloud auth print-identity-token)
+
+# authenticate with gmail account
+export GOOGLE_APPLICATION_CREDENTIALS="/Users/scohen/keys/tag-engine-client.json"
+export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
+
+# create config
+curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @tests/configs/dynamic_table/dynamic_dataset_non_default_service_account.json \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
+
+# trigger job
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+  -d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"8c1fe554e39c11ed9129acde48001122"}' \
+  -H "Authorization: Bearer $IAM_TOKEN" \
+  -H "oauth_token: $OAUTH_TOKEN"
+
+curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"accbe460e39c11ed9129acde48001122"}' \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
