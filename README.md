@@ -328,10 +328,11 @@ The output from this command should look similar to:
 
 Before running the next command, update the `job_uuid` with your value. 
 
+```
 curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"9c13357ee46911ed96c5acde48001122"}' \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
-
+```
 
 The output from this command should look like this:
 
@@ -430,10 +431,11 @@ The output from this command should look similar to:
 
 Before running the next command, update the `job_uuid` with your value. 
 
+```
 curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"9c13357ee46911ed96c5acde48001122"}' \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
-
+```
 
 The output from this command should look like this:
 
