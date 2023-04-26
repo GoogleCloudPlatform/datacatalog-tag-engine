@@ -9,11 +9,10 @@ This guide has three parts: [deployment procedure](#setup), [test procedure with
 
 ### <a name="setup"></a> Deployment Procedure
 
-1. Create (or designate) three service accounts:
+1. Create (or designate) two service accounts:
 
 - A service account that runs the Tag Engine Cloud Run service, referred to below as `CLOUD_RUN_SA`. 
 - A service account that performs the tagging in Data Catalog, and sourcing the contents of those tags from BigQuery, referred to below as `TAG_CREATOR_SA`. 
-- A service account that interacts with the Tag Engine API, referred to below as `CLIENT_SA`. 
 
 
 2. Set six environment variables which will be used throughout the setup procedure:
@@ -29,7 +28,7 @@ export CLOUD_RUN_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"     # email of your
 export TAG_CREATOR_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"   # email of your Tag creator service account for running BQ queries and creating DC tags
 ```
 
-<b>The key benefit of decoupling the `CLOUD_RUN_SA` from the `TAG_CREATOR_SA` is to limit the scope of what a Tag Engine client is allowed to tag.</b> When a client submits a request to Tag Engine, Tag Engine checks to see if they are authorized to use the `TAG_CREATOR_SA` before processing their request. A Tag Engine client can be either a user identity or a service account.  
+<b>The key benefit of decoupling the `CLOUD_RUN_SA` from the `TAG_CREATOR_SA` is to limit the scope of what a Tag Engine client is allowed to tag.</b> More specifically, when a client submits a request to Tag Engine, Tag Engine checks to see if they are authorized to use the `TAG_CREATOR_SA` before processing their request. A Tag Engine client can be either a user identity or a service account.  
 
 If multiple teams own different data assets in BigQuery, they can each have their own `TAG_CREATOR_SA` to prevent unauthorized tagging. The `TAG_CREATOR_SA` in the `tagengine.ini` (in the next step) represents the <i>default</i> `TAG_CREATOR_SA` and clients can override this default account when they create Tag Engine configs using the `service_account` attribute of the config.     
 
