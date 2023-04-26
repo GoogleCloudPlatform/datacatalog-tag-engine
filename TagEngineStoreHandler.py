@@ -1290,6 +1290,22 @@ class TagEngineStoreHandler:
                 success = True
                  
         return success, config_uuid
+
+
+    def lookup_service_account(self, config_type, config_uuid):
+        
+        service_account = None
+
+        coll_name = self.lookup_config_collection(config_type)
+        doc = self.db.collection(coll_name).document(config_uuid).get()
+        
+        if doc.exists:
+            config = doc.to_dict()
+            service_account = config['service_account']
+        else:
+            print('Error: could not locate the config')
+                  
+        return service_account
         
 
     def update_config(self, old_config_uuid, config_type, config_status, fields, included_uris, excluded_uris, template_uuid, \

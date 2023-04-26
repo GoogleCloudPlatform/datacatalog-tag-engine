@@ -136,26 +136,56 @@ gcloud iam roles create PolicyTagReader \
 ```
 gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
 	--member=serviceAccount:$CLOUD_RUN_SA \
-	--role=roles/cloudtasks.enqueuer \
-	--role=roles/cloudtasks.taskRunner \
-	--role=roles/datastore.user \
+	--role=roles/cloudtasks.enqueuer
+	
+gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+	--member=serviceAccount:$CLOUD_RUN_SA \	
+	--role=roles/cloudtasks.taskRunner
+	
+gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+	--member=serviceAccount:$CLOUD_RUN_SA \	
+	--role=roles/datastore.user 
+	
+gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+	--member=serviceAccount:$CLOUD_RUN_SA \	
 	--role=roles/run.invoker 
 ```
 ```
 gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
 	--member=serviceAccount:$TAG_CREATOR_SA \
-	--role=roles/datacatalog.tagEditor \
-	--role=roles/datacatalog.tagTemplateUser \
-	--role=roles/datacatalog.tagTemplateViewer \
+	--role=roles/datacatalog.tagEditor
+
+gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+	--member=serviceAccount:$TAG_CREATOR_SA \
+	--role=roles/datacatalog.tagTemplateUser
+	
+gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+	--member=serviceAccount:$TAG_CREATOR_SA \
+	--role=roles/datacatalog.tagTemplateViewer
+
+gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+	--member=serviceAccount:$TAG_CREATOR_SA \
 	--role=roles/datacatalog.viewer
 ```
 ```
 gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
 	--member=serviceAccount:$TAG_CREATOR_SA \
-	--role=roles/bigquery.dataEditor \
-	--role=roles/bigquery.jobUser \
-	--role=roles/bigquery.metadataViewer \
-	--role=roles/PolicyTagReader \
+	--role=roles/bigquery.dataEditor
+	
+gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
+	--member=serviceAccount:$TAG_CREATOR_SA \
+	--role=roles/bigquery.jobUser
+
+gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
+	--member=serviceAccount:$TAG_CREATOR_SA \
+	--role=roles/bigquery.metadataViewer
+
+gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
+	--member=serviceAccount:$TAG_CREATOR_SA \
+	--role=projects/$BIGQUERY_PROJECT/roles/PolicyTagReader 
+
+gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
+	--member=serviceAccount:$TAG_CREATOR_SA \
 	--role=projects/$BIGQUERY_PROJECT/roles/BigQuerySchemaUpdate	   
 ```
 ```
@@ -204,7 +234,7 @@ export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
 ```
 
 ```
-gcloud scheduler jobs create http scheduled_auto_updates1 \
+gcloud scheduler jobs create http scheduled_auto_updates \
 	--description="Tag Engine scheduled jobs" \
 	--location=$TAG_ENGINE_REGION --time-zone=America/Chicago \
 	--schedule="0 */1 * * *" --uri="${SERVICE_URL}/scheduled_auto_updates" 	\

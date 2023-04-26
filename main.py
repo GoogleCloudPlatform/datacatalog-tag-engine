@@ -1779,6 +1779,8 @@ def get_requested_service_account(json):
     
     if isinstance(json, dict) and 'service_account' in json:
         service_account = json['service_account']
+    elif isinstance(json, dict) and 'config_uuid' in json and 'config_type' in json:
+        service_account = store.lookup_service_account(json['config_type'], json['config_uuid'])
     else:
         service_account = TAG_CREATOR_SA
     
