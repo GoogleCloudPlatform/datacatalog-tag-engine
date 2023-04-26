@@ -113,7 +113,7 @@ gcloud tasks queues create tag-engine-work-queue \
 ```
 
 
-10. Create two custom roles (required by the SENSITIVE_COLUMN_CONFIG):
+10. Create two custom roles (required by the `SENSITIVE_COLUMN_CONFIG`):
 
 ```
 gcloud iam roles create BigQuerySchemaUpdate \

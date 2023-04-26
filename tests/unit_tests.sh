@@ -254,7 +254,6 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
 
 export IAM_TOKEN=$(gcloud auth print-identity-token)
 
-# authenticate with gmail account
 export GOOGLE_APPLICATION_CREDENTIALS="/Users/scohen/keys/tag-engine-client.json"
 export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
 
