@@ -249,9 +249,9 @@ This command created a Cloud Scheduler entry that will trigger tag updates every
 1. Create the sample `data_governance` tag template:
 
 ```
-git clone https://github.com/GoogleCloudPlatform/datacatalog-templates.git` 
-cd datacatalog-templates` 
-`python create_template.py $TAG_ENGINE_PROJECT $TAG_ENGINE_REGION data_governance.yaml` 
+git clone https://github.com/GoogleCloudPlatform/datacatalog-templates.git 
+cd datacatalog-templates
+python create_template.py $TAG_ENGINE_PROJECT $TAG_ENGINE_REGION data_governance.yaml 
 ```
 
 2. Authorize a user account to use $TAG_CREATOR_SA and to invoke the Tag Engine Cloud Run service:
@@ -353,9 +353,9 @@ Open the Data Catalog UI and verify that your tag was successfully created. If n
 1. Create the sample `data_governance` tag template (you can skip this step if you went through the previous test procedure):
 
 ```
-git clone https://github.com/GoogleCloudPlatform/datacatalog-templates.git` 
-cd datacatalog-templates` 
-`python create_template.py $TAG_ENGINE_PROJECT $TAG_ENGINE_REGION data_governance.yaml` 
+git clone https://github.com/GoogleCloudPlatform/datacatalog-templates.git 
+cd datacatalog-templates
+python create_template.py $TAG_ENGINE_PROJECT $TAG_ENGINE_REGION data_governance.yaml
 ```
 
 2. Authorize a service account to use $TAG_CREATOR_SA and to invoke the Tag Engine Cloud Run service:
