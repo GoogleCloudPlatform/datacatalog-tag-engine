@@ -345,7 +345,7 @@ The output from this command should look like this:
 }
 ```
 
-Open the Data Catalog UI and verify that your tag got created. If not, open the Cloud Run logs and investigate the problem. 
+Open the Data Catalog UI and verify that your tag was successfully created. If not, open the Cloud Run logs and investigate the problem. 
 
 
 ### <a name="testb"></a>Testing your Tag Engine setup with a service account:
