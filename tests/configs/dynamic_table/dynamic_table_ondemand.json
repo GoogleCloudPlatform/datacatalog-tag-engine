@@ -15,6 +15,6 @@
     "included_tables_uris": "bigquery/project/tag-engine-run/dataset/GCP_Mockup/*",
     "excluded_tables_uris": "",
     "refresh_mode": "ON_DEMAND",
-    "tag_history": true,
+    "tag_history": false,
     "tag_stream": false  
 }

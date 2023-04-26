@@ -54,7 +54,7 @@ curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @tests/configs/dynam
 
 # trigger job
 curl -i -X POST $TAG_ENGINE_URL/trigger_job \
-  -d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"c255f764d56711edb96eb170f969c0af"}' \
+  -d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"416f9694e46911ed96c5acde48001122"}' \
   -H "Authorization: Bearer $IAM_TOKEN" \
   -H "oauth_token: $OAUTH_TOKEN"
 
@@ -133,7 +133,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
   -H "Authorization: Bearer $IAM_TOKEN" \
   -H "oauth_token: $OAUTH_TOKEN"
 
-curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"6acb30b2e09411ed80416b1ac85cbc14"}' \
+curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"9c13357ee46911ed96c5acde48001122"}' \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 
@@ -264,10 +264,10 @@ curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @tests/configs/dynam
 
 # trigger job
 curl -i -X POST $TAG_ENGINE_URL/trigger_job \
-  -d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"8c1fe554e39c11ed9129acde48001122"}' \
+  -d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"b4028a74e44911eda52be10c4bdcfc22"}' \
   -H "Authorization: Bearer $IAM_TOKEN" \
   -H "oauth_token: $OAUTH_TOKEN"
 
-curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"accbe460e39c11ed9129acde48001122"}' \
+curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"a6384b16e45011ed85e3d3e918adc4d7"}' \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
