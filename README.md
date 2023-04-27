@@ -453,12 +453,18 @@ Open the Data Catalog UI and verify that your tag was successfully created. If n
 
 ### <a name="next"></a>Next steps:
 
-1. Explore the sample test scripts and run them:
+1. Explore additional API methods and run them through curl commands:
 
-Before running the scripts, open each file and update the `TAG_ENGINE_URL` variable on line 11 with your own Cloud Run service URL. Also, update the project and dataset values in the json config file(s) which are referenced by each script. 
+Open `tests/unit_test.sh` and go through the different methods for interracting with Tag Engine, including `configure_tag_history`, `create_static_asset_config`, `create_dynamic_column_config`, etc. 
 
+2. Explore the sample test scripts:
+
+There are multiple test scripts in Python in the `tests/scripts` folder. These are intended to help you get started with the Tag Engine API. 
+
+Before running the scripts, open each file and update the `TAG_ENGINE_URL` variable on line 11 with your own Cloud Run service URL. You'll also need to update the project and dataset values which may be in the script itself or in the referenced json config file. 
+
+Here are some of the scripts you can look at and run:
 ```
-cd tests/scripts
 python configure_tag_history.py
 python create_static_config_trigger_job.py
 python create_dynamic_table_config_trigger_job.py
@@ -470,5 +476,5 @@ python list_configs.py
 python read_config.py
 python purge_inactive_configs.py
 ```
- 
-2. Create your own Tag Engine configs. Have fun!
+
+3. Create your own Tag Engine configs. Have fun!
