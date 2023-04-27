@@ -455,18 +455,20 @@ Open the Data Catalog UI and verify that your tag was successfully created. If n
 
 1. Explore the sample test scripts and run them:
 
-Before running the scripts, open each file and update the `TAG_ENGINE_URL` on line 11 with your Cloud Run service URL. Also, update the project and dataset values in the json config file(s) which is referenced by each script. 
+Before running the scripts, open each file and update the `TAG_ENGINE_URL` variable on line 11 with your own Cloud Run service URL. Also, update the project and dataset values in the json config file(s) which are referenced by each script. 
 
 ```
-python tests/scripts/configure_tag_history.py
-python tests/scripts/create_static_config_trigger_job.py
-python tests/scripts/create_dynamic_table_config_trigger_job.py
-python tests/scripts/create_dynamic_column_config_trigger_job
-python tests/scripts/create_dynamic_dataset_config_trigger_job.py
-python tests/scripts/create_import_config_trigger_job.py
-python tests/scripts/create_export_config_trigger_job.py
-python tests/scripts/list_configs.py
-python tests/scripts/read_config.py
-python tests/scripts/purge_inactive_configs.py
+cd tests/scripts
+python configure_tag_history.py
+python create_static_config_trigger_job.py
+python create_dynamic_table_config_trigger_job.py
+python create_dynamic_column_config_trigger_job
+python create_dynamic_dataset_config_trigger_job.py
+python create_import_config_trigger_job.py
+python create_export_config_trigger_job.py
+python list_configs.py
+python read_config.py
+python purge_inactive_configs.py
 ```
  
+2. Create your own Tag Engine configs. Have fun!
