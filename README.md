@@ -5,7 +5,7 @@ Tag Engine is an open-source extension to Google Cloud's Data Catalog. Tag Engin
 
 If you are new to Tag Engine, you may also want to walk through [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog). Note that the tutorial is for Tag Engine v1 (as opposed to v2), but it will give you a sense of how Tag Engine works. We plan to publish a second tutorial for Tag Engine v2 soon. Stay tuned! 
 
-This guide has three parts: [deployment procedure](#setup), [test procedure with user account](#testa), [test procedure with service account](#testb), and [next steps](#next). 
+This guide has four parts: [deployment procedure](#setup), [test procedure with user account](#testa), [test procedure with service account](#testb), and [next steps](#next). 
 
 ### <a name="setup"></a> Deployment Procedure
 
