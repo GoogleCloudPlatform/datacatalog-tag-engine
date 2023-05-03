@@ -145,15 +145,15 @@ gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
 	--role=roles/cloudtasks.enqueuer
 	
 gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
-	--member=serviceAccount:$CLOUD_RUN_SA \	
+	--member=serviceAccount:$CLOUD_RUN_SA \
 	--role=roles/cloudtasks.taskRunner
 	
 gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
-	--member=serviceAccount:$CLOUD_RUN_SA \	
+	--member=serviceAccount:$CLOUD_RUN_SA \
 	--role=roles/datastore.user 
 	
 gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
-	--member=serviceAccount:$CLOUD_RUN_SA \	
+	--member=serviceAccount:$CLOUD_RUN_SA \
 	--role=roles/run.invoker 
 ```
 
@@ -186,9 +186,9 @@ gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
 	--member=serviceAccount:$TAG_CREATOR_SA \
 	--role=roles/bigquery.metadataViewer
 
-gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
+gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
 	--member=serviceAccount:$TAG_CREATOR_SA \
-	--role=projects/$BIGQUERY_PROJECT/roles/PolicyTagReader 
+	--role=projects/$TAG_ENGINE_PROJECT/roles/PolicyTagReader 
 
 gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
 	--member=serviceAccount:$TAG_CREATOR_SA \
@@ -260,11 +260,11 @@ python create_template.py $TAG_ENGINE_PROJECT $TAG_ENGINE_REGION data_governance
 export USER_ACCOUNT="username@example.com"
 
 gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-    --member=serviceAccount:$USER_ACCOUNT --role=roles/iam.serviceAccountUser 
+    --member=user:$USER_ACCOUNT --role=roles/iam.serviceAccountUser 
 
 
 gcloud run services add-iam-policy-binding tag-engine \
-    --member=serviceAccount:$USER_ACCOUNT --role=roles/run.invoker \
+    --member=user:$USER_ACCOUNT --role=roles/run.invoker \
     --region=$TAG_ENGINE_REGION	
 ```
 

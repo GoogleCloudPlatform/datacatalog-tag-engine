@@ -49,11 +49,11 @@ def create_indexes(project):
             except Exception as e:
                 print('Error occurred while creating index', fields_json, 'on', coll_name, '. Error:', e)
             
-    print('Creating', len(responses), 'indexes.')
-    
     for resp in responses:
         sleep_until_done(resp)
 
+    print('Created', len(responses), 'indexes.')
+    
 
 def sleep_until_done(resp):
         
