@@ -1029,52 +1029,7 @@ class TagEngineStoreHandler:
         print('Created tag export config.')
         
         return config_uuid
-        
-         
-    def write_log_entry(self, dc_op, resource_type, resource, column, config_type, config_uuid, tag_id, template_uuid):
                     
-        log_entry = {}
-        log_entry['ts'] = datetime.utcnow()
-        log_entry['dc_op'] = dc_op
-        log_entry['res_type'] = resource_type
-        log_entry['config_type'] = 'MANUAL'
-        log_entry['res'] = resource
-        
-        if len(column) > 0:
-            log_entry['col'] = column
-        
-        log_entry['config_type'] = config_type
-        log_entry['config_uuid'] = config_uuid
-        log_entry['dc_tag_id'] = tag_id
-        log_entry['template_uuid'] = template_uuid
-
-        self.db.collection('logs').add(log_entry)
-        #print('Wrote log entry.')
-        
-    
-    def write_tag_op_error(self, op, config_uuid, config_type, msg):
-                    
-        error = {}
-        error['ts'] = datetime.utcnow()
-        error['op'] = op
-        error['config_uuid'] = config_uuid
-        error['config_type'] = config_type
-        error['msg'] = msg
-        
-        self.db.collection('tag_op_error').add(error)
-        #print('Wrote error entry.')
-
-
-    def write_tag_value_error(self, msg):
-                    
-        error = {}
-        error['ts'] = datetime.utcnow()
-        error['error'] = msg
-        
-        self.db.collection('tag_value_error').add(error)
-        #print('Wrote error entry.')    
-    
-    
     def lookup_config_collection(self, requested_ct):
         
         coll = None

@@ -346,8 +346,6 @@ class DataCatalogController:
                 #print('response: ', response)
             except Exception as e:
                 print('Error occurred during tag update: ' + str(e))
-                msg = 'Error occurred during tag update: ' + str(e)
-                store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'DYNAMIC_TABLE_TAG', msg)
                 creation_status = constants.ERROR
         else:
 
@@ -358,8 +356,6 @@ class DataCatalogController:
                 
             except Exception as e:
                 print('Error occurred during tag create: ', e)
-                msg = 'Error occurred during tag create: ' + str(e)
-                store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'DYNAMIC_TABLE_TAG', msg)
                 creation_status = constants.ERROR
             
         if creation_status == constants.SUCCESS and tag_history:
@@ -496,8 +492,6 @@ class DataCatalogController:
                     #print('response: ', response)
                 except Exception as e:
                     print('Error occurred during tag update: ' + str(e))
-                    msg = 'Error occurred during tag update: ' + str(e)
-                    store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'DYNAMIC_COLUMN_TAG', msg)
                     creation_status = constants.ERROR
             else:
 
@@ -508,8 +502,6 @@ class DataCatalogController:
                 
                 except Exception as e:
                     print('Error occurred during tag create: ', e)
-                    msg = 'Error occurred during tag create: ' + str(e)
-                    store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'DYNAMIC_COLUMN_TAG', msg)
                     creation_status = constants.ERROR
             
             if creation_status == constants.SUCCESS and tag_history:
@@ -849,9 +841,8 @@ class DataCatalogController:
                 print('tag update: ', tag)
                 response = self.client.update_tag(tag=tag)
             except Exception as e:
-                msg = 'Error occurred during tag update: ' + str(e)
-                store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'GLOSSARY_ASSET_TAG', msg)
-                
+                print('Error occurred during tag update:', e)
+
                 # sleep and retry the tag update
                 if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
                     print('sleep for 3 minutes due to ' + str(e))
@@ -860,15 +851,13 @@ class DataCatalogController:
                     try:
                         response = self.client.update_tag(tag=tag)
                     except Exception as e:
-                        msg = 'Error occurred during tag update after sleep: ' + str(e)
-                        store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'GLOSSARY_ASSET_TAG', msg)
+                        print('Error occurred during tag update after sleep:', e)
         else:
             try:
                 print('tag create: ', tag)
                 response = self.client.create_tag(parent=entry.name, tag=tag)
             except Exception as e:
-                msg = 'Error occurred during tag create: ' + str(e) + '. Failed tag request = ' + str(tag)
-                store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'GLOSSARY_ASSET_TAG', msg)
+                print('Error occurred during tag create:', e)
                 
                 # sleep and retry write
                 if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
@@ -878,8 +867,7 @@ class DataCatalogController:
                     try:
                         response = self.client.create_tag(parent=entry.name, tag=tag)
                     except Exception as e:
-                        msg = 'Error occurred during tag create after sleep: ' + str(e)
-                        store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'GLOSSARY_ASSET_TAG', msg)
+                        print('Error occurred during tag create after sleep:', e)
                     
         if tag_history:
             bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
@@ -1133,10 +1121,8 @@ class DataCatalogController:
                     #print('response: ', response)
                     
                 except Exception as e:
-                    msg = 'Error occurred during tag update: ' + str(e) + '. Failed tag request = ' + str(tag)
-                    print(msg)
-                    store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'SENSITIVE_TAG', msg)
-                
+                    print('Error occurred during tag update:', e)
+                           
                     # sleep and retry the tag update
                     if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
                         print('sleep for 3 minutes due to ' + str(e))
@@ -1145,19 +1131,15 @@ class DataCatalogController:
                         try:
                             response = self.client.update_tag(tag=tag)
                         except Exception as e:
-                            msg = 'Error occurred during tag update after sleep: ' + str(e)
-                            print(msg)
-                            store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, 'SENSITIVE_TAG', msg)
+                            print('Error occurred during tag update after sleep:', e)
             else:
                 try:
                     print('tag create request: ', tag)
                     response = self.client.create_tag(parent=entry.name, tag=tag)
 
                 except Exception as e:
-                    msg = 'Error occurred during tag create: ' + str(e) + '. Failed tag request = ' + str(tag)
-                    print(msg)
-                    store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'SENSITIVE_TAG', msg)
-                
+                    print('Error occurred during tag create:', e)
+                   
                     # sleep and retry write
                     if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
                         print('sleep for 3 minutes due to ' + str(e))
@@ -1166,9 +1148,7 @@ class DataCatalogController:
                         try:
                             response = self.client.create_tag(parent=entry.name, tag=tag)
                         except Exception as e:
-                            msg = 'Error occurred during tag create after sleep: ' + str(e)
-                            print(msg)
-                            store.write_tag_op_error(constants.TAG_CREATED, config_uuid, 'SENSITIVE_TAG', msg)
+                            print('Error occurred during tag create after sleep:', e)
                     else:
                         # could not create the tag, could be due to a column mismatch
                         print('Error: could not create tag on', infotype_field)
@@ -1628,8 +1608,7 @@ class DataCatalogController:
                 print('tag update: ', tag)
                 response = self.client.update_tag(tag=tag)
             except Exception as e:
-                msg = 'Error occurred during tag update: ' + str(e)
-                store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, config_type, msg)
+                print('Error occurred during tag update:', e)
                 
                 # sleep and retry the tag update
                 if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
@@ -1639,8 +1618,7 @@ class DataCatalogController:
                     try:
                         response = self.client.update_tag(tag=tag)
                     except Exception as e:
-                        msg = 'Error occurred during tag update after sleep: ' + str(e)
-                        store.write_tag_op_error(constants.TAG_UPDATED, config_uuid, config_type, msg)
+                        print('Error occurred during tag update after sleep:', e)
                         creation_status = constants.ERROR
                         return creation_status
         else:
@@ -1648,9 +1626,8 @@ class DataCatalogController:
                 print('tag create: ', tag)
                 response = self.client.create_tag(parent=entry.name, tag=tag)
             except Exception as e:
-                msg = 'Error occurred during tag create: ' + str(e) + '. Failed tag request = ' + str(tag)
-                store.write_tag_op_error(constants.TAG_CREATED, config_uuid, config_type, msg)
-    
+                print('Error occurred during tag create:', e)
+                    
                 # sleep and retry write
                 if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
                     print('sleep for 3 minutes due to ' + str(e))
@@ -1659,8 +1636,7 @@ class DataCatalogController:
                     try:
                         response = self.client.create_tag(parent=entry.name, tag=tag)
                     except Exception as e:
-                        msg = 'Error occurred during tag create after sleep: ' + str(e)
-                        store.write_tag_op_error(constants.TAG_CREATED, config_uuid, config_type, msg)
+                        print('Error occurred during tag create after sleep:', e)
                         creation_status = constants.ERROR
                         return creation_status
         
@@ -1824,9 +1800,8 @@ class DataCatalogController:
                 rows = job.result()
             
             else:
-                #print('query_str:', query_str)
+                print('query_str:', query_str)
                 rows = bq_client.query(query_str).result()
-                #print('rows:', rows)
             
             # if query expression is well-formed, there should only be a single row returned with a single field_value
             # However, user may mistakenly run a query that returns a list of rows. In that case, grab only the top row.  
@@ -1841,16 +1816,13 @@ class DataCatalogController:
         
             # check row_count
             if row_count == 0:
-                # SQL query returned nothing, log error in Firestore
                 #error_exists = True
-                print('query_str returned nothing, writing error entry')
-                store.write_tag_value_error('sql returned nothing: ' + query_str)
+                print('sql query returned nothing:', query_str)
         
         except Exception as e:
             error_exists = True
             print('Error occurred during run_query ' + query_str + ', Error: ' + str(e))
-            store.write_tag_value_error('invalid query parameter(s): ' + query_str + ' produced error ' + str(e))
-        
+            
         #print('field_values: ', field_values)
         
         return field_values, error_exists
@@ -1930,9 +1902,6 @@ class DataCatalogController:
         except Exception as e:
             error_exists = True
             print("Error storing values ", field_values, " into field ", field_id)
-            
-            if store != None:
-                store.write_tag_value_error("Error storing value(s) " + str(field_values) + " into field " + field_id)
         
         return tag, error_exists
     
