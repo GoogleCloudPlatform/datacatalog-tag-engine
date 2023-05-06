@@ -1834,6 +1834,10 @@ class DataCatalogController:
         
         error_exists = False
         
+        if field_values[0] == None:
+            print('Cannot store null value in field', field_id)
+            return tag, error_exists
+        
         try:             
             if field_type == "bool":
                 bool_field = datacatalog.TagField()
