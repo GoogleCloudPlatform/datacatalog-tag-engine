@@ -297,12 +297,12 @@ class DataCatalogController:
 
             # parse and run query in BQ
             query_str = self.parse_query_expression(uri, query_expression)
-            #print('returned query_str: ' + query_str)
+            print('returned query_str: ' + query_str)
             
             # note: field_values is of type list
             field_values, error_exists = self.run_query(bq_client, query_str, field_type, batch_mode, store)
-            #print('field_values: ', field_values)
-            #print('error_exists: ', error_exists)
+            print('field_values: ', field_values)
+            print('error_exists: ', error_exists)
     
             if error_exists or field_values == []:
                 continue
@@ -1723,12 +1723,12 @@ class DataCatalogController:
         
         # $table referenced in from clause, use fully qualified table
         if from_clause_table_index > 0 or from_clause_backticks_table_index > 0:
-             print('$table referenced in from clause')
+             #print('$table referenced in from clause')
              qualified_table = uri.replace('/project/', '.').replace('/datasets/', '.').replace('/tables/', '.')
-             print('qualified_table:', qualified_table)
-             print('query_expression:', query_expression)
+             #print('qualified_table:', qualified_table)
+             #print('query_expression:', query_expression)
              query_str = query_expression.replace('$table', qualified_table)
-             print('query_str:', query_str)
+             #print('query_str:', query_str)
              
         # $table is referenced somewhere in the expression, replace $table with actual table name
         else:
@@ -1771,7 +1771,7 @@ class DataCatalogController:
             else:
                 query_str = query_str.replace('$column', column)
         
-        print('returning query_str:', query_str)            
+        #print('returning query_str:', query_str)            
         return query_str
     
     
