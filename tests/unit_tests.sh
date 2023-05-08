@@ -30,7 +30,8 @@ cd datacatalog-tag-engine/
 
 curl -X POST $TAG_ENGINE_URL/configure_tag_history \
 	-d '{"bigquery_region":"us-central1", "bigquery_project":"tag-engine-run", "bigquery_dataset":"tag_history", "enabled":true}' \
-	-H "Authorization: Bearer $IAM_TOKEN"
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
 
 ####### static tags #######
 
@@ -122,31 +123,35 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
 
 ####### Import tags from CSV #######
 
-# create the config
-curl -X POST $TAG_ENGINE_URL/create_import_config -d @tests/configs/import/import_table_tags.json \
+# create the import table config
+curl -X POST $TAG_ENGINE_URL/create_import_config -d @tests/configs/import/sakila_import_table_tags.json \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 
 # trigger job
 curl -i -X POST $TAG_ENGINE_URL/trigger_job \
-  -d '{"config_type":"TAG_IMPORT","config_uuid":"4ac0fb9ee09411edb235eba06dc7096f"}' \
+  -d '{"config_type":"TAG_IMPORT","config_uuid":"10388444edbc11edb14873cabec14225"}' \
   -H "Authorization: Bearer $IAM_TOKEN" \
   -H "oauth_token: $OAUTH_TOKEN"
 
-curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"9c13357ee46911ed96c5acde48001122"}' \
+curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"47ed6560edbe11edbc2e31f547ef9355"}' \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 
-# create the config
-curl -X POST $TAG_ENGINE_URL/create_import_config -d @tests/configs/import/import_column_tags.json \
+# create the import column config
+curl -X POST $TAG_ENGINE_URL/create_import_config -d @tests/configs/import/sakila_import_column_tags.json \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 
 # trigger job
 curl -i -X POST $TAG_ENGINE_URL/trigger_job \
-  -d '{"config_type":"TAG_IMPORT","config_uuid":"004d023ce0a911edac6f9d2f379f9994"}' \
+  -d '{"config_type":"TAG_IMPORT","config_uuid":"609aa42eedbe11edb6318d3e6e707045"}' \
   -H "Authorization: Bearer $IAM_TOKEN" \
   -H "oauth_token: $OAUTH_TOKEN"
+
+curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"74051166edbe11edbb048d3e6e707045"}' \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
 
 ####### Restore tags from metadata export #######
 

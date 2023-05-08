@@ -1,5 +1,5 @@
-# Be sure to set GOOGLE_APPLICATION_CREDENTIALS to your CLIENT_SA keyfile before running script
-# export GOOGLE_APPLICATION_CREDENTIALS="/Users/scohen/keys/python-client.json"
+# Be sure to set GOOGLE_APPLICATION_CREDENTIALS to your TAG_ENGINE_CLIENT_SA keyfile before running script
+# export GOOGLE_APPLICATION_CREDENTIALS="/Users/scohen/keys/tag-engine-client-sa.json"
 import urllib
 import json
 import google
@@ -25,14 +25,14 @@ def get_oauth_token():
     return credentials.token
   
   
-def create_config(id_token, oauth_token):
+def create_import_table_config(id_token, oauth_token):
     endpoint = TAG_ENGINE_URL + '/create_import_config'
 
     auth_req = google.auth.transport.requests.Request()
     id_token = google.oauth2.id_token.fetch_id_token(auth_req, audience=TAG_ENGINE_URL)
     headers = {'Authorization': 'Bearer ' + id_token, 'oauth_token': oauth_token}
     
-    payload = json.load(open('../configs/import/export_by_project.json'))
+    payload = json.load(open('../configs/import/sakila_import_table_tags.json'))
     payload_json = json.dumps(payload)
     
     response = requests.post(endpoint, headers=headers, data=payload_json)
@@ -41,6 +41,21 @@ def create_config(id_token, oauth_token):
     
     return response.json()
     
+def create_import_column_config(id_token, oauth_token):
+    endpoint = TAG_ENGINE_URL + '/create_import_config'
+
+    auth_req = google.auth.transport.requests.Request()
+    id_token = google.oauth2.id_token.fetch_id_token(auth_req, audience=TAG_ENGINE_URL)
+    headers = {'Authorization': 'Bearer ' + id_token, 'oauth_token': oauth_token}
+    
+    payload = json.load(open('../configs/import/sakila_import_column_tags.json'))
+    payload_json = json.dumps(payload)
+    
+    response = requests.post(endpoint, headers=headers, data=payload_json)
+    
+    print('config details:', response.json())
+    
+    return response.json()
     
 def trigger_job(id_token, oauth_token, payload):
     endpoint = TAG_ENGINE_URL + '/trigger_job'
@@ -87,7 +102,16 @@ def get_job_status(id_token, oauth_token, payload):
 if __name__ == '__main__':
     id_token = get_id_token()
     oauth_token = get_oauth_token()
-    response = create_config(id_token, oauth_token)
+    response = create_import_table_config(id_token, oauth_token)
+    response = trigger_job(id_token, oauth_token, response)
+    
+    if 'job_uuid' in response:
+        poll_job(id_token, oauth_token, response)
+    else:
+        print('Error: trigger_job failed. Consult Cloud Run logs for details. ')
+        sys.exit()
+        
+    response = create_import_column_config(id_token, oauth_token)
     response = trigger_job(id_token, oauth_token, response)
     
     if 'job_uuid' in response:

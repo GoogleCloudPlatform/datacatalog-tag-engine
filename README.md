@@ -376,7 +376,7 @@ gcloud run services add-iam-policy-binding tag-engine \
 
 ```
 export GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/keyfile.json"
-gcloud auth activate-service-account $CLIENT_SA
+gcloud auth activate-service-account $CLIENT_SA --key-file $GOOGLE_APPLICATION_CREDENTIALS
 export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
 ```
 
