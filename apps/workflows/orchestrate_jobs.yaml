@@ -1,0 +1,68 @@
+main:
+    params: [args]
+    steps:
+      - call_export_job:
+          call: trigger_job_flow
+          args:
+            oauth_token: ${args.oauth_token}
+            config_type: "TAG_EXPORT"
+            config_uuid: "ffe5e8bae07411ed8776acde48001122"
+          result: export_job_status
+      - call_import_job:
+          call: trigger_job_flow
+          args:
+            oauth_token: ${args.oauth_token}
+            config_type: "TAG_IMPORT"
+            config_uuid: "0e674d78eddd11ed8d3d09299afaece0"
+          result: import_job_status
+      - return_message:
+          return: "done"
+trigger_job_flow:
+    params: [oauth_token, config_type, config_uuid]
+    steps:
+     - job_completion_init:
+         assign:
+           - tasks_completed: 0
+     - trigger_job:
+         call: http.post
+         args:
+           url: https://tag-engine-eshsagj3ta-uc.a.run.app/trigger_job
+           headers:
+             oauth_token: ${oauth_token}
+           auth:
+             type: OIDC
+           body:
+             config_type: ${config_type}
+             config_uuid: ${config_uuid}
+         result: job_result
+     - wait_before_poll:
+         call: sys.sleep
+         args:
+           seconds: 60
+     - get_job_status:
+         call: http.post
+         args:
+           url: https://tag-engine-eshsagj3ta-uc.a.run.app/get_job_status
+           headers:
+             oauth_token: ${oauth_token}
+           auth:
+             type: OIDC
+           body:
+             ${job_result.body}
+         result: job_status
+     - check_if_done:
+         switch:
+            - condition: '${job_status.body.job_status != "SUCCESS" and job_status.body.tasks_completed > tasks_completed}'
+              next: wait_before_next_poll    
+            - condition: '${job_status.body.job_status == "SUCCESS" or job_status.body.tasks_completed == tasks_completed}'
+              return: ${job_status.body}
+     - wait_before_next_poll:
+         call: sys.sleep
+         args:
+           seconds: 60
+     - job_completion_prev:
+         assign:
+           - tasks_completed: job_status.body.tasks_completed
+         next: get_job_status
+     - return_job_status:
+         return: ${job_status.body}

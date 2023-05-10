@@ -478,4 +478,18 @@ python read_config.py
 python purge_inactive_configs.py
 ```
 
-3. Create your own Tag Engine configs. Have fun!
+3. Explore the sample workflow scripts:
+
+The `apps/workflows/` contains some sample workflows. The `trigger_job.yaml` and `orchestrate_jobs.yaml` show how orchestrate Tag Engine tasks from a Cloud Workflow. To run the workflows, you need to enable the Cloud Workflows API (`workflows.googleapis.com`) and follow these steps:
+
+```
+export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
+
+gcloud workflows deploy orchestrate-jobs --location=$TAG_ENGINE_REGION \
+	--source=orchestrate_jobs.yaml --service-account=$CLOUD_RUN_SA
+
+gcloud workflows run orchestrate-jobs --location=$TAG_ENGINE_REGION \
+	--data='{"oauth_token":"'"$OAUTH_TOKEN"'"}'
+``` 
+
+4. Create your own Tag Engine configs. Have fun!

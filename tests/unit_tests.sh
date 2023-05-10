@@ -97,7 +97,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
   -H "Authorization: Bearer $IAM_TOKEN" \
   -H "oauth_token: $OAUTH_TOKEN"
 
-####### export tags to BQ #######
+####### Export tags to BQ #######
 
 # create config
 curl -X POST $TAG_ENGINE_URL/create_export_config -d @tests/configs/export/export_by_project.json \
@@ -106,20 +106,14 @@ curl -X POST $TAG_ENGINE_URL/create_export_config -d @tests/configs/export/expor
 
 # trigger job
 curl -i -X POST $TAG_ENGINE_URL/trigger_job \
-  -d '{"config_type":"TAG_EXPORT","config_uuid":"0ceb28d4d64f11edb9fdf1930a40c33e"}' \
+  -d '{"config_type":"TAG_EXPORT","config_uuid":"ffe5e8bae07411ed8776acde48001122"}' \
   -H "Authorization: Bearer $IAM_TOKEN" \
   -H "oauth_token: $OAUTH_TOKEN"
 
-# create config
-curl -X POST $TAG_ENGINE_URL/create_export_config -d @tests/configs/export/export_by_folder.json \
+# get job status
+curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"f106ae4aef4911edb86ee96cdaa8e7ae"}' \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
-	
-# trigger job
-curl -i -X POST $TAG_ENGINE_URL/trigger_job \
-  -d '{"config_type":"TAG_EXPORT","config_uuid":"13bea024d56811ed95362762b95fd865"}' \
-  -H "Authorization: Bearer $IAM_TOKEN" \
-  -H "oauth_token: $OAUTH_TOKEN"
 
 ####### Import tags from CSV #######
 
@@ -130,11 +124,11 @@ curl -X POST $TAG_ENGINE_URL/create_import_config -d @tests/configs/import/sakil
 
 # trigger job
 curl -i -X POST $TAG_ENGINE_URL/trigger_job \
-  -d '{"config_type":"TAG_IMPORT","config_uuid":"10388444edbc11edb14873cabec14225"}' \
+  -d '{"config_type":"TAG_IMPORT","config_uuid":"0e674d78eddd11ed8d3d09299afaece0"}' \
   -H "Authorization: Bearer $IAM_TOKEN" \
   -H "oauth_token: $OAUTH_TOKEN"
 
-curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"47ed6560edbe11edbc2e31f547ef9355"}' \
+curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"2755de6ceddd11ed9e0e3f1388bde9d6"}' \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 
@@ -145,11 +139,11 @@ curl -X POST $TAG_ENGINE_URL/create_import_config -d @tests/configs/import/sakil
 
 # trigger job
 curl -i -X POST $TAG_ENGINE_URL/trigger_job \
-  -d '{"config_type":"TAG_IMPORT","config_uuid":"609aa42eedbe11edb6318d3e6e707045"}' \
+  -d '{"config_type":"TAG_IMPORT","config_uuid":"426ddac4eddd11ed9e0e3f1388bde9d6"}' \
   -H "Authorization: Bearer $IAM_TOKEN" \
   -H "oauth_token: $OAUTH_TOKEN"
 
-curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"74051166edbe11edbb048d3e6e707045"}' \
+curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"4abb1a0ceddd11edb0341b486213f8b6"}' \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 

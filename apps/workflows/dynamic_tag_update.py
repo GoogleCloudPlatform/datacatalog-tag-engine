@@ -38,14 +38,14 @@ default_args = {
     'start_date': YESTERDAY
 }
 
-dag = DAG('dynamic_update_dag', default_args=default_args)
+dag = DAG('dynamic_tag_update', default_args=default_args)
 
 update_tags = SimpleHttpOperator(
-    task_id='update_tags',
+    task_id='trigger_job',
     method='POST',
     data=json.dumps({'template_id': TAG_TEMPLATE_ID, 'template_project': TAG_TEMPLATE_PROJECT, 'template_region': TAG_TEMPLATE_REGION, 'included_uris_hash': INCLUDED_URIS}),
-    endpoint='dynamic_ondemand_update',
+    endpoint='trigger_job',
     dag=dag
 )
 
-update_tags
+trigger_job
