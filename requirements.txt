@@ -1,5 +1,5 @@
 gunicorn
-Flask==2.2.3
+Flask==2.3.2
 google-cloud-datacatalog==3.11.1
 google-cloud-bigquery
 google-cloud-core
