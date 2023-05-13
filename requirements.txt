@@ -1,4 +1,4 @@
-Flask==2.0.3
+Flask==2.3.2
 google-cloud-datacatalog==3.7.1
 google-cloud-bigquery
 google-cloud-core
