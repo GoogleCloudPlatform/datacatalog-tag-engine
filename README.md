@@ -28,10 +28,9 @@ export CLOUD_RUN_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"     # email of your
 export TAG_CREATOR_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"   # email of your Tag creator service account for running BQ queries and creating DC tags
 ```
 
-<b>The key benefit of decoupling the `CLOUD_RUN_SA` from the `TAG_CREATOR_SA` is to limit the scope of what a Tag Engine client is allowed to tag.</b> More specifically, when a client submits a request to Tag Engine, Tag Engine checks to see if they are authorized to use the `TAG_CREATOR_SA` before processing their request. A Tag Engine client can be either a user identity or a service account.  
+<b>The key benefit of decoupling `CLOUD_RUN_SA` from `TAG_CREATOR_SA` is to limit the scope of what a Tag Engine client is allowed to tag.</b> More specifically, when a client submits a request to Tag Engine, Tag Engine checks to see if they are authorized to use `TAG_CREATOR_SA` before processing their request. A Tag Engine client can either be a user identity or a service account.  
 
-If multiple teams own different data assets in BigQuery, they can each have their own `TAG_CREATOR_SA` to prevent unauthorized tagging. The `TAG_CREATOR_SA` in the `tagengine.ini` (in the next step) represents the <i>default</i> `TAG_CREATOR_SA` and clients can override this default account when they create Tag Engine configs using the `service_account` attribute of the config.     
-
+If multiple teams want to share an instance of Tag Engine and they own different assets in BigQuery, they can each have their own `TAG_CREATOR_SA` to prevent one team from tagging another team's assets. `TAG_CREATOR_SA` is set in the `tagengine.ini` file (next step) with the <i>default</i> `TAG_CREATOR_SA`. Tag Engine clients can override the default `TAG_CREATOR_SA` when creating tags by specifying a `service_account` attribute in the tag configuration (as shown [here](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/tests/configs/dynamic_table/dynamic_dataset_non_default_service_account.json)).     
 
 3. Open `tagengine.ini` and set the following six variables in the file. The first five should be equal to the environment variables you set above in step 2:
 
