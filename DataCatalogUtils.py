@@ -1734,8 +1734,13 @@ class DataCatalogUtils:
         if dataset_index != -1:
             dataset_start = uri.find('/datasets/') + 10
             dataset_string = uri[dataset_start:]
-            dataset_end = dataset_string.find('/') 
-            dataset = dataset_string[0:dataset_end]
+            dataset_end = dataset_string.find('/')
+
+            if dataset_end == -1:
+                dataset = dataset_string[0:]
+            else:
+                dataset = dataset_string[0:dataset_end]
+
             #print('dataset: ' + dataset)
             #print('dataset_index: ', dataset_index)
         
