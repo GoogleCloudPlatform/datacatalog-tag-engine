@@ -1717,9 +1717,14 @@ class DataCatalogController:
             dataset_start = uri.find('/datasets/') + 10
             dataset_string = uri[dataset_start:]
             dataset_end = dataset_string.find('/') 
-            dataset = dataset_string[0:dataset_end]
-            #print('dataset: ' + dataset)
-            #print('dataset_index: ', dataset_index)
+            
+            if dataset_end == -1:
+                dataset = dataset_string[0:]
+            else:
+                dataset = dataset_string[0:dataset_end]
+            print('dataset:', dataset)
+            print('dataset_end:', dataset_end)
+            print('dataset_index:', dataset_index)
         
         # $table referenced in from clause, use fully qualified table
         if from_clause_table_index > 0 or from_clause_backticks_table_index > 0:
@@ -1758,7 +1763,7 @@ class DataCatalogController:
                 else:
                     query_str = query_str.replace('$dataset', dataset)
                     
-                #print('query_str: ', query_str)
+                print('query_str: ', query_str)
             
         # table not in query expression (e.g. select 'string')
         if table_index == -1 and query_str == None:
