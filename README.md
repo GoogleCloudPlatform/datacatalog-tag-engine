@@ -175,6 +175,7 @@ gcloud storage buckets add-iam-policy-binding gs://<BUCKET> \
 	--role=roles/storage.legacyBucketReader
 ```
 
+	
 8. Create the Firestore database: 
 
 This command currently requires gcloud alpha. You can install it by running `gcloud components install alpha`.  
@@ -183,7 +184,7 @@ This command currently requires gcloud alpha. You can install it by running `gcl
 
 Note that Firestore is not available in every region. Consult [this list](https://cloud.google.com/firestore/docs/locations) to see where it's available and choose the closest region if you can't run it in your preferred one. It's perfectly fine for the Firestore region to be different from the `TAG_ENGINE_REGION`. 
 
-
+	
 9. Create the Firestore indexes:
 
 First, create a private key for your `$CLOUD_RUN_SA`:
@@ -198,10 +199,11 @@ Second, create the composite indexes which are needed for serving Tag Engine req
 ```
 cd deploy
 python create_indexes.py $TAG_ENGINE_PROJECT
+cd ..
 ```
 
-The script is expected to run for about 10 minutes. As the indexes get created, you will see them show up in the Firestore console. There should be 33 indexes total. 
-
+The script is expected to run for about 10 minutes. As the indexes get created, you will see them show up in the Firestore console. There should be 33 indexes in total. 
+	
 
 10. Build and deploy the Cloud Run service:
 
@@ -226,7 +228,7 @@ gcloud run services update tag-engine --set-env-vars SERVICE_URL=$SERVICE_URL
 ```
 
 
-12. This is an optional step. If you plan to create Tag Engine configs which auto refresh your tags, you'll also need to make a Cloud Scheduler entry to trigger the tag updates:
+12. This step is optional. If you plan to create Tag Engine configs which auto refresh your tags, you'll also need to make a Cloud Scheduler entry to trigger the tag updates:
 
 ```
 gcloud services enable cloudscheduler.googleapis.com
