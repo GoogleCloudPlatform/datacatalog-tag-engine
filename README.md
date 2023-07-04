@@ -61,6 +61,7 @@ gcloud services enable firestore.googleapis.com
 gcloud services enable cloudtasks.googleapis.com
 gcloud services enable datacatalog.googleapis.com
 gcloud services enable artifactregistry.googleapis.com
+gcloud services enable cloudbuild.googleapis.com
 ```
 
 5. Create two task queues:
