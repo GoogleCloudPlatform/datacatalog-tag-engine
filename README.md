@@ -9,6 +9,8 @@ This guide has four parts: [deployment procedure](#setup), [test procedure with 
 
 ### <a name="setup"></a> Deployment Procedure
 
+The deployment procedure has 11 required steps and 1 optional step. 
+
 1. Create (or designate) two service accounts:
 
 - A service account that runs the Tag Engine Cloud Run service, referred to below as `CLOUD_RUN_SA`. 
