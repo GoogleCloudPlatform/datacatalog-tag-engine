@@ -47,7 +47,7 @@ A couple of notes:
 
 - `ENABLE_AUTH` is a boolean. When set to True, Tag Engine verifies that the client is authorized to use the `TAG_CREATOR_SA` prior to processing requests. 
 
-- The `tagengine.ini` file also has two additional variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. Those determine the names of the tasks queues. You do not need to change them. They are used in step 9 of the setup.  
+- The `tagengine.ini` file also has two additional variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. Those determine the names of the tasks queues. You do not need to change them. The queues are created in step 5 of this setup.  
 
 
 4. Enable the required APIs:
@@ -62,52 +62,7 @@ gcloud services enable cloudtasks.googleapis.com
 gcloud services enable datacatalog.googleapis.com
 ```
 
-
-5. Create the Firestore database: 
-
-This command currently requires gcloud alpha. You can install it by running `gcloud components install alpha`.  
-
-`gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location=$TAG_ENGINE_REGION`
-
-Note that Firestore is not available in every region. Consult [this list](https://cloud.google.com/firestore/docs/locations)
-to see where it's available and choose the closest region if you can't run it in your preferred one. It's perfectly fine 
-for the Firestore region to be different from the `TAG_ENGINE_REGION`. 
-
-
-6. Create the Firestore indexes:
-
-```
-cd deploy
-python create_indexes.py $TAG_ENGINE_PROJECT
-```
-
-This script is expected to run for 8-12 minutes. It creates 30+ composite indexes in Firestore which are needed for serving Tag Engine requests. 
-
-
-7. Build and deploy the Cloud Run service:
-
-This command currently requires gcloud beta. You can install it by running `gcloud components install beta`.  
-
-```
-gcloud beta run deploy tag-engine \
-	--source . \
-	--platform managed \
-	--region $TAG_ENGINE_REGION \
-	--no-allow-unauthenticated \
-	--ingress=all \
-	--service-account=$CLOUD_RUN_SA
-```
-
-
-8. Set one Cloud Run environment variable:
-
-```
-export SERVICE_URL=`gcloud run services describe tag-engine --format="value(status.url)"`
-gcloud run services update tag-engine --set-env-vars SERVICE_URL=$SERVICE_URL
-```
-
-
-9. Create two task queues:
+5. Create two task queues:
 
 ```
 gcloud tasks queues create tag-engine-injector-queue \
@@ -118,7 +73,7 @@ gcloud tasks queues create tag-engine-work-queue \
 ```
 
 
-10. Create two custom roles (required by the `SENSITIVE_COLUMN_CONFIG`):
+6. Create two custom roles (required by the `SENSITIVE_COLUMN_CONFIG`):
 
 ```
 gcloud iam roles create BigQuerySchemaUpdate \
@@ -136,7 +91,7 @@ gcloud iam roles create PolicyTagReader \
 ```
 
 	
-11. Grant the required roles and iam policy bindings to `CLOUD_RUN_SA` and `TAG_CREATOR_SA`:
+7. Grant the required roles and iam policy bindings to `CLOUD_RUN_SA` and `TAG_CREATOR_SA`:
 
 ```
 gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
@@ -149,7 +104,11 @@ gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
 	
 gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
 	--member=serviceAccount:$CLOUD_RUN_SA \
-	--role=roles/datastore.user 
+	--role=roles/datastore.user
+
+gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+	--member=serviceAccount:$CLOUD_RUN_SA \
+	--role=roles/datastore.indexAdmin  
 	
 gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
 	--member=serviceAccount:$CLOUD_RUN_SA \
@@ -214,6 +173,56 @@ this permission or assign the `storage.legacyBucketReader` role:
 gcloud storage buckets add-iam-policy-binding gs://<BUCKET> \
 	--member=serviceAccount:$TAG_CREATOR_SA' \
 	--role=roles/storage.legacyBucketReader
+```
+
+8. Create the Firestore database: 
+
+This command currently requires gcloud alpha. You can install it by running `gcloud components install alpha`.  
+
+`gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location=$TAG_ENGINE_REGION`
+
+Note that Firestore is not available in every region. Consult [this list](https://cloud.google.com/firestore/docs/locations) to see where it's available and choose the closest region if you can't run it in your preferred one. It's perfectly fine for the Firestore region to be different from the `TAG_ENGINE_REGION`. 
+
+
+9. Create the Firestore indexes:
+
+First, create a private key for your `$CLOUD_RUN_SA`:
+
+```
+gcloud iam service-accounts keys create key.json --iam-account=$CLOUD_RUN_SA
+export GOOGLE_APPLICATION_CREDENTIALS="key.json"
+```
+
+Second, create the composite indexes which are needed for serving Tag Engine requests:
+
+```
+cd deploy
+python create_indexes.py $TAG_ENGINE_PROJECT
+```
+
+The script is expected to run for about 10 minutes. As the indexes get created, you will see them show up in the Firestore console. There should be 33 indexes total. 
+
+
+10. Build and deploy the Cloud Run service:
+
+This command currently requires gcloud beta. You can install it by running `gcloud components install beta`.  
+
+```
+gcloud beta run deploy tag-engine \
+	--source . \
+	--platform managed \
+	--region $TAG_ENGINE_REGION \
+	--no-allow-unauthenticated \
+	--ingress=all \
+	--service-account=$CLOUD_RUN_SA
+```
+
+
+11. Set one Cloud Run environment variable:
+
+```
+export SERVICE_URL=`gcloud run services describe tag-engine --format="value(status.url)"`
+gcloud run services update tag-engine --set-env-vars SERVICE_URL=$SERVICE_URL
 ```
 
 
