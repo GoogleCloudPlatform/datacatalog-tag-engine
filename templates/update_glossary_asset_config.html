@@ -6,12 +6,11 @@
   </head>  
     <body>
 	   <div class="pagetitle">
-	   <h1>Tag Engine</h1>
-        </div>
-	   <div class="header">
-	   <h2>Update Glossary Asset Config using {{ template_id }}</h2>
+	     <h1>Update Config</h1>
+       </div>
+	   
  	  
- 		   <h5>Make changes to your glossary asset config below. A checked box indicates the field is part of the tag. You can add new fields and/or remove existing ones from the tag. <br>You can also edit the glossary table URI, the included and excluded asset URIs, the refresh frequency and tag history settings. </h5>
+ 		   <h5>Make changes to your glossary asset config below. A checked box indicates the field is part of the tag. You can add new fields and/or remove existing ones from the tag. <br>You can also edit the glossary table URI, the included and excluded asset URIs, the scheduling options, and tag history settings. </h5>
  	 
 	   </div>
 	  
@@ -168,11 +167,12 @@
 	         <p>&nbsp;</p>
 		        <table>
 		        <tr>
-			   <td><input type="submit" value="Submit Changes" name="action">&nbsp;<input type="submit" value="Cancel Changes" name="action"></td>
+			   <td><input type="submit" value="Save Changes" name="action">&nbsp;<input type="submit" value="Cancel Changes" name="action"></td>
 			   </table>
 			   <input type="hidden" name="template_id" value="{{ template_id }}">
 			   <input type="hidden" name="template_project" value="{{ template_project }}">
 			   <input type="hidden" name="template_region" value="{{ template_region }}">
+			   <input type="hidden" name="service_account" value="{{ service_account }}">
 			   <input type="hidden" name="config_uuid" value="{{ config['config_uuid'] }}">
 			   
 			   {% for field in fields %}

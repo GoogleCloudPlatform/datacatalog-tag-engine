@@ -6,12 +6,17 @@
   </head>  
     <body>
 	   <div class="pagetitle">
-	   <h1>Tag Engine for Data Catalog</h1>
+	   <h1>Create Config</h1>
         </div>
-	   <div class="header">
-	   <h2>Create a Static Asset Config using {{ template_id }}</h2>
-	   </div>
-	   <h3>Template Field Values</h3>
+ 	  <table>
+ 		  <tr><td>&nbsp;<span style="color:#0b5394;">Template Id:</span> {{ template_id }}</td></tr>
+		  <tr><td>&nbsp;<span style="color:#0b5394;">Template Project:</span> {{ template_project }}</td></tr>
+		  <tr><td>&nbsp;<span style="color:#0b5394;">Template Region:</span> {{ template_region }}</td></tr>
+		  <tr><td>&nbsp;<span style="color:#0b5394;">Service Account:</span> {{ service_account }}</td></tr>
+		  <tr><td>&nbsp;<span style="color:#0b5394;">Config Type:</span> STATIC_TAG_ASSET</td></tr>
+ 	  </table>
+	   <p>&nbsp;</p> 
+	   <h3>Tag Template Fields</h3>
 	   <h5 style="width: 500px;">To include a field in your tag, click on the checkbox next to the field and either enter a value for the field in the text box (if the field is of type string, double or datetime) or choose a value for the field (if the field is of type enum or bool). <br><br>
 	   
 	   Mandatory template fields are marked by <span style="color:red;">*</span> and are already checked for you. 
@@ -93,7 +98,7 @@
 			    </table>
 				
   		        <p>&nbsp;</p>
-  			   <h3>Update Options</h3>
+  			   <h3>Scheduling Options</h3>
   		 	   
   		 		   <h5>If you choose the AUTO refresh mode, your static config will be scheduled for updates based on your specified refresh frequency. <br>
   					   If you choose the ON-DEMAND refresh mode, your static config will <b>not</b> be scheduled for updates (even if you specify a refresh frequency). <br>The AUTO mode is helpful for tagging new tables in BQ or files on GCS on a recurring schedule. It will not re-tag existing tables or files. <br><br>
@@ -139,7 +144,7 @@
 	         <p>&nbsp;</p>
 		        <table>
 		        <tr>
-			   <td><input type="submit" value="Submit Tag Config" name="action">
+			   <td><input type="submit" value="Create Config" name="action">
 			       <input type="submit" value="Cancel Changes" name="action">
 			   </td>
 		        </tr>
@@ -147,6 +152,7 @@
 			   <input type="hidden" name="template_id" value="{{ template_id }}">
 			   <input type="hidden" name="template_project" value="{{ template_project }}">
 			   <input type="hidden" name="template_region" value="{{ template_region }}">
+			   <input type="hidden" name="service_account" value="{{ service_account }}">
 			   
 			   {% for dict_field in fields %}
 			   	<input type="hidden" name="{{ dict_field['field_id'] }}_datatype" value="{{ dict_field['field_type'] }}">

@@ -6,23 +6,16 @@
   </head>  
     <body>
 	   <div class="pagetitle">
-	   <h1>Tag Engine for Data Catalog</h1>
+	   <h1>Update Config</h1>
         </div>
-	   <div class="header">
-	   <h2>Update Import Config using {{ template_id }}</h2>
 	   
-		   <h5>The import config lets you create and populate Data Catalog tags from one or more CSV files. <br>
-  			   For table-level tags, the CSV must have these three fields: project, dataset, and table.<br>
-			   For column-level tags, the CSV must have these four fields: project, dataset, table, and column.<br> 
-			   The remaining fields in the CSV are for each of the tag template fields to be included in the tags. <br> 
-			   <br>
-			   The top line of the file is reserved for headers (i.e. project, dataset, table, etc.). <br>
-			   The headers of the tagged fields are their field ID from the tag template.<br>
-			   Note: The content of a CSV file is scoped to one tag template. <br>
-			   Here are some sample CSVs: <a href="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/develop/examples/import_configs/sakila_table_tags.csv">table-level CSV</a>, <a href="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/develop/examples/import_configs/sakila_column_tags.csv">column-level CSV</a>
-			    <br><br>
+    	  <table>
+    		  <tr><td>&nbsp;<span style="color:#0b5394;">Config Id:</span> {{ config['config_uuid'] }}</td></tr> 
+    		  <tr><td>&nbsp;<span style="color:#0b5394;">Config Status:</span> {{ config['config_status'] }}</td></tr> 
+    		  <tr><td>&nbsp;<span style="color:#0b5394;">Config Type:</span> {{ config['config_type'] }}</td></tr>
+    	  </table>   
 			   
-			   Mandatory fields in this form are marked by <span style="color:red;">*</span></h5>
+		<h5>Mandatory fields in this form are marked by <span style="color:red;">*</span></h5>
 
 	   </div>
 	   <form method="post" action="/process_import_config"> 
@@ -97,11 +90,13 @@
 	         <p>&nbsp;</p>
 		        <table>
 		        <tr>
-			   <td><input type="submit" value="Submit Config" name="action">
+			   <td><input type="submit" value="Save Config" name="action">
 			       <input type="submit" value="Cancel Changes" name="action">
 			   </td>
 		        </tr>
-			   </table>	   
+			   </table>
+			   <input type="hidden" name="service_account" value="{{ service_account }}">
+			   <input type="hidden" name="config_uuid" value="{{ config['config_uuid'] }}">	   
          </form>
     </body>
 </html>

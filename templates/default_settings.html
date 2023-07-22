@@ -15,26 +15,30 @@
 	   <h1>Tag Engine for Data Catalog</h1>
         </div>
 	   <div class="header">
-	   <h2>Default Tag Template Settings</h2>
+	   <h2>Default Settings</h2>
 	   </div>
 	   <span style="color:#9d9a9a;">
-		   <h6>&nbsp;Set your default Tag Template preferences (template id, template project, and template region) to avoid retyping them into the text fields each time you use Tag Engine. 
+		   <h6>&nbsp;Set your default tag template and service account preferences to avoid having to retype them each time into the text fields. 
 
 		   </h6>
 	   </span> 
-         <form method="post" action="/set_default_tag_template">
+         <form method="post" action="/set_default_settings">
 		    <table>
 		        <tr>
-		          <td>&nbsp;Template Id:</td>
+		          <td>&nbsp;Tag Template Id:</td>
 		          <td>&nbsp;<input type="text" name="template_id" value="{{ template_id }}" style="width: 150px;padding: 3px;"></td>
 			   </tr>
 		        <tr>
-		          <td>&nbsp;Template Project:</td>
+		          <td>&nbsp;Tag Template Project:</td>
 		          <td>&nbsp;<input type="text" name="template_project" value="{{ template_project }}" style="width: 150px;padding: 3px;"></td>
 			   </tr>
 		        <tr>
-		          <td>&nbsp;Template Region:</td>
-		          <td>&nbsp;<input type="text" name="template_region" value="{{ template_region }}" style="width: 150px;padding: 3px;"></td>
+		          <td>&nbsp;Tag Template Region:</td>
+		          <td>&nbsp;<input type="text" name="template_region" value="{{ template_region }}" style="width: 120px;padding: 3px;"></td>
+			   </tr>
+		        <tr>
+		          <td>&nbsp;Service Account:</td>
+		          <td>&nbsp;<input type="text" name="service_account" value="{{ service_account }}" style="width: 350px;padding: 3px;"></td>
 			   </tr>
 			   <tr>
 			    <td></td>
@@ -43,6 +47,6 @@
 		    </table>
            
          </form>
-	    <p>&nbsp;&nbsp;<a href="/">Homepage</a></p>
+	    <p>&nbsp;&nbsp;<a href="/home">Homepage</a></p>
     </body>
 </html>

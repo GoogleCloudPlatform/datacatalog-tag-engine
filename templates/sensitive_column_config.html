@@ -6,22 +6,18 @@
   </head>  
     <body>
 	   <div class="pagetitle">
-	   <h1>Tag Engine for Data Catalog</h1>
+	   <h1>Create Config</h1>
         </div>
-	   <div class="header">
-	   <h2>Create a Sensitive Column Config using {{ template_id }}</h2>
-	   <span style="color:#9d9a9a;">
-	  </span>
 	  <h5>
 	  <span style="color:red;">
-	  Note: This config requires the <a href="https://github.com/GoogleCloudPlatform/datacatalog-templates/blob/master/data_sensitivity.yaml">data sensitivity</a> tag template. You can add new fields to this template prior to creating the config, but you cannot remove the sensitive_field or sensitive_type fields from the template. 
+	  Note: This config needs to be attached to the <a href="https://github.com/GoogleCloudPlatform/datacatalog-templates/blob/master/data_sensitivity.yaml">data sensitivity</a> tag template. You can add new fields to this template prior to creating the config, but you cannot remove the <i>sensitive_field</i> or <i>sensitive_type</i> fields from the template as those are required. Please be sure to also create the matching policy tag taxonomy prior to running the config. Consult the documentation for more details. 
 	   </span>
 	   </h5>
 	   </div>
 	   <h3>Tag Template Fields</h3>
 	   <h5 style="width: 700px;">To include a field in the tag, click on the checkbox next to the field. The tag will be created with the selected fields. <br><br>
 	   
-	   Mandatory template fields are marked by <span style="color:red;">*</span> and are already checked for you. 
+	   Mandatory template fields are marked by <span style="color:red;">*</span>. 
 	   </h5>
          <form method="post" action="/process_sensitive_column_config">
 		    <table>
@@ -85,9 +81,9 @@
  			     </tr>
 			 </table>
 				 <p>&nbsp;</p>
-			   <h3>BigQuery Assets</h3>
+			   <h3>BigQuery Tables</h3>
 		 	   
-	 		   <h5>Specify the URIs for the assets you want to tag. Wildcards are allowed in the table name. <br><br>
+	 		   <h5>Specify one or more URIs to include in or exclude from your dynamic config. Wildcards are allowed in the table name. <br><br>
 				  Supported URI syntax: <br>
 				  &nbsp;&nbsp;bigquery/project/[PROJECT]/* <br>
 				  &nbsp;&nbsp;bigquery/project/[PROJECT]/dataset/[DATASET]/* <br>
@@ -144,7 +140,7 @@
 				
 	 		   
  		        <p>&nbsp;</p>
- 			   <h3>Update Options</h3>
+ 			   <h3>Scheduling Options</h3>
  		 	  
  		 		   <h5>If you choose the AUTO refresh mode, your entry config will be scheduled for updates based on your specified refresh frequency. <br>
  					   If you choose the ON-DEMAND refresh mode, your entry config will <b>not</b> be scheduled for updates (even if you specify a refresh frequency). <br>The AUTO mode is helpful for registering and tagging new files on GCS on a recurring schedule. It will not re-register or re-tag existing files. <br><br>
@@ -160,7 +156,7 @@
  		         </tr>
  			     <tr><td>&nbsp;</td></tr>
  				<tr>	
- 			    <td><span style="color:red;">*</span> Refresh frequency:&nbsp;<input type="text" value="24" name="refresh_frequency" style="width: 30px;padding: 3px;">&nbsp;
+ 			    <td>Refresh frequency:&nbsp;<input type="text" value="24" name="refresh_frequency" style="width: 30px;padding: 3px;">&nbsp;
  				    			  <select name="refresh_unit" style="width: 70px;padding: 3px;">
 								<option value="minutes">minutes</option>
    				  				<option value="hours" selected>hours</option>
@@ -189,7 +185,7 @@
 	         <p>&nbsp;</p>
 		        <table>
 		        <tr>
-			   <td><input type="submit" value="Submit Tag Config" name="action">
+			   <td><input type="submit" value="Create Config" name="action">
 			       <input type="submit" value="Cancel Changes" name="action">
 			   </td>
 		        </tr>
@@ -197,6 +193,7 @@
 			   <input type="hidden" name="template_id" value="{{ template_id }}">
 			   <input type="hidden" name="template_project" value="{{ template_project }}">
 			   <input type="hidden" name="template_region" value="{{ template_region }}">
+			   <input type="hidden" name="service_account" value="{{ service_account }}">
 			   
 			   {% for dict_field in fields %}
 			   	<input type="hidden" name="{{ dict_field['field_id'] }}_datatype" value="{{ dict_field['field_type'] }}">

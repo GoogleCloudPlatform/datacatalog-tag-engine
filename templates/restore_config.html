@@ -6,56 +6,56 @@
   </head>  
     <body>
 	   <div class="pagetitle">
-	   <h1>Tag Engine for Data Catalog</h1>
+	   <h1>Create Config</h1>
         </div>
-	   <div class="header">
-	   <h2>Create a Restore Config using {{ template_id }}</h2>
-	  
+	   		<h5>The restore config lets you restore Data Catalog tags from an export file. The restore is scoped to a source and destination tag template, which can be the same. The export file is generated from the Export Metadata API, currently in private preview. If you are not part of the private preview, you won't be able to generate this file. </h5>
+		
+				 
 		   <h5>&nbsp;&nbsp;Mandatory fields are marked by <span style="color:red;">*</span></h5>
 	  
 	   </div>
 	   <form method="post" action="/process_restore_config"> 
-	   <h3>Source Details</h3>	
+	   <h3>Restore Source Details</h3>	
 	<table>
 
 	<tr>
-    <td>&nbsp;<span style="color:red;">*</span>&nbsp;Source tag template id:&nbsp;</td>
+    <td>&nbsp;<span style="color:red;">*</span>&nbsp;Source Tag Template Id:&nbsp;</td>
     <td>
 	<input type="text" name="source_template_id" style="width: 150px;padding: 3px;"/>			 
     </td>
     </tr>
 	<tr>
-    <td>&nbsp;<span style="color:red;">*</span>&nbsp;Source tag template project:&nbsp;</td>
+    <td>&nbsp;<span style="color:red;">*</span>&nbsp;Source Tag Template Project:&nbsp;</td>
 	<td>
     	  <input type="text" name="source_template_project" style="width: 150px;padding: 3px;"/>			 
     </td>
     </tr>
 	<tr>
-    <td>&nbsp;<span style="color:red;">*</span>&nbsp;Source tag template region:&nbsp;</td>
+    <td>&nbsp;<span style="color:red;">*</span>&nbsp;Source Tag Template Region:&nbsp;</td>
 	<td>
     	  <input type="text" name="source_template_region" style="width: 150px;padding: 3px;"/>			 
     </td>
     </tr>
     </table>
 	   <p>&nbsp;</p>
-	   <h3>Destination Details</h3>
+	   <h3>Restore Destination Details</h3>
    	<table> 
    	<tr>
-       <td>&nbsp;<span style="color:red;">*</span>&nbsp;Target tag template id:&nbsp;</td>
+       <td>&nbsp;<span style="color:red;">*</span>&nbsp;Target Tag Template Id:&nbsp;</td>
 	   <td>
        	  <input type="text" name="target_template_id" value="{{ template_id }}" style="width: 150px;padding: 3px;"/>			 
        </td>
        </tr>
    	<tr>
-       <td>&nbsp;<span style="color:red;">*</span>&nbsp;Target tag template project:&nbsp;</td>
+       <td>&nbsp;<span style="color:red;">*</span>&nbsp;Target Tag Template Project:&nbsp;</td>
 	   <td>
-       	  <input type="text" name="target_template_project" value="{{ project_id }}" style="width: 150px;padding: 3px;"/>			 
+       	  <input type="text" name="target_template_project" value="{{ template_project }}" style="width: 150px;padding: 3px;"/>			 
        </td>
        </tr>
    	<tr>
-       <td>&nbsp;<span style="color:red;">*</span>&nbsp;Target tag template region:&nbsp;</td>
+       <td>&nbsp;<span style="color:red;">*</span>&nbsp;Target Tag Template Region:&nbsp;</td>
 	   <td>
-       	  <input type="text" name="target_template_region" value="{{ region }}" style="width: 150px;padding: 3px;"/>			 
+       	  <input type="text" name="target_template_region" value="{{ template_region }}" style="width: 150px;padding: 3px;"/>			 
        </td>
        </tr>
        </table>
@@ -64,8 +64,8 @@
 		 	   
 					    <table>
 				     <tr>
-				    <td><span style="color:red;">*</span>&nbsp;Location of metadata export file(s):&nbsp;&nbsp;
-				    	  <input type="text" value="gs://" name="metadata_export_location" style="align-content:left; width: 700px; overflow:auto;"/>
+				    <td><span style="color:red;">*</span>&nbsp;Location of Metadata Export File(s):&nbsp;&nbsp;
+				    	  <input type="text" value="gs://" name="metadata_export_location" style="align-content:left; width: 600px; overflow:auto;"/>
 
 				    	</td>
 				     </tr>
@@ -93,7 +93,7 @@
 	         <p>&nbsp;</p>
 		        <table>
 		        <tr>
-			   <td><input type="submit" value="Submit Config" name="action">
+			   <td><input type="submit" value="Create Config" name="action">
 			       <input type="submit" value="Cancel Changes" name="action">
 			   </td>
 		        </tr>
@@ -101,6 +101,7 @@
 			   <input type="hidden" name="template_id" value="{{ template_id }}">
 			   <input type="hidden" name="template_project" value="{{ template_project }}">
 			   <input type="hidden" name="template_region" value="{{ template_region }}">
+			   <input type="hidden" name="service_account" value="{{ service_account }}">
          </form>
     </body>
 </html>

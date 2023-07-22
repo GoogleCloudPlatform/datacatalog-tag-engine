@@ -12,11 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from flask import Flask, render_template, request, redirect, url_for, jsonify, json
+from flask import Flask, render_template, request, redirect, url_for, jsonify, json, session
+from flask_session import Session
+#from flask_cors import CORS
+#from flask_sslify import SSLify
+
 import datetime, time, configparser, os
+import requests
 
 import google.auth # service account credentials
 from google.auth import impersonated_credentials # service account credentials
+
+import google_auth_oauthlib.flow
 import google.oauth2.service_account
 import google.oauth2.credentials # user credentials
 from googleapiclient import discovery
@@ -24,6 +31,7 @@ from googleapiclient import discovery
 from google.cloud import firestore
 from google.cloud import bigquery
 from google.cloud import tasks_v2
+from google.cloud import logging_v2
 from google.protobuf import timestamp_pb2
 
 import DataCatalogController as controller
@@ -38,7 +46,6 @@ import TaskManager as taskm
 import BigQueryUtils as bq
 import ConfigType as ct
 
-app = Flask(__name__)
 store = tesh.TagEngineStoreHandler()
 config = configparser.ConfigParser()
 config.read("tagengine.ini")
@@ -51,7 +58,6 @@ def check_service_url():
 
 check_service_url()
 #######################################################
-OAUTH_SCOPE = 'https://www.googleapis.com/auth/cloud-platform'
 
 print('enable_auth variable:', config['DEFAULT']['ENABLE_AUTH'].lower())
 if config['DEFAULT']['ENABLE_AUTH'].lower() == 'true' or config['DEFAULT']['ENABLE_AUTH'] == 1:
@@ -59,74 +65,190 @@ if config['DEFAULT']['ENABLE_AUTH'].lower() == 'true' or config['DEFAULT']['ENAB
 else:
     ENABLE_AUTH = False
     
+TAG_ENGINE_PROJECT = config['DEFAULT']['TAG_ENGINE_PROJECT'].strip()
+TAG_ENGINE_REGION = config['DEFAULT']['TAG_ENGINE_REGION'].strip()
+    
 CLOUD_RUN_SA = config['DEFAULT']['CLOUD_RUN_ACCOUNT'].strip()
 TAG_CREATOR_SA = config['DEFAULT']['TAG_CREATOR_ACCOUNT'].strip()
 
 SPLIT_WORK_HANDLER = os.environ['SERVICE_URL'] + '/_split_work'
 RUN_TASK_HANDLER = os.environ['SERVICE_URL'] + '/_run_task'
 
-jm = jobm.JobManager(CLOUD_RUN_SA, config['DEFAULT']['TAG_ENGINE_PROJECT'], \
-                     config['DEFAULT']['TAG_ENGINE_REGION'], \
-                     config['DEFAULT']['INJECTOR_QUEUE'], \
-                     SPLIT_WORK_HANDLER)
-                     
-tm = taskm.TaskManager(CLOUD_RUN_SA, config['DEFAULT']['TAG_ENGINE_PROJECT'], \
-                     config['DEFAULT']['TAG_ENGINE_REGION'], \
-                     config['DEFAULT']['WORK_QUEUE'], \
-                     RUN_TASK_HANDLER)
+INJECTOR_QUEUE = config['DEFAULT']['INJECTOR_QUEUE'].strip()
+WORK_QUEUE = config['DEFAULT']['WORK_QUEUE'].strip()
+
+jm = jobm.JobManager(CLOUD_RUN_SA, TAG_ENGINE_PROJECT, TAG_ENGINE_REGION, INJECTOR_QUEUE, SPLIT_WORK_HANDLER)                   
+tm = taskm.TaskManager(CLOUD_RUN_SA, TAG_ENGINE_PROJECT, TAG_ENGINE_REGION, WORK_QUEUE, RUN_TASK_HANDLER)
+
+SCOPES = ['openid', 'https://www.googleapis.com/auth/cloud-platform', 'https://www.googleapis.com/auth/userinfo.email']
+OAUTH_CLIENT_CREDENTIALS = config['DEFAULT']['OAUTH_CLIENT_CREDENTIALS'].strip()
 
 ##################### UI METHODS #################
 
+app = Flask(__name__)
+#app.secret_key = os.urandom(50)
+app.config["SESSION_PERMANENT"] = False
+app.config["SESSION_TYPE"] = "filesystem"
+Session(app)
+
 @app.route("/")
-def homepage():
+def authorize():
     
-    exists, settings = store.read_default_tag_template_settings()
+    flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(OAUTH_CLIENT_CREDENTIALS, scopes=SCOPES)
+        
+    flow.redirect_uri = url_for('oauth2callback', _external=True, _scheme='https')
+
+    authorization_url, state = flow.authorization_url(access_type='offline', include_granted_scopes="true",)
+    
+    session['state'] = state
+
+    return redirect(authorization_url)
+
+
+@app.route('/oauth2callback')
+def oauth2callback():
+    # Specify the state when creating the flow in the callback so that it can
+    # verified in the authorization server response.
+    state = session['state']
+
+    flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(OAUTH_CLIENT_CREDENTIALS, scopes=SCOPES, state=state)
+    flow.redirect_uri = url_for('oauth2callback', _external=True, _scheme='https')
+
+    https_authorization_url = request.url.replace('http://', 'https://')
+    flow.fetch_token(authorization_response=https_authorization_url)
+            
+    # ACTION ITEM: In a production app, you likely want to save these
+    # credentials in a persistent database instead.
+    credentials = flow.credentials
+    session['credentials'] = credentials_to_dict(credentials)
+    print('credentials:', session['credentials'])
+    
+    user_info_service = discovery.build('oauth2', 'v2', credentials=credentials)
+    user_info = user_info_service.userinfo().get().execute()
+    session['user_email'] = user_info['email']
+        
+    return redirect(url_for('home'))
+    
+    
+def credentials_to_dict(credentials):
+    return {'token': credentials.token,
+            'refresh_token': credentials.refresh_token,
+            'token_uri': credentials.token_uri,
+            'client_id': credentials.client_id,
+            'client_secret': credentials.client_secret,
+            'scopes': credentials.scopes,
+            'id_token': credentials.id_token}
+    
+            
+def dict_to_credentials(_dict):
+    
+    credentials = google.oauth2.credentials.Credentials(token=_dict['token'], refresh_token=_dict['refresh_token'], 
+                                                        token_uri=_dict['token_uri'], client_id=_dict['client_id'], 
+                                                        client_secret=_dict['client_secret'], scopes=_dict['scopes'],
+                                                        id_token=_dict['id_token'])    
+    return credentials
+
+
+@app.route("/logout")
+def logout():
+    
+    if 'credentials' in session:
+        del session['credentials']
+        
+    return redirect(url_for('authorize'))
+    
+
+def get_log_entries(service_account):
+    
+    formatted_entries = []
+    
+    logging_client = logging_v2.Client(project=TAG_ENGINE_PROJECT, credentials=get_target_credentials(service_account))
+    query="resource.type: cloud_run_revision"
+    entries = list(logging_client.list_entries(filter_=query, order_by=logging_v2.DESCENDING, max_results=25))
+    
+    for entry in entries:
+        timestamp = entry.timestamp.isoformat()[0:19]
+        
+        if entry.payload == None:
+            continue
+            
+        if len(entry.payload) > 100:
+            payload = entry.payload[0:100]
+        else:
+            payload = entry.payload
+    
+        formatted_entries.append((timestamp, payload))
+    
+    print('formatted_entries:', formatted_entries)
+    
+    return formatted_entries
+
+
+@app.route("/home")
+def home():
+    
+    if 'credentials' not in session:
+        return redirect('/')
+      
+    exists, settings = store.read_default_settings(session['user_email'])
     
     if exists:
         template_id = settings['template_id']
         template_project = settings['template_project']
         template_region = settings['template_region']
+        service_account = settings['service_account']
     else:
-        template_id = "{your_template_id}"
-        template_project = "{your_template_project}"
-        template_region = "{your_template_region}"
+        template_id = "{tag_template_id}"
+        template_project = "{tag_template_project}"
+        template_region = "{tag_template_region}"
+        service_account = "{service_account}"
     
     # [END homepage]
     # [START render_template]
     return render_template(
-        'index.html',
+        'home.html',
         template_id=template_id,
         template_project=template_project,
-        template_region=template_region)
+        template_region=template_region,
+        service_account=service_account)
 
     
-@app.route("/default_tag_template_settings<int:saved>", methods=["GET"])
-def default_tag_template_settings(saved):
+@app.route("/default_settings<int:saved>", methods=["GET"])
+def default_settings(saved):
     
-    exists, settings = store.read_default_tag_template_settings()
+    if 'credentials' not in session:
+        return redirect('/')
+        
+    exists, settings = store.read_default_settings(session['user_email'])
     
     if exists:
         template_id = settings['template_id']
         template_project = settings['template_project']
         template_region = settings['template_region']
+        service_account = settings['service_account']
     else:
-        template_id = "{your_template_id}"
-        template_project = "{your_template_project}"
-        template_region = "{your_template_region}"
+        template_id = "{tag_template_id}"
+        template_project = "{tag_template_project}"
+        template_region = "{tag_template_region}"
+        service_account = "{service_account}"
     
-    # [END default_tag_template_settings]
+    # [END default_settings]
     # [START render_template]
     return render_template(
-        'default_tag_template_settings.html',
+        'default_settings.html',
         template_id=template_id,
         template_project=template_project,
         template_region=template_region,
+        service_account=service_account,
         settings=saved)
     # [END render_template]
          
 @app.route("/coverage_report_settings<int:saved>")
 def coverage_report_settings(saved):
     
+    if 'credentials' not in session:
+        return redirect('/')
+        
     exists, settings = store.read_coverage_report_settings()
     
     if exists:
@@ -151,6 +273,9 @@ def coverage_report_settings(saved):
 @app.route("/tag_history_settings<int:saved>", methods=["GET"])
 def tag_history_settings(saved):
     
+    if 'credentials' not in session:
+        return redirect('/')
+        
     enabled, settings = store.read_tag_history_settings()
     
     if enabled:
@@ -177,6 +302,9 @@ def tag_history_settings(saved):
 @app.route("/tag_stream_settings<int:saved>", methods=["GET"])
 def tag_stream_settings(saved):
     
+    if 'credentials' not in session:
+        return redirect('/')
+        
     enabled, settings = store.read_tag_stream_settings()
     
     if enabled:
@@ -198,29 +326,38 @@ def tag_stream_settings(saved):
     # [END render_template]
     
 
-@app.route("/set_default_tag_template", methods=['POST'])
-def set_default_tag_template():
+@app.route("/set_default_settings", methods=['POST'])
+def set_default_settings():
     
+    if 'credentials' not in session:
+        return redirect('/')
+        
     template_id = request.form['template_id'].rstrip()
     template_project = request.form['template_project'].rstrip()
     template_region = request.form['template_region'].rstrip()
+    service_account = request.form['service_account'].rstrip()
     
-    if template_id == "{your_template_id}":
+    if template_id == "{tag_template_id}":
         template_id = None
-    if template_project == "{your_template_project}":
+    if template_project == "{tag_template_project}":
         template_project = None
-    if template_region == "{your_template_region}":
+    if template_region == "{tag_template_region}":
         template_region = None
+    if service_account == "{service_account}":
+        service_account = None
     
-    if template_id != None or template_project != None or template_region != None:
-        store.write_default_tag_template_settings(template_id, template_project, template_region)
+    if template_id != None or template_project != None or template_region != None or service_account != None:
+        store.write_default_settings(session['user_email'], template_id, template_project, template_region, service_account)
         
-    return default_tag_template_settings(1)
+    return default_settings(1)
         
         
 @app.route("/set_tag_history", methods=['POST'])
 def set_tag_history():
     
+    if 'credentials' not in session:
+        return redirect('/')
+        
     enabled = request.form['enabled'].rstrip()
     bigquery_project = request.form['bigquery_project'].rstrip()
     bigquery_region = request.form['bigquery_region'].rstrip()
@@ -258,6 +395,9 @@ def set_tag_history():
 @app.route("/set_tag_stream", methods=['POST'])
 def set_tag_stream():
     
+    if 'credentials' not in session:
+        return redirect('/')
+        
     enabled = request.form['enabled'].rstrip()
     pubsub_project = request.form['pubsub_project'].rstrip()
     pubsub_topic = request.form['pubsub_topic'].rstrip()
@@ -291,6 +431,9 @@ def set_tag_stream():
 @app.route("/set_coverage_report", methods=['POST'])
 def set_coverage_report():
     
+    if 'credentials' not in session:
+        return redirect('/')
+        
     included_bigquery_projects = request.form['included_bigquery_projects'].rstrip()
     
     if request.form['excluded_bigquery_datasets']:
@@ -322,6 +465,9 @@ def set_coverage_report():
 @app.route("/coverage_report")
 def coverage_report():
     
+    if 'credentials' not in session:
+        return redirect('/')
+        
     summary_report, detailed_report = store.generate_coverage_report()
     
     print('summary_report: ' + str(summary_report))
@@ -339,7 +485,9 @@ def coverage_report():
 # TO DO: re-implement this method using the DC API        
 @app.route("/coverage_details<string:res>", methods=['GET'])
 def coverage_details(res):
-    print("res: " + res)
+    
+    if 'credentials' not in session:
+        return redirect('/')
     
     bigquery_project = res.split('.')[0]
     resource = res.split('.')[1]
@@ -356,10 +504,28 @@ def coverage_details(res):
 @app.route('/search_tag_template', methods=['POST'])
 def search_tag_template():
 
+    if 'credentials' not in session:
+        return redirect('/')
+        
     template_id = request.form['template_id']
     template_project = request.form['template_project']
     template_region = request.form['template_region']
+    service_account = request.form['service_account']
     
+    # make sure user is authorized to use the service account
+    if ENABLE_AUTH == True:
+        has_permission = check_user_credentials(None, session['credentials'], service_account)   
+        print('user has permission:', has_permission)
+    
+        if has_permission == False:
+            return render_template(
+                'home.html',
+                template_id=template_id,
+                template_project=template_project,
+                template_region=template_region,
+                service_account=service_account,
+                missing_permissions=True)
+      
     dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     fields = dcc.get_template()
     
@@ -372,12 +538,16 @@ def search_tag_template():
         template_id=template_id,
         template_project=template_project,
         template_region=template_region,
+        service_account=service_account,
         fields=fields)
     # [END render_template]
         
 @app.route('/choose_action', methods=['GET'])
 def choose_action():
     
+    if 'credentials' not in session:
+        return redirect('/')
+        
     template_id = request.args.get('template_id')
     template_project = request.args.get('template_project')
     template_region = request.args.get('template_region')
@@ -394,44 +564,20 @@ def choose_action():
         template_id=template_id,
         template_project=template_project,
         template_region=template_region,
+        service_account=service_account, 
         fields=fields)
     # [END render_template]
 
-# [START view_configs]
-@app.route('/view_configs', methods=['GET'])
-def view_configs():
-    
-    template_id = request.args.get('template_id')
-    template_project = request.args.get('template_project')
-    template_region = request.args.get('template_region')
-    
-    print("template_id: " + str(template_id))
-    print("template_project: " + str(template_project))
-    print("template_region: " + str(template_region))
-    
-    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
-    template_fields = dcc.get_template()
-    
-    history_enabled, history_settings = store.read_tag_history_settings()
-    stream_enabled, stream_settings = store.read_tag_stream_settings()
-    
-    configs = store.read_configs(service_account, 'ALL', template_id, template_project, template_region)
-    
-    #print('configs: ', configs)
-    
-    return render_template(
-        'view_configs.html',
-        template_id=template_id,
-        template_project=template_project,
-        template_region=template_region,
-        configs=configs)
-    # [END render_template]
 
-def view_remaining_configs(template_id, template_project, template_region):
+def view_remaining_configs(service_account, template_id, template_project, template_region):
     
+    if 'credentials' not in session:
+        return redirect('/')
+        
     print("template_id: " + str(template_id))
     print("template_project: " + str(template_project))
     print("template_region: " + str(template_region))
+    print("service_account: " + str(service_account))
     
     dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     template_fields = dcc.get_template()
@@ -448,6 +594,7 @@ def view_remaining_configs(template_id, template_project, template_region):
         template_id=template_id,
         template_project=template_project,
         template_region=template_region,
+        service_account=service_account,
         configs=configs)
     # [END render_template]
     
@@ -456,6 +603,9 @@ def view_remaining_configs(template_id, template_project, template_region):
 @app.route('/view_export_configs', methods=['GET'])
 def view_export_configs():
     
+    if 'credentials' not in session:
+        return redirect('/')
+        
     configs = store.read_export_configs()
     
     print('configs: ', configs)
@@ -465,12 +615,17 @@ def view_export_configs():
         configs=configs)
     # [END render_template]
 
-# [START display_configuration]
-@app.route('/display_configuration', methods=['POST'])
-def display_configuration():
+# [START view_config_options]
+@app.route('/view_config_options', methods=['POST'])
+def view_config_options():
+    
+    if 'credentials' not in session:
+        return redirect('/')
+        
     template_id = request.form['template_id']
     template_project = request.form['template_project']
     template_region = request.form['template_region']
+    service_account = request.form['service_account']
     action = request.form['action']
 
     print("template_id: " + str(template_id))
@@ -484,7 +639,7 @@ def display_configuration():
     history_enabled, history_settings = store.read_tag_history_settings()
     stream_enabled, stream_settings = store.read_tag_stream_settings()
     
-    if action == "View and Edit Configurations":
+    if action == "View Existing Configs":
 
         configs = store.read_configs(service_account, 'ALL', template_id, template_project, template_region)
         
@@ -495,6 +650,7 @@ def display_configuration():
             template_id=template_id,
             template_project=template_project,
             template_region=template_region,
+            service_account=service_account,
             configs=configs)
         
     elif action == "Create Static Asset Tags":
@@ -503,6 +659,7 @@ def display_configuration():
             template_id=template_id,
             template_project=template_project,
             template_region=template_region,
+            service_account=service_account,
             fields=template_fields,
             current_time=datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
             display_tag_history=history_enabled,
@@ -514,6 +671,7 @@ def display_configuration():
             template_id=template_id,
             template_project=template_project,
             template_region=template_region,
+            service_account=service_account,
             fields=template_fields,
             display_tag_history=history_enabled,
             display_tag_stream=stream_enabled)
@@ -524,6 +682,7 @@ def display_configuration():
             template_id=template_id,
             template_project=template_project,
             template_region=template_region,
+            service_account=service_account,
             fields=template_fields,
             display_tag_history=history_enabled,
             display_tag_stream=stream_enabled)
@@ -534,6 +693,7 @@ def display_configuration():
             template_id=template_id,
             template_project=template_project,
             template_region=template_region,
+            service_account=service_account,
             fields=template_fields,
             display_tag_history=history_enabled,
             display_tag_stream=stream_enabled)
@@ -544,6 +704,7 @@ def display_configuration():
             template_id=template_id,
             template_project=template_project,
             template_region=template_region,
+            service_account=service_account,
             fields=template_fields,
             display_tag_history=history_enabled,
             display_tag_stream=stream_enabled)
@@ -554,6 +715,7 @@ def display_configuration():
             template_id=template_id,
             template_project=template_project,
             template_region=template_region,
+            service_account=service_account,
             fields=template_fields,
             display_tag_history=history_enabled,
             display_tag_stream=stream_enabled)
@@ -564,6 +726,7 @@ def display_configuration():
             template_id=template_id,
             template_project=template_project,
             template_region=template_region,
+            service_account=service_account,
             fields=template_fields,
             display_tag_history=history_enabled,
             display_tag_stream=stream_enabled)
@@ -574,21 +737,140 @@ def display_configuration():
             template_id=template_id,
             template_project=template_project,
             template_region=template_region,
+            service_account=service_account,
             fields=template_fields,
             display_tag_history=history_enabled,
             display_tag_stream=stream_enabled)
             
+    elif action == "Switch Template / Return Home" or action == 'Return Home':
+        return render_template(
+            'home.html',
+            template_id=template_id,
+            template_project=template_project,
+            template_region=template_region,
+            service_account=service_account)
+            
     # [END render_template]
+
+
+# [START process_created_config_action]
+@app.route('/process_created_config_action', methods=['POST'])
+def process_created_config_action():
+    
+    if 'credentials' not in session:
+        return redirect('/')
+        
+    config_uuid = request.form['config_uuid']
+    config_type = request.form['config_type']
+    
+    template_id = request.form['template_id']
+    template_project = request.form['template_project']
+    template_region = request.form['template_region']
+    service_account = request.form['service_account']
+    action = request.form['action']
+    
+    if action == "Trigger Job":
+        job_uuid = jm.create_job(service_account, config_uuid, config_type)
+        job = jm.get_job_status(job_uuid)
+        
+        entries = get_log_entries(service_account)
+        
+        return render_template(
+            'job_status.html',
+            job_uuid=job_uuid,
+            entries=entries,
+            job_status=job['job_status'],
+            config_uuid=config_uuid,
+            config_type=config_type,
+            template_id=template_id,
+            template_project=template_project,
+            template_region=template_region,
+            service_account=service_account)
+   
+    if action == "View Existing Configs":
+        configs = store.read_configs(service_account, 'ALL', template_id, template_project, template_region)
+
+        return render_template(
+            'view_configs.html',
+            template_id=template_id,
+            template_project=template_project,
+            template_region=template_region,
+            service_account=service_account,
+            configs=configs)
+    
+    if action == "Return Home":
+        return render_template(
+            'home.html',
+            template_id=template_id,
+            template_project=template_project,
+            template_region=template_region,
+            service_account=service_account)
+
+
+# [START refresh_job_status]
+@app.route('/refresh_job_status', methods=['POST'])
+def refresh_job_status():
+    
+    if 'credentials' not in session:
+        return redirect('/')
+    
+    job_uuid = request.form['job_uuid']    
+    config_uuid = request.form['config_uuid']
+    config_type = request.form['config_type']
+    
+    template_id = request.form['template_id']
+    template_project = request.form['template_project']
+    template_region = request.form['template_region']
+    service_account = request.form['service_account']
+    action = request.form['action']
+    
+    if action == "Refresh":
+        job = jm.get_job_status(job_uuid)
+        entries = get_log_entries(service_account)
+        
+        return render_template(
+            'job_status.html',
+            job_uuid=job_uuid,
+            entries=entries,
+            job_status=job['job_status'],
+            config_uuid=config_uuid,
+            config_type=config_type,
+            template_id=template_id,
+            template_project=template_project,
+            template_region=template_region,
+            service_account=service_account)
+    
+    if action == "View Existing Configs":
+        configs = store.read_configs(service_account, 'ALL', template_id, template_project, template_region)
+
+        return render_template(
+            'view_configs.html',
+            template_id=template_id,
+            template_project=template_project,
+            template_region=template_region,
+            service_account=service_account,
+            configs=configs)
+    
+    if action == "Return Home":
+        return render_template(
+            'home.html',
+            template_id=template_id,
+            template_project=template_project,
+            template_region=template_region,
+            service_account=service_account)
+
 
 # [START display_export_option]
 @app.route('/display_export_option', methods=['POST'])
 def display_export_option():
     
+    if 'credentials' not in session:
+        return redirect('/')
+        
     action = request.form['action']
     
     if action == "Create Export Config":
-        return render_template(
-            'export_config.html')
+        return render_template('export_config.html')
             
     elif action == "View and Edit Configs":
         return view_export_configs()
@@ -597,18 +879,24 @@ def display_export_option():
 @app.route('/create_export_option', methods=['GET'])
 def create_export_option():
     
+    if 'credentials' not in session:
+        return redirect('/')
+        
     return render_template(
             'export_config.html')
             
 
-@app.route('/update_config', methods=['POST'])
-def update_config():
+@app.route('/choose_config_action', methods=['POST'])
+def choose_config_action():
     
-    print('enter update_config')
-    
+    if 'credentials' not in session:
+        return redirect('/')
+        
     template_id = request.form['template_id']
     template_project = request.form['template_project']
     template_region = request.form['template_region']
+    service_account = request.form['service_account']
+    
     config_uuid = request.form['config_uuid']
     config_type = request.form['config_type']
     action = request.form['action']
@@ -616,14 +904,50 @@ def update_config():
     print('template_id:', template_id)
     print('template_project:', template_project)
     print('template_region:', template_region)
+    print('service_account:', service_account)
+    
     print('config_uuid:', config_uuid)
     print('config_type:', config_type)
     print('action:', action)
+
+    if action == "View Job History":
+        jobs = store.read_jobs_by_config(config_uuid)
+        
+        return render_template(
+            'job_history.html',
+            jobs=jobs,
+            config_uuid=config_uuid,
+            config_type=config_type,
+            template_id=template_id,
+            template_project=template_project,
+            template_region=template_region,
+            service_account=service_account)
+
+    if action == "Trigger Job":
+        job_uuid = jm.create_job(service_account, config_uuid, config_type)
+        job = jm.get_job_status(job_uuid)
+        entries = get_log_entries(service_account)
+
+        return render_template(
+            'job_status.html',
+            job_uuid=job_uuid,
+            entries=entries,
+            job_status=job['job_status'],
+            config_uuid=config_uuid,
+            config_type=config_type,
+            template_id=template_id,
+            template_project=template_project,
+            template_region=template_region,
+            service_account=service_account)
+   
+    if action == "View Configs":
+        print("View Configs")
     
     if action == "Delete Config":
-        store.delete_config(config_uuid, config_type)
-        return view_remaining_configs(template_id, template_project, template_region)
+        store.delete_config(service_account, config_uuid, config_type)
+        return view_remaining_configs(service_account, template_id, template_project, template_region)
     
+    # action == Update Config
     config = store.read_config(service_account, config_uuid, config_type)
     print("config: " + str(config))
     
@@ -649,98 +973,165 @@ def update_config():
     
     print("tag_stream: " + str(tag_stream))
 
-    if config_type == "STATIC_ASSET_TAG":
+    if config_type == "STATIC_TAG_ASSET":
         return render_template(
             'update_static_asset_config.html',
             template_id=template_id,
             template_project=template_project,
             template_region=template_region,
+            service_account=service_account,
             fields=template_fields,
             config=config, 
             current_time=datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
             display_tag_history_option=tag_history,
             display_tag_stream_option=tag_stream)
     
-    if config_type == "DYNAMIC_TABLE_TAG":
+    if config_type == "DYNAMIC_TAG_TABLE":
         return render_template(
             'update_dynamic_table_config.html',
             template_id=template_id,
             template_project=template_project,
             template_region=template_region,
+            service_account=service_account,
             fields=template_fields,
             config=config,
             display_tag_history_option=tag_history,
             display_tag_stream_option=tag_stream)
             
-    if config_type == "DYNAMIC_COLUMN_TAG":
+    if config_type == "DYNAMIC_TAG_COLUMN":
         return render_template(
             'update_dynamic_column_config.html',
             template_id=template_id,
             template_project=template_project,
             template_region=template_region,
+            service_account=service_account,
             fields=template_fields,
             config=config,
             display_tag_history_option=tag_history,
             display_tag_stream_option=tag_stream)
             
-    if config_type == "ENTRY":
+    if config_type == "ENTRY_CREATE":
         return render_template(
             'update_entry_config.html',
             template_id=template_id,
             template_project=template_project,
             template_region=template_region,
+            service_account=service_account,
             fields=template_fields,
             config=config,
             display_tag_history_option=tag_history,
             display_tag_stream_option=tag_stream)
             
-    if config_type == "GLOSSARY_ASSET_TAG":
+    if config_type == "GLOSSARY_TAG_ASSET":
         return render_template(
             'update_glossary_asset_config.html',
             template_id=template_id,
             template_project=template_project,
             template_region=template_region,
+            service_account=service_account,
             fields=template_fields,
             config=config,
             display_tag_history_option=tag_history,
             display_tag_stream_option=tag_stream)
             
-    if config_type == "SENSITIVE_COLUMN_TAG":
+    if config_type == "SENSITIVE_TAG_COLUMN":
         return render_template(
             'update_sensitive_column_config.html',
             template_id=template_id,
             template_project=template_project,
             template_region=template_region,
+            service_account=service_account,
             fields=template_fields,
             config=config,
             display_tag_history_option=tag_history,
             display_tag_stream_option=tag_stream)
     
-    if config_type == "IMPORT_TAG":
+    if config_type == "TAG_IMPORT":
         return render_template(
             'update_import_config.html',
             template_id=template_id,
             template_project=template_project,
             template_region=template_region,
+            service_account=service_account,
             config=config,
             display_tag_history_option=tag_history,
             display_tag_stream_option=tag_stream)
             
-    if config_type == "RESTORE_TAG":
+    if config_type == "TAG_RESTORE":
         return render_template(
             'update_restore_config.html',
             template_id=template_id,
             template_project=template_project,
             template_region=template_region,
+            service_account=service_account,
             config=config,
             display_tag_history_option=tag_history,
             display_tag_stream_option=tag_stream)
     # [END render_template]
     
+
+@app.route('/choose_job_history_action', methods=['POST'])
+def choose_job_history_action():
+    
+    if 'credentials' not in session:
+        return redirect('/')
+        
+    config_uuid = request.form['config_uuid']
+    config_type = request.form['config_type']
+    
+    template_id = request.form['template_id']
+    template_project = request.form['template_project']
+    template_region = request.form['template_region']
+    service_account = request.form['service_account']
+    
+    action = request.form['action']
+
+    if action == "Trigger Job":
+        job_uuid = jm.create_job(service_account, config_uuid, config_type)
+        job = jm.get_job_status(job_uuid)
+        
+        entries = get_log_entries(service_account)
+
+        return render_template(
+            'job_status.html',
+            job_uuid=job_uuid,
+            entries=entries,
+            job_status=job['job_status'],
+            config_uuid=config_uuid,
+            config_type=config_type,
+            template_id=template_id,
+            template_project=template_project,
+            template_region=template_region,
+            service_account=service_account)
+    
+    if action == "View Existing Configs":
+        configs = store.read_configs(service_account, 'ALL', template_id, template_project, template_region)
+        print('configs: ', configs)
+        
+        return render_template(
+            'view_configs.html',
+            template_id=template_id,
+            template_project=template_project,
+            template_region=template_region,
+            service_account=service_account,
+            configs=configs)
+            
+    if action == "Return Home":
+        return render_template(
+            'home.html',
+            template_id=template_id,
+            template_project=template_project,
+            template_region=template_region,
+            service_account=service_account)
+    
+    
  
 @app.route('/update_export_config', methods=['POST'])
 def update_export_config():
     
+    if 'credentials' not in session:
+        return redirect('/')
+        
     config_uuid = request.form['config_uuid']
     action = request.form['action']
     
@@ -760,9 +1151,14 @@ def update_export_config():
     
 @app.route('/process_static_asset_config', methods=['POST'])
 def process_static_asset_config():
+    
+    if 'credentials' not in session:
+        return redirect('/')
+        
     template_id = request.form['template_id']
     template_project = request.form['template_project']
     template_region = request.form['template_region']
+    service_account = request.form['service_account']
     included_assets_uris = request.form['included_assets_uris'].rstrip()
     excluded_assets_uris = request.form['excluded_assets_uris'].rstrip()
     refresh_mode = request.form['refresh_mode']
@@ -772,18 +1168,35 @@ def process_static_asset_config():
     
     print('included_assets_uris: ' + included_assets_uris)
     print('excluded_assets_uris: ' + excluded_assets_uris)
-    
+    print('service_account: ' + service_account)
+
     dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
         
+        history_enabled, history_settings = store.read_tag_history_settings()
+        stream_enabled, stream_settings = store.read_tag_stream_settings()
+    
         return render_template(
             'tag_template.html',
             template_id=template_id,
             template_project=template_project,
             template_region=template_region, 
+            service_account=service_account, 
             fields=template)
+    
+    if action == "View Existing Configs":
+
+        configs = store.read_configs(service_account, 'ALL', template_id, template_project, template_region)
+
+        return render_template(
+            'view_configs.html',
+            template_id=template_id,
+            template_project=template_project,
+            template_region=template_region,
+            service_account=service_account,
+            configs=configs)
     
     fields = []
     
@@ -841,50 +1254,43 @@ def process_static_asset_config():
             tag_stream_enabled = "ON"            
         
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
-    config_uuid, included_tables_uris_hash = store.write_static_asset_config(service_account, fields, included_assets_uris, excluded_assets_uris, template_uuid, refresh_mode, \
-                                                                    refresh_frequency, refresh_unit, tag_history_option, tag_stream_option)
+    config_uuid = store.write_static_asset_config(service_account, fields, included_assets_uris, excluded_assets_uris, \
+                                                  template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
+                                                  tag_history_option, tag_stream_option)
     
-    if isinstance(config_uuid, str):
-        job_uuid = jm.create_job(config_uuid, 'STATIC_ASSET_TAG')
-    
-    if job_uuid != None: 
-        job_creation = constants.SUCCESS
-    else:
-        job_creation = constants.ERROR
-            
-    # [END process_static_asset_config]
     # [START render_template]
     return render_template(
-        'submitted_static_asset_config.html',
+        'created_static_asset_config.html',
+        config_uuid=config_uuid,
+        config_type='STATIC_TAG_ASSET',
         template_id=template_id,
         template_project=template_project,
         template_region=template_region,
+        service_account=service_account,
         fields=fields,
         included_assets_uris=included_assets_uris,
         excluded_assets_uris=excluded_assets_uris,
         tag_history=tag_history_enabled,
-        tag_stream=tag_stream_enabled,
-        status=job_creation)
+        tag_stream=tag_stream_enabled)
     # [END render_template]
 
 
 @app.route('/process_dynamic_table_config', methods=['POST'])
 def process_dynamic_table_config():
+    
+    if 'credentials' not in session:
+        return redirect('/')
+        
     template_id = request.form['template_id']
     template_project = request.form['template_project']
     template_region = request.form['template_region']
+    service_account = request.form['service_account']
     included_tables_uris = request.form['included_tables_uris'].rstrip()
     excluded_tables_uris = request.form['excluded_tables_uris'].rstrip()
     refresh_mode = request.form['refresh_mode']
     refresh_frequency = request.form['refresh_frequency']
     refresh_unit = request.form['refresh_unit']
     action = request.form['action']
-    
-    #print('included_tables_uris: ' + included_tables_uris)
-    #print('excluded_tables_uris: ' + excluded_tables_uris)
-    #print('refresh_mode: ' + refresh_mode)
-    #print('refresh_frequency: ' + refresh_frequency)
-    #print('refresh_unit: ' + refresh_unit)
     
     dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     template = dcc.get_template()
@@ -896,6 +1302,7 @@ def process_dynamic_table_config():
             template_id=template_id,
             template_project=template_project,
             template_region=template_region, 
+            service_account=service_account, 
             fields=template)
 
     fields = []
@@ -949,33 +1356,25 @@ def process_dynamic_table_config():
     config_uuid = store.write_dynamic_table_config(service_account, fields, included_tables_uris, excluded_tables_uris, \
                                                    template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
                                                    tag_history_option, tag_stream_option)
-    if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(config_uuid, 'DYNAMIC_TAG_TABLE')
-    else:
-        job_uuid = None
-    
-    if job_uuid != None: 
-        job_creation = constants.SUCCESS
-    else:
-        job_creation = constants.ERROR
      
     # [END process_dynamic_table_config]
     # [START render_template]
     return render_template(
-        'submitted_dynamic_table_config.html',
+        'created_dynamic_table_config.html',
+        config_uuid=config_uuid,
+        config_type='DYNAMIC_TAG_TABLE',
         template_id=template_id,
         template_project=template_project,
         template_region=template_region,
+        service_account=service_account,
         fields=fields,
         included_tables_uris=included_tables_uris,
-        included_tables_uris_hash=included_tables_uris_hash,
         excluded_tables_uris=excluded_tables_uris,
         refresh_mode=refresh_mode,
         refresh_frequency=refresh_frequency,
         refresh_unit=refresh_unit,
         tag_history=tag_history_enabled,
-        tag_stream=tag_stream_enabled,
-        status=job_creation)
+        tag_stream=tag_stream_enabled)
     # [END render_template]
 
 
@@ -984,11 +1383,10 @@ def process_dynamic_column_config():
     template_id = request.form['template_id']
     template_project = request.form['template_project']
     template_region = request.form['template_region']
-    
+    service_account = request.form['service_account']
     included_columns_query = request.form['included_columns_query']
     included_tables_uris = request.form['included_tables_uris'].rstrip()
     excluded_tables_uris = request.form['excluded_tables_uris'].rstrip()
-    
     refresh_mode = request.form['refresh_mode']
     refresh_frequency = request.form['refresh_frequency']
     refresh_unit = request.form['refresh_unit']
@@ -1004,6 +1402,7 @@ def process_dynamic_column_config():
             template_id=template_id,
             template_project=template_project,
             template_region=template_region, 
+            service_account=service_account, 
             fields=template)
     
     fields = []
@@ -1058,41 +1457,35 @@ def process_dynamic_column_config():
                                                     included_tables_uris, excluded_tables_uris, template_uuid,\
                                                     refresh_mode, refresh_frequency, refresh_unit, \
                                                     tag_history_option, tag_stream_option)
-    if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(config_uuid, 'DYNAMIC_TAG_COLUMN')
-    else:
-        job_uuid = None
-    
-    if job_uuid != None: 
-        job_creation = constants.SUCCESS
-    else:
-        job_creation = constants.ERROR
      
     # [END process_dynamic_column_config]
     # [START render_template]
     return render_template(
-        'submitted_dynamic_column_config.html',
+        'created_dynamic_column_config.html',
+        config_uuid=config_uuid,
+        config_type='DYNAMIC_TAG_COLUMN',
         template_id=template_id,
         template_project=template_project,
         template_region=template_region,
+        service_account=service_account,
         fields=fields,
         included_columns_query=included_columns_query,
         included_tables_uris=included_tables_uris,
-        included_tables_uris_hash=included_tables_uris_hash,
         excluded_tables_uris=excluded_tables_uris,
         refresh_mode=refresh_mode,
         refresh_frequency=refresh_frequency,
         refresh_unit=refresh_unit,
         tag_history=tag_history_enabled,
-        tag_stream=tag_stream_enabled,
-        status=job_creation)
+        tag_stream=tag_stream_enabled)
     # [END render_template]
+
 
 @app.route('/process_entry_config', methods=['POST'])
 def process_entry_config():
     template_id = request.form['template_id']
     template_project = request.form['template_project']
     template_region = request.form['template_region']
+    service_account = request.form['service_account']
     included_assets_uris = request.form['included_assets_uris'].rstrip()
     excluded_assets_uris = request.form['excluded_assets_uris'].rstrip()
     refresh_mode = request.form['refresh_mode']
@@ -1115,7 +1508,8 @@ def process_entry_config():
             'tag_template.html',
             template_id=template_id,
             template_project=template_project,
-            template_region=template_region, 
+            template_region=template_region,
+            service_account=service_account,  
             fields=template)
 
     fields = []
@@ -1167,33 +1561,25 @@ def process_entry_config():
     config_uuid = store.write_entry_config(service_account, fields, included_assets_uris, excluded_assets_uris, template_uuid,\
                                             refresh_mode, refresh_frequency, refresh_unit, \
                                             tag_history_option, tag_stream_option)
-    if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(config_uuid, 'ENTRY')
-    else:
-        job_uuid = None
-    
-    if job_uuid != None: 
-        job_creation = constants.SUCCESS
-    else:
-        job_creation = constants.ERROR
      
     # [END process_entry_config]
     # [START render_template]
     return render_template(
-        'submitted_entry_config.html',
+        'created_entry_config.html',
+        config_uuid=config_uuid,
+        config_type='ENTRY_CREATE',
         template_id=template_id,
         template_project=template_project,
         template_region=template_region,
+        service_account=service_account,
         fields=fields,
         included_assets_uris=included_assets_uris,
-        included_assets_uris_hash=included_assets_uris_hash,
         excluded_assets_uris=excluded_assets_uris,
         refresh_mode=refresh_mode,
         refresh_frequency=refresh_frequency,
         refresh_unit=refresh_unit,
         tag_history=tag_history_enabled,
-        tag_stream=tag_stream_enabled,
-        status=job_creation)
+        tag_stream=tag_stream_enabled)
     # [END render_template]
 
 
@@ -1202,6 +1588,7 @@ def process_glossary_asset_config():
     template_id = request.form['template_id']
     template_project = request.form['template_project']
     template_region = request.form['template_region']
+    service_account = request.form['service_account']
     mapping_table = request.form['mapping_table'].rstrip()
     included_assets_uris = request.form['included_assets_uris'].rstrip()
     excluded_assets_uris = request.form['excluded_assets_uris'].rstrip()
@@ -1210,12 +1597,6 @@ def process_glossary_asset_config():
     refresh_unit = request.form['refresh_unit']
     overwrite = True # set to true as we are creating a new glossary asset config
     action = request.form['action']
-    
-    #print('included_assets_uris: ' + included_assets_uris)
-    #print('excluded_assets_uris: ' + excluded_assets_uris)
-    #print('refresh_mode: ' + refresh_mode)
-    #print('refresh_frequency: ' + refresh_frequency)
-    #print('refresh_unit: ' + refresh_unit)
     
     dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     template = dcc.get_template()
@@ -1227,6 +1608,7 @@ def process_glossary_asset_config():
             template_id=template_id,
             template_project=template_project,
             template_region=template_region, 
+            service_account=service_account, 
             fields=template)
 
     fields = []
@@ -1280,34 +1662,26 @@ def process_glossary_asset_config():
                                                     excluded_assets_uris, template_uuid,\
                                                     refresh_mode, refresh_frequency, refresh_unit, \
                                                     tag_history_option, tag_stream_option, overwrite)
-    if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(config_uuid, 'GLOSSARY_TAG_ASSET')
-    else:
-        job_uuid = None
-    
-    if job_uuid != None: 
-        job_creation = constants.SUCCESS
-    else:
-        job_creation = constants.ERROR
      
     # [END process_dynamic_tag]
     # [START render_template]
     return render_template(
-        'submitted_glossary_asset_config.html',
+        'created_glossary_asset_config.html',
+        config_uuid=config_uuid,
+        config_type='GLOSSARY_TAG_ASSET',
         template_id=template_id,
         template_project=template_project,
         template_region=template_region,
+        service_account=service_account,
         fields=fields,
         mapping_table=mapping_table,
         included_assets_uris=included_assets_uris,
-        included_assets_uris_hash=included_assets_uris_hash,
         excluded_assets_uris=excluded_assets_uris,
         refresh_mode=refresh_mode,
         refresh_frequency=refresh_frequency,
         refresh_unit=refresh_unit,
         tag_history=tag_history_enabled,
-        tag_stream=tag_stream_enabled,
-        status=job_creation)
+        tag_stream=tag_stream_enabled)
     # [END render_template]
 
 
@@ -1316,6 +1690,7 @@ def process_sensitive_column_config():
     template_id = request.form['template_id']
     template_project = request.form['template_project']
     template_region = request.form['template_region']
+    service_account = request.form['service_account']
     dlp_dataset = request.form['dlp_dataset'].rstrip()
     infotype_selection_table = request.form['infotype_selection_table'].rstrip()
     infotype_classification_table = request.form['infotype_classification_table'].rstrip()
@@ -1337,12 +1712,6 @@ def process_sensitive_column_config():
     overwrite = True # set to true as we are creating a new sensitive config
     action = request.form['action']
     
-    #print('included_tables_uris: ' + included_tables_uris)
-    #print('excluded_tables_uris: ' + excluded_tables_uris)
-    #print('refresh_mode: ' + refresh_mode)
-    #print('refresh_frequency: ' + refresh_frequency)
-    #print('refresh_unit: ' + refresh_unit)
-    
     dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     template = dcc.get_template()
     
@@ -1352,7 +1721,8 @@ def process_sensitive_column_config():
             'tag_template.html',
             template_id=template_id,
             template_project=template_project,
-            template_region=template_region, 
+            template_region=template_region,
+            service_account=service_account,  
             fields=template)
 
     fields = []
@@ -1407,29 +1777,22 @@ def process_sensitive_column_config():
                                                       create_policy_tags, taxonomy_id, template_uuid, \
                                                       refresh_mode, refresh_frequency, refresh_unit, \
                                                       tag_history_option, tag_stream_option, overwrite)
-    if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(config_uuid, 'SENSITIVE_TAG_COLUMN')
-    else:
-        job_uuid = None
-    
-    if job_uuid != None: 
-        job_creation = constants.SUCCESS
-    else:
-        job_creation = constants.ERROR
      
     # [END process_sensitive_column_config]
     # [START render_template]
     return render_template(
-        'submitted_sensitive_column_config.html',
+        'created_sensitive_column_config.html',
+        config_uuid=config_uuid,
+        config_type='SENSITIVE_TAG_COLUMN',
         template_id=template_id,
         template_project=template_project,
         template_region=template_region,
+        service_account=service_account,
         fields=fields,
         dlp_dataset=dlp_dataset,
         infotype_selection_table=infotype_selection_table,
         infotype_classification_table=infotype_classification_table,
         included_tables_uris=included_tables_uris,
-        included_tables_uris_hash=included_tables_uris_hash,
         excluded_tables_uris=excluded_tables_uris,
         policy_tags=policy_tags,
         taxonomy_id=taxonomy_id,
@@ -1437,8 +1800,7 @@ def process_sensitive_column_config():
         refresh_frequency=refresh_frequency,
         refresh_unit=refresh_unit,
         tag_history=tag_history_enabled,
-        tag_stream=tag_stream_enabled,
-        status=job_creation)
+        tag_stream=tag_stream_enabled)
     # [END render_template]
 
 
@@ -1448,6 +1810,7 @@ def process_restore_config():
     template_id = request.form['template_id']
     template_project = request.form['template_project']
     template_region = request.form['template_region']
+    service_account = request.form['service_account']
     action = request.form['action']
     
     dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
@@ -1460,6 +1823,7 @@ def process_restore_config():
             template_id=template_id,
             template_project=template_project,
             template_region=template_region, 
+            service_account=service_account, 
             fields=template)
             
     source_template_id = request.form['source_template_id']
@@ -1473,10 +1837,7 @@ def process_restore_config():
     metadata_export_location = request.form['metadata_export_location']
     
     action = request.form['action']
-    
-    dcu = dc.DataCatalogUtils(target_template_id, target_template_project, target_template_region)
-    template = dcc.get_template()
-        
+      
     tag_history_option = False
     tag_history_enabled = "OFF"
     
@@ -1502,36 +1863,27 @@ def process_restore_config():
     
     overwrite = True
     
-    config_uuid = store.write_restore_config(service_account, source_template_uuid, source_template_id, source_template_project, source_template_region, \
-                                           target_template_uuid, target_template_id, target_template_project, target_template_region, \
-                                           metadata_export_location, \
-                                           tag_history_option, tag_stream_option, overwrite)                                                      
+    config_uuid = store.write_tag_restore_config(service_account, source_template_uuid, source_template_id, source_template_project, \
+                                                 source_template_region, target_template_uuid, target_template_id, target_template_project, \
+                                                 target_template_region, metadata_export_location, tag_history_option, tag_stream_option, overwrite)                                                      
 
-    if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(config_uuid, 'RESTORE_TAG')
-    else:
-        job_uuid = None
-    
-        
-    if job_uuid != None: 
-        job_creation = constants.SUCCESS
-    else:
-        job_creation = constants.ERROR
-           
+
     # [END process_restore_config]
     # [START render_template]
     return render_template(
-        'submitted_restore_config.html',
+        'created_restore_config.html',
+        config_uuid=config_uuid,
+        config_type='RESTORE_TAG',
         source_template_id=source_template_id,
         source_template_project=source_template_project,
         source_template_region=source_template_region,
         target_template_id=target_template_id,
         target_template_project=target_template_project,
         target_template_region=target_template_region,
+        service_account = service_account,
         metadata_export_location=metadata_export_location,
         tag_history=tag_history_enabled,
-        tag_stream=tag_stream_enabled,
-        status=job_creation)
+        tag_stream=tag_stream_enabled)
     # [END render_template]
 
 
@@ -1541,7 +1893,7 @@ def process_import_config():
     template_id = request.form['template_id']
     template_project = request.form['template_project']
     template_region = request.form['template_region']
-
+    service_account = request.form['service_account']
     metadata_import_location = request.form['metadata_import_location']
     
     action = request.form['action']
@@ -1556,6 +1908,7 @@ def process_import_config():
             template_id=template_id,
             template_project=template_project,
             template_region=template_region, 
+            service_account=service_account, 
             fields=template)
         
     tag_history_option = False
@@ -1582,32 +1935,22 @@ def process_import_config():
   
     overwrite = True
     
-    config_uuid = store.write_import_config(service_account, template_uuid, template_id, template_project, template_region, \
-                                           metadata_import_location, \
-                                           tag_history_option, tag_stream_option, overwrite)                                                      
+    config_uuid = store.write_tag_import_config(service_account, template_uuid, template_id, template_project, template_region, \
+                                                metadata_import_location, tag_history_option, tag_stream_option, overwrite)                                                      
 
-    if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(config_uuid, 'IMPORT_TAG')
-    else:
-        job_uuid = None
-    
-        
-    if job_uuid != None: 
-        job_creation = constants.SUCCESS
-    else:
-        job_creation = constants.ERROR
-           
     # [END process_import_config]
     # [START render_template]
     return render_template(
-        'submitted_import_config.html',
+        'created_import_config.html',
+        config_uuid=config_uuid,
+        config_type='IMPORT_TAG',
         template_id=template_id,
         template_project=template_project,
         template_region=template_region,
+        service_account=service_account,
         metadata_import_location=metadata_import_location,
         tag_history=tag_history_enabled,
-        tag_stream=tag_stream_enabled,
-        status=job_creation)
+        tag_stream=tag_stream_enabled)
     # [END render_template]
 
 
@@ -1623,6 +1966,8 @@ def process_export_config():
     target_region = request.form['target_region']
     write_option = request.form['write_option']
     
+    service_account = request.form['service_account']
+    
     refresh_mode = request.form['refresh_mode']
     refresh_frequency = request.form['refresh_frequency']
     refresh_unit = request.form['refresh_unit']
@@ -1631,7 +1976,7 @@ def process_export_config():
         
     if action == "Cancel Changes":
         
-        return homepage()
+        return home()
             
     # put source projects into a list
     print('source_projects:', source_projects)
@@ -1641,36 +1986,27 @@ def process_export_config():
         project_list.append(project.strip())
     print('project_list:', project_list)
         
-    config_uuid = store.write_export_config(service_account, project_list, source_folder, source_region, \
-                                          target_project, target_dataset, target_region, write_option, \
-                                          refresh_mode, refresh_frequency, refresh_unit)                                                      
+    config_uuid = store.write_tag_export_config(service_account, project_list, source_folder, source_region, \
+                                                target_project, target_dataset, target_region, write_option, \
+                                                refresh_mode, refresh_frequency, refresh_unit)                                                      
 
-    if isinstance(config_uuid, str): 
-        job_uuid = jm.create_job(config_uuid, 'EXPORT_TAG')
-    else:
-        job_uuid = None
-    
-        
-    if job_uuid != None: 
-        job_creation = constants.SUCCESS
-    else:
-        job_creation = constants.ERROR
-           
     # [END process_export_config]
     # [START render_template]
     return render_template(
-        'submitted_export_config.html',
+        'created_export_config.html',
+        config_uuid=config_uuid,
+        config_type='EXPORT_TAG',
         source_projects=source_projects,
         source_folder=source_folder,
         source_region=source_region,
         target_project=target_project,
         target_dataset=target_dataset,
         target_region=target_region,
+        service_account=service_account,
         write_option=write_option,
         refresh_mode=refresh_mode,
         refresh_frequency=refresh_frequency,
-        refresh_unit=refresh_unit,
-        status=job_creation)
+        refresh_unit=refresh_unit)
     # [END render_template]
 
 
@@ -1728,31 +2064,35 @@ def check_template_parameters(request_name, json_request):
 
     return valid_parameters, template_id, template_project, template_region
 
-
+# used by API and UI whenever the TAG_CREATOR_SA credentials are needed 
 def get_target_credentials(target_service_account):
     
     print('*** enter get_target_credentials ***')
     
-    cloud_run_credentials, _ = google.auth.default() 
+    source_credentials, _ = google.auth.default() 
 
-    target_credentials = impersonated_credentials.Credentials(source_credentials=cloud_run_credentials,
+    target_credentials = impersonated_credentials.Credentials(source_credentials=source_credentials,
         target_principal=target_service_account,
-        target_scopes=OAUTH_SCOPE,
+        target_scopes=SCOPES,
         lifetime=1200) # lifetime is in seconds -> 20 minutes should be enough time
+    
+    #print('target_credentials:', target_credentials)
     
     return target_credentials
 
-# Param request contains the http headers, which includes an oauth token, not just an iam token. 
-# Needs to be created from client_id, client_secret, refresh_token, and token_uri
-# This must be generated from a key file
-def check_user_permissions(oauth_token, service_account):
-    
-    print('enter check_user_permissions')
+# Used by API and UI methods
+# API passes in an access_token while UI passes in the oauth credentials
+def check_user_credentials(access_token, credentials_dict, service_account):
     
     has_permission = False
     
-    user_credentials = google.oauth2.credentials.Credentials(token=oauth_token)                                                                                                  
-    service = discovery.build('iam', 'v1', credentials=user_credentials)
+    if access_token:
+        credentials = google.oauth2.credentials.Credentials(access_token)
+    
+    if credentials_dict:
+        credentials = dict_to_credentials(credentials_dict)
+                                                                                                            
+    service = discovery.build('iam', 'v1', credentials=credentials)
 
     # get the GCP project which owns the service account
     start_index = service_account.index('@') + 1 
@@ -1832,8 +2172,8 @@ def do_authentication(json, headers):
         }
         return False, response, service_account
         
-    has_permission  = check_user_permissions(oauth_token, service_account)   
-    print('has_permission:', has_permission)
+    has_permission  = check_user_credentials(oauth_token, None, service_account)   
+    print('user has permission:', has_permission)
     
     if has_permission == False:
         response = {
@@ -2676,7 +3016,7 @@ def copy_tags():
      }
          return jsonify(response), 400
 
-    dcu = dc.DataCatalogUtils(get_target_credentials(service_account))
+    dcc = controller.DataCatalogController(get_target_credentials(service_account))
     success = dcc.copy_tags(source_project, source_dataset, source_table, target_project, target_dataset, target_table)                                                      
     
     if success:
@@ -2725,7 +3065,7 @@ def update_tag_subset():
      }
          return jsonify(response), 400
 
-    dcu = dc.DataCatalogUtils(get_target_credentials(service_account))
+    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     success = dcc.update_tag_subset(template_id, template_project, template_region, entry_name, changed_fields)
 
     if success:
@@ -3384,7 +3724,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 2.0.1"
+    return "Welcome to Tag Engine version 2.1.0"
 #[END ping]
     
 ####################### TEST METHOD ####################################  
@@ -3403,5 +3743,8 @@ def server_error(e):
 
 
 if __name__ == "__main__":
-    #app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080))) # required for Cloud Run
-    app.run() # for running locally
+    #os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = "1" # uncomment only when running locally
+    os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = "1" # to allow for scope changes
+    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080))) # for running on Cloud Run
+    #app.run(debug=True, port=5000) # for running locally 
+    

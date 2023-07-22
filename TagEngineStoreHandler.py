@@ -31,12 +31,12 @@ class TagEngineStoreHandler:
         config = configparser.ConfigParser()
         config.read("tagengine.ini")
         
-    def read_default_tag_template_settings(self):
+    def read_default_settings(self, user_email):
         
         settings = {}
         exists = False
         
-        doc_ref = self.db.collection('settings').document('default_tag_template')
+        doc_ref = self.db.collection('settings').document(user_email)
         doc = doc_ref.get()
         
         if doc.exists:
@@ -46,17 +46,18 @@ class TagEngineStoreHandler:
         return exists, settings
         
     
-    def write_default_tag_template_settings(self, template_id, template_project, template_region):
+    def write_default_settings(self, user_email, template_id, template_project, template_region, service_account):
         
-        report_settings = self.db.collection('settings')
-        doc_ref = report_settings.document('default_tag_template')
+        settings = self.db.collection('settings')
+        doc_ref = settings.document(user_email)
         doc_ref.set({
             'template_id': template_id,
             'template_project':  template_project,
-            'template_region': template_region
+            'template_region': template_region,
+            'service_account': service_account
         })
         
-        print('Saved default tag template settings.')
+        print('Saved default settings.')
     
 
     def read_tag_history_settings(self):
@@ -1071,6 +1072,11 @@ class TagEngineStoreHandler:
         #print('colls: ', colls)
         
         for coll_name in colls:
+            
+            # skip the export configs because they are tied to a project, not template
+            if coll_name == 'export_configs':
+                continue
+            
             config_ref = self.db.collection(coll_name)
             
             if coll_name == 'restore_configs':
@@ -1115,6 +1121,19 @@ class TagEngineStoreHandler:
                 config_result = self.format_source_projects(config_result)
             
         return config_result
+        
+    
+    def read_jobs_by_config(self, config_uuid):
+        
+        job_results = []
+        
+        jobs_ref = self.db.collection('jobs')
+        jobs_stream = jobs_ref.where('config_uuid', '==', config_uuid).order_by('completion_time', direction=firestore.Query.DESCENDING).stream()
+
+        for job in jobs_stream:
+            job_results.append(job.to_dict())
+        
+        return job_results
         
     
     def delete_config(self, service_account, config_uuid, config_type):

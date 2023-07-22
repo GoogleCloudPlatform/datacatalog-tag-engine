@@ -24,7 +24,7 @@
 	   <br>Each export configuration is scoped to one storage region.  
 
    		</h5>
-   	<table> 
+   	<table>
    	<tr>
        <td>&nbsp;&nbsp;Source projects:&nbsp;</td>
 	   <td>
@@ -43,6 +43,10 @@
        	  <input type="text" name="source_region" style="width: 120px;padding: 3px;"/>			 
        </td>
        </tr>
+	    <tr>
+	      <td>&nbsp;<span style="color:red;">*</span>&nbsp;Service Account:</td>
+	      <td><input type="text" name="service_account" style="width: 350px;padding: 3px;"></td>
+	   </tr>
        </table>
 		<p>&nbsp;</p>
 		<h3>Target Dataset Details</h3>
@@ -82,7 +86,7 @@
 				
 	
 	        <p>&nbsp;</p>
-		   <h3>Update Options</h3>
+		   <h3>Scheduling Options</h3>
 	 	   
 	 		   <h5>If you choose the AUTO refresh mode, your export config will be scheduled to run based on your specified refresh frequency. <br>
 				   If you choose the ON-DEMAND refresh mode, your export config will <b>not</b> be scheduled (even if you specify a refresh frequency). <br>The AUTO mode is helpful for exporting your tags on a recurring schedule. <br><br>
@@ -109,7 +113,9 @@
 	         <p>&nbsp;</p>
 		        <table>
 		        <tr>
-			   <td><input type="submit" value="Submit Config" name="action">
+			   <td>
+				   <input type="hidden" name="service_account" value="{{ service_account }}">
+				   <input type="submit" value="Submit Config" name="action">
 			       <input type="submit" value="Cancel Changes" name="action">
 			   </td>
 		        </tr>

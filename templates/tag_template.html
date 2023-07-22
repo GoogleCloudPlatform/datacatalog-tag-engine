@@ -6,15 +6,17 @@
   </head>  
     <body>
 	   <div class="pagetitle">
-	   <h1>Tag Engine for Data Catalog</h1>
+	   <h1>Tag Template Details</h1>
         </div>
-	   <div class="header">
-	   <h3>&nbsp;{{ template_id }} tag template details</h3>
-	   </div>
+	   <span style="color:#0b5394;">&nbsp;Tag Template Id:</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {{ template_id }} <br>
+	   <span style="color:#0b5394;">&nbsp;Tag Template Project:</span>&nbsp;&nbsp; {{ template_project }} <br>
+	   <span style="color:#0b5394;">&nbsp;Tag Template Region:</span>&nbsp;&nbsp; {{ template_region }} <br>
+	   <span style="color:#0b5394;">&nbsp;Service Account:</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {{ service_account }} <br>
+	   
 	   <span style="color:#9d9a9a;">
 		   <h5>&nbsp;&nbsp;Mandatory tag template fields are marked by <span style="color:red;">*</span></h5>
-	   </span>
-         <form method="post" action="/display_configuration">
+	   </span>  
+		 <form method="post" action="/view_config_options">
 		    <table>
 			   {% for field in fields %}
 		        <tr>
@@ -41,35 +43,34 @@
 			    {% endfor %}
 			   </table>
 		    <p>&nbsp;</p>
-			   <h3>Choose a Tag Engine configuration type</h3>
+			   <h3>Choose an action to perform with the above tag template:</h3>
 			    <table>
 			     <tr>
-			    <td><input type="submit" value="Create Static Asset Tags" name="action"></td>
-			    <td><input type="submit" value="Create Dynamic Table Tags" name="action"></td>
-				<td><input type="submit" value="Create Dynamic Column Tags" name="action"></td>
+			       <td><input type="submit" value="View Existing Configs" name="action"></td>
+			       <td><input type="submit" value="Create Dynamic Table Tags" name="action"></td>
+				   <td><input type="submit" value="Create Dynamic Column Tags" name="action"></td>
+				   <td><input type="submit" value="Create Sensitive Column Tags" name="action"></td>
 				</tr>
 				<tr>
-			    <td><input type="submit" value="Create Sensitive Column Tags" name="action"></td>
-				<td><input type="submit" value="Create Glossary Asset Tags" name="action"></td>
-				<td><input type="submit" value="Create Data Catalog Entries" name="action"></td> 
+				   <td><input type="submit" value="Create Static Asset Tags" name="action"></td>
+				   <td><input type="submit" value="Create Glossary Asset Tags" name="action"></td>
+				   <td><input type="submit" value="Create Data Catalog Entries" name="action"></td> 
 				</tr>
 				<tr>
-				<td><input type="submit" value="Import Tags" name="action"></td>
-				<td><input type="submit" value="Restore Tags" name="action"></td>		
+				   <td><input type="submit" value="Import Tags" name="action"></td>
+				   <td><input type="submit" value="Restore Tags" name="action"></td>
 				</tr>
-			    <tr>
 				</table>
-				<p>&nbsp;</p>
-				<h3>Have an existing Tag Engine configuration for {{ template_id }}?</h3>
-				<table>
-				<td><input type="submit" value="View and Edit Configurations" name="action"></td>
-		         </tr>
-		        </table>
-			   <p>&nbsp;</p>
-			   <p>&nbsp;<a href="/">Switch tag templates / Homepage</a></p>
+				<h3>Alternatively:</h3>
+ 				<table>
+				<tr>
+ 				   <td><input type="submit" value="Switch Template / Return Home" name="action"></td>			
+ 				</tr>
+			    </table>
 			   <input type="hidden" name="template_id" value="{{ template_id }}">
 			   <input type="hidden" name="template_project" value="{{ template_project }}">
 			   <input type="hidden" name="template_region" value="{{ template_region }}">
+			   <input type="hidden" name="service_account" value="{{ service_account }}">
 			   <input type="hidden" name="fields" value="{{ fields }}">
          </form>
     </body>

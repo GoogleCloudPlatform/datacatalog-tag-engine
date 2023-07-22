@@ -119,6 +119,12 @@ indexes:
       - field: included_assets_uris_hash
       - field: template_uuid
       - field: config_status
+  - collection: entry_configs
+    fields:
+      - field: config_type
+      - field: included_assets_uris_hash
+      - field: template_uuid
+      - field: config_status
   - collection: dynamic_column_configs
     fields:
       - field: template_uuid
@@ -149,6 +155,7 @@ indexes:
       - field: config_status
   - collection: restore_configs
     fields:
+      - field: source_template_uuid
       - field: target_template_uuid
       - field: config_status
   - collection: export_configs
@@ -163,3 +170,7 @@ indexes:
       - field: metadata_import_location
       - field: template_uuid
       - field: config_status
+  - collection: jobs
+    fields:
+      - field: config_uuid
+      - field: completion_time

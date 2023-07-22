@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+  <head>
+    <title>Tag Engine</title>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+  </head>
+  <div class="pagetitle">
+  <h1>Job History</h1> 
+  </div>
+    <body>
+	<div id="main">
+	   <h3>The following jobs are all attached to the same config: <br>config id: {{ config_uuid }}, config_type: {{ config_type }}.</h3>
+	  <table>
+		   <tr>
+		     <th style="text-align:left">Job Id</th>
+		     <th style="text-align:left">&nbsp;&nbsp;&nbsp;Job Status</th>
+			 <th style="text-align:left">&nbsp;&nbsp;&nbsp;Creation Time</th>
+			 <th style="text-align:left">&nbsp;&nbsp;&nbsp;Completion Time</th>
+			 <th style="text-align:left">&nbsp;&nbsp;&nbsp;Task Count</th>
+	       </tr>			   
+		 {% for job in jobs: %}
+			<tr>
+			  <td style="text-align:left">{{ job.job_uuid }}</td>
+			  <td style="text-align:left">&nbsp;&nbsp;&nbsp;
+				  {% if job.job_status == 'SUCCESS': %}
+				  	<span style="color:green;">
+				  {% elif job.job_status == 'FAILURE': %}
+					<span style="color:red;"> 
+				  {% else: %}
+				     <span style="color:black;"> 
+				  {% endif %} 
+				  {{ job.job_status }}
+			  	     </span>
+			  </td>
+			  
+			  <td style="text-align:left">&nbsp;&nbsp;&nbsp;{{ job.creation_time.isoformat()[0:19] }}</td>
+			  <td style="text-align:left">&nbsp;&nbsp;&nbsp;{{ job.completion_time.isoformat()[0:19] }}</td>
+			  <td style="text-align:left">&nbsp;&nbsp;&nbsp;{{ job.task_count }}</td>
+			</tr>
+		   <tr><td>&nbsp;</td></tr>
+		{% endfor %}
+		</table>
+        <p>&nbsp;&nbsp;</p>
+		<form method="post" action="/choose_job_history_action">
+		&nbsp;<input type="submit" value="Trigger Job" name="action">
+		&nbsp;<input type="submit" value="View Existing Configs" name="action">
+		&nbsp;<input type="submit" value="Return Home" name="action">
+		
+	    <input type="hidden" name="config_uuid" value="{{ config_uuid }}">
+	    <input type="hidden" name="config_type" value="{{ config_type }}">
+	    <input type="hidden" name="template_id" value="{{ template_id }}">
+	    <input type="hidden" name="template_project" value="{{ template_project }}">
+	    <input type="hidden" name="template_region" value="{{ template_region }}">
+	    <input type="hidden" name="service_account" value="{{ service_account }}">
+		
+	    </form>
+	   </div>
+	 </body>
+</html>

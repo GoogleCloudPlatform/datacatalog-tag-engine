@@ -1,0 +1,71 @@
+<html>
+ <head>
+   <title>Export Config Created</title>
+   <link rel="stylesheet" type="text/css" href="/static/style.css">
+ </head>
+ <body>
+      {% if status == -1 %}
+      <table><tr><td>
+      &nbsp;<span style="color:red;">Errors occurred while processing your submission. Please check Firestore for details. </span>
+        </td></tr></table><p>
+      {% endif %}
+	 
+   <div class="pagetitle">
+   <h1>Config Created</h1>
+    </div>
+       <div id="main">
+          <h5>&nbsp;Your export configuration has been created with these settings:</h5>
+	   
+           <span style="color:#0b5394;">Config Id:</span> {{ config_uuid }} <br>
+ 		   <span style="color:#0b5394;">Config Type:</span> {{ config_type }} <br><br>
+		  
+ 		   <span style="color:#0b5394;">Service Account:</span> {{ service_account }} <br>
+       <p>
+          {% if source_projects %}
+		  	<span style="color:#0b5394;">Source Projects:</span> {{ source_projects }} <br>
+          {% else %}
+		    <span style="color:#0b5394;">Source Projects:</span> N/A <br>
+		  {% endif %}
+		  	
+		  {% if source_folder %}
+		  	<span style="color:#0b5394;">Source Folder:</span> {{ source_folder }} <br>
+          {% else %}
+		  	<span style="color:#0b5394;">Source Folder:</span> N/A <br>
+		  {% endif %}
+		  
+		  <span style="color:#0b5394;">Source Region:</span> {{ source_region }} <br>
+   		<p></p>
+         <span style="color:#0b5394;">Target Project:</span> {{ target_project }} <br>
+         <span style="color:#0b5394;">Target Dataset:</span> {{ target_dataset }} <br>
+		 <span style="color:#0b5394;">Target Region:</span> {{ target_region }} <br><br>
+		 
+		 <span style="color:#0b5394;">Write Option</span>: {{ write_option }}<br>
+   	    <p></p>
+		<span style="color:#0b5394;">Refresh Mode</span>: {{ refresh_mode }} <br>
+		<span style="color:#0b5394;">Refresh Frequency</span>: {{ refresh_frequency }} {{ refresh_unit }}<br> 
+	  </p></p>
+	  <p>
+
+	  <h5>&nbsp;Click on Trigger Job to run this configuration.<br>
+	  &nbsp;Click on View Configs to see and edit all your configurations in Tag Engine.<br>
+	  &nbsp;Click on Return Home to go back to the initial landing page.<br>
+      </h5> 
+	  <form method="post" action="/process_created_config_action">	   	  
+       <table>
+       <tr>
+   		<td><input type="submit" value="Trigger Job" name="action">
+       	 	<input type="submit" value="View Existing Configs" name="action">
+			<input type="submit" value="Return Home" name="action">
+			
+		   <input type="hidden" name="config_uuid" value="{{ config_uuid }}">
+		   <input type="hidden" name="config_type" value="{{ config_type }}">
+		   <input type="hidden" name="service_account" value="{{ service_account }}">
+   		</td>
+       </tr>
+       </table>	
+	  </p>
+     </div>
+   </div>
+ </body>
+</html>		
+	  

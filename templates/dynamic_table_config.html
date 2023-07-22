@@ -6,37 +6,23 @@
   </head>  
     <body>
 	   <div class="pagetitle">
-	   <h1>Tag Engine for Data Catalog</h1>
-        </div>
-	   <div class="header">
-	   <h2>Create a Dynamic Table Config using {{ template_id }}</h2>
-	   </div>
-	   <h5>
-		   A dynamic table config is used to populate Data Catalog tags from BigQuery queries. <br>
-		   The tags generated from this config must be attached to data assets that are tables or views in BigQuery.
-		</h5> 
-	   <h3>Template Field Values</h3>
+	   <h1>Create Config</h1>
+       </div>
+  	  <table>
+  		  <tr><td>&nbsp;<span style="color:#0b5394;">Template Id:</span> {{ template_id }}</td></tr>
+ 		  <tr><td>&nbsp;<span style="color:#0b5394;">Template Project:</span> {{ template_project }}</td></tr>
+ 		  <tr><td>&nbsp;<span style="color:#0b5394;">Template Region:</span> {{ template_region }}</td></tr>
+ 		  <tr><td>&nbsp;<span style="color:#0b5394;">Service Account:</span> {{ service_account }}</td></tr>
+ 		  <tr><td>&nbsp;<span style="color:#0b5394;">Config Type:</span> DYNAMIC_TAG_TABLE</td></tr>
+  	  </table>
+
+	   <h3>Tag Template Fields</h3>
  	   
  		   <h5 style="width: 800px;">To include a field in your tag, click on the checkbox next to the field and enter a query expression in the text box. <br>
  			   <br>
- 			   The query expression must be a <i>valid</i> select statement in BigQuery. It may contain filter, aggregate functions, joins, groupings, subqueries, etc. as long as it's a valid select statement.<br>
- 			   <br>
- 			   The query expression may reference these variables:<br>
- 			   - <b>$table</b> refers to the BQ table (or view) being tagged<br>
- 			   - <b>$dataset</b> refers to the BQ dataset of the table (or view) being tagged<br>
- 			   - <b>$project</b> refers to the BQ project of the table (or view) being tagged<br>
- 			   <br>
- 			   Here are some examples: <br>
- 			   &nbsp;select count(*) from $table;<br>
- 			   &nbsp;select count(distinct(account_id)) from $table;<br>
- 			   &nbsp;select count(*) > 1 from $table where account_id is null;<br>
- 			   &nbsp;select rating from dw-project.quality.scores where table = '$table' and dataset = '$dataset' and project = '$project';<br>
- 			   &nbsp;select '30-DAYS';<br>
- 			    <br>
- 			   Note: The result of the query expression must satisfy the type requirements of the field in the tag template. <br>
- 			   For example, if the tag template field is of type string, the query expression must return a string type.
-			   
- 		    <br><br>Mandatory tag template fields are marked by <span style="color:red;">*</span> and are already checked for you.
+ 			   The query expression must be a <i>valid</i> select statement in BigQuery. It may contain filter, aggregate functions, joins, groupings, subqueries, etc. as long as it's a valid select statement. Please consult the documentation for example queries.<br>
+ 			   
+ 		    <br><br>Mandatory fields are marked by <span style="color:red;">*</span>.
  		    </h5>
          <form method="post" action="/process_dynamic_table_config">
 		    <table>
@@ -96,7 +82,7 @@
 
 			     <table>
 				<tr>	
-			    <td><span style="color:red;">*</span> Refresh mode:&nbsp;<select name="refresh_mode" style="width: 100px;padding: 3px;">
+			    <td><span style="color:red;">*</span> Refresh Mode:&nbsp;<select name="refresh_mode" style="width: 100px;padding: 3px;">
   				  				<option value="AUTO" selected>AUTO</option>
   							   	<option value="ON-DEMAND">ON-DEMAND</option>
 							  </select>
@@ -104,7 +90,7 @@
 		         </tr>
 			     <tr><td>&nbsp;</td></tr>
 				<tr>	
-			    <td><span style="color:red;">*</span> Refresh frequency:&nbsp;<input type="text" value="24" name="refresh_frequency" style="width: 30px;padding: 3px;">&nbsp;
+			    <td>Refresh Frequency:&nbsp;<input type="text" value="24" name="refresh_frequency" style="width: 30px;padding: 3px;">&nbsp;
 				    			  <select name="refresh_unit" style="width: 70px;padding: 3px;">
 								<option value="minutes">minutes</option>
   				  				<option value="hours" selected>hours</option>
@@ -133,7 +119,7 @@
 	         <p>&nbsp;</p>
 		        <table>
 		        <tr>
-			   <td><input type="submit" value="Submit Tag Config" name="action">
+			   <td><input type="submit" value="Create Config" name="action">
 			       <input type="submit" value="Cancel Changes" name="action">
 			   </td>
 		        </tr>
@@ -141,6 +127,7 @@
 			   <input type="hidden" name ="template_id" value="{{ template_id }}">
 			   <input type="hidden" name ="template_project" value="{{ template_project }}">
 			   <input type="hidden" name ="template_region" value="{{ template_region }}">
+			   <input type="hidden" name ="service_account" value="{{ service_account }}">
 
 			   {% for dict_field in fields %}
 			   	<input type="hidden" name="{{ dict_field['field_id'] }}_datatype" value="{{ dict_field['field_type'] }}">

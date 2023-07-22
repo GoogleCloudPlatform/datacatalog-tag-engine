@@ -9,31 +9,26 @@
 	   <h1>Tag Engine</h1>
         </div>
 	   <div class="header">
-	   <h2>Update Dynamic Column Config using {{ template_id }}</h2>
+	   <h2>Update Config</h2>
  	   
- 		   <h5>Make changes to your dynamic column config below. A checked box indicates the field is part of this tag config. You can add new fields and/or remove existing ones from the tag config. <br>You can also edit the query expression, the included columns query, the included or excluded tables URIs, the refresh frequency, and the tag history and tag stream if you've enabled those options. </h5>
+		   <h5>Make changes to your config below. A checked box indicates a tag template field is part of the config. You can add new fields and/or remove existing ones from the tag config. <br>You can also edit a field's value, update included and excluded URIs, as well as the scheduling options.  <br><br>  
+		   Mandatory fields are marked below by <span style="color:red;">*</span>.
+		   </h5>
 
 	   </div>
+	   
+  	  <table>
+  		  <tr><td>&nbsp;<span style="color:#0b5394;">Config Id:</span> {{ config['config_uuid'] }}</td></tr> 
+  		  <tr><td>&nbsp;<span style="color:#0b5394;">Config Status:</span> {{ config['config_status'] }}</td></tr> 
+  		  <tr><td>&nbsp;<span style="color:#0b5394;">Config Type:</span> {{ config['config_type'] }}</td></tr>
+  	  </table>
 	  
-	   <h3>Template Field Values</h3>
+	   <h3>Tag Template Fields</h3>
 
- 		   <h5>
+ 	   <h5>
 		   The query expression must be a <i>valid</i> select statement in BQ. It can contain aggregate functions, joins, filters, groupings, etc. <br>
 	   <br>
-	   In addition, the query expression can contain the following variables:<br>
-	   - <b>$table</b> refers to the table (or view) being tagged<br>
-	   - <b>$column</b> refers to the column being tagged<br>
-	   - <b>$dataset</b> refers to the dataset of the table (or view) being tagged<br>
-	   - <b>$project</b> refers to the project of the table (or view) being tagged<br>
-	   <br>
-	   Here are some examples: <br>
-	   select count(*) from $table<br>
-	   select count(distinct($column)) from $table <br>
-	   select count(*) > 1 from $table where $column is null<br>
-	    <br>
-		Note: The result of the query expression must satisfy the type requirements of the field in the tag template. <br>
-		For example, if the tag template field is of type string, the query expression must return a string type.<br><br>
-			   
+	  		   
 	 	Mandatory tag template fields are marked by <span style="color:red;">*</span>. 
 	 	</h5>
 
@@ -135,7 +130,7 @@
 				</span>
 			     <table>
  				<tr>	
- 			    <td>Refresh mode:&nbsp;<select name="refresh_mode">
+ 			    <td><span style="color:red;">*</span>Refresh mode:&nbsp;<select name="refresh_mode">
 				    			{% if config['refresh_mode'] == 'AUTO' %}
    				  				<option value="AUTO" selected>AUTO</option>
    							   	<option value="ON-DEMAND">ON-DEMAND</option>
@@ -197,11 +192,12 @@
 	         <p>&nbsp;</p>
 		        <table>
 		        <tr>
-			   <td><input type="submit" value="Submit Changes" name="action">&nbsp;<input type="submit" value="Cancel Changes" name="action"></td>
+			   <td><input type="submit" value="Save Changes" name="action">&nbsp;<input type="submit" value="Cancel Changes" name="action"></td>
 			   </table>
 			   <input type="hidden" name="template_id" value="{{ template_id }}">
 			   <input type="hidden" name="template_project" value="{{ template_project }}">
 			   <input type="hidden" name="template_region" value="{{ template_region }}">
+			   <input type="hidden" name="service_account" value="{{ service_account }}">
 			   <input type="hidden" name="config_uuid" value="{{ config['config_uuid'] }}">
 			   
 			   {% for field in fields %}

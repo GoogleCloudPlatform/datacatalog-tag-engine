@@ -6,22 +6,20 @@
   </head>  
     <body>
 	   <div class="pagetitle">
-	   <h1>Tag Engine</h1>
+	   <h1>Update Config</h1>
         </div>
-	   <div class="header">
-	   <h2>Update Static Assets Config using {{ template_id }}</h2>
-	   <span style="color:#9d9a9a;">
-		   <h5>Make changes to your static assets config below. A checked box indicates the field is part of this tag config. You can add new fields and/or remove existing ones from the tag config. <br>You can also edit a field's value, the included URIs, excluded URIs, and tag history.  <br><br>   
+
+		   <h5>Make changes to your config below. A checked box indicates a tag template field is part of the config. You can add new fields and/or remove existing ones from the tag config. <br>You can also edit a field's value, update included and excluded URIs, as well as the scheduling options.  <br><br>  
+		   Mandatory fields are marked below by <span style="color:red;">*</span>.
 		   </h5>
-	  </span>
-	   </div>
-	   <h3>Template Field Values</h3>
-	   
-	   <span style="color:#9d9a9a;">
-		   <h5>
-	 	Mandatory tag template fields are marked by <span style="color:red;">*</span>. 
-	 	</h5>
-	   </span>
+
+	  <table>
+		  <tr><td>&nbsp;<span style="color:#0b5394;">Config Id:</span> {{ config['config_uuid'] }}</td></tr> 
+		  <tr><td>&nbsp;<span style="color:#0b5394;">Config Status:</span> {{ config['config_status'] }}</td></tr> 
+		  <tr><td>&nbsp;<span style="color:#0b5394;">Config Type:</span> {{ config['config_type'] }}</td></tr>
+	  </table>
+	  <p>&nbsp;</p>
+	   <h3>Tag Template Fields</h3>
          <form method="post" action="/process_static_asset_config">
 		    <table>
 			   {% for field in fields %}
@@ -180,15 +178,16 @@
 		         </table>
 				 
     		        <p>&nbsp;</p>
-    			   <h3>Update Options</h3>
-    		 	   <span style="color:#9d9a9a;">
-    		 		   <h5>If you choose the AUTO refresh mode, your static config will be scheduled for updates based on your specified refresh frequency. <br>
+    			   <h3>Scheduling Options</h3>
+    		 	   <span>
+    		 		   <h5>If you choose the AUTO refresh mode, your config will be scheduled for updates based on your specified refresh frequency. <br>
     					   If you choose the ON-DEMAND refresh mode, your static config will <b>not</b> be scheduled for updates (even if you specify a refresh frequency). <br>The AUTO mode is helpful for tagging new tables in BQ or files on GCS on a recurring schedule. It will not re-tag existing tables or files. <br><br>
     				   </h5>
     				</span>
  			     <table>
   				<tr>	
-  			    <td>Refresh mode:&nbsp;<select name="refresh_mode">
+  			    <td><span style="color:red;">*</span>Refresh mode:&nbsp;
+					        <select name="refresh_mode" style="width: 100px;">
  				    			{% if config['refresh_mode'] == 'AUTO' %}
     				  				<option value="AUTO" selected>AUTO</option>
     							   	<option value="ON-DEMAND">ON-DEMAND</option>
@@ -253,12 +252,13 @@
 	         <p>&nbsp;</p>
 		        <table>
 		        <tr>
-			   <td><input type="submit" value="Submit Changes" name="action">&nbsp;<input type="submit" value="Cancel Changes" name="action"></td>
+			   <td><input type="submit" value="Save Changes" name="action">&nbsp;<input type="submit" value="Cancel Changes" name="action"></td>
 		        </tr>
 			   </table>
 			   <input type="hidden" name="template_id" value="{{ template_id }}">
 			   <input type="hidden" name="template_project" value="{{ template_project }}">
 			   <input type="hidden" name="template_region" value="{{ template_region }}">
+			   <input type="hidden" name="service_account" value="{{ service_account }}">
 			   <input type="hidden" name="config_uuid" value="{{ config['config_uuid'] }}">
 			   
 			   {% for field in fields %}
