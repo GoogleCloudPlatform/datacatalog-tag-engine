@@ -172,8 +172,8 @@ def get_log_entries(service_account):
         if entry.payload == None:
             continue
             
-        if len(entry.payload) > 100:
-            payload = entry.payload[0:100]
+        if len(entry.payload) > 120:
+            payload = entry.payload[0:120]
         else:
             payload = entry.payload
     

@@ -285,10 +285,14 @@
 		    {% endif %}
 		    
 		    {% if 'refresh_frequency' in config %}
-		    <tr>
-		    <td>&nbsp;<span style="color:#0b5394;">Refresh Frequency:</span>
-			    &nbsp;{{ config['refresh_frequency'] }}&nbsp;{{ config['refresh_unit'] }}</td>
-	         </tr>
+			  <tr>
+		       {% if refresh_mode == 'ON-DEMAND' %}
+	              <td>&nbsp;<span style="color:#0b5394;">Refresh Frequency:</span>&nbsp;N/A</td>
+			   {% else %}
+		           <td>&nbsp;<span style="color:#0b5394;">Refresh Frequency:</span>
+			         &nbsp;{{ config['refresh_frequency'] }}&nbsp;{{ config['refresh_unit'] }}</td>
+				{% endif %}
+				</tr>
 			 <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
 		    {% endif %} 
 
