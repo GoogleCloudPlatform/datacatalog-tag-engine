@@ -7,11 +7,11 @@ If you are new to Tag Engine, you may want to walk through [this tutorial](https
 
 This README is organized into four parts:  <br>
 - Part 1: [Deployment Procedure](#setup) <br>
-- Part 2: [Test Procedure with User Account](#testa)  <br>
-- Part 3: [Test Procedure with Service Account](#testb)  <br>
+- Part 2: [Testing your Tag Engine Setup with a User Account](#testa)  <br>
+- Part 3: [Testing your Tag Engine Setup with a Service Account](#testb)  <br>
 - Part 4: [Next Steps](#next)  <br> 
 
-### <a name="setup"></a> Deployment Procedure
+### <a name="setup"></a> Part 1: Deployment Procedure
 
 This procedure covers both the API and UI setups for Tag Engine v2. It has 13 required steps and 1 optional step. <br>
 
@@ -80,7 +80,7 @@ gcloud services enable datacatalog.googleapis.com
 gcloud services enable artifactregistry.googleapis.com
 gcloud services enable cloudbuild.googleapis.com
 ```
-<br><br> 
+<br> 
 
 6. Create two task queues, the first one is used to queue the tag request, the second is used to queue the individual work items:
 
@@ -91,8 +91,7 @@ gcloud tasks queues create tag-engine-injector-queue \
 gcloud tasks queues create tag-engine-work-queue \
 	--location=$TAG_ENGINE_REGION --max-attempts=1 --max-concurrent-dispatches=100
 ```
-<br><br> 
-
+<br>
 
 7. Create two custom IAM roles which are required by `SENSITIVE_COLUMN_CONFIG`, a configuration type that creates policy tags on sensitive columns:
 
@@ -110,8 +109,7 @@ gcloud iam roles create PolicyTagReader \
 	--description "Read Policy Tag Taxonomy" \
 	--permissions datacatalog.taxonomies.get,datacatalog.taxonomies.list
 ```
-<br><br> 
-
+<br> 
 	
 8. Grant the required IAM roles and policy bindings for the accounts `CLOUD_RUN_SA` and `TAG_CREATOR_SA`:
 
@@ -200,7 +198,7 @@ gcloud storage buckets add-iam-policy-binding gs://<BUCKET> \
 	--member=serviceAccount:$TAG_CREATOR_SA' \
 	--role=roles/storage.legacyBucketReader
 ```
-<br><br> 
+<br> 
 
 	
 9. Create the Firestore database, which is used to store the tag configurations: 
@@ -213,7 +211,7 @@ gcloud components install alpha.
 gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location=$TAG_ENGINE_REGION
 ```
 
-Note that Firestore is not available in every region. Consult [this list](https://cloud.google.com/firestore/docs/locations) to see where it's available and choose the nearest region to $TAG_ENGINE_REGION. It's perfectly fine for the Firestore region to be different from the `TAG_ENGINE_REGION`. <br><br> 
+Note that Firestore is not available in every region. Consult [this list](https://cloud.google.com/firestore/docs/locations) to see where it's available and choose the nearest region to `TAG_ENGINE_REGION`. It's perfectly fine for the Firestore region to be different from the `TAG_ENGINE_REGION`. <br><br> 
 	
 	
 10. Firestore requires several composite indexes to service read requests. Create those indexes:
@@ -257,7 +255,7 @@ gcloud beta run deploy tag-engine \
 	--vpc-connector=projects/$TAG_ENGINE_PROJECT/locations/$TAG_ENGINE_REGION/connectors/$VPC_CONNECTOR \
 	--vpc-egress=private-ranges-only
 ```
-<br><br> 
+<br> 
 
 
 12. Set Cloud Run environment variable:
@@ -266,7 +264,7 @@ gcloud beta run deploy tag-engine \
 export SERVICE_URL=`gcloud run services describe tag-engine --format="value(status.url)"`
 gcloud run services update tag-engine --set-env-vars SERVICE_URL=$SERVICE_URL
 ```
-<br><br> 
+<br> 
 
 
 13. Put a load balancer in front of the Cloud Run service:
@@ -295,7 +293,8 @@ export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
 gcloud scheduler jobs create http scheduled_auto_updates \
 	--description="Tag Engine scheduled jobs" \
 	--location=$TAG_ENGINE_REGION --time-zone=America/Chicago \
-	--schedule="0 */1 * * *" --uri="${SERVICE_URL}/scheduled_auto_updates" 	\
+	--schedule="0 */1 * * *" \
+        --uri="${SERVICE_URL}/scheduled_auto_updates" \
 	--http-method=POST \
 	--headers oauth_token=$OAUTH_TOKEN \
 	--oidc-service-account-email=$CLIENT_SA \
@@ -303,9 +302,9 @@ gcloud scheduler jobs create http scheduled_auto_updates \
 ```
 
 This command created a Cloud Scheduler entry that will trigger tag updates every hour. If you want the tag updates to occur on a different schedule, you can adjust the value of the `schedule` parameter in the above command. 
+<br><br>
 
-
-### <a name="testa"></a>Testing your Tag Engine setup with a user account:
+### <a name="testa"></a> Part 2: Testing your Tag Engine setup with a user account
 
 1. Create the sample `data_governance` tag template:
 
@@ -314,6 +313,7 @@ git clone https://github.com/GoogleCloudPlatform/datacatalog-templates.git
 cd datacatalog-templates
 python create_template.py $TAG_ENGINE_PROJECT $TAG_ENGINE_REGION data_governance.yaml 
 ```
+<br>
 
 2. Authorize a user account to use $TAG_CREATOR_SA and to invoke the Tag Engine Cloud Run service:
 
@@ -328,8 +328,9 @@ gcloud run services add-iam-policy-binding tag-engine \
     --member=user:$USER_ACCOUNT --role=roles/run.invoker \
     --region=$TAG_ENGINE_REGION	
 ```
+<br>
 
-3. Test the Tag Engine UI access:
+3. Test your Tag Engine UI path:
 
 - Open a browser window
 - Navigate to https://[TAG_ENGINE_DOMAIN] 
@@ -339,10 +340,11 @@ gcloud run services add-iam-policy-binding tag-engine \
 - Enter your $TAG_CREATOR_SA as the service account
 - Click on `Search Tag Templates` to continue to the next step and create a tag configuration
 
-If you encouter a 500 error, you should open the Cloud Run logs to troubleshoot. 
+If you encouter a 500 error, open the Cloud Run logs to troubleshoot. 
+<br><br>
 
 
-4. Test the Tag Engine API access: 
+4. Test your Tag Engine API path: 
 
 a) Generate an OAUTH token for your `USER_ACCOUNT`:
 
@@ -422,9 +424,9 @@ The output from this command should look like this:
 ```
 
 Open the Data Catalog UI and verify that your tag was successfully created. If your tags are not there or if you encounter an error with the previous commands, open the Cloud Run logs and investigate. 
+<br><br>
 
-
-### <a name="testb"></a>Testing your Tag Engine setup with a service account:
+### <a name="testb"></a> Part 3: Testing your Tag Engine Setup with a Service Account
 
 1. Create the sample `data_governance` tag template (you can skip this step if you went through the previous test procedure):
 
@@ -433,6 +435,7 @@ git clone https://github.com/GoogleCloudPlatform/datacatalog-templates.git
 cd datacatalog-templates
 python create_template.py $TAG_ENGINE_PROJECT $TAG_ENGINE_REGION data_governance.yaml
 ```
+<br>
 
 2. Authorize a service account to use $TAG_CREATOR_SA and to invoke the Tag Engine Cloud Run service:
 
@@ -447,6 +450,7 @@ gcloud run services add-iam-policy-binding tag-engine \
     --member=serviceAccount:$CLIENT_SA --role=roles/run.invoker \
     --region=$TAG_ENGINE_REGION	
 ```
+<br>
 
 3. Generate an OAUTH token for your `CLIENT_SA`:
 
@@ -455,6 +459,7 @@ export GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/keyfile.json"
 gcloud auth activate-service-account $CLIENT_SA --key-file $GOOGLE_APPLICATION_CREDENTIALS
 export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
 ```
+<br>
 
 4. Generate an IAM token (aka Bearer token) for authenticating to the Tag Engine Cloud Run service:
 
@@ -462,6 +467,7 @@ export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
 gcloud auth login
 export IAM_TOKEN=$(gcloud auth print-identity-token)
 ```
+<br>
 
 5. Create a dynamic table config:
 
@@ -483,6 +489,7 @@ The output from this command should look similar to:
   "config_uuid": "416f9694e46911ed96c5acde48001122"
 }
 ```
+<br>
 
 6. Trigger the job:
 
@@ -502,6 +509,7 @@ The output from this command should look similar to:
   "job_uuid": "9c13357ee46911ed96c5acde48001122"
 }
 ```
+<br>
 
 7. View the job status:
 
@@ -526,13 +534,14 @@ The output from this command should look like this:
 ```
 
 Open the Data Catalog UI and verify that your tag was successfully created. If not, open the Cloud Run logs and investigate the problem. 
+<br><br>
 
-
-### <a name="next"></a>Next steps:
+### <a name="next"></a> Part 4: Next Steps
 
 1. Explore additional API methods and run them through curl commands:
 
-Open `tests/unit_test.sh` and go through the different methods for interracting with Tag Engine, including `configure_tag_history`, `create_static_asset_config`, `create_dynamic_column_config`, etc. 
+Open `tests/unit_test.sh` and go through the different methods for interracting with Tag Engine, including `configure_tag_history`, `create_static_asset_config`, `create_dynamic_column_config`, etc. <br><br>
+
 
 2. Explore the sample test scripts:
 
@@ -553,6 +562,7 @@ python list_configs.py
 python read_config.py
 python purge_inactive_configs.py
 ```
+<br>
 
 3. Explore the sample workflow scripts:
 
@@ -567,8 +577,9 @@ gcloud workflows deploy orchestrate-jobs --location=$TAG_ENGINE_REGION \
 gcloud workflows run orchestrate-jobs --location=$TAG_ENGINE_REGION \
 	--data='{"oauth_token":"'"$OAUTH_TOKEN"'"}'
 ``` 
+<br>
 
-4. Create your own Tag Engine configs either through the UI or API. 
+4. Create your own Tag Engine configs with the UI and/or API. <br><br>
 
 
 5. Open new [issues](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/issues) if you encounter bugs or would like to request a feature. 
