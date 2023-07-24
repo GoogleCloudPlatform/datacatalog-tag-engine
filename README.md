@@ -13,15 +13,15 @@ This README is organized into four parts:  <br>
 
 ### <a name="setup"></a> Deployment Procedure
 
-The deployment procedure covers the API and UI setup for Tag Engine v2. It has 12 required steps and 1 optional step. 
+This procedure covers both the API and UI setups for Tag Engine v2. It has 13 required steps and 1 optional step. <br>
 
 1. Create (or designate) two service accounts:
 
 - A service account that runs the Tag Engine Cloud Run service, referred to below as `CLOUD_RUN_SA`. 
-- A service account that performs the tagging in Data Catalog, and sourcing the contents of those tags from BigQuery, referred to below as `TAG_CREATOR_SA`. 
+- A service account that performs the tagging in Data Catalog, and sourcing the contents of those tags from BigQuery, referred to below as `TAG_CREATOR_SA`. <br><br>
 
 
-2. Set six environment variables which will be used throughout the setup procedure:
+2. Set 6 environment variables which will be used throughout the setup procedure:
 
 ```
 export TAG_ENGINE_PROJECT="<PROJECT>"  # GCP project id for running the Tag Engine service
@@ -36,14 +36,14 @@ export TAG_CREATOR_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"   # email of your
 
 <b>The key benefit of decoupling `CLOUD_RUN_SA` from `TAG_CREATOR_SA` is to limit the scope of what a Tag Engine client is allowed to tag.</b> More specifically, when a client submits a request to Tag Engine, Tag Engine checks to see if they are authorized to use `TAG_CREATOR_SA` before processing their request. A Tag Engine client can either be a user identity or a service account.  
 
-If multiple teams want to share an instance of Tag Engine and they own different assets in BigQuery, they can each have their own `TAG_CREATOR_SA` to prevent one team from tagging another team's assets. `TAG_CREATOR_SA` is set in the `tagengine.ini` file (next step) with the default account for the entire Tag Engine instance. Tag Engine clients can override the default `TAG_CREATOR_SA` when creating tag configurations by specifying a `service_account` attribute in the json request (as shown [here](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/tests/configs/dynamic_table/dynamic_dataset_non_default_service_account.json)).     
+If multiple teams want to share an instance of Tag Engine and they own different assets in BigQuery, they can each have their own `TAG_CREATOR_SA` to prevent one team from tagging another team's assets. `TAG_CREATOR_SA` is set in the `tagengine.ini` file (next step) with the default account for the entire Tag Engine instance. Tag Engine clients can override the default `TAG_CREATOR_SA` when creating tag configurations by specifying a `service_account` attribute in the json request (as shown [here](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/tests/configs/dynamic_table/dynamic_dataset_non_default_service_account.json)).  <br><br>   
 
 
 3. Create an OAuth client ID for your Tag Engine web application. 
 
 - Designate a domain for your web application (e.g. tagengine.app). You can register one from Cloud Domains if you don't have a domain. 
-- Create an OAuth client ID from API Credentials. Set the `Authorized redirect URI` to `https://[TAG_ENGINE_DOMAIN]/oauth2callback`, where [TAG_ENGINE_DOMAIN] is your actual domain name (e.g. https://tagengine.app/oauth2callback`). 
-- Download the OAuth client secret and save the json file in your local Tag Engine git repo (e.g. `datacatalog-tag-engine/client_secret.json`).  
+- Create an OAuth client ID from API Credentials. Set the `Authorized redirect URI` to `https://[TAG_ENGINE_DOMAIN]/oauth2callback`, where [TAG_ENGINE_DOMAIN] is your actual domain name (e.g. `https://tagengine.app/oauth2callback`). 
+- Download the OAuth client secret and save the json file to your local Tag Engine git repo (e.g. `datacatalog-tag-engine/client_secret.json`).  <br><br> 
 
 
 4. Open `tagengine.ini` and set the following variables in this file. The first five should be equal to the environment variables you previously set in step 2:
@@ -64,10 +64,10 @@ A couple of notes:
 
 - The variable `ENABLE_AUTH` is a boolean. When set to `True`, Tag Engine verifies that the end user is authorized to use `TAG_CREATOR_SA` prior to processing their tag requests. This is the recommended value. 
 
-- The `tagengine.ini` file also has two additional variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. Those determine the names of the tasks queues. You do not need to change them. The queues are created in step 5 of this setup.  
+- The `tagengine.ini` file also has two additional variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. Those determine the names of the tasks queues. You do not need to change them. The queues are created in step 5 of this setup.  <br><br> 
 
 
-4. Enable the required Google Cloud APIs in your project:
+5. Enable the required Google Cloud APIs in your project:
 
 `gcloud config set project $TAG_ENGINE_PROJECT`
 
@@ -80,8 +80,9 @@ gcloud services enable datacatalog.googleapis.com
 gcloud services enable artifactregistry.googleapis.com
 gcloud services enable cloudbuild.googleapis.com
 ```
+<br><br> 
 
-5. Create two task queues, the first one is used to queue the tag request, the second is used to queue the individual work items:
+6. Create two task queues, the first one is used to queue the tag request, the second is used to queue the individual work items:
 
 ```
 gcloud tasks queues create tag-engine-injector-queue \
@@ -90,9 +91,10 @@ gcloud tasks queues create tag-engine-injector-queue \
 gcloud tasks queues create tag-engine-work-queue \
 	--location=$TAG_ENGINE_REGION --max-attempts=1 --max-concurrent-dispatches=100
 ```
+<br><br> 
 
 
-6. Create two custom IAM roles which are required by `SENSITIVE_COLUMN_CONFIG`, a configuration type that creates policy tags on sensitive columns:
+7. Create two custom IAM roles which are required by `SENSITIVE_COLUMN_CONFIG`, a configuration type that creates policy tags on sensitive columns:
 
 ```
 gcloud iam roles create BigQuerySchemaUpdate \
@@ -108,9 +110,10 @@ gcloud iam roles create PolicyTagReader \
 	--description "Read Policy Tag Taxonomy" \
 	--permissions datacatalog.taxonomies.get,datacatalog.taxonomies.list
 ```
+<br><br> 
 
 	
-7. Grant the required IAM roles and policy bindings for the accounts `CLOUD_RUN_SA` and `TAG_CREATOR_SA`:
+8. Grant the required IAM roles and policy bindings for the accounts `CLOUD_RUN_SA` and `TAG_CREATOR_SA`:
 
 ```
 gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
@@ -197,9 +200,10 @@ gcloud storage buckets add-iam-policy-binding gs://<BUCKET> \
 	--member=serviceAccount:$TAG_CREATOR_SA' \
 	--role=roles/storage.legacyBucketReader
 ```
+<br><br> 
 
 	
-8. Create the Firestore database, which is used to store the tag configurations: 
+9. Create the Firestore database, which is used to store the tag configurations: 
 
 This command currently requires `gcloud alpha`. If you don't have it, you need to first install it before creating the database. 
 
@@ -209,11 +213,10 @@ gcloud components install alpha.
 gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location=$TAG_ENGINE_REGION
 ```
 
-Note that Firestore is not available in every region. Consult [this list](https://cloud.google.com/firestore/docs/locations) to see where it's available and choose the nearest region to $TAG_ENGINE_REGION. It's perfectly fine for the Firestore region to be different from the `TAG_ENGINE_REGION`. 
-
+Note that Firestore is not available in every region. Consult [this list](https://cloud.google.com/firestore/docs/locations) to see where it's available and choose the nearest region to $TAG_ENGINE_REGION. It's perfectly fine for the Firestore region to be different from the `TAG_ENGINE_REGION`. <br><br> 
 	
 	
-9. Firestore requires several composite indexes to service read requests. Create those indexes:
+10. Firestore requires several composite indexes to service read requests. Create those indexes:
 
 First, create a private key for your `$CLOUD_RUN_SA`:
 
@@ -230,11 +233,11 @@ python create_indexes.py $TAG_ENGINE_PROJECT
 cd ..
 ```
 
-Note: the above script is expected to run for 10-12 minutes. As the indexes get created, you will see them show up in the Firestore console. There should be 33 indexes in total. 
+Note: the above script is expected to run for 10-12 minutes. As the indexes get created, you will see them show up in the Firestore console. There should be 36 indexes in total. <br><br> 
 	
 
 
-10. Build and deploy the Cloud Run service:
+11. Build and deploy the Cloud Run service:
 
 The next command requires `gcloud beta`. You can install it by running `gcloud components install beta`.  
 
@@ -254,27 +257,29 @@ gcloud beta run deploy tag-engine \
 	--vpc-connector=projects/$TAG_ENGINE_PROJECT/locations/$TAG_ENGINE_REGION/connectors/$VPC_CONNECTOR \
 	--vpc-egress=private-ranges-only
 ```
+<br><br> 
 
 
-11. Set Cloud Run environment variable:
+12. Set Cloud Run environment variable:
 
 ```
 export SERVICE_URL=`gcloud run services describe tag-engine --format="value(status.url)"`
 gcloud run services update tag-engine --set-env-vars SERVICE_URL=$SERVICE_URL
 ```
+<br><br> 
 
 
-12. Put a load balancer in front of the Cloud Run service:
-
+13. Put a load balancer in front of the Cloud Run service:
 
 Create an application load balancer that accepts incoming https requests from your Tag Engine domain and forwards them to a [serverless network endpoint group](https://cloud.google.com/load-balancing/docs/negs/serverless-neg-concepts) that is tied to your Tag Engine Cloud Run service. 
 
 Once your load balancer has been created, use its IP address to create an A record in Cloud DNS. 
 
 If you created an external load balancer, enable Identity-Aware Proxy (IAP) on your load balancer's backend. Grant `IAP-secured Web App User` role to the user identities who are allowed to access the application. 
+<br><br> 
 
 
-13. This step is optional. If you plan to let Tag Engine to auto refresh your tags on a set schedule, you'll also need to make a Cloud Scheduler entry to trigger those tag updates:
+14. This step is optional. If you plan to let Tag Engine to auto refresh your tags on a set schedule, you'll also need to make a Cloud Scheduler entry to trigger those tag updates:
 
 ```
 gcloud services enable cloudscheduler.googleapis.com
