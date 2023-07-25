@@ -21,7 +21,7 @@ This procedure covers both the API and UI setups for Tag Engine v2. It has 13 re
 - A service account that performs the tagging in Data Catalog, and sourcing the contents of those tags from BigQuery, referred to below as `TAG_CREATOR_SA`. <br><br>
 
 
-2. Set 6 environment variables which will be used throughout the setup procedure:
+2. Set 6 environment variables which will be used throughout the deployment:
 
 ```
 export TAG_ENGINE_PROJECT="<PROJECT>"  # GCP project id for running the Tag Engine service
@@ -41,7 +41,7 @@ If multiple teams want to share an instance of Tag Engine and they own different
 
 3. Create an OAuth client ID for your Tag Engine web application. 
 
-- Designate a domain for your web application (e.g. tagengine.app). You can register one from Cloud Domains if you don't have a domain. 
+- Designate a domain for your web application (e.g. tagengine.app). You can register one from [Cloud Domains](https://console.cloud.google.com/net-services/domains/) if you don't have one. 
 - Create an OAuth client ID from API Credentials. Set the `Authorized redirect URI` to `https://[TAG_ENGINE_DOMAIN]/oauth2callback`, where [TAG_ENGINE_DOMAIN] is your actual domain name (e.g. `https://tagengine.app/oauth2callback`). 
 - Download the OAuth client secret and save the json file to your local Tag Engine git repo (e.g. `datacatalog-tag-engine/client_secret.json`).  <br><br> 
 
