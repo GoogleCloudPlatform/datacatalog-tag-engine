@@ -11,8 +11,21 @@
      </div>
      <div id="main">
 		  <span style="color:#0b5394;">Job Id:</span> {{ job_uuid }} <br>
-		  <span style="color:#0b5394;">Job Status:</span> {{ job_status }}&nbsp;&nbsp; 
-		  <input type="submit" value="Refresh" name="action" style="width: 100px;padding: 3px;"><br><br>
+		  
+		  {% if job_status != 'SUCCESS' %}
+		  	  <span style="color:#0b5394;">Job Status:</span> {{ job_status }}&nbsp;&nbsp; 
+		      <input type="submit" value="Refresh" name="action" style="width: 100px;padding: 3px;">
+		  {% else %}
+		  	  <span style="color:#0b5394;">Job Status:</span>
+			  <span style="color:green;"> {{ job_status }}</span>&nbsp;&nbsp; 
+		      
+			  {% if config_type == 'TAG_EXPORT' %}
+			  <a href="https://console.cloud.google.com/bigquery?project={{ target_project }}&ws=!1m4!1m3!3m2!1s{{ target_project }}!2s{{ target_dataset }}" target="_blank">View Tables in BigQuery</a>	
+			  {% else %}
+			  	<a href="https://console.cloud.google.com/dataplex/search?project={{ template_project }}&q=tag:{{ template_project }}.{{ template_id }}" target="_blank">View Tags in Data Catalog</a>
+			  {% endif %}
+		  {% endif %}	  
+		  <br><br>
 		  
 		  <span style="color:#0b5394;">Config Id:</span> {{ config_uuid }} <br>
 	      <span style="color:#0b5394;">Config Type:</span> {{ config_type }} <br><br>
@@ -44,6 +57,8 @@
 		 <input type="hidden" name="template_project" value="{{ template_project }}">
 		 <input type="hidden" name="template_region" value="{{ template_region }}">
 		 <input type="hidden" name="service_account" value="{{ service_account }}">
+		 <input type="hidden" name="target_project" value="{{ target_project }}">
+		 <input type="hidden" name="target_dataset" value="{{ target_dataset }}">
 	 </form>
    </body>
 </html>

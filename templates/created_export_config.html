@@ -14,7 +14,7 @@
    <h1>Config Created</h1>
     </div>
        <div id="main">
-          <h5>&nbsp;Your export configuration has been created with these settings:</h5>
+          <h5>&nbsp;Your export configuration has been created with these values:</h5>
 	   
            <span style="color:#0b5394;">Config Id:</span> {{ config_uuid }} <br>
  		   <span style="color:#0b5394;">Config Type:</span> {{ config_type }} <br><br>
@@ -22,9 +22,9 @@
  		   <span style="color:#0b5394;">Service Account:</span> {{ service_account }} <br>
        <p>
           {% if source_projects %}
-		  	<span style="color:#0b5394;">Source Projects:</span> {{ source_projects }} <br>
+		  	<span style="color:#0b5394;">Source Project(s):</span> {{ source_projects }} <br>
           {% else %}
-		    <span style="color:#0b5394;">Source Projects:</span> N/A <br>
+		    <span style="color:#0b5394;">Source Project(s):</span> N/A <br>
 		  {% endif %}
 		  	
 		  {% if source_folder %}
@@ -59,6 +59,8 @@
 			
 		   <input type="hidden" name="config_uuid" value="{{ config_uuid }}">
 		   <input type="hidden" name="config_type" value="{{ config_type }}">
+		   <input type="hidden" name="target_project" value="{{ target_project }}">
+		   <input type="hidden" name="target_dataset" value="{{ target_dataset }}">
 		   <input type="hidden" name="service_account" value="{{ service_account }}">
    		</td>
        </tr>

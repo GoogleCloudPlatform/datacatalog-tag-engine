@@ -121,8 +121,7 @@ def oauth2callback():
     # credentials in a persistent database instead.
     credentials = flow.credentials
     session['credentials'] = credentials_to_dict(credentials)
-    print('credentials:', session['credentials'])
-    
+        
     user_info_service = discovery.build('oauth2', 'v2', credentials=credentials)
     user_info = user_info_service.userinfo().get().execute()
     session['user_email'] = user_info['email']
@@ -164,22 +163,25 @@ def get_log_entries(service_account):
     
     logging_client = logging_v2.Client(project=TAG_ENGINE_PROJECT, credentials=get_target_credentials(service_account))
     query="resource.type: cloud_run_revision"
-    entries = list(logging_client.list_entries(filter_=query, order_by=logging_v2.DESCENDING, max_results=25))
     
-    for entry in entries:
-        timestamp = entry.timestamp.isoformat()[0:19]
+    try:
+        entries = list(logging_client.list_entries(filter_=query, order_by=logging_v2.DESCENDING, max_results=25))
+    
+        for entry in entries:
+            timestamp = entry.timestamp.isoformat()[0:19]
         
-        if entry.payload == None:
-            continue
+            if entry.payload == None:
+                continue
             
-        if len(entry.payload) > 120:
-            payload = entry.payload[0:120]
-        else:
-            payload = entry.payload
+            if len(entry.payload) > 120:
+                payload = entry.payload[0:120]
+            else:
+                payload = entry.payload
     
-        formatted_entries.append((timestamp, payload))
+            formatted_entries.append((timestamp, payload))
     
-    print('formatted_entries:', formatted_entries)
+    except Exception as e:
+        print('Error occurred while retrieving log entries: ', e)
     
     return formatted_entries
 
@@ -763,10 +765,30 @@ def process_created_config_action():
     config_uuid = request.form['config_uuid']
     config_type = request.form['config_type']
     
-    template_id = request.form['template_id']
-    template_project = request.form['template_project']
-    template_region = request.form['template_region']
+    if 'template_id' in request.form:
+        template_id = request.form['template_id']
+    else:
+        template_id = 'N/A' # export config handler
+    
+    if 'template_project' in request.form:
+        template_project = request.form['template_project']
+    else:
+        template_project = 'N/A' # export config handler
+        
+    if 'template_region' in request.form:
+        template_region = request.form['template_region']
+    else:
+        template_region = 'N/A' # export config handler
+        
+    if template_id == 'N/A' and template_project == 'N/A' and template_region == 'N/A':
+        target_project = request.form['target_project']
+        target_dataset = request.form['target_dataset']
+    else:
+        target_project = 'N/A'
+        target_dataset = 'N/A'
+    
     service_account = request.form['service_account']
+    
     action = request.form['action']
     
     if action == "Trigger Job":
@@ -785,7 +807,9 @@ def process_created_config_action():
             template_id=template_id,
             template_project=template_project,
             template_region=template_region,
-            service_account=service_account)
+            service_account=service_account,
+            target_project=target_project,
+            target_dataset=target_dataset)
    
     if action == "View Existing Configs":
         configs = store.read_configs(service_account, 'ALL', template_id, template_project, template_region)
@@ -818,9 +842,28 @@ def refresh_job_status():
     config_uuid = request.form['config_uuid']
     config_type = request.form['config_type']
     
-    template_id = request.form['template_id']
-    template_project = request.form['template_project']
-    template_region = request.form['template_region']
+    if 'template_id' in request.form:
+        template_id = request.form['template_id']
+    else:
+        template_id = 'N/A' # export config handler
+    
+    if 'template_project' in request.form:
+        template_project = request.form['template_project']
+    else:
+        template_project = 'N/A' # export config handler
+        
+    if 'template_region' in request.form:
+        template_region = request.form['template_region']
+    else:
+        template_region = 'N/A' # export config handler
+        
+    if template_id == 'N/A' and template_project == 'N/A' and template_region == 'N/A':
+        target_project = request.form['target_project']
+        target_dataset = request.form['target_dataset']
+    else:
+        target_project = 'N/A'
+        target_dataset = 'N/A'
+    
     service_account = request.form['service_account']
     action = request.form['action']
     
@@ -838,7 +881,9 @@ def refresh_job_status():
             template_id=template_id,
             template_project=template_project,
             template_region=template_region,
-            service_account=service_account)
+            service_account=service_account,
+            target_project=target_project,
+            target_dataset=target_dataset)
     
     if action == "View Existing Configs":
         configs = store.read_configs(service_account, 'ALL', template_id, template_project, template_region)
@@ -1995,7 +2040,7 @@ def process_export_config():
     return render_template(
         'created_export_config.html',
         config_uuid=config_uuid,
-        config_type='EXPORT_TAG',
+        config_type='TAG_EXPORT',
         source_projects=source_projects,
         source_folder=source_folder,
         source_region=source_region,
