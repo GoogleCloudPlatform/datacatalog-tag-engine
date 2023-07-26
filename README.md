@@ -6,14 +6,16 @@ Tag Engine is an open-source extension to Google Cloud's Data Catalog. Tag Engin
 If you are new to Tag Engine, you may want to walk through [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog). Note that the tutorial was written for Tag Engine v1 (as opposed to v2), but it will give you a sense of how Tag Engine works. We plan to publish a second tutorial for Tag Engine v2 soon. Stay tuned! 
 
 This README is organized into four parts:  <br>
-- Part 1: [Deployment Procedure](#setup) <br>
+- Part 1: [Deployment](#setup) <br>
 - Part 2: [Testing your Tag Engine Setup with a User Account](#testa)  <br>
 - Part 3: [Testing your Tag Engine Setup with a Service Account](#testb)  <br>
 - Part 4: [Next Steps](#next)  <br> 
 
-### <a name="setup"></a> Part 1: Deployment Procedure
+### <a name="setup"></a> Part 1: Deployment
 
-This procedure covers both the API and UI setups for Tag Engine v2. It has 13 required steps and 1 optional step. <br>
+The deployment of Tag Engine hosted on Cloud Run is more complex than the App Engine deployment. Here's is  pictorial representation: <br><img src="static/architecture.png" alt="arch" width="500"/>
+
+The deployment covers both the API and UI paths. There are 13 required steps and 1 optional step. <br>
 
 1. Create (or designate) two service accounts:
 
@@ -39,7 +41,7 @@ export TAG_CREATOR_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"   # email of your
 If multiple teams want to share an instance of Tag Engine and they own different assets in BigQuery, they can each have their own `TAG_CREATOR_SA` to prevent one team from tagging another team's assets. `TAG_CREATOR_SA` is set in the `tagengine.ini` file (next step) with the default account for the entire Tag Engine instance. Tag Engine clients can override the default `TAG_CREATOR_SA` when creating tag configurations by specifying a `service_account` attribute in the json request (as shown [here](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/tests/configs/dynamic_table/dynamic_dataset_non_default_service_account.json)).  <br><br>   
 
 
-3. Create an OAuth client ID for your Tag Engine web application. 
+3. Create an OAuth client ID for your Tag Engine web application: 
 
 - Designate a domain for your web application (e.g. tagengine.app). You can register one from [Cloud Domains](https://console.cloud.google.com/net-services/domains/) if you don't have one. 
 - Create an OAuth client ID from API Credentials. Set the `Authorized redirect URI` to `https://[TAG_ENGINE_DOMAIN]/oauth2callback`, where [TAG_ENGINE_DOMAIN] is your actual domain name (e.g. `https://tagengine.app/oauth2callback`). 
@@ -267,13 +269,13 @@ gcloud run services update tag-engine --set-env-vars SERVICE_URL=$SERVICE_URL
 <br> 
 
 
-13. Put a load balancer in front of the Cloud Run service:
+13. Put an HTTP Load Balancer in front of the Cloud Run service:
 
-Create an application load balancer that accepts incoming https requests from your Tag Engine domain and forwards them to a [serverless network endpoint group](https://cloud.google.com/load-balancing/docs/negs/serverless-neg-concepts) that is tied to your Tag Engine Cloud Run service. 
+Create an application load balancer that accepts incoming HTTPS requests from your Tag Engine domain and forwards them to a [serverless network endpoint group](https://cloud.google.com/load-balancing/docs/negs/serverless-neg-concepts) that is tied to your Tag Engine Cloud Run service. 
 
-Once your load balancer has been created, use its IP address to create an A record in Cloud DNS. 
+Once your load balancer has been created, use its IP address to create an `A record` in Cloud DNS. 
 
-If you created an external load balancer, enable Identity-Aware Proxy (IAP) on your load balancer's backend. Grant `IAP-secured Web App User` role to the user identities who are allowed to access the application. 
+If you have created an external load balancer, enable Identity-Aware Proxy (IAP) on your load balancer's backend. Grant `IAP-secured Web App User` role to the user identities who are allowed to access the application. 
 <br><br> 
 
 
