@@ -531,6 +531,16 @@ def search_tag_template():
     dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     fields = dcc.get_template()
     
+    if len(fields) == 0:
+        # error retrieving the tag template
+        return render_template(
+            'home.html',
+            template_id=template_id,
+            template_project=template_project,
+            template_region=template_region,
+            service_account=service_account,
+            tag_template_error=True)
+        
     #print("fields: " + str(fields))
     
     # [END search_tag_template]
@@ -3769,7 +3779,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 2.1.0"
+    return "Welcome to Tag Engine version 2.1.1"
 #[END ping]
     
 ####################### TEST METHOD ####################################  

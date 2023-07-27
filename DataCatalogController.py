@@ -58,7 +58,13 @@ class DataCatalogController:
         
         fields = []
         
-        tag_template = self.client.get_tag_template(name=self.template_path)
+        try:
+            
+            tag_template = self.client.get_tag_template(name=self.template_path)
+        
+        except Exception as e:
+            print('Error retrieving tag template: ', e)
+            return fields
         
         for field_id, field_value in tag_template.fields.items():
             
