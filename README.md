@@ -317,7 +317,7 @@ python create_template.py $TAG_ENGINE_PROJECT $TAG_ENGINE_REGION data_governance
 ```
 <br>
 
-2. Authorize a user account to use $TAG_CREATOR_SA and to invoke the Tag Engine Cloud Run service:
+2. Authorize a user account to use `TAG_CREATOR_SA` and to invoke the Tag Engine Cloud Run service:
 
 ```
 export USER_ACCOUNT="username@example.com"
@@ -339,7 +339,7 @@ gcloud run services add-iam-policy-binding tag-engine \
 - If you enabled IAP, you should be prompted to sign in to `iap.googleapis.com`
 - Once signed in, you should be directed to the Tag Engine home page (i.e. https://[TAG_ENGINE_DOMAIN]/home)
 - Enter your template id, template project, and template region
-- Enter your $TAG_CREATOR_SA as the service account
+- Enter your `TAG_CREATOR_SA` as the service account
 - Click on `Search Tag Templates` to continue to the next step and create a tag configuration
 
 If you encouter a 500 error, open the Cloud Run logs to troubleshoot. 
@@ -439,7 +439,7 @@ python create_template.py $TAG_ENGINE_PROJECT $TAG_ENGINE_REGION data_governance
 ```
 <br>
 
-2. Authorize a service account to use $TAG_CREATOR_SA and to invoke the Tag Engine Cloud Run service:
+2. Authorize a service account to use `TAG_CREATOR_SA` and to invoke the Tag Engine Cloud Run service:
 
 ```
 export CLIENT_SA="tag-engine-client@<PROJECT>.iam.gserviceaccount.com"
@@ -584,4 +584,4 @@ gcloud workflows run orchestrate-jobs --location=$TAG_ENGINE_REGION \
 4. Create your own Tag Engine configs with the UI and/or API. <br><br>
 
 
-5. Open new [issues](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/issues) if you encounter bugs or would like to request a feature. 
+5. Open new [issues](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/issues) if you encounter any bugs or would like to request a new feature. 
