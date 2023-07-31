@@ -273,13 +273,16 @@ gcloud beta run deploy tag-engine-ui \
 <br> 
 
 
-12. Set the SERVICE_URL environment variable:
+12. Set the `SERVICE_URL` environment variable:
+
+If you are deploying the API, run:
 
 ```
 export API_SERVICE_URL=`gcloud run services describe tag-engine-api --format="value(status.url)"`
 gcloud run services update tag-engine-api --set-env-vars SERVICE_URL=$API_SERVICE_URL
 ```
 
+If you are deploying the UI, run:
 ```
 export UI_SERVICE_URL=`gcloud run services describe tag-engine-ui--format="value(status.url)"`
 gcloud run services update tag-engine-ui --set-env-vars SERVICE_URL=$UI_SERVICE_URL
@@ -290,7 +293,7 @@ gcloud run services update tag-engine-ui --set-env-vars SERVICE_URL=$UI_SERVICE_
 
 13. Put an HTTP Load Balancer in front of the UI Cloud Run service:
 
-This step is only required if you are running the UI. 
+Note: This step is only required if you are deploying the UI. 
 
 Create an application load balancer that accepts incoming HTTPS requests from your Tag Engine domain and forwards them to a [serverless network endpoint group](https://cloud.google.com/load-balancing/docs/negs/serverless-neg-concepts) that is tied to your UI Cloud Run service (tag-engine-ui). 
 
