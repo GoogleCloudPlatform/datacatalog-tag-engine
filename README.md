@@ -43,9 +43,12 @@ If multiple teams want to share an instance of Tag Engine and they own different
 
 3. Create an OAuth client ID for your Tag Engine web application: 
 
-- This step is only required if you are planning to run the UI. 
+- This step is only required if you are deploying the UI. 
+
 - Designate a domain for your web application (e.g. tagengine.app). You can register one from [Cloud Domains](https://console.cloud.google.com/net-services/domains/) if you don't have one. 
+
 - Create an OAuth client ID from API Credentials. Set the `Authorized redirect URI` to `https://[TAG_ENGINE_DOMAIN]/oauth2callback`, where [TAG_ENGINE_DOMAIN] is your actual domain name (e.g. `https://tagengine.app/oauth2callback`). 
+
 - Download the OAuth client secret and save the json file to your local Tag Engine git repo (e.g. `datacatalog-tag-engine/client_secret.json`).  <br><br> 
 
 
@@ -63,7 +66,7 @@ ENABLE_AUTH
 
 A couple of notes:
 
-- Set the variable `OAUTH_CLIENT_CREDENTIALS` to the name of your OAuth client secret file (e.g. `client_secret.json`). If you are not planning to run the UI, you don't need to set this variable. 
+- Set the variable `OAUTH_CLIENT_CREDENTIALS` to the name of your OAuth client secret file (e.g. `client_secret.json`). If you are not deploying the UI, you don't need to set `OAUTH_CLIENT_CREDENTIALS`.  
 
 - The variable `ENABLE_AUTH` is a boolean. When set to `True`, Tag Engine verifies that the end user is authorized to use `TAG_CREATOR_SA` prior to processing their tag requests. This is the recommended value. 
 
@@ -242,8 +245,9 @@ Note: the above script is expected to run for 10-12 minutes. As the indexes get 
 
 There is one Cloud Run service for the API and one Cloud Run service for the UI. They are both built from the same code base. 
 
-The next two commands require `gcloud beta`. You can install it by running `gcloud components install beta`.  
+The next two commands require `gcloud beta`. You can install `gcloud beta` by running `gcloud components install beta`.  
 
+```
 gcloud beta run deploy tag-engine-api \
 	--source . \
 	--platform managed \
@@ -251,7 +255,7 @@ gcloud beta run deploy tag-engine-api \
 	--no-allow-unauthenticated \
 	--ingress=all \
 	--service-account=$CLOUD_RUN_SA
-
+```
 ```
 gcloud beta run deploy tag-engine-ui \
 	--source . \
