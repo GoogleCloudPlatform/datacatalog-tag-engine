@@ -296,9 +296,9 @@ gcloud run services update tag-engine-ui --set-env-vars SERVICE_URL=$UI_SERVICE_
 Note: This step is only required if you are deploying the UI. 
 
 - Create an application load balancer that accepts incoming HTTPS requests
-- Create a [serverless network endpoint group](https://cloud.google.com/load-balancing/docs/negs/serverless-neg-concepts)
-- Attach the front-end of the NEG to your Tag Engine domain
-- Attach the back-end of the NEG to the Tag Engine UI Cloud Run service (tag-engine-ui)
+- Attach the front-end of the load balancer to your Tag Engine domain
+- Create a [serverless network endpoint group](https://cloud.google.com/load-balancing/docs/negs/serverless-neg-concepts) (or NEG) that references the Tag Engine UI Cloud Run service (tag-engine-ui)
+- Attach the back-end of the load balancer to the NEG 
 
 Once the load balancer is up, use its IP address to create an `A record` in Cloud DNS. 
 
