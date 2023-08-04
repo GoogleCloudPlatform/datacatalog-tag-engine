@@ -295,11 +295,14 @@ gcloud run services update tag-engine-ui --set-env-vars SERVICE_URL=$UI_SERVICE_
 
 Note: This step is only required if you are deploying the UI. 
 
-Create an application load balancer that accepts incoming HTTPS requests from your Tag Engine domain and forwards them to a [serverless network endpoint group](https://cloud.google.com/load-balancing/docs/negs/serverless-neg-concepts) that is tied to your UI Cloud Run service (tag-engine-ui). 
+- Create an application load balancer that accepts incoming HTTPS requests
+- Create a [serverless network endpoint group](https://cloud.google.com/load-balancing/docs/negs/serverless-neg-concepts)
+- Attach the front-end of the NEG to your Tag Engine domain
+- Attach the back-end of the NEG to the Tag Engine UI Cloud Run service (tag-engine-ui)
 
-Once your load balancer has been created, use its IP address to create an `A record` in Cloud DNS. 
+Once the load balancer is up, use its IP address to create an `A record` in Cloud DNS. 
 
-If you have created an external load balancer, enable Identity-Aware Proxy (IAP) on your load balancer's backend. Grant `IAP-secured Web App User` role to the user identities who are allowed to access the application. 
+If you created an external load balancer, we recommend that you also enable Identity-Aware Proxy (IAP) on your load balancer's backend. Grant `IAP-secured Web App User` role to the user identities who are allowed to access the application. 
 <br><br> 
 
 
@@ -341,7 +344,7 @@ python create_template.py $TAG_ENGINE_PROJECT $TAG_ENGINE_REGION data_governance
 ```
 <br>
 
-2. Authorize a user account to use `TAG_CREATOR_SA` and to invoke the Tag Engine Cloud Run service:
+2. Authorize a user account to use `TAG_CREATOR_SA` and to invoke the Tag Engine Cloud Run services:
 
 ```
 export USER_ACCOUNT="username@example.com"
@@ -349,8 +352,11 @@ export USER_ACCOUNT="username@example.com"
 gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
     --member=user:$USER_ACCOUNT --role=roles/iam.serviceAccountUser 
 
+gcloud run services add-iam-policy-binding tag-engine-api \
+    --member=user:$USER_ACCOUNT --role=roles/run.invoker \
+    --region=$TAG_ENGINE_REGION
 
-gcloud run services add-iam-policy-binding tag-engine \
+gcloud run services add-iam-policy-binding tag-engine-ui \
     --member=user:$USER_ACCOUNT --role=roles/run.invoker \
     --region=$TAG_ENGINE_REGION	
 ```
@@ -364,7 +370,7 @@ gcloud run services add-iam-policy-binding tag-engine \
 - Once signed in, you should be directed to the Tag Engine home page (i.e. https://[TAG_ENGINE_DOMAIN]/home)
 - Enter your template id, template project, and template region
 - Enter your `TAG_CREATOR_SA` as the service account
-- Click on `Search Tag Templates` to continue to the next step and create a tag configuration
+- Click on the `Search Tag Templates` button to continue to the next step and create a tag configuration
 
 If you encouter a 500 error, open the Cloud Run logs to troubleshoot. 
 <br><br>
@@ -463,7 +469,7 @@ python create_template.py $TAG_ENGINE_PROJECT $TAG_ENGINE_REGION data_governance
 ```
 <br>
 
-2. Authorize a service account to use `TAG_CREATOR_SA` and to invoke the Tag Engine Cloud Run service:
+2. Authorize a service account to use `TAG_CREATOR_SA` and to invoke the Tag Engine API Cloud Run service (tag-engine-api):
 
 ```
 export CLIENT_SA="tag-engine-client@<PROJECT>.iam.gserviceaccount.com"
@@ -472,7 +478,7 @@ gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
     --member=serviceAccount:$CLIENT_SA --role=roles/iam.serviceAccountUser 
 
 
-gcloud run services add-iam-policy-binding tag-engine \
+gcloud run services add-iam-policy-binding tag-engine-api \
     --member=serviceAccount:$CLIENT_SA --role=roles/run.invoker \
     --region=$TAG_ENGINE_REGION	
 ```
