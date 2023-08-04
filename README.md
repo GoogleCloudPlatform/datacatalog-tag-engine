@@ -284,7 +284,7 @@ gcloud run services update tag-engine-api --set-env-vars SERVICE_URL=$API_SERVIC
 
 If you are deploying the UI, run:
 ```
-export UI_SERVICE_URL=`gcloud run services describe tag-engine-ui--format="value(status.url)"`
+export UI_SERVICE_URL=`gcloud run services describe tag-engine-ui --format="value(status.url)"`
 gcloud run services update tag-engine-ui --set-env-vars SERVICE_URL=$UI_SERVICE_URL
 ```
 
