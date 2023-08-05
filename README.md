@@ -344,7 +344,7 @@ python create_template.py $TAG_ENGINE_PROJECT $TAG_ENGINE_REGION data_governance
 ```
 <br>
 
-2. Authorize a user account to use `TAG_CREATOR_SA` and to invoke the Tag Engine Cloud Run services:
+2. Authorize a user account to use `TAG_CREATOR_SA`:
 
 ```
 export USER_ACCOUNT="username@example.com"
@@ -352,13 +352,6 @@ export USER_ACCOUNT="username@example.com"
 gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
     --member=user:$USER_ACCOUNT --role=roles/iam.serviceAccountUser 
 
-gcloud run services add-iam-policy-binding tag-engine-api \
-    --member=user:$USER_ACCOUNT --role=roles/run.invoker \
-    --region=$TAG_ENGINE_REGION
-
-gcloud run services add-iam-policy-binding tag-engine-ui \
-    --member=user:$USER_ACCOUNT --role=roles/run.invoker \
-    --region=$TAG_ENGINE_REGION	
 ```
 <br>
 
@@ -469,18 +462,13 @@ python create_template.py $TAG_ENGINE_PROJECT $TAG_ENGINE_REGION data_governance
 ```
 <br>
 
-2. Authorize a service account to use `TAG_CREATOR_SA` and to invoke the Tag Engine API Cloud Run service (tag-engine-api):
+2. Authorize a service account to use `TAG_CREATOR_SA`:
 
 ```
 export CLIENT_SA="tag-engine-client@<PROJECT>.iam.gserviceaccount.com"
 
 gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
     --member=serviceAccount:$CLIENT_SA --role=roles/iam.serviceAccountUser 
-
-
-gcloud run services add-iam-policy-binding tag-engine-api \
-    --member=serviceAccount:$CLIENT_SA --role=roles/run.invoker \
-    --region=$TAG_ENGINE_REGION	
 ```
 <br>
 
