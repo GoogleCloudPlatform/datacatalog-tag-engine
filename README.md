@@ -6,16 +6,16 @@ Tag Engine is an open-source extension to Google Cloud's Data Catalog. Tag Engin
 If you are new to Tag Engine, you may want to walk through [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog). Note that the tutorial was written for Tag Engine v1 (as opposed to v2), but it will give you a sense of how Tag Engine works. We plan to publish a second tutorial for Tag Engine v2 soon. Stay tuned! 
 
 This README is organized into four parts:  <br>
-- Part 1: [Deployment](#setup) <br>
+- Part 1: [Deployment Steps](#setup) <br>
 - Part 2: [Testing your Tag Engine Setup with a User Account](#testa)  <br>
 - Part 3: [Testing your Tag Engine Setup with a Service Account](#testb)  <br>
 - Part 4: [Next Steps](#next)  <br> 
 
-### <a name="setup"></a> Part 1: Deployment
+### <a name="setup"></a> Part 1: Deployment Steps
 
-The deployment of Tag Engine on Cloud Run is more complex than on App Engine. Here's a pictorial representation: <br><img src="static/architecture.png" alt="arch" width="500"/>
+The deployment of Tag Engine on Cloud Run is more complex than on App Engine because the Cloud Run service that serves the UI needs to be secured with Identity-Aware Proxy (IAP), which in turn requires a Load Balancer. Here's a high-level diagram of the main components: <br><img src="static/architecture.png" alt="arch" width="500"/>
 
-The deployment covers both the API and UI paths. You can deploy each one on their own or deploy them together. Altogether, the deployment has 13 required steps and 1 optional step. <br>
+This guide covers both the Tag Engine API and UI paths. You can deploy each one separately or together. The deployment as a whole has 13 required steps and 1 optional step. There are fewer steps when you choose to deploy only the API. The UI specific steps are marked as such. <br>
 
 1. Create (or designate) two service accounts:
 
