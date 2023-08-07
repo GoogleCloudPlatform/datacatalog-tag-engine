@@ -13,9 +13,9 @@ This README is organized into four parts:  <br>
 
 ### <a name="setup"></a> Part 1: Deployment Steps
 
-The deployment of Tag Engine on Cloud Run is more complex than on App Engine because the Cloud Run service that serves the UI needs to be secured with Identity-Aware Proxy (IAP), which in turn requires a Load Balancer. Here's a high-level diagram of the main components: <br><img src="static/architecture.png" alt="arch" width="500"/>
+The deployment of Tag Engine on Cloud Run is more complex than on App Engine. The Cloud Run service that serves the UI needs to be secured with Identity-Aware Proxy (IAP), which in turn requires a Load Balancer. Here's a high-level diagram of the main components: <br><img src="static/architecture.png" alt="arch" width="500"/>
 
-This guide covers both the Tag Engine API and UI paths. You can deploy each one separately or together. The deployment as a whole has 13 required steps and 1 optional step. There are fewer steps when you choose to deploy only the API. The UI specific steps are marked as such. <br>
+This guide covers both the Tag Engine API and UI deployments. You can deploy each one separately or together. The deployment as a whole has 13 required steps and 1 optional step. There are fewer steps when you choose to deploy only the API. The UI specific steps are marked as such. <br>
 
 1. Create (or designate) two service accounts:
 
