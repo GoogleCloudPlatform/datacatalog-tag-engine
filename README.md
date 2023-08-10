@@ -11,7 +11,7 @@ This README is organized into four parts:  <br>
 - Part 3: [Testing your Setup with a Service Account](#testb)  <br>
 - Part 4: [What To Do Next](#next)  <br> 
 
-### <a name="deploy"></a> Deployment Tag Engine v2
+### <a name="deploy"></a> Deploying Tag Engine v2
 
 The deployment of Tag Engine on Cloud Run is more complex than on App Engine. The Cloud Run service that serves the UI needs to be secured with Identity-Aware Proxy (IAP), which in turn requires a Load Balancer. Here's a high-level diagram of the main components: <br><img src="static/architecture.png" alt="arch" width="500"/>
 
