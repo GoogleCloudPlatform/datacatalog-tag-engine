@@ -256,6 +256,9 @@ gcloud beta run deploy tag-engine-api \
 	--ingress=all \
 	--service-account=$CLOUD_RUN_SA
 ```
+
+The next command requires a VPC access connector. This is used to send requests to your VPC network from Cloud Run using internal DNS and internal IP addresses as opposed to going through the public internet. To create a connector, consult [this page](https://cloud.google.com/vpc/docs/configure-serverless-vpc-access#gcloud).  
+
 ```
 gcloud beta run deploy tag-engine-ui \
 	--source . \
