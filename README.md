@@ -6,12 +6,12 @@ Tag Engine is an open-source extension to Google Cloud's Data Catalog. Tag Engin
 If you are new to Tag Engine, you may want to walk through [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog). Note that the tutorial was written for Tag Engine v1 (as opposed to v2), but it will give you a sense of how Tag Engine works. We plan to publish a second tutorial for Tag Engine v2 soon. Stay tuned! 
 
 This README is organized into four parts:  <br>
-- Part 1: [Deployment Steps](#setup) <br>
-- Part 2: [Testing your Tag Engine Setup with a User Account](#testa)  <br>
-- Part 3: [Testing your Tag Engine Setup with a Service Account](#testb)  <br>
-- Part 4: [Next Steps](#next)  <br> 
+- Part 1: [Deploying Tag Engine v2](#deploy) <br>
+- Part 2: [Testing your Setup with a User Account](#testa)  <br>
+- Part 3: [Testing your Setup with a Service Account](#testb)  <br>
+- Part 4: [What To Do Next](#next)  <br> 
 
-### <a name="setup"></a> Part 1: Deployment Steps
+### <a name="deploy"></a> Deployment Tag Engine v2
 
 The deployment of Tag Engine on Cloud Run is more complex than on App Engine. The Cloud Run service that serves the UI needs to be secured with Identity-Aware Proxy (IAP), which in turn requires a Load Balancer. Here's a high-level diagram of the main components: <br><img src="static/architecture.png" alt="arch" width="500"/>
 
@@ -336,7 +336,7 @@ gcloud scheduler jobs create http scheduled_auto_updates \
 This command created a Cloud Scheduler entry that will trigger tag updates every hour. If you want the tag updates to occur on a different schedule, you can adjust the value of the `schedule` parameter in the above command. 
 <br><br>
 
-### <a name="testa"></a> Part 2: Testing your Tag Engine setup with a user account
+### <a name="testa"></a> Testing your Setup with a User Account
 
 1. Create the sample `data_governance` tag template:
 
@@ -454,7 +454,7 @@ The output from this command should look like this:
 Open the Data Catalog UI and verify that your tag was successfully created. If your tags are not there or if you encounter an error with the previous commands, open the Cloud Run logs and investigate. 
 <br><br>
 
-### <a name="testb"></a> Part 3: Testing your Tag Engine Setup with a Service Account
+### <a name="testb"></a> Testing your Setup with a Service Account
 
 1. Create the sample `data_governance` tag template (you can skip this step if you went through the previous test procedure):
 
@@ -559,7 +559,7 @@ The output from this command should look like this:
 Open the Data Catalog UI and verify that your tag was successfully created. If not, open the Cloud Run logs and investigate the problem. 
 <br><br>
 
-### <a name="next"></a> Part 4: Next Steps
+### <a name="next"></a> What To Do Next
 
 1. Explore additional API methods and run them through curl commands:
 
