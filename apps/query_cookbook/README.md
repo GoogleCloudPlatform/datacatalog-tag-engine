@@ -140,9 +140,23 @@ gcloud functions add-iam-policy-binding summarize_users \
    --project="${TAG_ENGINE_PROJECT}"
 ```
 
+#### Step 6: Copy the prompts to Google Cloud Storage
 
-#### Step 6: Create the remote functions in BigQuery
+The `summarize_sql` passes a prompt when it calls the Vertex AI [text-bison](https://cloud.google.com/vertex-ai/docs/generative-ai/model-reference/text) LLM function. Each SQL operation being summarized has a different prompt (select, join, where, group by, and functions) and each prompt is kept in its own text file. 
 
+Review the prompts located at `summarize_sql/*_prompt.txt
+
+Make a bucket in Google Cloud Storage and copy the files into it: 
+
+```
+gsutil mb -c standard -l REGION gs://BUCKET
+gsutil cp summarize_sql/*_prompt.txt BUCKET
+```
+
+Replace REGION and BUCKET in the above commands with their actual values. 
+
+
+#### Step 7: Create the remote functions in BigQuery
 
 Before creating the functions, we create the BigQuery dataset for holding them:
 
@@ -190,7 +204,7 @@ The `operation` parameter needs to be equal to one of 'fields', 'wheres', 'joins
 The `excluded_accounts` parameter is a comma-separated list of user and service accounts to exclude or filter out. 
 
 
-#### Step 6: Test the remote BigQuery functions
+#### Step 8: Test the remote BigQuery functions
 
 Test both functions on a table that has been queried over the past 180 days. 
 
@@ -207,7 +221,7 @@ select `PROJECT`.query_cookbook.summarize_sql('functions', 'PROJECT', 'REGION', 
 If you do not see the expected output, consult the Cloud Function logs for errors.
 
 
-#### Step 7: Raise the execution and memory limits
+#### Step 9: Raise the execution and memory limits
 
 The integration with Vertex AI in the `summarize_sql` cloud function increases the execution time of the function. To avoid timeouts, we raise the Cloud Run [request timeout](https://cloud.google.com/run/docs/configuring/request-timeout) from 5 minutes to 60 minutes:
 
@@ -227,8 +241,7 @@ gcloud run services update tag-engine-api --memory 4G
 Again, you'll want to run the same command on `tag-engine-ui` if you are planning to trigger the job from the Tag Engine UI. 
 
 
-#### Step 8: Create the Tag Engine dynamic tag config
-
+#### Step 10: Create the Tag Engine dynamic tag config
 
 a) Set environment variables:
 
