@@ -100,30 +100,27 @@ For more details on creating cloud resource connections, refer to the [product d
 The `summarize_users` and `summarize_sql` remote functions in BigQuery both call a cloud function by the same name. 
 
 ```
-cd datacatalog-tag-engine/apps/query_cookbook/summarize_users
+cd datacatalog-tag-engine/apps/query_cookbook
 
 gcloud functions deploy summarize_users \
     --region=$BIGQUERY_REGION \
-    --source=archive.zip \
+    --source=summarize_sql \
     --entry-point=event_handler \
     --runtime=python311 \
     --trigger-http \
     --service-account=$QUERY_COOKBOOK_SA \
-    --timeout=540s
-```
-
-Create the `summarize_sql` cloud function: 
-
-```
-cd datacatalog-tag-engine/apps/query_cookbook/summarize_sql
+    --timeout=540s \
+    --no-allow-unauthenticated
 
 gcloud functions deploy summarize_sql \
     --region=$BIGQUERY_REGION \
+    --source=summarize_sql \
     --entry-point=event_handler \
     --runtime=python311 \
     --trigger-http \
-    --service-account=[TAG_ENGINE_SA] \
-    --timeout=540s
+    --service-account=$QUERY_COOKBOOK_SA \
+    --timeout=540s \
+    --no-allow-unauthenticated
 ```
 
 #### Step 5: Assign the permissions to the CONNECTION_SA
@@ -142,9 +139,9 @@ gcloud functions add-iam-policy-binding summarize_users \
 
 #### Step 6: Copy the prompts to Google Cloud Storage
 
-The `summarize_sql` passes a prompt when it calls the Vertex AI [text-bison](https://cloud.google.com/vertex-ai/docs/generative-ai/model-reference/text) LLM function. Each SQL operation being summarized has a different prompt (select, join, where, group by, and functions) and each prompt is kept in its own text file. 
+The `summarize_sql` function passes a prompt when it calls the Vertex AI [text-bison](https://cloud.google.com/vertex-ai/docs/generative-ai/model-reference/text) LLM. Each SQL operation being summarized has a different prompt (select, join, where, group by, and functions) and each prompt is kept in its own text file. 
 
-Review the prompts located at `summarize_sql/*_prompt.txt
+Review the prompts located at `summarize_sql/*_prompt.txt and customize them to your needs. 
 
 Make a bucket in Google Cloud Storage and copy the files into it: 
 
@@ -257,7 +254,7 @@ b) Open `query_cookbook_config.json` and update the `"template_project"` and `"t
 the project and region in which you created the Query Cookbook tag template. 
 
 Replace the project references to `tag-engine-run-iap` in the query expressions with your BigQuery project. 
-Replace the `"included_tables_uris"` value with the paths to your BigQuery datasets. 
+Replace the `included_tables_uris` value with the complete paths to your BigQuery datasets. 
 
 
 c) Create the Tag Engine dynamic tag config from your edited json file:
