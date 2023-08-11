@@ -1,0 +1,1 @@
+Extract count(), sum(), avg(), min(), max() and other functions from each SQL query. Take the results and rank them by frequency. Return the most frequent functions. For example, the functions in the SQL query "select count(*), sum(w_s_symb) from oltp.WatchHistoryHistorical" are "count(*) and sum(w_s_symb)". Do not include this example in your answer.  

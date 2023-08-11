@@ -1,4 +1,4 @@
-# Copyright 2022 Google, LLC.
+# Copyright 2023 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hashlib
-import base64
 import json
 
 from google.cloud import bigquery
@@ -21,31 +19,20 @@ bq = bigquery.Client()
 
 def event_handler(request):
     request_json = request.get_json()
-    print('request_json:', request_json)
-    
+
     project = request_json['calls'][0][0].strip()
-    print('project:', project)
-    
-    dataset = request_json['calls'][0][1].strip()
-    print('dataset:', dataset)
-    
-    table = request_json['calls'][0][2].strip()
-    print('table:', table)
-    
-    region = request_json['calls'][0][3].strip()
-    print('region:', region)
-    
+    region = request_json['calls'][0][1].strip()
+    dataset = request_json['calls'][0][2].strip()
+    table = request_json['calls'][0][3].strip() 
     max_users = request_json['calls'][0][4]
-    print('max_users:', max_users)
-    
+
     if request_json['calls'][0][5]:
         excluded_accounts = request_json['calls'][0][5]
-        print('excluded_accounts:', excluded_accounts)
     else:
         excluded_accounts = None
     
     try:
-        html_results = process_query_log(project, dataset, table, region, max_users, excluded_accounts)
+        html_results = summarize_users(project, region, dataset, table, max_users, excluded_accounts)
         return json.dumps({"replies": [html_results]})
     
     except Exception as e:
@@ -53,14 +40,12 @@ def event_handler(request):
         return json.dumps({"errorMessage": str(e)}), 400 
 
     
-def process_query_log(project, dataset, table, region, max_users, excluded_accounts=None):
-    
-    print('enter process_query_log')
+def summarize_users(project, region, dataset, table, max_users, excluded_accounts=None):
     
     sql = "select user_email, count(*) "
     sql += "from `" + project + "`.`region-" + region + "`.INFORMATION_SCHEMA.JOBS_BY_PROJECT, unnest(referenced_tables) as rf "
-    sql += "where statement_type = 'SELECT' "
-    sql += "and query not like '%INFORMATION_SCHEMA%' "
+    #sql += "where statement_type = 'SELECT' "
+    sql += "WHERE query not like '%INFORMATION_SCHEMA%' "
     sql += "and state = 'DONE' "
     sql += "and error_result is null "
     sql += "and rf.project_id = '" + project + "' "

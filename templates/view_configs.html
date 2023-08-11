@@ -36,7 +36,7 @@
 	    </h5>
 
 		    {% for config in configs %}
-		    <table style="background-color:#f1eeee" width="860">
+		    <table style="background-color:#f1eeee" width="930">
 		    
 			<form method="post" action="/choose_config_action">
 		    
@@ -51,7 +51,7 @@
 			<tr><td>&nbsp;<span style="color:#0b5394;">Config Type:</span> {{ config['config_type'] }}</td></tr>
 			<tr><td>&nbsp;</td></tr>
 			{% if config['config_type'] == 'TAG_RESTORE' %}
- 		       <table style="background-color:#f1eeee" width="860">
+ 		       <table style="background-color:#f1eeee" width="930">
 			   <tr>
  		          <td>&nbsp;<span style="color:#0b5394;">Source template id:</span>
  		           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{ config['source_template_id'] }}</td>
@@ -83,7 +83,7 @@
  	           </tr>
 			   </table>
 		{% elif config['config_type'] == 'TAG_IMPORT' %}
-	       <table style="background-color:#f1eeee" width="860">
+	       <table style="background-color:#f1eeee" width="930">
 		   <tr>
 	          <td>&nbsp;<span style="color:#0b5394;">Template id:</span>
 	           &nbsp;&nbsp;{{ config['template_id'] }}</td>
@@ -105,7 +105,7 @@
 		  {% else %}
 				<tr><td>&nbsp;<span style="color:#0b5394;">Tag Template Fields:</span></td></tr>
 			    </table>
-				<table style="background-color:#f1eeee" width="860">
+				<table style="background-color:#f1eeee" width="930">
 				{% for field in config['fields'] %}
 			         <tr>
 				     <td>&nbsp;
@@ -140,7 +140,7 @@
 		{% endif %}
 		   
 	    {% if config['config_type'] == 'SENSITIVE_TAG_COLUMN' %}
-		  <table style="background-color:#f1eeee" width="860">  
+		  <table style="background-color:#f1eeee" width="930">  
 	       <tr><td>&nbsp;</td></tr>
 		   <tr>
 	       <td>&nbsp;<span style="color:#0b5394;">DLP Dataset:</span></td>
@@ -152,7 +152,7 @@
 	    {% endif %}
 		
 	    {% if config['config_type'] == 'GLOSSARY_TAG_ASSET' %}
-		  <table style="background-color:#f1eeee" width="860">  
+		  <table style="background-color:#f1eeee" width="930">  
 	       <tr>
 	       <td>&nbsp;<span style="color:#0b5394;">Mapping Table:</span></td>
             </tr>
@@ -163,7 +163,7 @@
 	    {% endif %}
 		
 	    {% if config['config_type'] == 'SENSITIVE_TAG_COLUMN' %}
-		  <table style="background-color:#f1eeee" width="860">  
+		  <table style="background-color:#f1eeee" width="930">  
 	       <tr>
 	       <td>&nbsp;<span style="color:#0b5394;">Infotype Selection Table:</span></td>
             </tr>
@@ -180,7 +180,7 @@
 	    {% endif %}
 		
 		
-		   <table style="background-color:#f1eeee" width="860">
+		   <table style="background-color:#f1eeee" width="930">
 			
 			{% if config['config_type'] == 'ENTRY_CREATE' %}
 				<tr>
@@ -258,7 +258,7 @@
 			 {% endif %}
 			
 		    {% if config['config_type'] == 'SENSITIVE_TAG_COLUMN' %}
-			  <table style="background-color:#f1eeee" width="860">  
+			  <table style="background-color:#f1eeee" width="930">  
 		       <tr>
 		       <td>&nbsp;<span style="color:#0b5394;">Create Policy Tags:</span></td>
 	            </tr>
@@ -276,7 +276,7 @@
 		    {% endif %}	    
 		  
 			
-			<table style="background-color:#f1eeee" width="860">
+			<table style="background-color:#f1eeee" width="930">
 		    {% if 'refresh_mode' in config %}
 		    <tr>
 		    <td>&nbsp;<span style="color:#0b5394;">Refresh Mode:</span>
