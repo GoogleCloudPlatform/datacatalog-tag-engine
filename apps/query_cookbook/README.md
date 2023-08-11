@@ -1,48 +1,31 @@
-## Query Cookbook Overview
+## Query Cookbook Workflow
 
-This folder contains a workflow that creates and populates the Query Cookbook tags on all Data Catalog entities representing BigQuery tables or views which have been recently queried.  
+This folder contains a workflow which produces metadata tags in Data Catalog that contains query access stats. 
 
-For each BigQuery table or view, the Query Cookbook workflow computes these tag fields: 
-1) `top_queries`: the most frequent SQL queries which reference the BigQuery entity in question. 
-2) `top_users`: the user or service accounts with the highest number of queries on the BigQuery entity in question.  
+For each table or view in BigQuery, the Query Cookbook workflow computes a table-level tag with these fields: 
+1) `top_users`: Most active users who have queried this data asset  
+2) `top_fields`: Most commonly selected fields on this data asset
+3) `where_clauses`: Most common where clauses on this data asset
+4) `top_joins`: Most common joins on this data asset
+5) `top_groupbys`: Most common group by clauses on this data asset
+6) `top_functions`: Most common functions run on this data asset
 
-The workflow creates one tag per BigQuery entity in Data Catalog which has been queried over the last 180 days. BigQuery entities which have not been referenced by any queries will not be tagged. 
+The workflow extracts the query logs from [INFORMATION_SCHEMA.JOBS](https://cloud.google.com/bigquery/docs/information-schema-jobs) view and summarizes their contents by calling Vertex AI's [text-bison](https://cloud.google.com/vertex-ai/docs/generative-ai/model-reference/text) LLM.  
+
 
 ### Dependencies
 
-In order to implement this workflow, you must have a running instance of Tag Engine. Moreover, your instance must be running Tag Engine version 1.0.5 or higher. You can check your version by opening the Tag Engine UI or by calling the `[TAG_ENGINE_URL]/version` endpoint. 
-
-If you are new to Tag Engine, start with [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog). You can follow [this README](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/main/README.md) to deploy Tag Engine on Google Cloud Platform. 
+In order to deploy this workflow, you must have a running instance of Tag Engine v2. Make sure you are running on 2.1.1 or higher. You can check your version from the home page of the UI or by calling the `[TAG_ENGINE_URL]/version` endpoint. To deploy Tag Engine, refer to this [guide](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/README.md#deploy). 
 
 
-### Deployment Procedure
+### How to Deploy
 
 The following procedure assumes that you have deployed Tag Engine in your Google Cloud project. 
 
 
-#### Step 1: Create the tag template
+#### Step 1: Create the Query Cookbook tag template
 
-This workflow makes use of the [Query Cookbook tag template](https://github.com/GoogleCloudPlatform/datacatalog-templates/blob/master/query_cookbook.yaml):
-
-```
-template:
-- name: query_cookbook
-  display_name: "Query Cookbook Template"
-  public: False
-  fields:
-    - field: top_users
-      type: richtext
-      display: "Top users"
-      description: "Top users who have queried this data asset in the past 180 days"
-      required: true
-      order: 1
-    - field: top_queries
-      type: richtext
-      display: "Top queries"
-      description: "Top queries run against this data asset in the past 180 days"
-      required: true
-      order: 0
-```
+This workflow makes use of the Query Cookbook [tag template](https://github.com/GoogleCloudPlatform/datacatalog-templates/blob/master/query_cookbook.yaml). 
 
 To create the template, clone the [tag template repository](https://github.com/GoogleCloudPlatform/datacatalog-templates.git) and run the [create_template.py](https://github.com/GoogleCloudPlatform/datacatalog-templates/blob/master/create_template.py) script as follows:
 
@@ -50,19 +33,50 @@ To create the template, clone the [tag template repository](https://github.com/G
 git clone https://github.com/GoogleCloudPlatform/datacatalog-templates.git
 
 python create_template.py [PROJECT] [REGION] query_cookbook.yaml
-
 ```
 
 In the above command, replace [PROJECT] and [REGION] with your BigQuery project and region, respectively.  
 
 
-#### Step 2: Assign IAM role to Tag Engine service account
+#### Step 2: Create the service account 
 
-The Query Cookbook functions query the `INFORMATION_SCHEMA.JOBS` view to retrieve the query logs. In order to query this view, you'll need to grant the BigQuery Resource Viewer role (`roles/bigquery.resourceViewer`) to your Tag Engine service account. 
+The Query Cookbook workflow comes with two BigQuery remote functions, one for retrieving the top users, which is called `summarize_users`, and the other for retrieving the top sql, which is called `summarize_sql`. 
 
-The Tag Engine service account is the default App Engine service account unless you specified a user-managed service account when deploying Tag Engine. 
+Create a service account for running these functions and grant this account the necessary permissions.   
 
-For more details on the `INFORMATION_SCHEMA.JOBS` view, refer to the [product documentation](https://cloud.google.com/bigquery/docs/information-schema-jobs). 
+```
+gcloud iam service-accounts create query-cookbook
+
+export QUERY_COOKBOOK_SA=query-cookbook@${TAG_ENGINE_PROJECT}.iam.gserviceaccount.com
+
+gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
+    --member=serviceAccount:$QUERY_COOKBOOK_SA \
+    --role=roles/bigquery.connectionUser
+
+gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
+    --member=serviceAccount:$QUERY_COOKBOOK_SA \
+    --role=roles/bigquery.dataViewer
+
+gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
+    --member=serviceAccount:$QUERY_COOKBOOK_SA \
+    --role=roles/bigquery.jobUser
+
+gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
+    --member=serviceAccount:$QUERY_COOKBOOK_SA \
+    --role=roles/bigquery.jobUser
+
+gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
+    --member=serviceAccount:$QUERY_COOKBOOK_SA \
+    --role=roles/bigquery.resourceViewer
+
+gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
+    --member=serviceAccount:$QUERY_COOKBOOK_SA \
+    --role=roles/bigquery.resourceViewer
+
+gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
+    --member=serviceAccount:$QUERY_COOKBOOK_SA \
+    --role=roles/storage.objectViewer
+```
 
 
 #### Step 3: Create the BigQuery cloud resource connection 
@@ -76,77 +90,77 @@ bq show --location=[REGION] --connection cloud-function-connection
 
 In the above command, replace [PROJECT] and [REGION] with your BigQuery project and region, respectively.  
 
-The expected output from the `bq show` command contains a "serviceAccountId" property for the created connection. Assign the Cloud Functions Invoker role (`roles/cloudfunctions.invoker`) to this service account. 
+The expected output from the `bq show` command contains a "serviceAccountId" property for the connection resource that starts with `bqcx-` and ends with `@gcp-sa-bigquery-condel.iam.gserviceaccount.com`. We'll refer to this service account below as `CONNECTION_SA`. Once the cloud functions are created (in the following step), we'll need to assign the Cloud Functions Invoker role (`roles/cloudfunctions.invoker`) to the `CONNECTION_SA`. 
 
 For more details on creating cloud resource connections, refer to the [product documentation](https://cloud.google.com/bigquery/docs/reference/standard-sql/remote-functions#sample_code). 
 
 
-#### Step 4: Create the Cloud Functions
+#### Step 4: Create the cloud functions
 
-Create the `top_queries` function in Cloud Functions: 
+The `top_users` and `summarize_sql` remote functions in BigQuery both call a Cloud Function by the same name. 
 
 ```
-cd datacatalog-tag-engine/examples/query_cookbook/top_queries
+cd datacatalog-tag-engine/examples/query_cookbook/summarize_users
 
-gcloud functions deploy top_queries \
-    --region=[REGION] \
+gcloud functions deploy summarize_users \
+    --region=$BIGQUERY_REGION \
     --source=archive.zip \
     --entry-point=event_handler \
-    --runtime=python310 \
+    --runtime=python311 \
     --trigger-http \
-    --service-account=$TAG_ENGINE_SA 
+    --service-account=$QUERY_COOKBOOK_SA
 ```
 
-Create the `top_users` cloud function: 
+Create the `summarize_sql` cloud function: 
 
 ```
-cd datacatalog-tag-engine/examples/query_cookbook/top_users
+cd datacatalog-tag-engine/examples/query_cookbook/summarize_sql
 
-gcloud functions deploy top_users \
-    --region=[REGION] \
+gcloud functions deploy summarize_sql \
+    --region=$BIGQUERY_REGION \
     --entry-point=event_handler \
-    --runtime=python310 \
+    --runtime=python311 \
     --trigger-http \
     --service-account=[TAG_ENGINE_SA] 
 ```
 
-In the above commands, replace [REGION] and [TAG_ENGINE_SA] with your BigQuery region and 
-Tag Engine service account, respectively.  
-
-
-#### Step 5: Create the remote functions in BigQuery
-
-
-Create the BigQuery dataset for holding the two remote functions:
+#### Step 5: Assign the permissions to the CONNECTION_SA
 
 ```
-create schema [PROJECT]:remote_functions options (location='[REGION]');
+gcloud functions add-iam-policy-binding summarize_sql \
+   --member="${CONNECTION_SA}" \
+   --role="roles/cloudfunctions.invoker" \
+   --project="${TAG_ENGINE_PROJECT}"
 
+gcloud functions add-iam-policy-binding summarize_users \
+   --member="${CONNECTION_SA}" \
+   --role="roles/cloudfunctions.invoker" \
+   --project="${TAG_ENGINE_PROJECT}"
 ```
 
-Create the `top_queries` remote function:
+
+#### Step 6: Create the remote functions in BigQuery
+
+
+Before creating the functions, we create the BigQuery dataset for holding them:
 
 ```
-create or replace function `[PROJECT]`.remote_functions.top_queries(project string, 
-	dataset string, table string, region string, max_queries int64, excluded_accounts string) returns string
-	remote with connection `[PROJECT].[REGION].cloud-function-connection`
-	options (endpoint = 'https://[REGION]-[PROJECT].cloudfunctions.net/top_queries')
+CREATE SCHEMA [PROJECT]:remote_functions OPTIONS (location='[REGION]');
 ```
 
-Create the `top_users` remote function:
+Replace [PROJECT] and [REGION] in the above command with the actual values of your BigQuery project and region. 
+
+
+Create the `summarize_users` remote function:
 
 ```
-create or replace function `[PROJECT]`.remote_functions.top_users(project string, 
-	dataset string, table string, region string, max_users int64, excluded_accounts string) returns string
-	remote with connection `[PROJECT].[REGION].cloud-function-connection`
-	options (endpoint = 'https://[REGION]-[PROJECT].cloudfunctions.net/top_users')
+CREATE OR REPLACE FUNCTION `[PROJECT]`.query_cookbook.summarize_users(project STRING, region STRING, dataset STRING, table STRING, 
+      max_users INT64, excluded_accounts STRING) RETURNS STRING 
+      REMOTE WITH CONNECTION `[PROJECT].[REGION].remote-connection` 
+      OPTIONS 
+      (endpoint = 'https://[REGION]-[PROJECT].cloudfunctions.net/summarize_users');
 ```
-
-In the above commands, replace [PROJECT] and [REGION] with your BigQuery project and region, respectively. 
-
-
-The `max_queries` parameter is the max number of SQL queries returned from the function. 
-Set it to the highest number of queries that you wish to include in a tag. 
+Replace [PROJECT] and [REGION] in the above command with the actual values of your BigQuery project and region. 
 
 The `max_users` parameter is the max number of user and service accounts to return from the function. 
 Set it to the highest number of users you wish to include in a tag. 
@@ -156,43 +170,130 @@ When passed in to the `top_queries`, it filters out any queries run from those a
 When passed in to the `top_users` function, it excludes any top users that match the `excluded_accounts` value. 
 
 
-#### Step 6: Test the remote BigQuery functions
-
-Test both functions on a table that has been queried frequently over the past 180 days. 
+Create the `summarize_sql` remote function:
 
 ```
-select `[PROJECT]`.remote_functions.top_queries('[PROJECT]', '[DATASET]', '[TABLE]', '[REGION]', 6, NULL);
+CREATE OR REPLACE FUNCTION `tag-engine-run-iap`.query_cookbook.summarize_sql(operation STRING, project STRING, region STRING, 
+     dataset STRING, table STRING, excluded_accounts STRING) RETURNS STRING 
+     REMOTE WITH CONNECTION `tag-engine-run-iap.us-central1.remote-connection` 
+     OPTIONS 
+     (endpoint = 'https://us-central1-tag-engine-run-iap.cloudfunctions.net/summarize_sql');
+```
 
-select `[PROJECT]`.remote_functions.top_users('[PROJECT]', '[DATASET]', '[TABLE]', '[REGION]', 6, NULL);
+In the above commands, replace [PROJECT] and [REGION] with your BigQuery project and region, respectively. 
+
+
+The `operation` parameter is the max number of SQL queries returned from the function. 
+Set it to the highest number of queries that you wish to include in a tag. 
+
+
+
+#### Step 6: Test the remote BigQuery functions
+
+Test both functions on a table that has been queried over the past 180 days. 
+
+```
+select `[PROJECT]`.remote_functions.summarize_users('[PROJECT]', '[DATASET]', '[TABLE]', '[REGION]', 6, NULL);
+
+select `[PROJECT]`.remote_functions.summarize_sql('[PROJECT]', '[DATASET]', '[TABLE]', '[REGION]', 6, NULL);
 ```
 
 If you do not see the expected output, consult the Cloud Function logs for errors.
 
 
-#### Step 7: Create the Tag Engine config
+#### Step 7: Raise the execution and memory limits
+
+The integration with Vertex AI in the `summarize_sql` cloud function increases the execution time of the function. To avoid timeouts, we need to raise the execution limit of a request from the Cloud Run service:
 
 ```
-cd datacatalog-tag-engine/examples/query_cookbook
+gcloud run services update tag-engine-api --timeout=59m
 ```
 
-Open `query_cookbook_config.json` and update the `"template_project"` and `"template_region"` fields to 
+You'll want to run the same command on `tag-engine-ui` if you are planning to trigger the job from the Tag Engine UI. 
+
+
+In addition, raise the memory limit of the Cloud Run service:
+
+```
+gcloud run services update tag-engine-api --memory 4G
+```
+
+Again, you'll want to run the same command on `tag-engine-ui` if you are planning to trigger the job from the Tag Engine UI. 
+
+
+#### Step 8: Create the Tag Engine dynamic tag config
+
+
+a) Set environment variables:
+
+```
+export TAG_ENGINE_URL=`gcloud run services describe tag-engine-api --format="value(status.url)"`
+export GOOGLE_APPLICATION_CREDENTIALS="cloud-run-sa-private_key.json" 
+
+export IAM_TOKEN=$(gcloud auth print-identity-token)
+export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
+```
+
+b) Open `query_cookbook_config.json` and update the `"template_project"` and `"template_region"` fields to 
 the project and region in which you created the Query Cookbook tag template. 
 
-Replace the references to `tag-engine-develop` in the query expressions with your BigQuery project. 
+Replace the project references to `tag-engine-run-iap` in the query expressions with your BigQuery project. 
 Replace the `"included_tables_uris"` value with the paths to your BigQuery datasets. 
 
-Create the Tag Engine dynamic tag config with your edited json file:
+
+c) Create the Tag Engine dynamic tag config with your edited json file:
 
 ```
-curl -X POST [TAG_ENGINE_URL]/dynamic_table_tags -d @query_cookbook_config.json
+curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @query_cookbook_config.json \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
 ``` 
 
-The above command creates and populates the Query Cookbook tags in Data Catalog. 
-The config also tells Tag Engine to update the tags every 24 hours using the `"refresh_mode"` field.  
+The output from this command should look like this:
 
-Wait a few minutes and open the Data Catalog UI to see the resulting tags. 
+```
+{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"162ba61834ae11eea3b32b4db8329d44"}
+```
 
-If you don't see the expected out, consult the App Engine logs for errors:<br>
+d) Trigger the job to create the Data Catalog tags:
 
-`gcloud app logs tail -s default`
+```
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+  -d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"162ba61834ae11eea3b32b4db8329d44"}' \
+  -H "Authorization: Bearer $IAM_TOKEN" \
+  -H "oauth_token: $OAUTH_TOKEN"
+```
+
+Replace the `config_uuid` with your value in the above command. 
+
+The output from this command should look like this:
+
+```
+{"job_uuid":"1e83cfe834ae11eea3b32b4db8329d44"}
+```
+
+e) Check the job status:
+
+```
+curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"1e83cfe834ae11eea3b32b4db8329d44"}' \
+     -H "Authorization: Bearer $IAM_TOKEN" \
+     -H "oauth_token: $OAUTH_TOKEN"
+```
+
+The output should look like:
+
+```
+{"job_status":"RUNNING","task_count":4,"tasks_completed":0,"tasks_failed":0,"tasks_ran":0}
+```
+
+You can keep polling `get_job_status` until the job finishes. 
+
+Once the job completes, the output changes to:
+
+```
+{"job_status":"SUCCESS","task_count":4,"tasks_completed":4,"tasks_failed":0,"tasks_ran":4}
+```
+
+Open the Data Catalog UI to see the resulting tags. If the job errors out, consult the Cloud Run log for details<br>
+
 
