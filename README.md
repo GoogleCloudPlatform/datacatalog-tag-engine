@@ -587,9 +587,9 @@ python purge_inactive_configs.py
 ```
 <br>
 
-3. Explore the sample workflow scripts:
+3. Explore the sample orchestration scripts:
 
-The `apps/workflows/` contains some sample workflows. The `trigger_job.yaml` and `orchestrate_jobs.yaml` show how orchestrate Tag Engine tasks from a Cloud Workflow. To run the workflows, you need to enable the Cloud Workflows API (`workflows.googleapis.com`) and follow these steps:
+The `apps/orchestration` folder contains some sample workflows. The `trigger_job.yaml` and `orchestrate_jobs.yaml` show how orchestrate Tag Engine tasks from a Cloud Workflow. To run the workflows, you need to enable the Cloud Workflows API (`workflows.googleapis.com`) and follow these steps:
 
 ```
 export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
@@ -602,7 +602,9 @@ gcloud workflows run orchestrate-jobs --location=$TAG_ENGINE_REGION \
 ``` 
 <br>
 
-4. Create your own Tag Engine configs with the UI and/or API. <br><br>
+4. Create the Query Cookbook workflow:
 
+The `apps/query_cookbook` folder contains a workflow that summarizes query access patterns and tags the results. Please consult the [Query Cookbook deployment guide](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/apps/query_cookbook/README.md) for more details. 
+<br>
 
-5. Open new [issues](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/issues) if you encounter any bugs or would like to request a new feature. 
+5. Please open a new [issue](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/issues) if you encounter any bugs or would like to request a new feature. 
