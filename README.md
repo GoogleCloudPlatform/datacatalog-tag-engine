@@ -13,7 +13,7 @@ This README is organized into four parts:  <br>
 
 ### <a name="deploy"></a> Deploying Tag Engine v2
 
-The deployment of Tag Engine on Cloud Run is more complex than on App Engine. The Cloud Run service that serves the UI needs to be secured with Identity-Aware Proxy (IAP), which in turn requires a Load Balancer. Here's a high-level diagram of the main components: <br><img src="static/architecture.png" alt="arch" width="500"/>
+The deployment of Tag Engine on Cloud Run is more complex than on App Engine. The Cloud Run service that serves the UI is secured with a Load Balancer, OAuth, and optionally with Identity-Aware Proxy (IAP). Here's a high-level diagram of the main components: <br><img src="static/architecture.png" alt="arch" width="500"/>
 
 This guide covers both the Tag Engine API and UI deployments. You can deploy each one separately or together. The deployment as a whole has 13 required steps and 1 optional step. There are fewer steps when you choose to deploy only the API. The UI specific steps are marked as such. <br>
 
@@ -305,7 +305,7 @@ Note: This step is only required if you are deploying the UI.
 
 Once the load balancer is up, use its IP address to create an `A record` in Cloud DNS. 
 
-If you created an external load balancer, we recommend that you also enable Identity-Aware Proxy (IAP) on your load balancer's backend. Grant `IAP-secured Web App User` role to the user identities who are allowed to access the application. 
+If you created an external load balancer, we recommend that you also enable Identity-Aware Proxy (IAP) as an extra layer of defense. The use of IAP is not required, however, as the application is secured by OAuth. If you choose to use IAP, grant the `IAP-secured Web App User` role to the user identities who are allowed to access the application. 
 <br><br> 
 
 
