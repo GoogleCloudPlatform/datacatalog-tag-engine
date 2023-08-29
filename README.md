@@ -13,7 +13,7 @@ This README is organized into four parts:  <br>
 
 ### <a name="deploy"></a> Deploying Tag Engine v2
 
-The deployment of Tag Engine on Cloud Run is more complex than on App Engine. The Cloud Run service that serves the UI needs to be secured with Identity-Aware Proxy (IAP), which in turn requires a Load Balancer. Here's a high-level diagram of the main components: <br><img src="static/architecture.png" alt="arch" width="500"/>
+The deployment of Tag Engine on Cloud Run is more complex than on App Engine. The Cloud Run service that serves the UI is secured with a Load Balancer, OAuth, and optionally with Identity-Aware Proxy (IAP). Here's a high-level diagram of the main components: <br><img src="static/architecture.png" alt="arch" width="500"/>
 
 This guide covers both the Tag Engine API and UI deployments. You can deploy each one separately or together. The deployment as a whole has 13 required steps and 1 optional step. There are fewer steps when you choose to deploy only the API. The UI specific steps are marked as such. <br>
 
@@ -305,7 +305,7 @@ Note: This step is only required if you are deploying the UI.
 
 Once the load balancer is up, use its IP address to create an `A record` in Cloud DNS. 
 
-If you created an external load balancer, we recommend that you also enable Identity-Aware Proxy (IAP) on your load balancer's backend. Grant `IAP-secured Web App User` role to the user identities who are allowed to access the application. 
+If you created an external load balancer, we recommend that you also enable Identity-Aware Proxy (IAP) as an extra layer of defense. The use of IAP is not required, however, as the application is secured by OAuth. If you choose to use IAP, grant the `IAP-secured Web App User` role to the user identities who are allowed to access the application. 
 <br><br> 
 
 
@@ -587,9 +587,9 @@ python purge_inactive_configs.py
 ```
 <br>
 
-3. Explore the sample workflow scripts:
+3. Explore the sample orchestration scripts:
 
-The `apps/workflows/` contains some sample workflows. The `trigger_job.yaml` and `orchestrate_jobs.yaml` show how orchestrate Tag Engine tasks from a Cloud Workflow. To run the workflows, you need to enable the Cloud Workflows API (`workflows.googleapis.com`) and follow these steps:
+The `apps/orchestration` folder contains some sample workflows. The `trigger_job.yaml` and `orchestrate_jobs.yaml` show how orchestrate Tag Engine tasks from a Cloud Workflow. To run the workflows, you need to enable the Cloud Workflows API (`workflows.googleapis.com`) and follow these steps:
 
 ```
 export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
@@ -602,7 +602,9 @@ gcloud workflows run orchestrate-jobs --location=$TAG_ENGINE_REGION \
 ``` 
 <br>
 
-4. Create your own Tag Engine configs with the UI and/or API. <br><br>
+4. Create the Query Cookbook workflow:
 
+The `apps/query_cookbook` folder contains a workflow that summarizes query access patterns and tags the results. Please consult the [Query Cookbook deployment guide](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/apps/query_cookbook/README.md) for more details. 
+<br>
 
-5. Open new [issues](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/issues) if you encounter any bugs or would like to request a new feature. 
+5. Please open a new [issue](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/issues) if you encounter any bugs or would like to request a new feature. 

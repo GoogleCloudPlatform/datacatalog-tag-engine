@@ -95,9 +95,31 @@ The expected output from the `bq show` command contains a "serviceAccountId" pro
 For more details on creating cloud resource connections, refer to the [product documentation](https://cloud.google.com/bigquery/docs/reference/standard-sql/remote-functions#sample_code). 
 
 
-#### Step 4: Create the cloud functions
+#### Step 4: Copy the prompts to Google Cloud Storage
+
+The `summarize_sql` function passes a prompt when it calls the Vertex AI [text-bison](https://cloud.google.com/vertex-ai/docs/generative-ai/model-reference/text) LLM. Each SQL operation being summarized has a different prompt (select, join, where, group by, and functions) and each prompt is kept in its own text file. 
+
+Review the prompts located at `summarize_sql/*_prompt.txt and customize them to your needs. 
+
+Make a bucket in Google Cloud Storage and copy the files into it: 
+
+```
+gsutil mb -c standard -l REGION gs://BUCKET
+gsutil cp summarize_sql/*_prompt.txt BUCKET
+```
+
+Replace REGION and BUCKET in the above commands with their actual values. 
+
+
+#### Step 5: Create the cloud functions
 
 The `summarize_users` and `summarize_sql` remote functions in BigQuery both call a cloud function by the same name. 
+
+The source for each one is contained in `main.py` under the `summarize_users` and `summarize_sql` folders. 
+
+Open each `main.py and update the `GCS_BUCKET` variable on line 19 with your own bucket. 
+
+Now we are ready to create the functions:
 
 ```
 cd datacatalog-tag-engine/apps/query_cookbook
@@ -123,7 +145,7 @@ gcloud functions deploy summarize_sql \
     --no-allow-unauthenticated
 ```
 
-#### Step 5: Assign the permissions to the CONNECTION_SA
+#### Step 6: Assign the permissions to the CONNECTION_SA
 
 ```
 gcloud functions add-iam-policy-binding summarize_sql \
@@ -136,21 +158,6 @@ gcloud functions add-iam-policy-binding summarize_users \
    --role="roles/cloudfunctions.invoker" \
    --project="${TAG_ENGINE_PROJECT}"
 ```
-
-#### Step 6: Copy the prompts to Google Cloud Storage
-
-The `summarize_sql` function passes a prompt when it calls the Vertex AI [text-bison](https://cloud.google.com/vertex-ai/docs/generative-ai/model-reference/text) LLM. Each SQL operation being summarized has a different prompt (select, join, where, group by, and functions) and each prompt is kept in its own text file. 
-
-Review the prompts located at `summarize_sql/*_prompt.txt and customize them to your needs. 
-
-Make a bucket in Google Cloud Storage and copy the files into it: 
-
-```
-gsutil mb -c standard -l REGION gs://BUCKET
-gsutil cp summarize_sql/*_prompt.txt BUCKET
-```
-
-Replace REGION and BUCKET in the above commands with their actual values. 
 
 
 #### Step 7: Create the remote functions in BigQuery
