@@ -1,4 +1,4 @@
-# Copyright 2020-2022 Google, LLC.
+# Copyright 2020-2023 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import google.auth
+from google.api_core.client_info import ClientInfo
 from google.cloud import bigquery
 from google.cloud import storage
 from google.cloud import resourcemanager_v3
 import constants, configparser
+
+USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v2'
 
 class Resources:
     
@@ -25,8 +28,8 @@ class Resources:
     
     def __init__(self, credentials):
         
-        self.bq_client = bigquery.Client(credentials=credentials)
-        self.gcs_client = storage.Client(credentials=credentials)
+        self.bq_client = bigquery.Client(credentials=credentials, client_info=ClientInfo(user_agent=USER_AGENT))
+        self.gcs_client = storage.Client(credentials=credentials, client_info=ClientInfo(user_agent=USER_AGENT))
 
     def get_resources(self, included_uris, excluded_uris):
         

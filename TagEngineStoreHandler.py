@@ -16,17 +16,20 @@ import uuid, pytz, os, requests
 import configparser, difflib, hashlib
 from datetime import datetime
 from datetime import timedelta
+from google.api_core.gapic_v1.client_info import ClientInfo
 from google.cloud import bigquery
 from google.cloud import firestore
 import DataCatalogController as controller
 import ConfigType as ct
 import constants
 
+USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v2'
+
 class TagEngineStoreHandler:
     
     def __init__(self):
         
-        self.db = firestore.Client()
+        self.db = firestore.Client(client_info=ClientInfo(user_agent=USER_AGENT))
         
         config = configparser.ConfigParser()
         config.read("tagengine.ini")
