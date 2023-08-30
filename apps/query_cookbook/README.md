@@ -205,7 +205,7 @@ Create the `summarize_sql` remote function:
 ```
 CREATE OR REPLACE FUNCTION `PROJECT`.query_cookbook.summarize_sql(operation STRING, project STRING, region STRING, 
      dataset STRING, table STRING, excluded_accounts STRING) RETURNS STRING 
-     REMOTE WITH CONNECTION `tag-engine-run-iap.us-central1.remote-connection` 
+     REMOTE WITH CONNECTION `PROJECT.REGION.remote-connection` 
      OPTIONS 
      (endpoint = 'https://REGION-PROJECT.cloudfunctions.net/summarize_sql');
 ```
