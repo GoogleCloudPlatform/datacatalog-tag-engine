@@ -1,8 +1,8 @@
 ## Query Cookbook Workflow
 
-This folder contains a workflow that produces metadata tags in Data Catalog. The tags are attached to tables and views in BigQuery and are populated with their most common query access patterns. 
+This folder contains a workflow that produces metadata tags in Data Catalog which contain access patterns for data assets in BigQuery. The workflow calls the ML.GENERATE_TEXT function in BigQuery, which uses the Vertex AI text-bison large language model (LLM) for inferences. More details on the ML.GENERATE_TEXT function are available in the [product documentation](https://cloud.google.com/bigquery/docs/generate-text). 
 
-For each table or view in BigQuery, the Query Cookbook workflow computes a tag with these fields: 
+For each table or view in BigQuery, the Query Cookbook workflow computes a metadata tag with these fields: 
 1) `top_users`: Most active users who have queried this data asset  
 2) `top_fields`: Most commonly selected fields on this data asset
 3) `top_wheres`: Most common where clauses on this data asset
@@ -83,19 +83,29 @@ gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
 
 ```
 bq mk --connection --display_name='cloud function connection' --connection_type=CLOUD_RESOURCE \
-	--project_id=PROJECT --location=REGION cloud-function-connection
+	--project_id=PROJECT --location=REGION remote-connection
 
-bq show --location=REGION --connection cloud-function-connection
+bq show --location=REGION --connection remote-connection
 ```
 
 In the above command, replace PROJECT and REGION with your BigQuery project and region, respectively.  
 
-The expected output from the `bq show` command contains a "serviceAccountId" property for the connection resource that starts with `bqcx-` and ends with `@gcp-sa-bigquery-condel.iam.gserviceaccount.com`. We'll refer to this service account below as `CONNECTION_SA`. Once the cloud functions are created (in the following step), we'll need to assign the Cloud Functions Invoker role (`roles/cloudfunctions.invoker`) to the `CONNECTION_SA`. 
+The expected output from the `bq show` command contains a "serviceAccountId" property for the connection resource that starts with `bqcx-` and ends with `@gcp-sa-bigquery-condel.iam.gserviceaccount.com`. We'll refer to this service account in the following steps as `CONNECTION_SA`. Once the cloud functions are created (in the step 5), we'll need to assign the Cloud Functions Invoker role (`roles/cloudfunctions.invoker`) to the `CONNECTION_SA`. 
 
 For more details on creating cloud resource connections, refer to the [product documentation](https://cloud.google.com/bigquery/docs/reference/standard-sql/remote-functions#sample_code). 
 
 
-#### Step 4: Copy the prompts to Google Cloud Storage
+#### Step 4: Create the ML model
+
+```
+CREATE SCHEMA llm OPTIONS (location = 'us-central1');
+
+CREATE OR REPLACE MODEL llm.model_v1
+    REMOTE WITH CONNECTION `PROJECT.REGION.remote_connection`
+    OPTIONS (REMOTE_SERVICE_TYPE = 'CLOUD_AI_LARGE_LANGUAGE_MODEL_V1');
+```
+
+#### Step 5: Copy the prompts to Google Cloud Storage
 
 The `summarize_sql` function passes a prompt when it calls the Vertex AI [text-bison](https://cloud.google.com/vertex-ai/docs/generative-ai/model-reference/text) LLM. Each SQL operation being summarized has a different prompt (select, join, where, group by, and functions) and each prompt is kept in its own text file. 
 
@@ -111,7 +121,7 @@ gsutil cp summarize_sql/*_prompt.txt BUCKET
 Replace REGION and BUCKET in the above commands with their actual values. 
 
 
-#### Step 5: Create the cloud functions
+#### Step 6: Create the cloud functions
 
 The `summarize_users` and `summarize_sql` remote functions in BigQuery both call a cloud function by the same name. 
 
@@ -145,7 +155,7 @@ gcloud functions deploy summarize_sql \
     --no-allow-unauthenticated
 ```
 
-#### Step 6: Assign the permissions to the CONNECTION_SA
+#### Step 7: Assign the permissions to the CONNECTION_SA
 
 ```
 gcloud functions add-iam-policy-binding summarize_sql \
@@ -160,7 +170,7 @@ gcloud functions add-iam-policy-binding summarize_users \
 ```
 
 
-#### Step 7: Create the remote functions in BigQuery
+#### Step 8: Create the remote functions in BigQuery
 
 Before creating the functions, we create the BigQuery dataset for holding them:
 
@@ -208,7 +218,7 @@ The `operation` parameter needs to be equal to one of 'fields', 'wheres', 'joins
 The `excluded_accounts` parameter is a comma-separated list of user and service accounts to exclude or filter out. 
 
 
-#### Step 8: Test the remote BigQuery functions
+#### Step 9: Test the remote BigQuery functions
 
 Test both functions on a table that has been queried over the past 180 days. 
 
@@ -225,7 +235,7 @@ select `PROJECT`.query_cookbook.summarize_sql('functions', 'PROJECT', 'REGION', 
 If you do not see the expected output, consult the Cloud Function logs for errors.
 
 
-#### Step 9: Raise the execution and memory limits
+#### Step 10: Raise the Tag Engine Cloud Run service's execution and memory limits
 
 The integration with Vertex AI in the `summarize_sql` cloud function increases the execution time of the function. To avoid timeouts, we raise the Cloud Run [request timeout](https://cloud.google.com/run/docs/configuring/request-timeout) from 5 minutes to 60 minutes:
 
