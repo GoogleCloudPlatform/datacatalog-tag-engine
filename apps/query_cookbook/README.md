@@ -1,6 +1,6 @@
 ## Query Cookbook Workflow
 
-This folder contains a workflow computes access patterns for data assets in BigQuery and produces metadata tags in Data Catalog with the results. The workflow calls the `ML.GENERATE_TEXT` function in BigQuery, which uses the Vertex AI text-bison large language model (LLM) for inferences. More details on `ML.GENERATE_TEXT` are available in the [product documentation](https://cloud.google.com/bigquery/docs/generate-text). 
+This folder contains a workflow that computes access patterns for data assets in BigQuery and produces metadata tags in Data Catalog with the results. The workflow calls the `ML.GENERATE_TEXT` function in BigQuery, which uses the Vertex AI text-bison large language model (LLM) for inferences. More details on `ML.GENERATE_TEXT` are available in the [product documentation](https://cloud.google.com/bigquery/docs/generate-text). 
 
 For each table or view in BigQuery, the Query Cookbook workflow computes a metadata tag with these fields: 
 1) `top_users`: Most active users who have queried this data asset  
