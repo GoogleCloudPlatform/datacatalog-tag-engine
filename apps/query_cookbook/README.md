@@ -63,14 +63,6 @@ gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
 
 gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
     --member=serviceAccount:$QUERY_COOKBOOK_SA \
-    --role=roles/bigquery.jobUser
-
-gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
-    --member=serviceAccount:$QUERY_COOKBOOK_SA \
-    --role=roles/bigquery.resourceViewer
-
-gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
-    --member=serviceAccount:$QUERY_COOKBOOK_SA \
     --role=roles/bigquery.resourceViewer
 
 gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
