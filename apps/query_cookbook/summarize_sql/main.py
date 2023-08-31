@@ -56,18 +56,23 @@ def main(operation, project, region, dataset, table, excluded_accounts=None):
     bq = bigquery.Client(location=region)
     
     if 'FIELD' in operation.upper():
+        operation = 'FIELD'
         prompt = download_prompt(FIELDS_PROMPT)
 
     elif 'JOIN' in operation.upper():
+        operation = 'JOIN'
         prompt = download_prompt(JOINS_PROMPT)
 
     elif 'WHERE' in operation.upper():
+        operation = 'WHERE'
         prompt = download_prompt(WHERES_PROMPT)
 
     elif 'GROUP_BY' in operation.upper():
+        operation = 'GROUP_BY'
         prompt = download_prompt(GROUP_BYS_PROMPT)
         
     elif 'FUNCTION' in operation.upper():
+        operation = 'FUNCTION'
         prompt = download_prompt(FUNCTIONS_PROMPT)
     
     else:
@@ -78,10 +83,10 @@ def main(operation, project, region, dataset, table, excluded_accounts=None):
         print(error_message)
         return None, error_message
     else:
-        unique_predictions = extract_sql(operation, prompt, bq, project, region, dataset, table, excluded_accounts)
+        raw_predictions = extract_sql(operation, prompt, bq, project, region, dataset, table, excluded_accounts)
     
-    if len(unique_predictions) > 0:
-        html_predictions = convert_to_html(unique_predictions)
+    if len(raw_predictions) > 0:
+        html_predictions = format_predictions(raw_predictions, operation)
         error_message = None
     else:
         error_message = 'Opps! no predictions found'
@@ -103,9 +108,9 @@ def download_prompt(prompt_file):
 
 def extract_sql(operation, prompt, bq, project, region, dataset, table, excluded_accounts=None):
     
-    print('extract_sql')
+    #print('extract_sql')
     
-    predictions = []
+    raw_predictions = []
     
     sql = "SELECT * "
     sql += "FROM ML.GENERATE_TEXT("
@@ -118,9 +123,11 @@ def extract_sql(operation, prompt, bq, project, region, dataset, table, excluded
     sql += "AND query not like '%summarize_sql%' "
     sql += "AND state = 'DONE' "
     sql += "AND error_result is null "
+    sql += "AND destination_table.project_id is not null "
+    sql += "AND statement_type != 'ALTER_TABLE'"
     
     if excluded_accounts:
-        sql += " and user_email not in ("
+        sql += " AND user_email not in ("
         
         index = 0
         
@@ -151,59 +158,244 @@ def extract_sql(operation, prompt, bq, project, region, dataset, table, excluded
         text_result = row.ml_generate_text_result
         json_result = json.loads(text_result)
         prediction = json_result['predictions'][0]['content']
-        #print('prediction:', prediction)
+        print('raw prediction:', prediction)
         
         # remove false positives
         if 'oltp.WatchHistoryHistorical' in prediction:
             continue  
         else:
             
-            if 'FIELD' in operation.upper() and 'FROM ' in prediction.upper():
-                end_index = prediction.upper().index('FROM ')
-                prediction = prediction[0:end_index]
-            
-            if 'FIELD' in operation.upper():
-                if 'SELECT *' in prediction.upper():
-                    continue
-            
-            if 'FUNCTION' in operation.upper():
-                if any(s in prediction.upper() for s in ('SELECT','FROM','ORDER','LIMIT','PRIMARY KEY', 'FOREIGN KEY')):
-                    continue
-                    
-            if 'GROUP_BY' in operation.upper():
-                if 'GROUP BY' not in prediction.upper():
-                    continue
-
-            predictions.append(prediction.replace('\n', ' ').strip())
+            raw_predictions.append(prediction)
             prediction_count += 1
         
         if prediction_count == 3:
             break
     
-    unique_predictions = set(predictions)
-    
-    return unique_predictions 
+    return raw_predictions 
  
         
-def convert_to_html(predictions):
+def format_predictions(raw_predictions, operation):
     
-    html = '<html>'
+    print('format_predictions')
+    print('input:', raw_predictions)
+    print('count:', len(raw_predictions))
     
-    for prediction in predictions:
+    filtered_predictions = []
+    
+    for raw in raw_predictions:
+        #print('raw:', raw)
+    
+        line_splits = raw.split('\n')
+        #print('line_splits:', line_splits)
+        #print('count:', len(line_splits))
         
-        if prediction == '':
-            continue
+        count = 0
+    
+        for line_split in line_splits:
         
-        html += prediction + '<br>'
-        print('html:', html)
+            count += 1
+            
+            if count < 3 and line_split != '' and line_split[0] == '|':
+                continue
+                        
+            #print('line_split:', line_split)
         
-    html = html[0:-4]
+            pipe_splits = line_split.split('|')
+        
+            for pipe_split in pipe_splits:
+        
+                token = pipe_split.strip()
+                #print('raw token:', token)
+                #print('filtered_predictions:', filtered_predictions)
+                
+                if token == '':
+                    continue
+                
+                if token.isnumeric():
+                    #print('token is numeric, skipping it')
+                    continue
+                    
+                if token[0].isdigit():
+                    token = token[2:].strip()
+                    #print('removed digit from token')
+                    #print('new token:', token)
+                    
+                if operation == 'JOIN' and len(filtered_predictions) > 0 and token.startswith('on '):
+                    last_token = filtered_predictions[-1]
+                    replaced_token = last_token + ' ' + token
+                    filtered_predictions[-1] = replaced_token
+                    #print('replaced last token', last_token, ' with replaced_token', replaced_token)
+                
+                else:
+                    filtered_predictions.append(token)
+                    #print('added token:', token)
+    
+    #print('filtered_predictions:', filtered_predictions)
+    
+    if len(filtered_predictions) == 0:
+        return ''
+    
+    unique_predictions = set(filtered_predictions) 
+    final_predictions = remove_false_positives(unique_predictions, operation)   
+    
+    if len(final_predictions) == 0:
+        return ''
+        
+    html = '<html>'    
+    html += '<br>'.join(final_predictions)
     html += '</html>'
     
     return html    
 
 
+def remove_false_positives(predictions, operation):
+    
+    if any(item in '' for item in predictions):
+        predictions.remove('')
+        
+    if operation == 'FIELD':
+        
+        if any(item in 'frequency' for item in predictions):
+            predictions.remove('frequency')
+            
+        if any(item in 'select clause' for item in predictions):
+            predictions.remove('select clause')
+            
+    if operation == 'WHERE':
+        
+        if any(item in 'Where Clauses' for item in predictions):
+            predictions.remove('Where Clauses')
+            
+        if any(item in 'Frequency' for item in predictions):
+            predictions.remove('Frequency')
+        
+        if any(item in 'No WHERE clauses found' for item in predictions):
+            predictions.remove('No WHERE clauses found')
+            
+        if any(item in 'Here are the most frequently occurring where clauses: ' for item in predictions):
+            predictions.remove('Here are the most frequently occurring where clauses: ')    
+        
+    if operation == 'FUNCTION':
+        
+        if any(item in 'order by' for item in predictions):
+            predictions.remove('order by') 
+              
+        if any(item in 'group by' for item in predictions):
+            predictions.remove('group by')
+            
+        if any(item in 'Frequency' for item in predictions):
+            predictions.remove('Frequency')
+            
+        if any(item in 'Function' for item in predictions):
+            predictions.remove('Function')    
+    
+    if operation == 'GROUP_BY':
+        
+        if any(item in 'Frequency' for item in predictions):
+            predictions.remove('Frequency')
+            
+        if any(item in 'Group By Clause' for item in predictions):
+            predictions.remove('Group By Clause')    
+        
+    if operation == 'JOIN':
+        
+        '''if any(item in 'FROM table_1 FULL JOIN table_2 ON table_1.column_name = table_2.column_name' for item in predictions):
+            predictions.remove('FROM table_1 FULL JOIN table_2 ON table_1.column_name = table_2.column_name')
+
+        if any(item in 'FROM table_1 JOIN table_2 ON table_1.column_name = table_2.column_name' for item in predictions):
+            predictions.remove('FROM table_1 JOIN table_2 ON table_1.column_name = table_2.column_name')
+
+        if any(item in 'FROM table_1 LEFT JOIN table_2 ON table_1.column_name = table_2.column_name' for item in predictions):
+            predictions.remove('FROM table_1 LEFT JOIN table_2 ON table_1.column_name = table_2.column_name')
+        
+        if any(item in 'FROM table_1 RIGHT JOIN table_2 ON table_1.column_name = table_2.column_name' for item in predictions):
+           predictions.remove('FROM table_1 RIGHT JOIN table_2 ON table_1.column_name = table_2.column_name')'''
+
+        if any(item in 'No joins detected.' for item in predictions):
+            predictions.remove('No joins detected.')
+        
+        if any(item in 'No joins were found in the query.' for item in predictions):
+            predictions.remove('No joins were found in the query.')    
+        
+        if any(item in 'Here are the most frequently occurring joins:' for item in predictions):
+            predictions.remove('Here are the most frequently occurring joins:') 
+        
+        if any(item in 'Here are the most frequent joins:' for item in predictions):
+            predictions.remove('Here are the most frequent joins:')
+          
+        if any(item in 'The most frequently occurring join is "left outer join".' for item in predictions):
+            predictions.remove('The most frequently occurring join is "left outer join".')
+                
+        if any(item in 'The most frequently occurring joins are:' for item in predictions):
+            predictions.remove('The most frequently occurring joins are:')
+            
+        if any(item in 'The most frequent joins are:' for item in predictions):
+            predictions.remove('The most frequent joins are:')
+            
+        if any(item in 'ON' for item in predictions):
+            predictions.remove('ON')
+            
+        if any(item in 'FROM' for item in predictions):
+            predictions.remove('FROM')
+        
+        if any(item in 'WHERE' for item in predictions):
+            predictions.remove('WHERE')
+            
+        if any(item in '```' for item in predictions):
+            predictions.remove('```')
+            
+        if any(item in 'JOIN' for item in predictions):
+            predictions.remove('JOIN')
+            
+        if any(item in 'INNER JOIN' for item in predictions):
+            predictions.remove('INNER JOIN')
+        
+        if any(item in 'LEFT JOIN' for item in predictions):
+            predictions.remove('LEFT JOIN')
+        
+        if any(item in 'LEFT OUTER JOIN' for item in predictions):
+            predictions.remove('LEFT OUTER JOIN')
+            
+        if any(item in 'RIGHT JOIN' for item in predictions):
+            predictions.remove('RIGHT JOIN')
+            
+        if any(item in 'RIGHT OUTER JOIN' for item in predictions):
+            predictions.remove('RIGHT OUTER JOIN')
+            
+        if any(item in 'FULL JOIN' for item in predictions):
+            predictions.remove('FULL JOIN')
+    
+        if any(item in 'FULL OUTER JOIN' for item in predictions):
+            predictions.remove('FULL OUTER JOIN')
+
+        if any(item in 'CROSS JOIN' for item in predictions):
+            predictions.remove('CROSS JOIN')
+            
+        if any(item in 'NATURAL JOIN' for item in predictions):
+            predictions.remove('NATURAL JOIN')
+        
+        if any(item in 'NATURAL LEFT JOIN' for item in predictions):
+            predictions.remove('NATURAL LEFT JOIN')
+
+        if any(item in 'NATURAL RIGHT JOIN' for item in predictions):
+            predictions.remove('NATURAL RIGHT JOIN')
+
+        if any(item in 'NATURAL FULL JOIN' for item in predictions):
+            predictions.remove('NATURAL FULL JOIN')
+
+        if any(item in 'NATURAL LEFT OUTER JOIN' for item in predictions):
+            predictions.remove('NATURAL LEFT OUTER JOIN')
+            
+        if any(item in 'NATURAL RIGHT OUTER JOIN' for item in predictions):
+            predictions.remove('NATURAL RIGHT OUTER JOIN')
+        
+        if any(item in 'NATURAL FULL OUTER JOIN' for item in predictions):
+            predictions.remove('NATURAL FULL OUTER JOIN')
+
+    return predictions
+    
+
 if __name__ == "__main__":
-    html_predictions, error_message = main('group_by', 'tag-engine-run-iap', 'us-central1', 'tickit', 'sales')
+    html_predictions, error_message = main('join', 'tag-engine-run-iap', 'us-central1', 'tickit', 'event') # group by, where, function, field
     print('html_predictions:', html_predictions)
     print('error_message:', error_message)
