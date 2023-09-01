@@ -403,6 +403,24 @@ def remove_false_positives(predictions, operation):
         
         if any(item == 'NATURAL FULL OUTER JOIN' for item in predictions):
             predictions.remove('NATURAL FULL OUTER JOIN')
+            
+        if any(item == '`left outer join`' for item in predictions):
+            predictions.remove('`left outer join`')
+        
+        if any(item == '`join`' for item in predictions):
+            predictions.remove('`join`')
+        
+        if any(item == '`full join`' for item in predictions):
+            predictions.remove('`full join`')
+        
+        if any(item == '`cross join`' for item in predictions):
+            predictions.remove('`cross join`')
+        
+        if any(item == '`right outer join`' for item in predictions):
+            predictions.remove('`right outer join`')
+        
+        if any(item == '`using`' for item in predictions):
+            predictions.remove('`using`')
 
     return predictions
     
