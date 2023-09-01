@@ -239,7 +239,7 @@ def format_predictions(raw_predictions, operation):
     final_predictions = remove_false_positives(unique_predictions, operation)   
     
     if len(final_predictions) == 0:
-        return ''
+        return 'None'
         
     html = '<html>'    
     html += '<br>'.join(final_predictions)
@@ -250,152 +250,164 @@ def format_predictions(raw_predictions, operation):
 
 def remove_false_positives(predictions, operation):
     
-    if any(item in '' for item in predictions):
+    print('remove_false_positives')
+    print('predictions:', predictions)
+    
+    if any(item == '' for item in predictions):
         predictions.remove('')
         
     if operation == 'FIELD':
         
-        if any(item in 'frequency' for item in predictions):
+        if any(item == 'frequency' for item in predictions):
             predictions.remove('frequency')
             
-        if any(item in 'select clause' for item in predictions):
+        if any(item == 'select clause' for item in predictions):
             predictions.remove('select clause')
             
     if operation == 'WHERE':
         
-        if any(item in 'Where Clauses' for item in predictions):
+        if any(item == 'Where Clauses' for item in predictions):
             predictions.remove('Where Clauses')
             
-        if any(item in 'Frequency' for item in predictions):
+        if any(item == 'Frequency' for item in predictions):
             predictions.remove('Frequency')
         
-        if any(item in 'No WHERE clauses found' for item in predictions):
+        if any(item == 'No WHERE clauses found' for item in predictions):
             predictions.remove('No WHERE clauses found')
             
-        if any(item in 'Here are the most frequently occurring where clauses: ' for item in predictions):
-            predictions.remove('Here are the most frequently occurring where clauses: ')    
+        if any(item == 'Here are the most frequently occurring where clauses:' for item in predictions):
+            predictions.remove('Here are the most frequently occurring where clauses:')  
         
     if operation == 'FUNCTION':
         
-        if any(item in 'order by' for item in predictions):
+        if any(item == 'order by' for item in predictions):
             predictions.remove('order by') 
               
-        if any(item in 'group by' for item in predictions):
+        if any(item == 'group by' for item in predictions):
             predictions.remove('group by')
             
-        if any(item in 'Frequency' for item in predictions):
+        if any(item == 'Frequency' for item in predictions):
             predictions.remove('Frequency')
             
-        if any(item in 'Function' for item in predictions):
-            predictions.remove('Function')    
+        if any(item == 'Function' for item in predictions):
+            predictions.remove('Function')
+        
+        if any(item == 'where' for item in predictions):
+            predictions.remove('where')    
     
     if operation == 'GROUP_BY':
         
-        if any(item in 'Frequency' for item in predictions):
+        if any(item == 'Frequency' for item in predictions):
             predictions.remove('Frequency')
             
-        if any(item in 'Group By Clause' for item in predictions):
-            predictions.remove('Group By Clause')    
+        if any(item == 'Group By Clause' for item in predictions):
+            predictions.remove('Group By Clause') 
+        
+        if any(item == 'Rank' for item in predictions):
+            predictions.remove('Rank')   
         
     if operation == 'JOIN':
         
-        '''if any(item in 'FROM table_1 FULL JOIN table_2 ON table_1.column_name = table_2.column_name' for item in predictions):
+        if any(item == 'FROM table_1 FULL JOIN table_2 ON table_1.column_name = table_2.column_name' for item in predictions):
             predictions.remove('FROM table_1 FULL JOIN table_2 ON table_1.column_name = table_2.column_name')
 
-        if any(item in 'FROM table_1 JOIN table_2 ON table_1.column_name = table_2.column_name' for item in predictions):
+        if any(item == 'FROM table_1 JOIN table_2 ON table_1.column_name = table_2.column_name' for item in predictions):
             predictions.remove('FROM table_1 JOIN table_2 ON table_1.column_name = table_2.column_name')
 
-        if any(item in 'FROM table_1 LEFT JOIN table_2 ON table_1.column_name = table_2.column_name' for item in predictions):
+        if any(item == 'FROM table_1 LEFT JOIN table_2 ON table_1.column_name = table_2.column_name' for item in predictions):
             predictions.remove('FROM table_1 LEFT JOIN table_2 ON table_1.column_name = table_2.column_name')
         
-        if any(item in 'FROM table_1 RIGHT JOIN table_2 ON table_1.column_name = table_2.column_name' for item in predictions):
-           predictions.remove('FROM table_1 RIGHT JOIN table_2 ON table_1.column_name = table_2.column_name')'''
+        if any(item == 'FROM table_1 RIGHT JOIN table_2 ON table_1.column_name = table_2.column_name' for item in predictions):
+           predictions.remove('FROM table_1 RIGHT JOIN table_2 ON table_1.column_name = table_2.column_name')
 
-        if any(item in 'No joins detected.' for item in predictions):
+        if any(item == 'No joins detected.' for item in predictions):
             predictions.remove('No joins detected.')
         
-        if any(item in 'No joins were found in the query.' for item in predictions):
+        if any(item == 'No joins were found in the query.' for item in predictions):
             predictions.remove('No joins were found in the query.')    
         
-        if any(item in 'Here are the most frequently occurring joins:' for item in predictions):
+        if any(item == 'Here are the most frequently occurring joins:' for item in predictions):
             predictions.remove('Here are the most frequently occurring joins:') 
         
-        if any(item in 'Here are the most frequent joins:' for item in predictions):
+        if any(item == 'Here are the most frequent joins:' for item in predictions):
             predictions.remove('Here are the most frequent joins:')
           
-        if any(item in 'The most frequently occurring join is "left outer join".' for item in predictions):
+        if any(item == 'The most frequently occurring join is "left outer join".' for item in predictions):
             predictions.remove('The most frequently occurring join is "left outer join".')
                 
-        if any(item in 'The most frequently occurring joins are:' for item in predictions):
+        if any(item == 'The most frequently occurring joins are:' for item in predictions):
             predictions.remove('The most frequently occurring joins are:')
             
-        if any(item in 'The most frequent joins are:' for item in predictions):
+        if any(item == 'The most frequent joins are:' for item in predictions):
             predictions.remove('The most frequent joins are:')
+        
+        if any(item == 'Join' for item in predictions):
+            predictions.remove('Join')    
             
-        if any(item in 'ON' for item in predictions):
+        if any(item == 'ON' for item in predictions):
             predictions.remove('ON')
             
-        if any(item in 'FROM' for item in predictions):
+        if any(item == 'FROM' for item in predictions):
             predictions.remove('FROM')
         
-        if any(item in 'WHERE' for item in predictions):
+        if any(item == 'WHERE' for item in predictions):
             predictions.remove('WHERE')
             
-        if any(item in '```' for item in predictions):
+        if any(item == '```' for item in predictions):
             predictions.remove('```')
             
-        if any(item in 'JOIN' for item in predictions):
+        if any(item == 'JOIN' for item in predictions):
             predictions.remove('JOIN')
             
-        if any(item in 'INNER JOIN' for item in predictions):
+        if any(item == 'INNER JOIN' for item in predictions):
             predictions.remove('INNER JOIN')
         
-        if any(item in 'LEFT JOIN' for item in predictions):
+        if any(item == 'LEFT JOIN' for item in predictions):
             predictions.remove('LEFT JOIN')
         
-        if any(item in 'LEFT OUTER JOIN' for item in predictions):
+        if any(item == 'LEFT OUTER JOIN' for item in predictions):
             predictions.remove('LEFT OUTER JOIN')
             
-        if any(item in 'RIGHT JOIN' for item in predictions):
+        if any(item == 'RIGHT JOIN' for item in predictions):
             predictions.remove('RIGHT JOIN')
             
-        if any(item in 'RIGHT OUTER JOIN' for item in predictions):
+        if any(item == 'RIGHT OUTER JOIN' for item in predictions):
             predictions.remove('RIGHT OUTER JOIN')
             
-        if any(item in 'FULL JOIN' for item in predictions):
+        if any(item == 'FULL JOIN' for item in predictions):
             predictions.remove('FULL JOIN')
     
-        if any(item in 'FULL OUTER JOIN' for item in predictions):
+        if any(item == 'FULL OUTER JOIN' for item in predictions):
             predictions.remove('FULL OUTER JOIN')
 
-        if any(item in 'CROSS JOIN' for item in predictions):
+        if any(item == 'CROSS JOIN' for item in predictions):
             predictions.remove('CROSS JOIN')
             
-        if any(item in 'NATURAL JOIN' for item in predictions):
+        if any(item == 'NATURAL JOIN' for item in predictions):
             predictions.remove('NATURAL JOIN')
         
-        if any(item in 'NATURAL LEFT JOIN' for item in predictions):
+        if any(item == 'NATURAL LEFT JOIN' for item in predictions):
             predictions.remove('NATURAL LEFT JOIN')
 
-        if any(item in 'NATURAL RIGHT JOIN' for item in predictions):
+        if any(item == 'NATURAL RIGHT JOIN' for item in predictions):
             predictions.remove('NATURAL RIGHT JOIN')
 
-        if any(item in 'NATURAL FULL JOIN' for item in predictions):
+        if any(item == 'NATURAL FULL JOIN' for item in predictions):
             predictions.remove('NATURAL FULL JOIN')
 
-        if any(item in 'NATURAL LEFT OUTER JOIN' for item in predictions):
+        if any(item == 'NATURAL LEFT OUTER JOIN' for item in predictions):
             predictions.remove('NATURAL LEFT OUTER JOIN')
             
-        if any(item in 'NATURAL RIGHT OUTER JOIN' for item in predictions):
+        if any(item == 'NATURAL RIGHT OUTER JOIN' for item in predictions):
             predictions.remove('NATURAL RIGHT OUTER JOIN')
         
-        if any(item in 'NATURAL FULL OUTER JOIN' for item in predictions):
+        if any(item == 'NATURAL FULL OUTER JOIN' for item in predictions):
             predictions.remove('NATURAL FULL OUTER JOIN')
 
     return predictions
     
 
 if __name__ == "__main__":
-    html_predictions, error_message = main('join', 'tag-engine-run-iap', 'us-central1', 'tickit', 'event') # group by, where, function, field
+    html_predictions, error_message = main('join', 'tag-engine-run-iap', 'us-central1', 'tickit', 'listing') # group by, where, function, field
     print('html_predictions:', html_predictions)
     print('error_message:', error_message)
