@@ -426,6 +426,6 @@ def remove_false_positives(predictions, operation):
     
 
 if __name__ == "__main__":
-    html_predictions, error_message = main('join', 'tag-engine-run-iap', 'us-central1', 'tickit', 'listing') # group by, where, function, field
+    html_predictions, error_message = main('join', 'tag-engine-run-iap', 'us-central1', 'tickit', 'users') # group by, where, function, field
     print('html_predictions:', html_predictions)
     print('error_message:', error_message)

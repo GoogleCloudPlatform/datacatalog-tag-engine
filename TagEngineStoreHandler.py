@@ -19,6 +19,7 @@ from datetime import timedelta
 from google.api_core.gapic_v1.client_info import ClientInfo
 from google.cloud import bigquery
 from google.cloud import firestore
+from google.cloud.firestore_v1.base_query import FieldFilter
 import DataCatalogController as controller
 import ConfigType as ct
 import constants
@@ -314,7 +315,9 @@ class TagEngineStoreHandler:
         
         # check to see if this template already exists
         template_ref = self.db.collection('tag_templates')
-        query = template_ref.where('template_id', '==', template_id).where('template_project', '==', template_project).where('template_region', '==', template_region)
+        query = template_ref.where(filter=FieldFilter('template_id', '==', template_id))
+        query = query.where(filter=FieldFilter('template_project', '==', template_project))
+        query = query.where(filter=FieldFilter('template_region', '==', template_region))
         
         matches = query.get()
         
@@ -358,8 +361,10 @@ class TagEngineStoreHandler:
         
         # check to see if a static config already exists
         configs_ref = self.db.collection('static_asset_configs')
-        query = configs_ref.where('template_uuid', '==', template_uuid).where('included_assets_uris_hash', '==',\
-                            included_assets_uris_hash).where('config_type', '==', 'STATIC_TAG_ASSET').where('config_status', '!=', 'INACTIVE')
+        query = configs_ref.where(filter=FieldFilter('template_uuid', '==', template_uuid))
+        query = query.where(filter=FieldFilter('included_assets_uris_hash', '==', included_assets_uris_hash))
+        query = query.where(filter=FieldFilter('config_type', '==', 'STATIC_TAG_ASSET'))
+        query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
        
         matches = query.get()
        
@@ -439,7 +444,10 @@ class TagEngineStoreHandler:
         
         # check to see if this config already exists
         configs_ref = self.db.collection('dynamic_table_configs')
-        query = configs_ref.where('template_uuid', '==', template_uuid).where('included_tables_uris_hash', '==', included_tables_uris_hash).where('config_type', '==', 'DYNAMIC_TAG_TABLE').where('config_status', '!=', 'INACTIVE')
+        query = configs_ref.where(filter=FieldFilter('template_uuid', '==', template_uuid))
+        query = query.where(filter=FieldFilter('included_tables_uris_hash', '==', included_tables_uris_hash))
+        query = query.where(filter=FieldFilter('config_type', '==', 'DYNAMIC_TAG_TABLE'))
+        query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
        
         matches = query.get()
        
@@ -514,7 +522,10 @@ class TagEngineStoreHandler:
         
         # check to see if this config already exists
         configs_ref = self.db.collection('dynamic_column_configs')
-        query = configs_ref.where('template_uuid', '==', template_uuid).where('included_tables_uris_hash', '==', included_tables_uris_hash).where('config_type', '==', 'DYNAMIC_TAG_COLUMN').where('config_status', '!=', 'INACTIVE')
+        query = configs_ref.where(filter=FieldFilter('template_uuid', '==', template_uuid))
+        query = query.where(filter=FieldFilter('included_tables_uris_hash', '==', included_tables_uris_hash))
+        query = query.where(filter=FieldFilter('config_type', '==', 'DYNAMIC_TAG_COLUMN'))
+        query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
        
         matches = query.get()
        
@@ -619,7 +630,10 @@ class TagEngineStoreHandler:
         
         # check to see if this config already exists
         configs_ref = self.db.collection('entry_configs')
-        query = configs_ref.where('template_uuid', '==', template_uuid).where('included_assets_uris_hash', '==', included_assets_uris_hash).where('config_type', '==', 'ENTRY_CREATE').where('config_status', '!=', 'INACTIVE')
+        query = configs_ref.where(filter=FieldFilter('template_uuid', '==', template_uuid))
+        query = query.where(filter=FieldFilter('included_assets_uris_hash', '==', included_assets_uris_hash))
+        query = query.where(filter=FieldFilter('config_type', '==', 'ENTRY_CREATE'))
+        query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
        
         matches = query.get()
        
@@ -697,7 +711,10 @@ class TagEngineStoreHandler:
         
         # check to see if this config already exists
         configs_ref = self.db.collection('glossary_asset_configs')
-        query = configs_ref.where('template_uuid', '==', template_uuid).where('included_assets_uris_hash', '==', included_assets_uris_hash).where('config_type', '==', 'GLOSSARY_TAG_ASSET').where('config_status', '!=', 'INACTIVE')
+        query = configs_ref.where(filter=FieldFilter('template_uuid', '==', template_uuid))
+        query = query.where(filter=FieldFilter('included_assets_uris_hash', '==', included_assets_uris_hash))
+        query = query.where(filter=FieldFilter('config_type', '==', 'GLOSSARY_TAG_ASSET'))
+        query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
        
         matches = query.get()
        
@@ -779,7 +796,10 @@ class TagEngineStoreHandler:
         
         # check to see if this config already exists
         configs_ref = self.db.collection('sensitive_column_configs')
-        query = configs_ref.where('template_uuid', '==', template_uuid).where('included_tables_uris_hash', '==', included_tables_uris_hash).where('config_type', '==', 'SENSITIVE_TAG_COLUMN').where('config_status', '!=', 'INACTIVE')
+        query = configs_ref.where(filter=FieldFilter('template_uuid', '==', template_uuid))
+        query = query.where(filter=FieldFilter('included_tables_uris_hash', '==', included_tables_uris_hash))
+        query = query.where(filter=FieldFilter('config_type', '==', 'SENSITIVE_TAG_COLUMN'))
+        query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
        
         matches = query.get()
        
@@ -867,7 +887,9 @@ class TagEngineStoreHandler:
         
         # check to see if this config already exists
         configs_ref = self.db.collection('restore_configs')
-        query = configs_ref.where('source_template_uuid', '==', source_template_uuid).where('target_template_uuid', '==', target_template_uuid).where('config_status', '!=', 'INACTIVE')
+        query = configs_ref.where(filter=FieldFilter('source_template_uuid', '==', source_template_uuid))
+        query = query.where(filter=FieldFilter('target_template_uuid', '==', target_template_uuid))
+        query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
        
         matches = query.get()
        
@@ -916,7 +938,9 @@ class TagEngineStoreHandler:
         
         # check to see if this config already exists
         configs_ref = self.db.collection('import_configs')
-        query = configs_ref.where('template_uuid', '==', template_uuid).where('metadata_import_location', '==', metadata_import_location).where('config_status', '!=', 'INACTIVE')
+        query = configs_ref.where(filter=FieldFilter('template_uuid', '==', template_uuid))
+        query = query.where(filter=FieldFilter('metadata_import_location', '==', metadata_import_location))
+        query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
        
         matches = query.get()
        
@@ -964,9 +988,17 @@ class TagEngineStoreHandler:
         configs_ref = self.db.collection('export_configs')
         
         if source_projects != '':
-            query = configs_ref.where('source_projects', '==', source_projects).where('source_region', '==', source_region).where('target_project', '==', target_project).where('target_dataset', '==', target_dataset).where('config_status', '!=', 'INACTIVE')
+            query = configs_ref.where(filter=FieldFilter('source_projects', '==', source_projects))
+            query = query.where(filter=FieldFilter('source_region', '==', source_region))
+            query = query.where(filter=FieldFilter('target_project', '==', target_project))
+            query = query.where(filter=FieldFilter('target_dataset', '==', target_dataset))
+            query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
         else:
-            query = configs_ref.where('source_folder', '==', source_folder).where('source_region', '==', source_region).where('target_project', '==', target_project).where('target_dataset', '==', target_dataset).where('config_status', '!=', 'INACTIVE')
+            query = configs_ref.where(filter=FieldFilter('source_folder', '==', source_folder))
+            query = query.where(filter=FieldFilter('source_region', '==', source_region))
+            query = query.where(filter=FieldFilter('target_project', '==', target_project))
+            query = query.where(filter=FieldFilter('target_dataset', '==', target_dataset))
+            query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
        
         matches = query.get()
        
@@ -1085,13 +1117,14 @@ class TagEngineStoreHandler:
             if coll_name == 'restore_configs':
             
                 if template_exists == True:
-                    config_ref = config_ref.where('target_template_uuid', '==', template_uuid)
+                    config_ref = config_ref.where(filter=FieldFilter('target_template_uuid', '==', template_uuid))
             else:
                 
                 if template_exists == True:
-                    config_ref = config_ref.where('template_uuid', '==', template_uuid)
+                    config_ref = config_ref.where(filter=FieldFilter('template_uuid', '==', template_uuid))
                 
-            docs = config_ref.where('config_status', '!=', 'INACTIVE').where('service_account', '==', service_account).stream()
+            docs = config_ref.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
+            docs = docs.where(filter=FieldFilter('service_account', '==', service_account)).stream()
                                     
             for doc in docs:
                 config = doc.to_dict()
@@ -1131,7 +1164,8 @@ class TagEngineStoreHandler:
         job_results = []
         
         jobs_ref = self.db.collection('jobs')
-        jobs_stream = jobs_ref.where('config_uuid', '==', config_uuid).order_by('completion_time', direction=firestore.Query.DESCENDING).stream()
+        query = jobs_ref.where(filter=FieldFilter('config_uuid', '==', config_uuid))
+        jobs_stream = query.order_by('completion_time', direction=firestore.Query.DESCENDING).stream()
 
         for job in jobs_stream:
             job_results.append(job.to_dict())
@@ -1172,7 +1206,8 @@ class TagEngineStoreHandler:
         
         for coll_name in coll_names:
             config_ref = self.db.collection(coll_name)
-            config_stream = config_ref.where('config_status', '==', 'INACTIVE').where('service_account', '==', service_account).stream()
+            query = config_ref.where(filter=FieldFilter('config_status', '==', 'INACTIVE'))
+            config_stream = query.where(filter=FieldFilter('service_account', '==', service_account)).stream()
 
             for inactive_config in config_stream:
                 config_uuids.append(inactive_config.id)
@@ -1190,7 +1225,8 @@ class TagEngineStoreHandler:
         
         configs = []
     
-        docs = self.db.collection('export_configs').where('config_status', '!=', 'INACTIVE').order_by('config_status', direction=firestore.Query.DESCENDING).stream()
+        query = self.db.collection('export_configs').where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
+        docs = query.order_by('config_status', direction=firestore.Query.DESCENDING).stream()
                 
         for doc in docs:
             config = doc.to_dict()
@@ -1252,11 +1288,13 @@ class TagEngineStoreHandler:
         config_ref = self.db.collection(coll_name)
         
         if 'asset' in coll_name:
-            config = config_ref.where('template_uuid', '==', template_uuid).where('config_status', '==', 'ACTIVE')\
-                    .where('included_assets_uris', '==', included_uris).get()
+            config = config_ref.where(filter=FieldFilter('template_uuid', '==', template_uuid))
+            config = config.where(filter=FieldFilter('config_status', '==', 'ACTIVE'))
+            config = config.where(filter=FieldFilter('included_assets_uris', '==', included_uris)).get()
         else:
-            config = config_ref.where('template_uuid', '==', template_uuid).where('config_status', '==', 'ACTIVE')\
-                    .where('included_tables_uris', '==', included_uris).get()
+            config = config_ref.where(filter=FieldFilter('template_uuid', '==', template_uuid))
+            config = config.where(filter=FieldFilter('config_status', '==', 'ACTIVE'))
+            config = config.where(filter=FieldFilter('included_tables_uris', '==', included_uris)).get()
         
         if config == None:
             print('Error: config could not be found')
