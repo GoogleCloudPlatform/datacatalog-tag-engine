@@ -45,7 +45,7 @@ If multiple teams want to share an instance of Tag Engine and they own different
 
 - This step is only required if you are deploying the UI. 
 
-- Designate a domain for your web application (e.g. tagengine.app). You can register one from [Cloud Domains](https://console.cloud.google.com/net-services/domains/) if you don't have one. 
+- Designate a domain for your web application (e.g. tagengine.app). You can register a domain from GCP with [Cloud Domains](https://console.cloud.google.com/net-services/domains/) if you need one. 
 
 - Create an OAuth client ID from API Credentials. Set the `Authorized redirect URI` to `https://[TAG_ENGINE_DOMAIN]/oauth2callback`, where [TAG_ENGINE_DOMAIN] is your actual domain name (e.g. `https://tagengine.app/oauth2callback`). 
 
