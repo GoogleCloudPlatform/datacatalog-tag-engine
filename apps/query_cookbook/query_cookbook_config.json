@@ -1,21 +1,36 @@
 {
     "template_id": "query_cookbook",
-    "template_project": "tag-engine-develop",
+    "template_project": "tag-engine-run-iap",
     "template_region": "us-central1",
     "fields": [
         {
             "field_id": "top_users",
-            "query_expression": "select `tag-engine-develop`.remote_functions.top_users('$project', '$dataset', '$table', 'us-central1', 6, NULL)"
+            "query_expression": "select `tag-engine-run-iap`.query_cookbook.summarize_users('$project', 'us-central1', '$dataset', '$table', 3, NULL);"
         },
-		{
-            "field_id": "top_queries",
-            "query_expression": "select `tag-engine-develop`.remote_functions.top_queries('$project', '$dataset', '$table', 'us-central1', 6, NULL)"
+        {
+            "field_id": "top_fields",
+            "query_expression": "select `tag-engine-run-iap`.query_cookbook.summarize_sql('fields', '$project', 'us-central1', '$dataset', '$table', NULL);"
+        },
+        {
+            "field_id": "top_wheres",
+            "query_expression": "select `tag-engine-run-iap`.query_cookbook.summarize_sql('wheres', '$project', 'us-central1', '$dataset', '$table', NULL);"
+        },
+        {
+            "field_id": "top_joins",
+            "query_expression": "select `tag-engine-run-iap`.query_cookbook.summarize_sql('joins', '$project', 'us-central1', '$dataset', '$table', NULL);"
+        },
+        {
+            "field_id": "top_groupbys",
+            "query_expression": "select `tag-engine-run-iap`.query_cookbook.summarize_sql('group_bys', '$project', 'us-central1', '$dataset', '$table', NULL);"
+        },
+        {
+            "field_id": "top_functions",
+            "query_expression": "select `tag-engine-run-iap`.query_cookbook.summarize_sql('functions', '$project', 'us-central1', '$dataset', '$table', NULL);"
         }
     ],
-    "included_tables_uris": "bigquery/project/data-mesh-343422/dataset/oltp/*,bigquery/project/data-mesh-343422/dataset/crm/*",
-    "refresh_mode": "AUTO",
-    "refresh_frequency": 24,
-    "refresh_unit": "hours",
-    "tag_history": true,
+    "included_tables_uris": "bigquery/project/tag-engine-run-iap/dataset/tickit/listing,bigquery/project/tag-engine-run-iap/dataset/tickit/sales,bigquery/project/tag-engine-run-iap/dataset/tickit/event,bigquery/project/tag-engine-run-iap/dataset/tickit/users",
+    "excluded_tables_uris": "",
+    "refresh_mode": "ON_DEMAND",
+    "tag_history": false,
     "tag_stream": false  
 }

@@ -1,4 +1,4 @@
-# Copyright 2020-2021 Google, LLC.
+# Copyright 2020-2023 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ from pyarrow import parquet
 import json
 import os
 
+from google.api_core.gapic_v1.client_info import ClientInfo
 from google.protobuf.timestamp_pb2 import Timestamp
 from google.cloud import datacatalog
 from google.cloud.datacatalog_v1 import types
@@ -38,6 +39,7 @@ import constants
 config = configparser.ConfigParser()
 config.read("tagengine.ini")
 BIGQUERY_REGION = config['DEFAULT']['BIGQUERY_REGION']
+USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v2'
 
 class DataCatalogController:
     
@@ -46,19 +48,28 @@ class DataCatalogController:
         self.template_id = template_id
         self.template_project = template_project
         self.template_region = template_region
-        
-        self.client = DataCatalogClient(credentials=credentials)
+        self.client = DataCatalogClient(credentials=self.credentials, client_info=ClientInfo(user_agent=USER_AGENT))
         
         if template_id != None and template_project != None and template_region != None:
             self.template_path = self.client.tag_template_path(template_project, template_region, template_id)
         else:
             self.template_path = None
+            
+        self.bq_client = bigquery.Client(credentials=self.credentials, location=BIGQUERY_REGION, client_info=ClientInfo(user_agent=USER_AGENT))
+        self.gcs_client = storage.Client(credentials=self.credentials, client_info=ClientInfo(user_agent=USER_AGENT))
+        self.ptm_client = datacatalog.PolicyTagManagerClient(credentials=self.credentials, client_info=ClientInfo(user_agent=USER_AGENT))
     
     def get_template(self, included_fields=None):
         
         fields = []
         
-        tag_template = self.client.get_tag_template(name=self.template_path)
+        try:
+            
+            tag_template = self.client.get_tag_template(name=self.template_path)
+        
+        except Exception as e:
+            print('Error retrieving tag template: ', e)
+            return fields
         
         for field_id, field_value in tag_template.fields.items():
             
@@ -269,8 +280,7 @@ class DataCatalogController:
         print('tag_stream:', tag_stream)
         
         store = tesh.TagEngineStoreHandler()
-        bq_client = bigquery.Client(credentials=self.credentials, location=BIGQUERY_REGION)
-        
+
         creation_status = constants.SUCCESS
         error_exists = False
         
@@ -300,7 +310,7 @@ class DataCatalogController:
             print('returned query_str: ' + query_str)
             
             # note: field_values is of type list
-            field_values, error_exists = self.run_query(bq_client, query_str, field_type, batch_mode, store)
+            field_values, error_exists = self.run_query(query_str, field_type, batch_mode, store)
             print('field_values: ', field_values)
             print('error_exists: ', error_exists)
     
@@ -383,15 +393,14 @@ class DataCatalogController:
         #print('tag_stream:', tag_stream)
                 
         store = tesh.TagEngineStoreHandler()
-        bq_client = bigquery.Client(credentials=self.credentials, location=BIGQUERY_REGION)
-        
+
         creation_status = constants.SUCCESS
         error_exists = False
         
         columns = [] # columns to be tagged
         columns_query = self.parse_query_expression(uri, columns_query)
         #print('columns_query:', columns_query)
-        rows = bq_client.query(columns_query).result()
+        rows = self.bq_client.query(columns_query).result()
         
         num_rows = 0
         for row in rows:
@@ -444,7 +453,7 @@ class DataCatalogController:
                 #print('returned query_str: ' + query_str)
             
                 # note: field_values is of type list
-                field_values, error_exists = self.run_query(bq_client, query_str, field_type, batch_mode, store)
+                field_values, error_exists = self.run_query(query_str, field_type, batch_mode, store)
                 #print('field_values: ', field_values)
                 #print('error_exists: ', error_exists)
     
@@ -524,10 +533,9 @@ class DataCatalogController:
         
         creation_status = constants.SUCCESS
         store = tesh.TagEngineStoreHandler()
-        gcs_client = storage.Client()
         
         bucket_name, filename = uri
-        bucket = gcs_client.get_bucket(bucket_name)
+        bucket = self.gcs_client.get_bucket(bucket_name)
         blob = bucket.get_blob(filename)
         
         entry_group_short_name = bucket_name.replace('-', '_')
@@ -805,9 +813,7 @@ class DataCatalogController:
         query_str = 'select canonical_name from `' + mapping_table_formatted + '` where source_name in (' + column_schema_str[0:-1] + ')'
         #print('query_str: ', query_str)
 
-        # run query against mapping table
-        bq_client = bigquery.Client(credentials=self.credentials, location=BIGQUERY_REGION)
-        rows = bq_client.query(query_str).result()
+        rows = self.bq_client.query(query_str).result()
         
         tag = datacatalog.Tag()
         tag.template = self.template_path
@@ -903,14 +909,13 @@ class DataCatalogController:
         print('template_uuid: ', template_uuid)
         
         if create_policy_tags:
-            ptm_client = datacatalog.PolicyTagManagerClient(credentials=self.credentials)
-            
+
             request = datacatalog.ListPolicyTagsRequest(
                 parent=taxonomy_id
             )
 
             try:
-                page_result = ptm_client.list_policy_tags(request=request)
+                page_result = self.ptm_client.list_policy_tags(request=request)
             except Exception as e:
                 print('Unable to retrieve the policy tag taxonomy for taxonomy_id ' + taxonomy_id + '. Error message: ', e)
                 creation_status = constants.ERROR
@@ -968,11 +973,9 @@ class DataCatalogController:
         dlp_sql += 'group by field'
         
         #print('dlp_sql: ', dlp_sql)
-        
-        bq_client = bigquery.Client(credentials=self.credentials, location=BIGQUERY_REGION)
-        
+
         try:
-            dlp_rows = bq_client.query(dlp_sql).result()
+            dlp_rows = self.bq_client.query(dlp_sql).result()
         
         except Exception as e:
             print('Error querying DLP findings table. Error message: ', e)
@@ -1015,7 +1018,7 @@ class DataCatalogController:
             #print('is_sql: ', is_sql)
             
             try:
-                ni_rows = bq_client.query(is_sql).result()
+                ni_rows = self.bq_client.query(is_sql).result()
             except Exception as e:
                 print('Error querying infotype selection table. Error message: ', e)
                 creation_status = constants.ERROR
@@ -1055,7 +1058,7 @@ class DataCatalogController:
         #print('c_sql: ', c_sql)
     
         try:
-            c_rows = bq_client.query(c_sql).result()
+            c_rows = self.bq_client.query(c_sql).result()
         except Exception as e:
             print('Error querying infotype classification table. Error message: ', e)
             creation_status = constants.ERROR
@@ -1185,9 +1188,7 @@ class DataCatalogController:
     def apply_policy_tags(self, table_id, policy_tag_requests):
         
         success = True
-        
-        bq_client = bigquery.Client(credentials=self.credentials, location=BIGQUERY_REGION)
-        table = bq_client.get_table(table_id) 
+        table = self.bq_client.get_table(table_id) 
         schema = table.schema
 
         new_schema = []
@@ -1211,7 +1212,7 @@ class DataCatalogController:
         table.schema = new_schema
         
         try:
-            table = bq_client.update_table(table, ["schema"])  
+            table = self.bq_client.update_table(table, ["schema"])  
         
         except Exception as e:
             print('Error occurred while updating the schema of', table_id, 'Error message:', e)
@@ -1780,7 +1781,7 @@ class DataCatalogController:
         return query_str
     
     
-    def run_query(self, bq_client, query_str, field_type, batch_mode, store):
+    def run_query(self, query_str, field_type, batch_mode, store):
         
         #print('*** enter run_query ***')
         
@@ -1796,8 +1797,8 @@ class DataCatalogController:
                     priority=bigquery.QueryPriority.BATCH
                 )
                 
-                query_job = bq_client.query(query_str, job_config=batch_config)
-                job = bq_client.get_job(query_job.job_id, location=query_job.location)
+                query_job = self.bq_client.query(query_str, job_config=batch_config)
+                job = self.bq_client.get_job(query_job.job_id, location=query_job.location)
             
                 while job.state == 'RUNNING':
                     time.sleep(2)
@@ -1806,7 +1807,7 @@ class DataCatalogController:
             
             else:
                 print('query_str:', query_str)
-                rows = bq_client.query(query_str).result()
+                rows = self.bq_client.query(query_str).result()
             
             # if query expression is well-formed, there should only be a single row returned with a single field_value
             # However, user may mistakenly run a query that returns a list of rows. In that case, grab only the top row.  
@@ -2026,14 +2027,11 @@ class DataCatalogController:
     def copy_policy_tags(self, source_project, source_dataset, source_table, target_project, target_dataset, target_table):
     
         success = True
-    
-        bq_client = bigquery.Client(credentials=self.credentials, location=BIGQUERY_REGION)
-
         source_table_id = source_project + '.' + source_dataset + '.' + source_table
         target_table_id = target_project + '.' + target_dataset + '.' + target_table
     
         try:
-            source_schema = bq_client.get_table(source_table_id).schema
+            source_schema = self.bq_client.get_table(source_table_id).schema
         except Exception as e:
             success = False
             print('Error occurred while retrieving the schema of ', source_table_id, '. Error message:', e)

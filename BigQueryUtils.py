@@ -1,4 +1,4 @@
-# Copyright 2020-2022 Google, LLC.
+# Copyright 2020-2023 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,17 +15,20 @@
 import json, datetime, time, configparser
 import decimal
 
+from google.api_core.client_info import ClientInfo
 from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
 
 import TagEngineStoreHandler as tesh
+
+USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v2'
 
 class BigQueryUtils:
     
     def __init__(self, credentials, region):
 
         self.region = region
-        self.client = bigquery.Client(credentials=credentials, location=region)
+        self.client = bigquery.Client(credentials=credentials, location=region, client_info=ClientInfo(user_agent=USER_AGENT))
         
 
     # API method used by tag export function
@@ -364,6 +367,3 @@ if __name__ == '__main__':
     asset_name = 'sdw-conf-b1927e-bcc1/dataset/sales/table/control14_test1/column/postalCode'
     tagged_values = [{'field_type': 'bool', 'field_id': 'sensitive_field', 'is_required': True, 'field_value': True}, {'is_required': False, 'field_id': 'sensitive_type', 'field_type': 'enum', 'field_value': 'Personal_Identifiable_Information'}] 
     bqu.insert_history_row(table_id, asset_name, tagged_values)
-        
-        
-        

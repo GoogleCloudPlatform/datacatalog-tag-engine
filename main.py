@@ -14,11 +14,11 @@
 
 from flask import Flask, render_template, request, redirect, url_for, jsonify, json, session
 from flask_session import Session
-#from flask_cors import CORS
-#from flask_sslify import SSLify
 
 import datetime, time, configparser, os
 import requests
+
+from google.api_core.client_info import ClientInfo
 
 import google.auth # service account credentials
 from google.auth import impersonated_credentials # service account credentials
@@ -46,18 +46,17 @@ import TaskManager as taskm
 import BigQueryUtils as bq
 import ConfigType as ct
 
-store = tesh.TagEngineStoreHandler()
 config = configparser.ConfigParser()
 config.read("tagengine.ini")
 
-##################### INIT METHOD #####################
+##################### CHECK SERVICE_URL #####################
 def check_service_url():
     if os.environ['SERVICE_URL'] == None:
         print('Fatal Error: SERVICE_URL environment variable not set. Please set it before running the Tag Engine app.')
         return -1
 
 check_service_url()
-#######################################################
+##################### INIT GLOBAL VARIABLES ##################################
 
 print('enable_auth variable:', config['DEFAULT']['ENABLE_AUTH'].lower())
 if config['DEFAULT']['ENABLE_AUTH'].lower() == 'true' or config['DEFAULT']['ENABLE_AUTH'] == 1:
@@ -83,6 +82,9 @@ tm = taskm.TaskManager(CLOUD_RUN_SA, TAG_ENGINE_PROJECT, TAG_ENGINE_REGION, WORK
 SCOPES = ['openid', 'https://www.googleapis.com/auth/cloud-platform', 'https://www.googleapis.com/auth/userinfo.email']
 OAUTH_CLIENT_CREDENTIALS = config['DEFAULT']['OAUTH_CLIENT_CREDENTIALS'].strip()
 
+USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v2'
+store = tesh.TagEngineStoreHandler()
+
 ##################### UI METHODS #################
 
 app = Flask(__name__)
@@ -101,6 +103,7 @@ def authorize():
     authorization_url, state = flow.authorization_url(access_type='offline', include_granted_scopes="true",)
     
     session['state'] = state
+    print('state:', state)
 
     return redirect(authorization_url)
 
@@ -161,7 +164,7 @@ def get_log_entries(service_account):
     
     formatted_entries = []
     
-    logging_client = logging_v2.Client(project=TAG_ENGINE_PROJECT, credentials=get_target_credentials(service_account))
+    logging_client = logging_v2.Client(project=TAG_ENGINE_PROJECT, credentials=get_target_credentials(service_account), client_info=ClientInfo(user_agent=USER_AGENT))
     query="resource.type: cloud_run_revision"
     
     try:
@@ -531,6 +534,16 @@ def search_tag_template():
     dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
     fields = dcc.get_template()
     
+    if len(fields) == 0:
+        # error retrieving the tag template
+        return render_template(
+            'home.html',
+            template_id=template_id,
+            template_project=template_project,
+            template_region=template_region,
+            service_account=service_account,
+            tag_template_error=True)
+        
     #print("fields: " + str(fields))
     
     # [END search_tag_template]
@@ -3769,7 +3782,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 2.1.0"
+    return "Welcome to Tag Engine version 2.1.2"
 #[END ping]
     
 ####################### TEST METHOD ####################################  

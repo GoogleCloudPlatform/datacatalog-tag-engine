@@ -1,0 +1,20 @@
+{
+    "template_id": "data_retention",
+    "template_project": "tag-engine-run-iap",
+    "template_region": "us-central1",
+    "fields": [
+        {
+            "field_id": "retention_period",
+            "query_expression": "select 180"
+        },
+        {
+            "field_id": "expiration_action",
+            "query_expression": "select 'ARCHIVE'"
+        }
+    ],
+    "included_tables_uris": "bigquery/project/tag-engine-run-iap/dataset/crm/*",
+    "excluded_tables_uris": "",
+    "refresh_mode": "ON_DEMAND",
+    "tag_history": false,
+    "tag_stream": false  
+}
