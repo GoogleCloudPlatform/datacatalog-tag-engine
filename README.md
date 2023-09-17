@@ -25,39 +25,39 @@ The following procedure deploys Tag Engine v2 on Google Cloud. The first five st
 
 2. Register and purchase a domain:
 
-Enable the [Cloud DNS API](https://console.cloud.google.com/marketplace/product/google/dns.googleapis.com)
-Open [Cloud Domains](https://console.cloud.google.com/net-services/domains/registrations/list) and register a domain for the Tag Engine UI<br><br>
+   Enable the [Cloud DNS API](https://console.cloud.google.com/marketplace/product/google/dns.googleapis.com)<br>
+   Open [Cloud Domains](https://console.cloud.google.com/net-services/domains/registrations/list) and register a domain for your Tag Engine UI.<br><br>
 
 
 3. Create a pair of OAuth clients:
 
-Open [API Credentials] (https://console.cloud.google.com/apis/credentials)<br>
+   Open [API Credentials] (https://console.cloud.google.com/apis/credentials)<br>
 
-Click on Create Credentials and select OAuth client ID and choose the following settings:<br>
+   Click on Create Credentials and select OAuth client ID and choose the following settings:<br>
 
-Application type: web application<br>
-Name: tag-engine-oauth<br>
-Authorized redirects URIs: https://[YOUR_DOMAIN]/oauth2callback<br> 
-Click Create<br>
-Download the credentials as `client_secret.json` and place the file in the root of the `datacatalog-tag-engine` directory<br> 
+   Application type: web application<br>
+   Name: tag-engine-oauth<br>
+   Authorized redirects URIs: https://[YOUR_DOMAIN]/oauth2callback<br> 
+   Click Create<br>
+   Download the credentials as `client_secret.json` and place the file in the root of the `datacatalog-tag-engine` directory<br> 
 
-Note: [YOUR_DOMAIN] refers to your domain name (e.g. tagengine.app)<br><br> 
+   Note: [YOUR_DOMAIN] refers to your domain name (e.g. tagengine.app)<br><br> 
 
-Click on Create Credentials and select OAuth client ID and choose the following settings:<br>
+   Click on Create Credentials and select OAuth client ID and choose the following settings:<br>
 
-Application type: web application<br>
-Name: IAP-tag-engine-backend<br>
-Click Create<br>
+   Application type: web application<br>
+   Name: IAP-tag-engine-backend<br>
+   Click Create<br>
 
-Reopen IAP-tag-engine-backend<br> 
-Copy the Client ID<br>
-Add authorized redirect URI: https://iap.googleapis.com/v1/oauth/clientIds/[CLIENT_ID].apps.googleusercontent.com:handleRedirect<br>
-Click Save<br>
+   Reopen IAP-tag-engine-backend<br> 
+   Copy the Client ID<br>
+   Add authorized redirect URI: https://iap.googleapis.com/v1/oauth/clientIds/[CLIENT_ID].apps.googleusercontent.com:handleRedirect<br>
+   Click Save<br>
 
-Note: [CLIENT_ID] refers to your OAuth client ID (e.g. 111111111111-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com)<br><br>
+   Note: [CLIENT_ID] refers to your OAuth client ID (e.g. 111111111111-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com)<br><br>
 
 
-4. Open `datacatalog-tag-engine/tagengine.ini` and set the following variables in this file. 
+4. Open `datacatalog-tag-engine/tagengine.ini` and set the following variables in this file: 
 
 ```
 TAG_ENGINE_PROJECT
@@ -68,18 +68,18 @@ TAG_CREATOR_SA
 ENABLE_AUTH  
 ```
 
-A couple of notes:
+   A couple of notes: <br>
 
-- The variable `ENABLE_AUTH` is a boolean. When set to `True`, Tag Engine verifies that the end user is authorized to use `TAG_CREATOR_SA` prior to processing their tag requests. This is the recommended value. 
+   - The variable `ENABLE_AUTH` is a boolean. When set to `True`, Tag Engine verifies that the end user is authorized to use `TAG_CREATOR_SA` prior to    processing their tag requests. This is the recommended value. <br>
 
-- The `tagengine.ini` file also has two variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. Those determine the names of the tasks queues. You do not need to change them. If you change their name, you need to change them in the `deploy/variables.tf` as well.<br><br> 
+   - The `tagengine.ini` file also has two variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. Those determine the names of the tasks queues. You do not need to change them. If you change their name, you need to change them in the `deploy/variables.tf` as well.<br><br> 
 
 
 5. Set the Terraform variables:
 
-Open `deploy/variables.tf` and change the default value for each variable.<br>
-Open `deploy/terraform.tfvars` and set the three remaining variables. <br>
-Save both files.<br><br> 
+   Open `deploy/variables.tf` and change the default value for each variable.<br>
+   Open `deploy/terraform.tfvars` and set the three remaining variables. <br>
+   Save both files.<br><br> 
 
 
 6. Run the Terraform scripts:
@@ -90,7 +90,7 @@ terraform plan
 terraform apply
 ```
 
-Note: if you wish to deploy using gcloud instead of Terraform, consult the [manual deployment procedure](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/cloud-run/docs/manual_deployment.md).
+   Note: if you wish to deploy using gcloud instead of Terraform, consult the [manual deployment procedure](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/cloud-run/docs/manual_deployment.md).
 
 ### <a name="testa"></a> Part 2: Testing your Tag Engine setup with a user account
 
@@ -120,21 +120,21 @@ gcloud run services add-iam-policy-binding tag-engine \
 
 3. Test your Tag Engine UI path:
 
-- Open a browser window
-- Navigate to https://[YOUR_DOMAIN] 
-- You should be prompted to sign in to `iap.googleapis.com`
-- Once signed in, you should be directed to the Tag Engine home page (i.e. https://[YOUR_DOMAIN]/home)
-- Enter your template id, template project, and template region
-- Enter your $TAG_CREATOR_SA as the service account
-- Click on `Search Tag Templates` to continue to the next step and create a tag configuration
+   - Open a browser window
+   - Navigate to https://[YOUR_DOMAIN] 
+   - You should be prompted to sign in to `iap.googleapis.com`
+   - Once signed in, you should be directed to the Tag Engine home page (i.e. https://[YOUR_DOMAIN]/home)
+   - Enter your template id, template project, and template region
+   - Enter your $TAG_CREATOR_SA as the service account
+   - Click on `Search Tag Templates` to continue to the next step and create a tag configuration
 
-If you encouter a 500 error, open the Cloud Run logs to troubleshoot. 
+   If you encouter a 500 error, open the Cloud Run logs to troubleshoot. 
 <br><br>
 
 
 4. Test your Tag Engine API path: 
 
-a) Generate an OAUTH token for your `USER_ACCOUNT`:
+   a) Generate an OAUTH token for your `USER_ACCOUNT`:
 
 ```
 gcloud auth application-default login
@@ -150,7 +150,7 @@ export IAM_TOKEN=$(gcloud auth print-identity-token)
 
 c) Create a dynamic table config:
 
-Before running the next command, update the project and dataset values in `tests/configs/dynamic_table/dynamic_table_ondemand.json`. 
+   Before running the next command, update the project and dataset values in `tests/configs/dynamic_table/dynamic_table_ondemand.json`. 
 
 ```
 export TAG_ENGINE_URL=$SERVICE_URL
@@ -171,7 +171,7 @@ The output from this command should look similar to:
 
 d) Trigger the job:
 
-Before running the next command, update the `config_uuid` with your value. 
+   Before running the next command, update the `config_uuid` with your value. 
 
 ```
 curl -i -X POST $TAG_ENGINE_URL/trigger_job \
@@ -180,7 +180,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
   -H "oauth_token: $OAUTH_TOKEN"
 ```
 
-The output from this command should look similar to:
+   The output from this command should look similar to:
 
 ```
 {
@@ -191,7 +191,7 @@ The output from this command should look similar to:
 e) View the job status:
 
 
-Before running the next command, update the `job_uuid` with your value. 
+   Before running the next command, update the `job_uuid` with your value. 
 
 ```
 curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"9c13357ee46911ed96c5acde48001122"}' \
@@ -199,7 +199,7 @@ curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"9c13357ee46911ed96c
 	-H "oauth_token: $OAUTH_TOKEN"
 ```
 
-The output from this command should look like this:
+   The output from this command should look like this:
 
 ```
 {
@@ -211,7 +211,7 @@ The output from this command should look like this:
 }
 ```
 
-Open the Data Catalog UI and verify that your tag was successfully created. If your tags are not there or if you encounter an error with the previous commands, open the Cloud Run logs and investigate. 
+   Open the Data Catalog UI and verify that your tag was successfully created. If your tags are not there or if you encounter an error with the previous commands, open the Cloud Run logs and investigate. 
 <br><br>
 
 ### <a name="testb"></a> Part 3: Testing your Tag Engine Setup with a Service Account
@@ -259,7 +259,7 @@ export IAM_TOKEN=$(gcloud auth print-identity-token)
 
 5. Create a dynamic table config:
 
-Before running the next command, update the project and dataset values in `tests/configs/dynamic_table/dynamic_table_ondemand.json`. 
+   Before running the next command, update the project and dataset values in `tests/configs/dynamic_table/dynamic_table_ondemand.json`. 
 
 ```
 export TAG_ENGINE_URL=$SERVICE_URL
@@ -269,7 +269,7 @@ curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @tests/configs/dynam
 	-H "oauth_token: $OAUTH_TOKEN"
 ```
 
-The output from this command should look similar to:
+   The output from this command should look similar to:
 
 ```
 {
@@ -281,7 +281,7 @@ The output from this command should look similar to:
 
 6. Trigger the job:
 
-Before running the next command, update the `config_uuid` with your value. 
+   Before running the next command, update the `config_uuid` with your value. 
 
 ```
 curl -i -X POST $TAG_ENGINE_URL/trigger_job \
@@ -290,7 +290,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
   -H "oauth_token: $OAUTH_TOKEN"
 ```
 
-The output from this command should look similar to:
+   The output from this command should look similar to:
 
 ```
 {
@@ -301,7 +301,7 @@ The output from this command should look similar to:
 
 7. View the job status:
 
-Before running the next command, update the `job_uuid` with your value. 
+   Before running the next command, update the `job_uuid` with your value. 
 
 ```
 curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"9c13357ee46911ed96c5acde48001122"}' \
@@ -309,7 +309,7 @@ curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"9c13357ee46911ed96c
 	-H "oauth_token: $OAUTH_TOKEN"
 ```
 
-The output from this command should look like this:
+   The output from this command should look like this:
 
 ```
 {
@@ -321,23 +321,23 @@ The output from this command should look like this:
 }
 ```
 
-Open the Data Catalog UI and verify that your tag was successfully created. If not, open the Cloud Run logs and investigate the problem. 
+   Open the Data Catalog UI and verify that your tag was successfully created. If not, open the Cloud Run logs and investigate the problem. 
 <br><br>
 
 ### <a name="next"></a> Part 4: Next Steps
 
 1. Explore additional API methods and run them through curl commands:
 
-Open `tests/unit_test.sh` and go through the different methods for interracting with Tag Engine, including `configure_tag_history`, `create_static_asset_config`, `create_dynamic_column_config`, etc. <br><br>
+   Open `tests/unit_test.sh` and go through the different methods for interracting with Tag Engine, including `configure_tag_history`, `create_static_asset_config`, `create_dynamic_column_config`, etc. <br><br>
 
 
 2. Explore the sample test scripts:
 
-There are multiple test scripts in Python in the `tests/scripts` folder. These are intended to help you get started with the Tag Engine API. 
+   There are multiple test scripts in Python in the `tests/scripts` folder. These are intended to help you get started with the Tag Engine API. 
 
-Before running the scripts, open each file and update the `TAG_ENGINE_URL` variable on line 11 with your own Cloud Run service URL. You'll also need to update the project and dataset values which may be in the script itself or in the referenced json config file. 
+   Before running the scripts, open each file and update the `TAG_ENGINE_URL` variable on line 11 with your own Cloud Run service URL. You'll also need to    update the project and dataset values which may be in the script itself or in the referenced json config file. 
 
-Here are some of the scripts you can look at and run:
+   Here are some of the scripts you can look at and run:
 ```
 python configure_tag_history.py
 python create_static_config_trigger_job.py
@@ -354,7 +354,7 @@ python purge_inactive_configs.py
 
 3. Explore the sample workflows:
 
-The `apps/workflows/` contains a few sample workflows implemented in Cloud Workflow. The `trigger_job.yaml` and `orchestrate_jobs.yaml` show how to orchestrate some tagging activities. To run the workflows, enable the Cloud Workflows API (`workflows.googleapis.com`) and then follow these steps:
+   The `apps/workflows/` contains a few sample workflows implemented in Cloud Workflow. The `trigger_job.yaml` and `orchestrate_jobs.yaml` show how to    orchestrate some tagging activities. To run the workflows, enable the Cloud Workflows API (`workflows.googleapis.com`) and then follow these steps:
 
 ```
 export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
