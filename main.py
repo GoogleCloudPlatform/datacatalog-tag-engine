@@ -67,8 +67,8 @@ else:
 TAG_ENGINE_PROJECT = config['DEFAULT']['TAG_ENGINE_PROJECT'].strip()
 TAG_ENGINE_REGION = config['DEFAULT']['TAG_ENGINE_REGION'].strip()
     
-CLOUD_RUN_SA = config['DEFAULT']['CLOUD_RUN_ACCOUNT'].strip()
-TAG_CREATOR_SA = config['DEFAULT']['TAG_CREATOR_ACCOUNT'].strip()
+TAG_ENGINE_SA = config['DEFAULT']['TAG_ENGINE_SA'].strip()
+TAG_CREATOR_SA = config['DEFAULT']['TAG_CREATOR_SA'].strip()
 
 SPLIT_WORK_HANDLER = os.environ['SERVICE_URL'] + '/_split_work'
 RUN_TASK_HANDLER = os.environ['SERVICE_URL'] + '/_run_task'
@@ -76,8 +76,8 @@ RUN_TASK_HANDLER = os.environ['SERVICE_URL'] + '/_run_task'
 INJECTOR_QUEUE = config['DEFAULT']['INJECTOR_QUEUE'].strip()
 WORK_QUEUE = config['DEFAULT']['WORK_QUEUE'].strip()
 
-jm = jobm.JobManager(CLOUD_RUN_SA, TAG_ENGINE_PROJECT, TAG_ENGINE_REGION, INJECTOR_QUEUE, SPLIT_WORK_HANDLER)                   
-tm = taskm.TaskManager(CLOUD_RUN_SA, TAG_ENGINE_PROJECT, TAG_ENGINE_REGION, WORK_QUEUE, RUN_TASK_HANDLER)
+jm = jobm.JobManager(TAG_ENGINE_SA, TAG_ENGINE_PROJECT, TAG_ENGINE_REGION, INJECTOR_QUEUE, SPLIT_WORK_HANDLER)                   
+tm = taskm.TaskManager(TAG_ENGINE_SA, TAG_ENGINE_PROJECT, TAG_ENGINE_REGION, WORK_QUEUE, RUN_TASK_HANDLER)
 
 SCOPES = ['openid', 'https://www.googleapis.com/auth/cloud-platform', 'https://www.googleapis.com/auth/userinfo.email']
 OAUTH_CLIENT_CREDENTIALS = config['DEFAULT']['OAUTH_CLIENT_CREDENTIALS'].strip()
@@ -88,7 +88,6 @@ store = tesh.TagEngineStoreHandler()
 ##################### UI METHODS #################
 
 app = Flask(__name__)
-#app.secret_key = os.urandom(50)
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
@@ -120,8 +119,6 @@ def oauth2callback():
     https_authorization_url = request.url.replace('http://', 'https://')
     flow.fetch_token(authorization_response=https_authorization_url)
             
-    # ACTION ITEM: In a production app, you likely want to save these
-    # credentials in a persistent database instead.
     credentials = flow.credentials
     session['credentials'] = credentials_to_dict(credentials)
         
@@ -3783,7 +3780,6 @@ def _run_task():
 @app.route("/version", methods=['GET'])
 def version():
     return "Welcome to Tag Engine version 2.1.2"
-#[END ping]
     
 ####################### TEST METHOD ####################################  
     
@@ -3797,8 +3793,6 @@ def server_error(e):
     # Log the error and stacktrace.
     #logging.exception('An error occurred during a request.')
     return 'An internal error occurred: ' + str(e), 500
-# [END app]
-
 
 if __name__ == "__main__":
     #os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = "1" # uncomment only when running locally

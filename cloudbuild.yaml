@@ -1,0 +1,8 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: [ 'build', '-f', 'Dockerfile', '-t', '${_REGION}-docker.pkg.dev/${_PROJECT}/cloud-run-source-deploy/${_IMAGE}', '.']
+images:
+- '${_REGION}-docker.pkg.dev/${_PROJECT}/cloud-run-source-deploy/${_IMAGE}'
+serviceAccount: 'projects/${_PROJECT}/serviceAccounts/${_TAG_ENGINE_SA}'
+options:
+  logging: CLOUD_LOGGING_ONLY
