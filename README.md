@@ -13,9 +13,7 @@ This README is organized into four parts:  <br>
 
 ### <a name="deploy"></a> Deploying Tag Engine v2
 
-The deployment of Tag Engine on Cloud Run is more complex than on App Engine. The Cloud Run service that serves the UI is secured with a Load Balancer, OAuth, and optionally with Identity-Aware Proxy (IAP). Here's a high-level diagram of the main components: <br><img src="static/architecture.png" alt="arch" width="500"/>
-
-This guide covers both the Tag Engine API and UI deployments. You can deploy each one separately or together. The deployment as a whole has 13 required steps and 1 optional step. There are fewer steps when you choose to deploy only the API. The UI specific steps are marked as such. <br>
+The deployment of Tag Engine on Cloud Run is more complex than on App Engine. The Cloud Run service that serves the Tag Engine UI is secured with a Load Balancer, OAuth, and with Identity-Aware Proxy (IAP). Here's a high-level diagram of the main components: <br><img src="static/architecture.png" alt="arch" width="500"/>
 
 The following procedure deploys Tag Engine v2 on Google Cloud. The first five steps are manual, the last step is done through Terraform. 
 
@@ -28,14 +26,14 @@ The following procedure deploys Tag Engine v2 on Google Cloud. The first five st
 2. Register and purchase a domain:
 
 Enable the [Cloud DNS API](https://console.cloud.google.com/marketplace/product/google/dns.googleapis.com)
-Open [Cloud Domains](https://console.cloud.google.com/net-services/domains/registrations/list) and register a domain for the Tag Engine UI
+Open [Cloud Domains](https://console.cloud.google.com/net-services/domains/registrations/list) and register a domain for the Tag Engine UI<br><br>
 
 
 3. Create a pair of OAuth clients:
 
-Open [API Credentials] (https://console.cloud.google.com/apis/credentials)<br><br>
+Open [API Credentials] (https://console.cloud.google.com/apis/credentials)<br>
 
-Click on Create Credentials and select OAuth client ID and choose the following settings:<br><br>
+Click on Create Credentials and select OAuth client ID and choose the following settings:<br>
 
 Application type: web application<br>
 Name: tag-engine-oauth<br>
@@ -45,7 +43,7 @@ Download the credentials as `client_secret.json` and place the file in the root 
 
 Note: [YOUR_DOMAIN] refers to your domain name (e.g. tagengine.app)<br><br> 
 
-Click on Create Credentials and select OAuth client ID and choose the following settings:<br><br> 
+Click on Create Credentials and select OAuth client ID and choose the following settings:<br>
 
 Application type: web application<br>
 Name: IAP-tag-engine-backend<br>
@@ -56,7 +54,7 @@ Copy the Client ID<br>
 Add authorized redirect URI: https://iap.googleapis.com/v1/oauth/clientIds/[CLIENT_ID].apps.googleusercontent.com:handleRedirect<br>
 Click Save<br><br>
 
-Note: [CLIENT_ID] refers to your OAuth client ID (e.g. 856459114491-4qkk116lvka7dtaur0bd0i1s0e69fs5p.apps.googleusercontent.com)<br><br>
+Note: [CLIENT_ID] refers to your OAuth client ID (e.g. 111111111111-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com)<br><br>
 
 
 4. Open `datacatalog-tag-engine/tagengine.ini` and set the following variables in this file. 
@@ -79,7 +77,7 @@ A couple of notes:
 
 5. Set the Terraform variables:
 
-Open `deploy/variables.tf` and change the default value for each variable to your own.<br>
+Open `deploy/variables.tf` and change the default value for each variable.<br>
 Open `deploy/terraform.tfvars` and set the three remaining variables. <br>
 Save both files.<br><br> 
 
@@ -92,7 +90,7 @@ terraform plan
 terraform apply
 ```
 
-Note: if you wish to deploy using gcloud commands instead of Terraform, consults the [manual deployment procedure](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/cloud-run/docs/manual_deployment.md).
+Note: if you wish to deploy using gcloud instead of Terraform, consult the [manual deployment procedure](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/cloud-run/docs/manual_deployment.md).
 
 ### <a name="testa"></a> Part 2: Testing your Tag Engine setup with a user account
 
