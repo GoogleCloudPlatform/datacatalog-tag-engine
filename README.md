@@ -39,7 +39,7 @@ Application type: web application<br>
 Name: tag-engine-oauth<br>
 Authorized redirects URIs: https://[YOUR_DOMAIN]/oauth2callback<br> 
 Click Create<br>
-Download the credentials as `client_secret.json` and place the file in the root of the `datacatalog-tag-engine` directory<br><br> 
+Download the credentials as `client_secret.json` and place the file in the root of the `datacatalog-tag-engine` directory<br> 
 
 Note: [YOUR_DOMAIN] refers to your domain name (e.g. tagengine.app)<br><br> 
 
@@ -47,12 +47,12 @@ Click on Create Credentials and select OAuth client ID and choose the following 
 
 Application type: web application<br>
 Name: IAP-tag-engine-backend<br>
-Click Create<br><br>
+Click Create<br>
 
 Reopen IAP-tag-engine-backend<br> 
 Copy the Client ID<br>
 Add authorized redirect URI: https://iap.googleapis.com/v1/oauth/clientIds/[CLIENT_ID].apps.googleusercontent.com:handleRedirect<br>
-Click Save<br><br>
+Click Save<br>
 
 Note: [CLIENT_ID] refers to your OAuth client ID (e.g. 111111111111-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com)<br><br>
 
