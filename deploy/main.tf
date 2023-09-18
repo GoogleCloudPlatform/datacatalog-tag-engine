@@ -16,9 +16,3 @@ resource "google_project_service" "tag_engine_project" {
   disable_dependent_services = true
 }
 
-# run instructions: 
-# export GOOGLE_APPLICATION_CREDENTIALS="/Users/scohen/keys/tag-engine-develop-dev.json"
-# gcloud auth application-default login
-# terraform init -input=false 
-# terraform plan -out=tfplan -input=false
-# terraform apply -input=false tfplan
