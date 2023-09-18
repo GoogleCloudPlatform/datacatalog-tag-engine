@@ -166,7 +166,7 @@ resource "null_resource" "set_env_var" {
 
  provisioner "local-exec" {
 
-    command = "/bin/bash set_service_url.sh ${google_cloud_run_v2_service.api_service.uri} ${google_cloud_run_v2_service.ui_service.uri}"
+    command = "/bin/bash set_service_url.sh"
   }
   
   depends_on = [google_cloud_run_v2_service.api_service, google_cloud_run_v2_service.ui_service]
