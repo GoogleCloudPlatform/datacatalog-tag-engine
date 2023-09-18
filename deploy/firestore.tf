@@ -1,15 +1,17 @@
 # ************************************************************ #
 # Create the firestore database
+# Note: no need to create the default database, it gets 
+# created automatically when the API is enabled. 
 # ************************************************************ #
 
-resource "google_firestore_database" "create" {
-  project     = var.tag_engine_project
-  name        = "(default)"
-  location_id = var.firestore_region
-  type        = "FIRESTORE_NATIVE"
+#resource "google_firestore_database" "create" {
+  #project     = var.tag_engine_project
+  #name        = "(default)"
+  #location_id = var.firestore_region
+  #type        = "FIRESTORE_NATIVE"
 
-  depends_on = [google_project_service.tag_engine_project]
-}
+  #depends_on = [google_project_service.tag_engine_project]
+  #}
 
 
 # ************************************************************ #
@@ -22,6 +24,6 @@ resource "null_resource" "firestore_indexes" {
     command = "python create_indexes.py ${var.tag_engine_project}"
   }
   
-  depends_on = [google_firestore_database.create]
+  depends_on = [google_project_service.tag_engine_project]
 }
    

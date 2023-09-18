@@ -19,7 +19,7 @@ resource "google_cloud_tasks_queue" "injector_queue" {
     sampling_ratio = 0.9
   }
   
-  depends_on = [google_project_service.tag_engine_project]
+  depends_on = [google_project_service.tag_engine_project, google_cloud_run_v2_service.api_service, google_cloud_run_v2_service.ui_service]
 }
 
 
@@ -40,5 +40,5 @@ resource "google_cloud_tasks_queue" "work_queue" {
     sampling_ratio = 0.9
   }
   
-  depends_on = [google_project_service.tag_engine_project]
+  depends_on = [google_project_service.tag_engine_project, google_cloud_run_v2_service.api_service, google_cloud_run_v2_service.ui_service]
 }
