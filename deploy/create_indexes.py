@@ -39,7 +39,12 @@ def create_indexes(project):
     
             for field in fields:
                 field_path = field['field']
-                field_list.append({'field_path': field_path, 'order': 'ASCENDING'})
+                
+                if ':' in field_path:
+                    field_path = field_path.split(':')[0]
+                    field_list.append({'field_path': field_path, 'order': 'DESCENDING'})
+                else:
+                    field_list.append({'field_path': field_path, 'order': 'ASCENDING'})
             
             fields_json = {"fields": field_list, "query_scope": "COLLECTION"}
             
