@@ -22,8 +22,8 @@ resource "null_resource" "build_api_image" {
   provisioner "local-exec" {
     when    = create
     command = <<EOF
-gcloud builds submit .. --git-source-dir=. \
---config=../cloudbuild.yaml \
+gcloud builds submit ../.. --git-source-dir=. \
+--config=../../cloudbuild.yaml \
 --project ${var.tag_engine_project} \
 --region ${var.tag_engine_region} \
 --machine-type=e2-highcpu-8 \
@@ -90,8 +90,8 @@ resource "null_resource" "build_ui_image" {
   provisioner "local-exec" {
     when    = create
     command = <<EOF
-gcloud builds submit .. --git-source-dir=. \
---config=../cloudbuild.yaml \
+gcloud builds submit ../.. --git-source-dir=. \
+--config=../../cloudbuild.yaml \
 --project ${var.tag_engine_project} \
 --region ${var.tag_engine_region} \
 --machine-type=e2-highcpu-8 \
