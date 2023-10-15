@@ -34,7 +34,7 @@ Alternative 2: you can choose to deploy Tag Engine v2 with [gcloud commands](htt
 
 2. Create an OAuth client:
 
-   Open [API Credentials](https://console.cloud.google.com/apis/credentials)<br>
+   Open [API Credentials](https://console.cloud.google.com/apis/credentials).<br>
 
    Click on Create Credentials and select OAuth client ID and choose the following settings:<br>
 
