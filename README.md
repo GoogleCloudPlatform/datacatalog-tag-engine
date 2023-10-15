@@ -25,7 +25,7 @@ Alternative 1: you can deploy Tag Engine v2 behind an [external load balancer](h
 
 Alternative 2: you can also choose to deploy Tag Engine v2 with [gcloud commands](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/cloud-run/docs/manual_deployment.md) instead of running the Terraform.
 
-<br><br>
+<br>
 1. Create (or designate) two service accounts:
 
 - A service account that runs the Tag Engine Cloud Run service, referred to as `TAG_ENGINE_SA`. 
@@ -40,7 +40,7 @@ Alternative 2: you can also choose to deploy Tag Engine v2 with [gcloud commands
 
    Application type: web application<br>
    Name: tag-engine-oauth<br>
-   Authorized redirects URIs: <i>Leave this field blank for now.<i>  
+   Authorized redirects URIs: <i>Leave this field blank for now.</i>  
    Click Create<br>
    Download the credentials as `client_secret.json` and place the file in the root of the `datacatalog-tag-engine` directory<br> 
 
