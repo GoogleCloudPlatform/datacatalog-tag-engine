@@ -11,7 +11,7 @@ This README is organized into four parts:  <br>
 - Part 3: [Testing your Setup with a Service Account](#testb)  <br>
 - Part 4: [What To Do Next](#next)  <br> 
 
-### <a name="deploy"></a> Deploying Tag Engine v2
+### <a name="deploy"></a> Part 1: Deploying Tag Engine v2
 
 Tag Engine v2 comes with two Cloud Run services. One service is for the API (tag-engine-api) and the other is for the UI (tag-engine-ui). 
 
@@ -19,11 +19,13 @@ The Cloud Run API service uses Bearer token headers for authentication.
 
 The Cloud Run UI service uses OAuth for authentication. It also uses the OAuth client's credentials (client_secret.json) for impersonation. 
 
-Follow the 6 steps below to deploy Tag Engine v2 with Terraform and without a load balancer. Alternatively, you can deploy Tag Engine behind an [external load balancer](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/cloud-run/docs/external_load_balancer.md). 
+Follow the 6 steps below to deploy Tag Engine v2 with Terraform and without a load balancer. 
 
-You can also choose to deploy Tag Engine v2 with [gcloud commands](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/cloud-run/docs/manual_deployment.md) instead.
+Alternative 1: you can deploy Tag Engine v2 behind an [external load balancer](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/cloud-run/docs/external_load_balancer.md). 
 
+Alternative 2: you can also choose to deploy Tag Engine v2 with [gcloud commands](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/cloud-run/docs/manual_deployment.md) instead of running the Terraform.
 
+<br><br>
 1. Create (or designate) two service accounts:
 
 - A service account that runs the Tag Engine Cloud Run service, referred to as `TAG_ENGINE_SA`. 
@@ -38,7 +40,7 @@ You can also choose to deploy Tag Engine v2 with [gcloud commands](https://githu
 
    Application type: web application<br>
    Name: tag-engine-oauth<br>
-   Authorized redirects URIs: Leave blank for now.  
+   Authorized redirects URIs: <i>Leave this field blank for now.<i>  
    Click Create<br>
    Download the credentials as `client_secret.json` and place the file in the root of the `datacatalog-tag-engine` directory<br> 
 
@@ -81,9 +83,9 @@ You can also choose to deploy Tag Engine v2 with [gcloud commands](https://githu
 
 6. Set the authorized redirect URI:
 
-    Re-open [API Credentials] (https://console.cloud.google.com/apis/credentials)<br>
+    Re-open [API Credentials](https://console.cloud.google.com/apis/credentials)<br>
 
-    Under OAuth 2.0 Client IDs, edit the `tag-engine-oauth` client which you created earlier. <br>
+    Under OAuth 2.0 Client IDs, edit the `tag-engine-oauth` entry which you created earlier. <br>
 
 	Under Authorized redirect URIs, add the URI:
 	
@@ -91,7 +93,7 @@ You can also choose to deploy Tag Engine v2 with [gcloud commands](https://githu
 	
 	Replace xxxxxxxxxxxxx in the URI with the actual value from the Terraform. This URI will be referred to below as the `$UI_SERVICE_URI`. 
 
-
+<br><br>
 ### <a name="testa"></a> Part 2: Testing your Tag Engine setup with a user account
 
 1. Create the sample `data_governance` tag template:
