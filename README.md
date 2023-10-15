@@ -13,17 +13,17 @@ This README is organized into four parts:  <br>
 
 ### <a name="deploy"></a> Part 1: Deploying Tag Engine v2
 
-Tag Engine v2 comes with two Cloud Run services. One service is for the API (tag-engine-api) and the other is for the UI (tag-engine-ui). 
+Tag Engine v2 comes with two Cloud Run services. One service is for the API (`tag-engine-api`) and the other is for the UI (`tag-engine-ui`). 
 
 The Cloud Run API service uses Bearer token headers for authentication. 
 
-The Cloud Run UI service uses OAuth for authentication. It also uses the OAuth client's credentials (client_secret.json) for impersonation. 
+The Cloud Run UI service uses OAuth for authentication. It also uses the OAuth client's credentials (`client_secret.json`) for impersonation. 
 
 Follow the 6 steps below to deploy Tag Engine v2 with Terraform and without a load balancer. 
 
 Alternative 1: you can deploy Tag Engine v2 behind an [external load balancer](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/cloud-run/docs/external_load_balancer.md). 
 
-Alternative 2: you can also choose to deploy Tag Engine v2 with [gcloud commands](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/cloud-run/docs/manual_deployment.md) instead of running the Terraform.
+Alternative 2: you can choose to deploy Tag Engine v2 with [gcloud commands](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/cloud-run/docs/manual_deployment.md) instead of running the Terraform.
 
 <br>
 1. Create (or designate) two service accounts:
@@ -34,7 +34,7 @@ Alternative 2: you can also choose to deploy Tag Engine v2 with [gcloud commands
 
 2. Create an OAuth client:
 
-   Open [API Credentials] (https://console.cloud.google.com/apis/credentials)<br>
+   Open [API Credentials](https://console.cloud.google.com/apis/credentials).<br>
 
    Click on Create Credentials and select OAuth client ID and choose the following settings:<br>
 
@@ -42,7 +42,7 @@ Alternative 2: you can also choose to deploy Tag Engine v2 with [gcloud commands
    Name: tag-engine-oauth<br>
    Authorized redirects URIs: <i>Leave this field blank for now.</i>  
    Click Create<br>
-   Download the credentials as `client_secret.json` and place the file in the root of the `datacatalog-tag-engine` directory<br> 
+   Download the credentials as `client_secret.json` and place the file in the root of the `datacatalog-tag-engine` directory<br><br> 
 
  
 3. Open `datacatalog-tag-engine/tagengine.ini` and set the following variables in this file: 
@@ -78,10 +78,10 @@ Alternative 2: you can also choose to deploy Tag Engine v2 with [gcloud commands
 	terraform apply
 	```
 
-	When the Terraform finishes running, it should output two URIs. One for the API service (which looks like this https://tag-engine-api-xxxxxxxxxxxxx.a.run.app) and another for the UI service (which looks like this https://tag-engine-ui-xxxxxxxxxxxxx.a.run.app). 
+	When the Terraform finishes running, it should output two URIs. One for the API service (which looks like this https://tag-engine-api-xxxxxxxxxxxxx.a.run.app) and another for the UI service (which looks like this https://tag-engine-ui-xxxxxxxxxxxxx.a.run.app). <br><br>
 
 
-6. Set the authorized redirect URI:
+6. Set the authorized redirect URI and test users:
 
     Re-open [API Credentials](https://console.cloud.google.com/apis/credentials)<br>
 
@@ -91,7 +91,11 @@ Alternative 2: you can also choose to deploy Tag Engine v2 with [gcloud commands
 	
     https://tag-engine-ui-xxxxxxxxxxxxx.a.run.app/oauth2callback
 	
-	Replace xxxxxxxxxxxxx in the URI with the actual value from the Terraform. This URI will be referred to below as the `$UI_SERVICE_URI`. 
+	Replace xxxxxxxxxxxxx in the URI with the actual value from the Terraform. This URI will be referred to below as the `$UI_SERVICE_URI`.
+
+    Open the OAuth consent screen page and under the Test users section, click on add users.
+
+    Add the email address of each user you would like to grant access to the Tag Engine UI. 
 
 <br><br>
 ### <a name="testa"></a> Part 2: Testing your Tag Engine setup with a user account
