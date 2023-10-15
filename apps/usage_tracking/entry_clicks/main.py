@@ -20,7 +20,7 @@ from google.cloud import datacatalog
 bq_client = bigquery.Client()
 dc_client = datacatalog.DataCatalogClient()
 
-reporting_table = 'entry_click_stream' # name of the output table
+reporting_table = 'entry_clicks' # name of the output table
 
 def event_handler(request):
     request_json = request.get_json()
