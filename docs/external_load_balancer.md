@@ -6,7 +6,7 @@ It also uses a domain for the URL of the Tag Engine UI (instead of the IP addres
 
 Here's a high-level diagram of the main components: <br><img src="../static/architecture.png" alt="arch" width="500"/>
 
-The first five steps are manual, the last step is done with Terraform. 
+The first 5 steps are manual, the last step is done with Terraform. 
 
 1. Create (or designate) two service accounts:
 
@@ -14,7 +14,7 @@ The first five steps are manual, the last step is done with Terraform.
 	- A service account that performs the tagging in Data Catalog, and sourcing the contents of those tags from BigQuery, referred to as `TAG_CREATOR_SA`. <br><br>
 
 
-2. Register and purchase a domain (skip this step if you already have a domain):
+2. Register and purchase a domain (<i>skip this step if you already have a domain</i>):
 
    Enable the [Cloud DNS API](https://console.cloud.google.com/marketplace/product/google/dns.googleapis.com)<br>
    Open [Cloud Domains](https://console.cloud.google.com/net-services/domains/registrations/list) and register a domain for your Tag Engine UI.<br><br>
@@ -22,7 +22,7 @@ The first five steps are manual, the last step is done with Terraform.
 
 3. Create a pair of OAuth clients:
 
-   Open [API Credentials] (https://console.cloud.google.com/apis/credentials)<br>
+   Open [API Credentials](https://console.cloud.google.com/apis/credentials)<br>
 
    Click on Create Credentials and select OAuth client ID and choose the following settings:<br>
 
@@ -82,4 +82,4 @@ The first five steps are manual, the last step is done with Terraform.
 	terraform apply
 	```
 
-Once the Terraform completes, consult the test procedures (Testing your Setup with a User Account)[https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/README.md#testa] and (Testing your Setup with a Service Account)[https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/README.md#testb] for next steps. 
+Once the Terraform completes, consult the test procedures [Testing your Setup with a User Account](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/README.md#testa) and [Testing your Setup with a Service Account](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/README.md#testb) for next steps. 
