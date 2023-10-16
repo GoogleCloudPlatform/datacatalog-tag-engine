@@ -81,7 +81,7 @@ Alternative 2: you can choose to deploy Tag Engine v2 with [gcloud commands](htt
 	When the Terraform finishes running, it should output two URIs. One for the API service (which looks like this https://tag-engine-api-xxxxxxxxxxxxx.a.run.app) and another for the UI service (which looks like this https://tag-engine-ui-xxxxxxxxxxxxx.a.run.app). <br><br>
 
 
-6. Set the authorized redirect URI and test users:
+6. Set the authorized redirect URI and add authorized users:
 
     Re-open [API Credentials](https://console.cloud.google.com/apis/credentials)<br>
 
@@ -95,7 +95,7 @@ Alternative 2: you can choose to deploy Tag Engine v2 with [gcloud commands](htt
 
     Open the OAuth consent screen page and under the Test users section, click on add users.
 
-    Add the email address of each user you would like to grant access to the Tag Engine UI. 
+    Add the email address of each user for which you would like to grant access to the Tag Engine UI. 
 
 <br><br>
 ### <a name="testa"></a> Part 2: Testing your Tag Engine setup with a user account
