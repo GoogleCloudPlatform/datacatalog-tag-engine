@@ -91,7 +91,7 @@ Alternative 2: you can choose to deploy Tag Engine v2 with [gcloud commands](htt
 	
     https://tag-engine-ui-xxxxxxxxxxxxx.a.run.app/oauth2callback
 	
-	Replace xxxxxxxxxxxxx in the URI with the actual value from the Terraform. This URI will be referred to below as the `$UI_SERVICE_URI`.
+	Replace xxxxxxxxxxxxx in the URI with the actual value from the Terraform. This URI will be referred to below as the `UI_SERVICE_URI`.
 
     Open the OAuth consent screen page and under the Test users section, click on add users.
 
@@ -127,11 +127,11 @@ gcloud run services add-iam-policy-binding tag-engine \
 3. Test your Tag Engine UI path:
 
    - Open a browser window
-   - Navigate to $UI_SERVICE_URI 
-   - You should be prompted to sign in to `iap.googleapis.com`
-   - Once signed in, you should be directed to the Tag Engine home page (i.e. $UI_SERVICE_URI/home)
+   - Navigate to `UI_SERVICE_URI` 
+   - You should be prompted to sign in with Google
+   - Once signed in, you will be redirected to the Tag Engine home page (i.e. `UI_SERVICE_URI`/home)
    - Enter your template id, template project, and template region
-   - Enter your $TAG_CREATOR_SA as the service account
+   - Enter your `TAG_CREATOR_SA` as the service account
    - Click on `Search Tag Templates` to continue to the next step and create a tag configuration
 
    If you encouter a 500 error, open the Cloud Run logs to troubleshoot. 
