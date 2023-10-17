@@ -141,19 +141,16 @@ resource "google_project_iam_binding" "loggingViewer" {
 }
 
 resource "google_project_iam_binding" "PolicyTagReader" {
-  project = var.tag_engine_project
-  role    = "projects/${var.tag_engine_project}/roles/PolicyTagReader"
-  members = ["serviceAccount:${var.tag_creator_sa}"]
-  depends_on = [google_project_service.tag_engine_project]
+  project    = var.tag_engine_project
+  role       = google_project_iam_custom_role.policy_tag_reader.id
+  members    = ["serviceAccount:${var.tag_creator_sa}"]
 }
 
 resource "google_project_iam_binding" "BigQuerySchemaUpdate" {
-  project = var.tag_engine_project
-  role    = "projects/${var.bigquery_project}/roles/BigQuerySchemaUpdate"
-  members = ["serviceAccount:${var.tag_creator_sa}"]
-  depends_on = [google_project_service.tag_engine_project]
+  project    = var.bigquery_project
+  role       = google_project_iam_custom_role.bigquery_schema_update.id
+  members    = ["serviceAccount:${var.tag_creator_sa}"]
 }
-
 
 # ************************************************************ #
 # Create the service account policy bindings for tag_engine_sa

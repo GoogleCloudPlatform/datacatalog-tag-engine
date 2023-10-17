@@ -65,8 +65,7 @@ Alternative 2: you can choose to deploy Tag Engine v2 with [gcloud commands](htt
 
 4. Set the Terraform variables:
 
-   Open `deploy/without_load_balancer/variables.tf` and change the default value of each variable.<br>
-   Save the file.<br><br> 
+   Copy `deploy/without_load_balancer/terraform.example.tfvars` to a local `terraform.tfvars` file and set variables.
 
 
 5. Run the Terraform scripts:

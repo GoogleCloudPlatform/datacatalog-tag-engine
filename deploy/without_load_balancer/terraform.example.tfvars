@@ -1,0 +1,6 @@
+tag_engine_project = ""
+bigquery_project   = ""
+bigquery_region    = ""
+tag_creator_sa     = ""
+tag_engine_sa      = ""
+csv_bucket         = ""

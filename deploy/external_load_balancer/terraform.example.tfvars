@@ -1,0 +1,9 @@
+oauth_client_id          = "111111111111-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com"
+oauth_client_secret      = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+authorized_user_accounts = ["admin@example.com", "dev@example.com"]
+tag_engine_project       = ""
+bigquery_project         = ""
+bigquery_region          = ""
+tag_creator_sa           = ""
+tag_engine_sa            = ""
+dns_zone                 = ""
