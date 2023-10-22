@@ -57,7 +57,7 @@ def check_service_url():
 
 check_service_url()
 
-##################### CHECK CLIENT SECRET #####################
+##################### CHECK AUTH and CLIENT SECRET VARIABLES #####################
     
 if config['DEFAULT']['ENABLE_AUTH'].lower() == 'true' or config['DEFAULT']['ENABLE_AUTH'] == 1:
     ENABLE_AUTH = True
@@ -66,17 +66,15 @@ else:
     ENABLE_AUTH = False
     print('Info: ENABLE_AUTH = False. This option is only supported in API mode as the client secret is needed to obtain an access token from the UI.')
 
-def check_client_secret():
-    if 'OAUTH_CLIENT_CREDENTIALS' in config['DEFAULT']:
-        OAUTH_CLIENT_CREDENTIALS = config['DEFAULT']['OAUTH_CLIENT_CREDENTIALS'].strip()
-    else:
-        if 'tag-engine-ui-' in os.environ['SERVICE_URL']:
-            print('Fatal Error: The Tag Engine UI requires the OAUTH_CLIENT_CREDENTIALS variable to be set. Please set it in tagengine.ini.')
-            return -1
-        else:
-            print('Info: running in API mode without the client secret file')
 
-check_client_secret()
+if 'OAUTH_CLIENT_CREDENTIALS' in config['DEFAULT']:
+    OAUTH_CLIENT_CREDENTIALS = config['DEFAULT']['OAUTH_CLIENT_CREDENTIALS'].strip()
+    print('Info: OAUTH_CLIENT_CREDENTIALS =', OAUTH_CLIENT_CREDENTIALS)
+else:
+    if 'tag-engine-ui-' in os.environ['SERVICE_URL']:
+        print('Fatal Error: The Tag Engine UI requires the OAUTH_CLIENT_CREDENTIALS variable to be set. Please set it in tagengine.ini.')
+    else:
+        print('Info: running in API mode without the client secret file')
 
 ##################### INIT GLOBAL VARIABLES ##################################
     
