@@ -3,7 +3,7 @@ This branch contains the Tag Engine 2.0 application, a recent release of Tag Eng
 
 Tag Engine is an open-source extension to Google Cloud's Data Catalog which is now part of the Dataplex suite. Tag Engine automates the tagging of BigQuery tables and views as well as data lake files in Cloud Storage. You create a configuration, for example, one that contains SQL expressions that define how to populate the fields in the tags. Tag Engine runs the configuration either on demand or on a schedule.
 
-If you are new to Tag Engine, you may want to walk through a basic [tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog). Note that the tutorial was written with Tag Engine v1 in mind, but it will still give you a sense of how Tag Engine configurations works. We plan to publish a new tutorial for Tag Engine v2 and will link it from here when ready. In the meantime, this README contains the deployment steps, the testing procedures, and references to multiple code samples to help you get started. 
+If you are new to Tag Engine, you may want to walk through [this](https://cloud.google.com/architecture/tag-engine-and-data-catalog) basic tutorial. Note that the tutorial was written with Tag Engine v1 in mind, but it will still give you a sense of how Tag Engine configurations works. We plan to publish a revised tutorial for Tag Engine v2 and will link it from here when ready. In the meantime, this README contains the deployment steps, the testing procedures, and references to multiple code samples to help you get started. 
 
 This README is organized into four parts:  <br>
 - Part 1: [Deploying Tag Engine v2](#deploy) <br>
