@@ -15,9 +15,7 @@ This README is organized into four parts:  <br>
 
 Tag Engine v2 comes with two Cloud Run services. One service is for the API (`tag-engine-api`) and the other is for the UI (`tag-engine-ui`). 
 
-The Cloud Run API service uses Bearer token headers for authentication. 
-
-The Cloud Run UI service uses OAuth for authentication. It also uses the OAuth client's credentials (`client_secret.json`) for impersonation. 
+Both services use access tokens for authorization. The API service expects the client to pass in an access token when calling the API functions whereas the UI service uses OAuth to authorize the client from the front end. The client secret file is required for the OAuth flow.  
 
 Follow the 6 steps below to deploy Tag Engine v2 with Terraform and without a load balancer. 
 

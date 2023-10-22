@@ -57,8 +57,15 @@ resource "google_cloud_run_v2_service" "api_service" {
 	}
 
     containers {
-      image = null_resource.build_api_image.triggers.full_image_path
-    }
+        image = null_resource.build_api_image.triggers.full_image_path
+	  
+	    resources {
+	        limits = {
+	           memory = "1024Mi"
+		    }
+	        cpu_idle = true
+	    }
+     }
   }
   depends_on = [null_resource.build_api_image]
 }
@@ -126,9 +133,16 @@ resource "google_cloud_run_v2_service" "ui_service" {
 	}
 
     containers {
-      
-	  image = null_resource.build_ui_image.triggers.full_image_path
+        image = null_resource.build_ui_image.triggers.full_image_path
+	  
+	    resources {
+	        limits = {
+	           memory = "1024Mi"
+		    }
+	        cpu_idle = true
+	    }
     }
+	 
 	vpc_access {
 	    connector = google_vpc_access_connector.connector.id
 	    egress = "PRIVATE_RANGES_ONLY"

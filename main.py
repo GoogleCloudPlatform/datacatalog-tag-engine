@@ -56,13 +56,29 @@ def check_service_url():
         return -1
 
 check_service_url()
-##################### INIT GLOBAL VARIABLES ##################################
 
-print('enable_auth variable:', config['DEFAULT']['ENABLE_AUTH'].lower())
+##################### CHECK CLIENT SECRET #####################
+    
 if config['DEFAULT']['ENABLE_AUTH'].lower() == 'true' or config['DEFAULT']['ENABLE_AUTH'] == 1:
     ENABLE_AUTH = True
+    print('Info: ENABLE_AUTH = True')
 else:
     ENABLE_AUTH = False
+    print('Info: ENABLE_AUTH = False. This option is only supported in API mode as the client secret is needed to obtain an access token from the UI.')
+
+def check_client_secret():
+    if 'OAUTH_CLIENT_CREDENTIALS' in config['DEFAULT']:
+        OAUTH_CLIENT_CREDENTIALS = config['DEFAULT']['OAUTH_CLIENT_CREDENTIALS'].strip()
+    else:
+        if 'tag-engine-ui-' in os.environ['SERVICE_URL']:
+            print('Fatal Error: The Tag Engine UI requires the OAUTH_CLIENT_CREDENTIALS variable to be set. Please set it in tagengine.ini.')
+            return -1
+        else:
+            print('Info: running in API mode without the client secret file')
+
+check_client_secret()
+
+##################### INIT GLOBAL VARIABLES ##################################
     
 TAG_ENGINE_PROJECT = config['DEFAULT']['TAG_ENGINE_PROJECT'].strip()
 TAG_ENGINE_REGION = config['DEFAULT']['TAG_ENGINE_REGION'].strip()
@@ -80,8 +96,7 @@ jm = jobm.JobManager(TAG_ENGINE_SA, TAG_ENGINE_PROJECT, TAG_ENGINE_REGION, INJEC
 tm = taskm.TaskManager(TAG_ENGINE_SA, TAG_ENGINE_PROJECT, TAG_ENGINE_REGION, WORK_QUEUE, RUN_TASK_HANDLER)
 
 SCOPES = ['openid', 'https://www.googleapis.com/auth/cloud-platform', 'https://www.googleapis.com/auth/userinfo.email']
-OAUTH_CLIENT_CREDENTIALS = config['DEFAULT']['OAUTH_CLIENT_CREDENTIALS'].strip()
-
+ 
 USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v2'
 store = tesh.TagEngineStoreHandler()
 
@@ -3779,13 +3794,13 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 2.1.2"
+    return "Welcome to Tag Engine version 2.1.2\n"
     
 ####################### TEST METHOD ####################################  
     
 @app.route("/ping", methods=['GET'])
 def ping():
-    return "Tag Engine is alive"
+    return "Tag Engine is alive\n"
 #[END ping]
 
 @app.errorhandler(500)
