@@ -1,9 +1,9 @@
 ## Tag Engine 2.0
-This branch contains the Tag Engine 2.0 application, a recent release of Tag Engine v2 that is hosted on Cloud Run (instead of App Engine) and is [VPC-SC compatible](https://cloud.google.com/vpc-service-controls/docs/supported-products). Tag Engine 2.0 supports authentication and the ability for multiple teams to securely tag their own data assets. 
+This branch contains the Tag Engine 2.0 application, a recent release of Tag Engine v2 that is hosted on Cloud Run (instead of App Engine) and is [VPC-SC compatible](https://cloud.google.com/vpc-service-controls/docs/supported-products). Tag Engine 2.0 supports user authorization and the ability for multiple teams using BigQuery to tag only the data catalog entries which they have permission to use. 
 
-Tag Engine is an open-source extension to Google Cloud's Data Catalog. Tag Engine automates the tagging of BigQuery tables and views as well as data lake files in Cloud Storage. You create a configuration, which contains SQL expressions that define how to populate the fields in the tags. Tag Engine runs the configuration either on demand or on a pre-defined schedule.
+Tag Engine is an open-source extension to Google Cloud's Data Catalog which is now part of the Dataplex suite. Tag Engine automates the tagging of BigQuery tables and views as well as data lake files in Cloud Storage. You create a configuration, for example, one that contains SQL expressions that define how to populate the fields in the tags. Tag Engine runs the configuration either on demand or on a schedule.
 
-If you are new to Tag Engine, you may want to walk through [this tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog). Note that the tutorial was written for Tag Engine v1 (as opposed to v2), but it will give you a sense of how Tag Engine works. We plan to publish a second tutorial for Tag Engine v2 soon. Stay tuned! 
+If you are new to Tag Engine, you may want to walk through a basic [tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog). Note that the tutorial was written with Tag Engine v1 in mind, but it will still give you a sense of how Tag Engine configurations works. We plan to publish a new tutorial for Tag Engine v2 and will link it from here when ready. In the meantime, this README contains the deployment steps, the testing procedures, and references to multiple code samples to help you get started. 
 
 This README is organized into four parts:  <br>
 - Part 1: [Deploying Tag Engine v2](#deploy) <br>
@@ -15,7 +15,7 @@ This README is organized into four parts:  <br>
 
 Tag Engine v2 comes with two Cloud Run services. One service is for the API (`tag-engine-api`) and the other is for the UI (`tag-engine-ui`). 
 
-Both services use access tokens for authorization. The API service expects the client to pass in an access token when calling the API functions whereas the UI service uses OAuth to authorize the client from the front end. The client secret file is required for the OAuth flow.  
+Both services use access tokens for authorization. The API service expects the client to pass in an access token when calling the API functions whereas the UI service uses OAuth to authorize the client from the frontend. Note that a client secret file is required for the OAuth flow.  
 
 Follow the 6 steps below to deploy Tag Engine v2 with Terraform and without a load balancer. 
 
@@ -24,11 +24,14 @@ Alternative 1: you can deploy Tag Engine v2 behind an [external load balancer](h
 Alternative 2: you can choose to deploy Tag Engine v2 with [gcloud commands](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/cloud-run/docs/manual_deployment.md) instead of running the Terraform.
 
 <br>
-1. Create (or designate) two service accounts:
+1. Create (or designate) two service accounts: <br><br>
 
-- A service account that runs the Tag Engine Cloud Run service, referred to as `TAG_ENGINE_SA`. 
-- A service account that performs the tagging in Data Catalog, and sourcing the contents of those tags from BigQuery, referred to as `TAG_CREATOR_SA`. <br><br>
+   - A service account that runs the Tag Engine Cloud Run service, referred to as `TAG_ENGINE_SA`. 
+   - A service account that performs the tagging in Data Catalog, and sourcing the contents of those tags from BigQuery, referred to as `TAG_CREATOR_SA`. <br>
 
+   Why do we need two service accounts? The key benefit of decoupling them is to allow individual teams to have their own Tag Creator SAs. For API access, teams can then link 
+   invoker SAs to Tag Creator SAs so that a single Tag Engine instance can be shared by multiple teams. Similarly, for UI access, teams can link user accounts to Tag Creator SAs 
+   so that a single Tag Engine instance can be shared by multiple teams. <br><br>
 
 2. Create an OAuth client:
 
@@ -40,9 +43,10 @@ Alternative 2: you can choose to deploy Tag Engine v2 with [gcloud commands](htt
    Name: tag-engine-oauth<br>
    Authorized redirects URIs: <i>Leave this field blank for now.</i>  
    Click Create<br>
-   Download the credentials as `client_secret.json` and place the file in the root of the `datacatalog-tag-engine` directory<br><br> 
+   Download the credentials as `client_secret.json` and place the file in the root of the `datacatalog-tag-engine` directory<br><br>
 
- 
+   Note: The client secret file is required for establishing the authorization flow from the UI.  
+
 3. Open `datacatalog-tag-engine/tagengine.ini` and set the following variables in this file: 
 
 	```
