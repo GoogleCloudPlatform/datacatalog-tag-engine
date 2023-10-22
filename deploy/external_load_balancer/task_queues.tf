@@ -33,7 +33,7 @@ resource "google_cloud_tasks_queue" "work_queue" {
     }
 
     retry_config {
-      max_attempts = 1
+      max_attempts = 2
     }
 
   stackdriver_logging_config {

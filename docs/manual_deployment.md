@@ -10,16 +10,16 @@ This procedure deploys the Tag Engine v2 components by hand. The steps are carri
 
 2. Define 6 environment variables which will be used throughout the deployment:
 
-```
-export TAG_ENGINE_PROJECT="<PROJECT>"  # GCP project id for running the Tag Engine service
-export TAG_ENGINE_REGION="<REGION>"    # GCP region for running Tag Engine service, e.g. us-central1
+	```
+	export TAG_ENGINE_PROJECT="<PROJECT>"  # GCP project id for running the Tag Engine service
+	export TAG_ENGINE_REGION="<REGION>"    # GCP region for running Tag Engine service, e.g. us-central1
 
-export BIGQUERY_PROJECT="<PROJECT>"    # GCP project used by BigQuery data assets, can be equal to TAG_ENGINE_PROJECT. This variable is only used for setting IAM permissions in steps 10 and 11 
-export BIGQUERY_REGION="<REGION>"      # GCP region in which data assets in BigQuery are stored, e.g. us-central1
+	export BIGQUERY_PROJECT="<PROJECT>"    # GCP project used by BigQuery data assets, can be equal to TAG_ENGINE_PROJECT. This variable is only used for setting IAM permissions in steps 10 and 11 
+	export BIGQUERY_REGION="<REGION>"      # GCP region in which data assets in BigQuery are stored, e.g. us-central1
 
-export TAG_ENGINE_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"     # email of your Cloud Run service account for running Tag Engine service
-export TAG_CREATOR_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"   # email of your Tag creator service account for running BQ queries and creating DC tags
-```
+	export TAG_ENGINE_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"    # email of your Cloud Run service account for running Tag Engine service
+	export TAG_CREATOR_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"   # email of your Tag creator service account for running BQ queries and creating DC tags
+	```
 
 <b>The key benefit of decoupling `TAG_ENGINE_SA` from `TAG_CREATOR_SA` is to limit the scope of what a Tag Engine client is allowed to tag.</b> More specifically, when a client submits a request to Tag Engine, Tag Engine checks to see if they are authorized to use `TAG_CREATOR_SA` before processing their request. A Tag Engine client can either be a user identity or a service account.  
 
@@ -39,15 +39,15 @@ If multiple teams want to share an instance of Tag Engine and they own different
 
 4. Open `tagengine.ini` and set the following variables in this file. The first five should be equal to the environment variables you previously set in step 2:
 
-```
-TAG_ENGINE_PROJECT
-TAG_ENGINE_REGION  
-BIGQUERY_REGION
-CLOUD_RUN_ACCOUNT
-TAG_CREATOR_ACCOUNT
-OAUTH_CLIENT_CREDENTIALS
-ENABLE_AUTH  
-```
+	```
+	TAG_ENGINE_PROJECT
+	TAG_ENGINE_REGION  
+	BIGQUERY_REGION
+	CLOUD_RUN_ACCOUNT
+	TAG_CREATOR_ACCOUNT
+	OAUTH_CLIENT_CREDENTIALS
+	ENABLE_AUTH  
+	```
 
    A couple of notes:
 
@@ -60,28 +60,28 @@ ENABLE_AUTH
 
 5. Enable the required Google Cloud APIs in your project:
 
-`gcloud config set project $TAG_ENGINE_PROJECT`
+	`gcloud config set project $TAG_ENGINE_PROJECT`
 
-```
-gcloud services enable iam.googleapis.com
-gcloud services enable cloudresourcemanager.googleapis.com
-gcloud services enable firestore.googleapis.com
-gcloud services enable cloudtasks.googleapis.com
-gcloud services enable datacatalog.googleapis.com
-gcloud services enable artifactregistry.googleapis.com
-gcloud services enable cloudbuild.googleapis.com
-```
+	```
+	gcloud services enable iam.googleapis.com
+	gcloud services enable cloudresourcemanager.googleapis.com
+	gcloud services enable firestore.googleapis.com
+	gcloud services enable cloudtasks.googleapis.com
+	gcloud services enable datacatalog.googleapis.com
+	gcloud services enable artifactregistry.googleapis.com
+	gcloud services enable cloudbuild.googleapis.com
+	```
 <br> 
 
 6. Create two task queues, the first one is used to queue the tag request, the second is used to queue the individual work items:
 
-```
-gcloud tasks queues create tag-engine-injector-queue \
-	--location=$TAG_ENGINE_REGION --max-attempts=1 --max-concurrent-dispatches=100
+	```
+	gcloud tasks queues create tag-engine-injector-queue \
+		--location=$TAG_ENGINE_REGION --max-attempts=1 --max-concurrent-dispatches=100
 
-gcloud tasks queues create tag-engine-work-queue \
-	--location=$TAG_ENGINE_REGION --max-attempts=1 --max-concurrent-dispatches=100
-```
+	gcloud tasks queues create tag-engine-work-queue \
+		--location=$TAG_ENGINE_REGION --max-attempts=1 --max-concurrent-dispatches=100
+	```
 <br>
 
 7. Create two custom IAM roles which are required by `SENSITIVE_COLUMN_CONFIG`, a configuration type that creates policy tags on sensitive columns:
@@ -104,91 +104,91 @@ gcloud iam roles create PolicyTagReader \
 	
 8. Grant the required IAM roles and policy bindings for the accounts `TAG_ENGINE_SA` and `TAG_CREATOR_SA`:
 
-```
-gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
-	--member=serviceAccount:$TAG_ENGINE_SA \
-	--role=roles/cloudtasks.enqueuer
+	```
+	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+		--member=serviceAccount:$TAG_ENGINE_SA \
+		--role=roles/cloudtasks.enqueuer
 	
-gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
-	--member=serviceAccount:$TAG_ENGINE_SA \
-	--role=roles/cloudtasks.taskRunner
+	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+		--member=serviceAccount:$TAG_ENGINE_SA \
+		--role=roles/cloudtasks.taskRunner
 	
-gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
-	--member=serviceAccount:$TAG_ENGINE_SA \
-	--role=roles/datastore.user
+	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+		--member=serviceAccount:$TAG_ENGINE_SA \
+		--role=roles/datastore.user
 
-gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
-	--member=serviceAccount:$TAG_ENGINE_SA \
-	--role=roles/datastore.indexAdmin  
+	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+		--member=serviceAccount:$TAG_ENGINE_SA \
+		--role=roles/datastore.indexAdmin  
 	
-gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
-	--member=serviceAccount:$TAG_ENGINE_SA \
-	--role=roles/run.invoker 
-```
+	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+		--member=serviceAccount:$TAG_ENGINE_SA \
+		--role=roles/run.invoker 
+	```
 
-```
-gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
-	--member=serviceAccount:$TAG_CREATOR_SA \
-	--role=roles/datacatalog.tagEditor
+	```
+	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+		--member=serviceAccount:$TAG_CREATOR_SA \
+		--role=roles/datacatalog.tagEditor
 
-gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
-	--member=serviceAccount:$TAG_CREATOR_SA \
-	--role=roles/datacatalog.tagTemplateUser
+	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+		--member=serviceAccount:$TAG_CREATOR_SA \
+		--role=roles/datacatalog.tagTemplateUser
 	
-gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
-	--member=serviceAccount:$TAG_CREATOR_SA \
-	--role=roles/datacatalog.tagTemplateViewer
+	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+		--member=serviceAccount:$TAG_CREATOR_SA \
+		--role=roles/datacatalog.tagTemplateViewer
 
-gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
-	--member=serviceAccount:$TAG_CREATOR_SA \
-	--role=roles/datacatalog.viewer
+	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+		--member=serviceAccount:$TAG_CREATOR_SA \
+		--role=roles/datacatalog.viewer
 
-gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
-	--member=serviceAccount:$TAG_CREATOR_SA \
-	--role=roles/bigquery.dataEditor
+	gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
+		--member=serviceAccount:$TAG_CREATOR_SA \
+		--role=roles/bigquery.dataEditor
 	
-gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
-	--member=serviceAccount:$TAG_CREATOR_SA \
-	--role=roles/bigquery.jobUser
+	gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
+		--member=serviceAccount:$TAG_CREATOR_SA \
+		--role=roles/bigquery.jobUser
 
-gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
-	--member=serviceAccount:$TAG_CREATOR_SA \
-	--role=roles/bigquery.metadataViewer
+	gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
+		--member=serviceAccount:$TAG_CREATOR_SA \
+		--role=roles/bigquery.metadataViewer
 
-gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
-	--member=serviceAccount:$TAG_CREATOR_SA \
-	--role=roles/logging.viewer
+	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+		--member=serviceAccount:$TAG_CREATOR_SA \
+		--role=roles/logging.viewer
 
-gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
-	--member=serviceAccount:$TAG_CREATOR_SA \
-	--role=projects/$TAG_ENGINE_PROJECT/roles/PolicyTagReader 
+	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+		--member=serviceAccount:$TAG_CREATOR_SA \
+		--role=projects/$TAG_ENGINE_PROJECT/roles/PolicyTagReader 
 
-gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
-	--member=serviceAccount:$TAG_CREATOR_SA \
-	--role=projects/$BIGQUERY_PROJECT/roles/BigQuerySchemaUpdate	   
-```
+	gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
+		--member=serviceAccount:$TAG_CREATOR_SA \
+		--role=projects/$BIGQUERY_PROJECT/roles/BigQuerySchemaUpdate	   
+	```
 
-```
-gcloud iam service-accounts add-iam-policy-binding $TAG_ENGINE_SA \
-	--member=serviceAccount:$TAG_ENGINE_SA --role roles/iam.serviceAccountUser
+	```
+	gcloud iam service-accounts add-iam-policy-binding $TAG_ENGINE_SA \
+		--member=serviceAccount:$TAG_ENGINE_SA --role roles/iam.serviceAccountUser
 	
-gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-	--member=serviceAccount:$TAG_ENGINE_SA --role=roles/iam.serviceAccountUser
+	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
+		--member=serviceAccount:$TAG_ENGINE_SA --role=roles/iam.serviceAccountUser
 
-gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-    --member=serviceAccount:$TAG_ENGINE_SA --role=roles/iam.serviceAccountTokenCreator 
-```
+	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
+	    --member=serviceAccount:$TAG_ENGINE_SA --role=roles/iam.serviceAccountTokenCreator 
+	```
 
 
 Note: If you plan to create tags from CSV files, you also need to ensure that `TAG_CREATOR_SA` has the 
 `storage.buckets.get` permission on the GCS bucket where the CSV files are stored. To do that, you can create a custom role with 
 this permission or assign the `storage.legacyBucketReader` role:
 
-```
-gcloud storage buckets add-iam-policy-binding gs://<BUCKET> \
-	--member=serviceAccount:$TAG_CREATOR_SA' \
-	--role=roles/storage.legacyBucketReader
-```
+	```
+	gcloud storage buckets add-iam-policy-binding gs://<BUCKET> \
+		--member=serviceAccount:$TAG_CREATOR_SA' \
+		--role=roles/storage.legacyBucketReader
+	```
 <br> 
 
 	
@@ -209,55 +209,75 @@ gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location
 
    First, you must download a private key for your `$TAG_ENGINE_SA`:
 
-```
-gcloud iam service-accounts keys create private_key.json --iam-account=$TAG_ENGINE_SA
-export GOOGLE_APPLICATION_CREDENTIALS="private_key.json"
-```
+	```
+	gcloud iam service-accounts keys create private_key.json --iam-account=$TAG_ENGINE_SA
+	export GOOGLE_APPLICATION_CREDENTIALS="private_key.json"
+	```
 
    Second, create the composite indexes which are needed for serving multiple read requests:
 
-```
-cd deploy
-python create_indexes.py $TAG_ENGINE_PROJECT
-cd ..
-```
+	```
+	pip install google-cloud-firestore
+	cd deploy/external_load_balancer
+	python create_indexes.py $TAG_ENGINE_PROJECT
+	cd ..
+	```
 
-   Note: the above script is expected to run for 10-12 minutes. As the indexes get created, you will see them show up in the Firestore console. There should be 36 indexes in total. <br><br> 
+   Note: the above script is expected to run for 10-12 minutes. As the indexes get created, you will see them show up in the Firestore console. There should be about 36 indexes. <br><br> 
 	
-
 
 11. Build and deploy the Cloud Run services:
 
-   There is one Cloud Run service for the API and one Cloud Run service for the UI. They are both built from the same code base. 
+   There is one service in Cloud Run for the API (tag-engine-api) and another service in Cloud Run for the UI (tag-engine-ui). They are both built from the same code base. 
 
    The next two commands require `gcloud beta`. You can install `gcloud beta` by running `gcloud components install beta`.  
 
-```
-gcloud beta run deploy tag-engine-api \
-	--source . \
-	--platform managed \
-	--region $TAG_ENGINE_REGION \
-	--no-allow-unauthenticated \
-	--ingress=all \
-	--service-account=$TAG_ENGINE_SA
-```
+	```
+	gcloud beta run deploy tag-engine-api \
+		--source . \
+		--platform managed \
+		--region $TAG_ENGINE_REGION \
+		--no-allow-unauthenticated \
+		--ingress=all \
+		--memory=1024Mi \
+		--service-account=$TAG_ENGINE_SA
+	```
 
-   The next command requires a VPC access connector. This is used to send requests to your VPC network from Cloud Run using internal DNS and internal IP addresses as opposed to going through the public internet. To create a connector, consult [this page](https://cloud.google.com/vpc/docs/configure-serverless-vpc-access#gcloud).  
+   To deploy the UI service without IAP: 
+   
+   ```
+	   gcloud beta run deploy tag-engine-ui \
+	   --source . \
+	   --platform managed \
+	   --region $TAG_ENGINE_REGION \
+	   --allow-unauthenticated \
+	   --ingress=all \
+	   --memory=1024Mi \
+	   --service-account=$TAG_ENGINE_SA
+   
+   ``` 
+   
+   To deploy the UI service behind IAP: 
+   
+   Note: This option requires an external load balancer and VPC access connector. 
+   
+   Create a VPC access connector before running the next command. This connector is used to send requests to your VPC network from Cloud Run using internal DNS and internal IP addresses as opposed to going through the public internet. To create a connector, consult [this page](https://cloud.google.com/vpc/docs/configure-serverless-vpc-access#gcloud).  
 
-```
-gcloud beta run deploy tag-engine-ui \
-	--source . \
-	--platform managed \
-	--region $TAG_ENGINE_REGION \
-	--allow-unauthenticated \
-	--ingress=internal-and-cloud-load-balancing \
-	--port=8080 \
-	--min-instances=0 \
-	--max-instances=5 \
-	--service-account=$TAG_ENGINE_SA \
-	--vpc-connector=projects/$TAG_ENGINE_PROJECT/locations/$TAG_ENGINE_REGION/connectors/$VPC_CONNECTOR \
-	--vpc-egress=private-ranges-only
-```
+	```
+	gcloud beta run deploy tag-engine-ui \
+		--source . \
+		--platform managed \
+		--region $TAG_ENGINE_REGION \
+		--allow-unauthenticated \
+		--ingress=internal-and-cloud-load-balancing \
+		--port=8080 \
+		--min-instances=0 \
+		--max-instances=5 \
+		--memory=1024Mi,
+		--service-account=$TAG_ENGINE_SA \
+		--vpc-connector=projects/$TAG_ENGINE_PROJECT/locations/$TAG_ENGINE_REGION/connectors/$VPC_CONNECTOR \
+		--vpc-egress=private-ranges-only
+	```
 <br> 
 
 
@@ -265,30 +285,34 @@ gcloud beta run deploy tag-engine-ui \
 
    If you are deploying the API, run:
 
-```
-export API_SERVICE_URL=`gcloud run services describe tag-engine-api --format="value(status.url)"`
-gcloud run services update tag-engine-api --set-env-vars SERVICE_URL=$API_SERVICE_URL
-```
+	```
+	export API_SERVICE_URL=`gcloud run services describe tag-engine-api --format="value(status.url)"`
+	gcloud run services update tag-engine-api --set-env-vars SERVICE_URL=$API_SERVICE_URL
+	```
 
    If you are deploying the UI, run:
-```
-export UI_SERVICE_URL=`gcloud run services describe tag-engine-ui --format="value(status.url)"`
-gcloud run services update tag-engine-ui --set-env-vars SERVICE_URL=$UI_SERVICE_URL
-```
+	```
+	export UI_SERVICE_URL=`gcloud run services describe tag-engine-ui --format="value(status.url)"`
+	gcloud run services update tag-engine-ui --set-env-vars SERVICE_URL=$UI_SERVICE_URL
+	```
 
 <br> 
 
 
-13. Put an HTTP Load Balancer in front of the UI Cloud Run service:
+13. Put an HTTP External Load Balancer in front of the UI Cloud Run service:
 
-   Note: This step is only required if you are deploying the UI. 
+   If you are deploying the UI service in Cloud Run without a load balancer, skip this step. 
+   
+   The benefit of fronting the UI with a load balancer is to be able to secure access with IAP (Note: IAP is in addition to OAuth). 
+   
+   You cannot attach IAP directly to a Cloud Run service, you need to go through a load balancer.  
 
-   - Create an application load balancer that accepts incoming HTTPS requests
-   - Attach the frontend of the load balancer to your Tag Engine domain
-   - Create a [serverless network endpoint group](https://cloud.google.com/load-balancing/docs/negs/serverless-neg-concepts) (or NEG) that references the Tag Engine UI Cloud Run    service (tag-engine-ui)
+   - Create an external application load balancer that accepts incoming HTTPS requests
+   - Attach the frontend of the load balancer to your custom domain for Tag Engine
+   - Create a [serverless network endpoint group](https://cloud.google.com/load-balancing/docs/negs/serverless-neg-concepts) (or NEG) that references the Tag Engine UI Cloud Run service (tag-engine-ui)
    - Attach the backend of the load balancer to the NEG 
 
-   Once the load balancer is up, use its IP address to create an `A record` in Cloud DNS. 
+   Once the external load balancer is up, use its IP address to create an `A record` in Cloud DNS. 
 
    Open IAP and confirm that it is connected to your load balancer's backend. 
    Inside IAP, grant the `IAP-secured Web App User` role to the user identities who are allowed to access the Tag Engine UI. 

@@ -6,7 +6,6 @@ resource "google_artifact_registry_repository" "image_registry" {
   depends_on = [google_project_service.tag_engine_project]
 }
 
-
 # ************************************************************ #
 # Create the Cloud Run API service
 # ************************************************************ #
@@ -57,8 +56,15 @@ resource "google_cloud_run_v2_service" "api_service" {
 	}
 
     containers {
-      image = null_resource.build_api_image.triggers.full_image_path
-    }
+        image = null_resource.build_api_image.triggers.full_image_path
+	  
+	    resources {
+	        limits = {
+	           memory = "1024Mi"
+		    }
+	        cpu_idle = true
+	    }
+     }
   }
   depends_on = [null_resource.build_api_image]
 }
@@ -118,9 +124,15 @@ resource "google_cloud_run_v2_service" "ui_service" {
 	}
 
     containers {
-      
-	  image = null_resource.build_ui_image.triggers.full_image_path
-    }
+        image = null_resource.build_ui_image.triggers.full_image_path
+	  
+	    resources {
+	        limits = {
+	           memory = "1024Mi"
+		    }
+	        cpu_idle = true
+	    }
+     }
   }
   depends_on = [null_resource.build_ui_image]
 }
