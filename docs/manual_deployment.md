@@ -184,11 +184,11 @@ Note: If you plan to create tags from CSV files, you also need to ensure that `T
 `storage.buckets.get` permission on the GCS bucket where the CSV files are stored. To do that, you can create a custom role with 
 this permission or assign the `storage.legacyBucketReader` role:
 
-	```
+```
 	gcloud storage buckets add-iam-policy-binding gs://<BUCKET> \
 		--member=serviceAccount:$TAG_CREATOR_SA' \
 		--role=roles/storage.legacyBucketReader
-	```
+```
 <br> 
 
 	
@@ -209,19 +209,19 @@ gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location
 
    First, you must download a private key for your `$TAG_ENGINE_SA`:
 
-	```
+   ```
 	gcloud iam service-accounts keys create private_key.json --iam-account=$TAG_ENGINE_SA
 	export GOOGLE_APPLICATION_CREDENTIALS="private_key.json"
-	```
+   ```
 
    Second, create the composite indexes which are needed for serving multiple read requests:
 
-	```
+   ```
 	pip install google-cloud-firestore
 	cd deploy/external_load_balancer
 	python create_indexes.py $TAG_ENGINE_PROJECT
 	cd ..
-	```
+   ```
 
    Note: the above script is expected to run for 10-12 minutes. As the indexes get created, you will see them show up in the Firestore console. There should be about 36 indexes. <br><br> 
 	
@@ -232,7 +232,7 @@ gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location
 
    The next two commands require `gcloud beta`. You can install `gcloud beta` by running `gcloud components install beta`.  
 
-	```
+   ```
 	gcloud beta run deploy tag-engine-api \
 		--source . \
 		--platform managed \
@@ -241,7 +241,7 @@ gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location
 		--ingress=all \
 		--memory=1024Mi \
 		--service-account=$TAG_ENGINE_SA
-	```
+   ```
 
    To deploy the UI service without IAP: 
    
@@ -263,7 +263,7 @@ gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location
    
    Create a VPC access connector before running the next command. This connector is used to send requests to your VPC network from Cloud Run using internal DNS and internal IP addresses as opposed to going through the public internet. To create a connector, consult [this page](https://cloud.google.com/vpc/docs/configure-serverless-vpc-access#gcloud).  
 
-	```
+  ```
 		gcloud beta run deploy tag-engine-ui \
 			--source . \
 			--platform managed \
@@ -277,7 +277,7 @@ gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location
 			--service-account=$TAG_ENGINE_SA \
 			--vpc-connector=projects/$TAG_ENGINE_PROJECT/locations/$TAG_ENGINE_REGION/connectors/$VPC_CONNECTOR \
 			--vpc-egress=private-ranges-only
-	```
+   ```
 <br> 
 
 
@@ -285,17 +285,17 @@ gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location
 
    If you are deploying the API, run:
 
-	```
-		export API_SERVICE_URL=`gcloud run services describe tag-engine-api --format="value(status.url)"`
-		gcloud run services update tag-engine-api --set-env-vars SERVICE_URL=$API_SERVICE_URL
-	```
+   ```
+   	export API_SERVICE_URL=`gcloud run services describe tag-engine-api --format="value(status.url)"`
+	gcloud run services update tag-engine-api --set-env-vars SERVICE_URL=$API_SERVICE_URL
+   ```
 
    If you are deploying the UI, run:
    
-	```
-		export UI_SERVICE_URL=`gcloud run services describe tag-engine-ui --format="value(status.url)"`
-		gcloud run services update tag-engine-ui --set-env-vars SERVICE_URL=$UI_SERVICE_URL
-	```
+   ```
+	export UI_SERVICE_URL=`gcloud run services describe tag-engine-ui --format="value(status.url)"`
+	gcloud run services update tag-engine-ui --set-env-vars SERVICE_URL=$UI_SERVICE_URL
+   ```
 
 <br> 
 
