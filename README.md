@@ -334,7 +334,7 @@ e) View the job status:
 
 ### <a name="troubleshooting"></a> Part 4: Troubleshooting
 
-If you encounter the error `The requested URL was not found on this server`, you'll need to redeploy the Cloud Run API service as follows:
+If you encounter the error `The requested URL was not found on this server` after running the Terraform, the issue is that the Cloud Run API service didn't get built correctly. Try to rebuild and redeploy the Cloud Run API service with this command:
 
 ```
 cd datacatalog-tag-engine
@@ -346,6 +346,15 @@ gcloud beta run deploy tag-engine-api \
  	--ingress=all \
  	--memory=1024Mi \
  	--service-account=$TAG_ENGINE_SA
+```
+
+Then, call the `ping` endpoint as follows:
+```
+curl $TAG_ENGINE_URL/ping -H "Authorization: Bearer $IAM_TOKEN" -H "oauth_token: $OAUTH_TOKEN"
+```
+You should see the following response:
+```
+Tag Engine is alive
 ```
 
 ### <a name="next"></a> Part 5: Next Steps
