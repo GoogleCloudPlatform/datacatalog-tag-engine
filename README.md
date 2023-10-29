@@ -260,7 +260,6 @@ e) View the job status:
 4. Generate an IAM token (aka Bearer token) for authenticating to the Tag Engine Cloud Run service:
 
 ```
-	gcloud auth login
 	export IAM_TOKEN=$(gcloud auth print-identity-token)
 ```
 <br>
