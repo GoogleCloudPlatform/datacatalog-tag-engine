@@ -9,7 +9,8 @@ This README is organized into four parts:  <br>
 - Part 1: [Deploying Tag Engine v2](#deploy) <br>
 - Part 2: [Testing your Setup with a User Account](#testa)  <br>
 - Part 3: [Testing your Setup with a Service Account](#testb)  <br>
-- Part 4: [What To Do Next](#next)  <br> 
+- Part 4: [Troubleshooting](#troubleshooting)  <br>
+- Part 5: [What To Do Next](#next)  <br> 
 
 ### <a name="deploy"></a> Part 1: Deploying Tag Engine v2
 
@@ -331,7 +332,23 @@ e) View the job status:
    Open the Data Catalog UI and verify that your tag was successfully created. If not, open the Cloud Run logs and investigate the problem. 
 <br><br>
 
-### <a name="next"></a> Part 4: Next Steps
+### <a name="troubleshooting"></a> Part 4: Troubleshooting
+
+If you encounter the error `The requested URL was not found on this server`, you'll need to redeploy the Cloud Run API service as follows:
+
+```
+cd datacatalog-tag-engine
+gcloud beta run deploy tag-engine-api \
+ 	--source . \
+ 	--platform managed \
+ 	--region $TAG_ENGINE_REGION \
+ 	--no-allow-unauthenticated \
+ 	--ingress=all \
+ 	--memory=1024Mi \
+ 	--service-account=$TAG_ENGINE_SA
+```
+
+### <a name="next"></a> Part 5: Next Steps
 
 1. Explore additional API methods and run them through curl commands:
 
