@@ -1,7 +1,7 @@
 variable "required_apis" {
 	type = list
 	description = "list of required GCP services"
-	default = ["cloudresourcemanager.googleapis.com", "iam.googleapis.com", "cloudresourcemanager.googleapis.com", "cloudbuild.googleapis.com", "artifactregistry.googleapis.com", "vpcaccess.googleapis.com", "cloudtasks.googleapis.com", "firestore.googleapis.com", "datacatalog.googleapis.com", "iap.googleapis.com"] 
+	default = ["cloudresourcemanager.googleapis.com", "iam.googleapis.com", "cloudresourcemanager.googleapis.com", "cloudbuild.googleapis.com", "artifactregistry.googleapis.com", "cloudtasks.googleapis.com", "firestore.googleapis.com", "datacatalog.googleapis.com", "run.googleapis.com"] 
 }
 
 variable "tag_engine_project" {

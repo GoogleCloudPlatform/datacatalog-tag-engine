@@ -66,7 +66,7 @@ resource "google_cloud_run_v2_service" "api_service" {
 	    }
      }
   }
-  depends_on = [null_resource.build_api_image]
+  depends_on = [google_project_service.tag_engine_project, null_resource.build_api_image]
 }
 
 output "api_service_uri" {
@@ -134,7 +134,7 @@ resource "google_cloud_run_v2_service" "ui_service" {
 	    }
      }
   }
-  depends_on = [null_resource.build_ui_image]
+  depends_on = [google_project_service.tag_engine_project, null_resource.build_ui_image]
 }
 
 output "ui_service_uri" {
