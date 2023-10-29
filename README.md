@@ -9,7 +9,8 @@ This README is organized into four parts:  <br>
 - Part 1: [Deploying Tag Engine v2](#deploy) <br>
 - Part 2: [Testing your Setup with a User Account](#testa)  <br>
 - Part 3: [Testing your Setup with a Service Account](#testb)  <br>
-- Part 4: [What To Do Next](#next)  <br> 
+- Part 4: [Troubleshooting](#troubleshooting)  <br>
+- Part 5: [What To Do Next](#next)  <br> 
 
 ### <a name="deploy"></a> Part 1: Deploying Tag Engine v2
 
@@ -111,7 +112,7 @@ python create_template.py $TAG_ENGINE_PROJECT $TAG_ENGINE_REGION data_governance
 ```
 <br>
 
-2. Authorize a user account to use $TAG_CREATOR_SA and to invoke the Tag Engine Cloud Run service:
+2. Authorize a user account to use $TAG_CREATOR_SA and to invoke the Tag Engine API Cloud Run service:
 
 ```
 export USER_ACCOUNT="username@example.com"
@@ -120,7 +121,7 @@ gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
     --member=user:$USER_ACCOUNT --role=roles/iam.serviceAccountUser 
 
 
-gcloud run services add-iam-policy-binding tag-engine \
+gcloud run services add-iam-policy-binding tag-engine-api \
     --member=user:$USER_ACCOUNT --role=roles/run.invoker \
     --region=$TAG_ENGINE_REGION	
 ```
@@ -233,7 +234,7 @@ e) View the job status:
 ```
 <br>
 
-2. Authorize a service account to use $TAG_CREATOR_SA and to invoke the Tag Engine Cloud Run service:
+2. Authorize a service account to use $TAG_CREATOR_SA and to invoke the Tag Engine API Cloud Run service:
 
 ```
 	export CLIENT_SA="tag-engine-client@<PROJECT>.iam.gserviceaccount.com"
@@ -242,7 +243,7 @@ e) View the job status:
 	    --member=serviceAccount:$CLIENT_SA --role=roles/iam.serviceAccountUser 
 
 
-	gcloud run services add-iam-policy-binding tag-engine \
+	gcloud run services add-iam-policy-binding tag-engine-api \
 	    --member=serviceAccount:$CLIENT_SA --role=roles/run.invoker \
 	    --region=$TAG_ENGINE_REGION	
 ```
@@ -260,7 +261,6 @@ e) View the job status:
 4. Generate an IAM token (aka Bearer token) for authenticating to the Tag Engine Cloud Run service:
 
 ```
-	gcloud auth login
 	export IAM_TOKEN=$(gcloud auth print-identity-token)
 ```
 <br>
@@ -332,7 +332,32 @@ e) View the job status:
    Open the Data Catalog UI and verify that your tag was successfully created. If not, open the Cloud Run logs and investigate the problem. 
 <br><br>
 
-### <a name="next"></a> Part 4: Next Steps
+### <a name="troubleshooting"></a> Part 4: Troubleshooting
+
+If you encounter the error `The requested URL was not found on this server` after running the Terraform, the issue is that the Cloud Run API service didn't get built correctly. Try to rebuild and redeploy the Cloud Run API service with this command:
+
+```
+cd datacatalog-tag-engine
+gcloud beta run deploy tag-engine-api \
+ 	--source . \
+ 	--platform managed \
+ 	--region $TAG_ENGINE_REGION \
+ 	--no-allow-unauthenticated \
+ 	--ingress=all \
+ 	--memory=1024Mi \
+ 	--service-account=$TAG_ENGINE_SA
+```
+
+Then, call the `ping` endpoint as follows:
+```
+curl $TAG_ENGINE_URL/ping -H "Authorization: Bearer $IAM_TOKEN" -H "oauth_token: $OAUTH_TOKEN"
+```
+You should see the following response:
+```
+Tag Engine is alive
+```
+
+### <a name="next"></a> Part 5: Next Steps
 
 1. Explore additional API methods and run them through curl commands:
 
