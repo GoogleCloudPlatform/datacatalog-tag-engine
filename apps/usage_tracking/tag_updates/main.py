@@ -20,7 +20,7 @@ from google.cloud import datacatalog
 bq_client = bigquery.Client()
 dc_client = datacatalog.DataCatalogClient()
 
-reporting_table = 'entry_clicks' # designated name for the output table
+reporting_table = 'tag_updates' # designated name for the output table
 
 def event_handler(request):
     request_json = request.get_json()
@@ -67,7 +67,7 @@ def main(log_sync_project, log_sync_dataset, reporting_project, reporting_datase
     sql += "protopayload_auditlog.authenticationInfo.principalEmail as user_email, "
     sql += "protopayload_auditlog.resourceName as dc_entry "
     sql += "from " + log_sync_project + "." + log_sync_dataset + "." + "cloudaudit_googleapis_com_activity "
-    sql += "where protopayload_auditlog.methodName = 'google.cloud.datacatalog.v1.DataCatalog.TestUpdateTagPermission' "
+    sql += "where protopayload_auditlog.methodName = 'google.cloud.datacatalog.v1.DataCatalog.UpdateTag' "
     
     if start_date != None:
         sql += "and timestamp_trunc(timestamp, DAY) >= timestamp('" + start_date + "')"  
