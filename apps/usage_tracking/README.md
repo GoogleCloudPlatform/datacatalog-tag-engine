@@ -2,7 +2,7 @@
 
 This folder contains a series of cloud functions that generate an event click stream in BigQuery based on Data Catalog user activity:
 
-1) `entry_views`: which users have viewed which entries in the catalog over time 
+1) `entry_clicks`: which users have viewed which entries in the catalog over time 
 2) `tag_creates`: which users have created a tag on which entries in the catalog over time
 3) `tag_updates`: which users have updated a tag on which entries in the catalog over time
 4) `tag_deletes`: which users have deleted a tag on which entries in the catalog over time
