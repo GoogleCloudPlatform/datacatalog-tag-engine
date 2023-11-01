@@ -79,7 +79,7 @@ gcloud functions deploy entry_clicks \
     --region=$BIGQUERY_REGION \
     --source=entry_clicks \
     --entry-point=event_handler \
-	--gen2 \
+    --gen2 \
     --runtime=python311 \
     --trigger-http \
     --service-account=$SA \
@@ -90,7 +90,7 @@ gcloud functions deploy tag_creates \
     --region=$BIGQUERY_REGION \
     --source=tag_creates \
     --entry-point=event_handler \
-	--gen2 \
+    --gen2 \
     --runtime=python311 \
     --trigger-http \
     --service-account=$SA \
