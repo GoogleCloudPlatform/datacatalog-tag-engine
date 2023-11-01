@@ -17,8 +17,9 @@ from google.cloud.exceptions import NotFound
 from google.cloud import bigquery
 from google.cloud import datacatalog
 
-bq_client = bigquery.Client()
-dc_client = datacatalog.DataCatalogClient()
+USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v2'
+bq_client = bigquery.Client(client_info=ClientInfo(user_agent=USER_AGENT))
+dc_client = datacatalog.DataCatalogClient(client_info=ClientInfo(user_agent=USER_AGENT))
 
 reporting_table = 'tag_updates' # designated name for the output table
 
