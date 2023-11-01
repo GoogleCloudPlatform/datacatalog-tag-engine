@@ -2,7 +2,7 @@
 
 This folder contains a series of cloud functions that generate an event click stream in BigQuery based on Data Catalog user activity:
 
-1) `entry_views`: which users have viewed which entries in the catalog over time 
+1) `entry_clicks`: which users have clicked on which entries in the catalog over time 
 2) `tag_creates`: which users have created a tag on which entries in the catalog over time
 3) `tag_updates`: which users have updated a tag on which entries in the catalog over time
 4) `tag_deletes`: which users have deleted a tag on which entries in the catalog over time
@@ -79,6 +79,7 @@ gcloud functions deploy entry_clicks \
     --region=$BIGQUERY_REGION \
     --source=entry_clicks \
     --entry-point=event_handler \
+	--gen2 \
     --runtime=python311 \
     --trigger-http \
     --service-account=$SA \
@@ -89,6 +90,7 @@ gcloud functions deploy tag_creates \
     --region=$BIGQUERY_REGION \
     --source=tag_creates \
     --entry-point=event_handler \
+	--gen2 \
     --runtime=python311 \
     --trigger-http \
     --service-account=$SA \
@@ -99,6 +101,7 @@ gcloud functions deploy tag_deletes \
     --region=$BIGQUERY_REGION \
     --source=tag_creates \
     --entry-point=event_handler \
+	--gen2 \
     --runtime=python311 \
     --trigger-http \
     --service-account=$SA \
@@ -109,6 +112,7 @@ gcloud functions deploy tag_updates \
     --region=$BIGQUERY_REGION \
     --source=tag_creates \
     --entry-point=event_handler \
+	--gen2 \
     --runtime=python311 \
     --trigger-http \
     --service-account=$SA \
@@ -116,30 +120,39 @@ gcloud functions deploy tag_updates \
     --no-allow-unauthenticated	
 ```
 
-#### Step 6: Assign `$CONNECTION_SA` permissions to run the functions
+#### Step 6: Grant `$CONNECTION_SA` permissions to run the functions
 
-The `$CONNECTION_SA` is the account that runs the resource connection:
+Note: `$CONNECTION_SA` is the account that runs the resource connection (which was created by the `bq mk` command):
 
 ```
 gcloud functions add-iam-policy-binding entry_clicks \
    --member=serviceAccount:$CONNECTION_SA \
    --role="roles/cloudfunctions.invoker" \
    --project=$BIGQUERY_PROJECT
+   
+gcloud functions add-invoker-policy-binding entry_clicks --member=serviceAccount:$CONNECTION_SA
 
 gcloud functions add-iam-policy-binding tag_creates \
    --member=serviceAccount:$CONNECTION_SA \
    --role="roles/cloudfunctions.invoker" \
    --project=$BIGQUERY_PROJECT
    
+gcloud functions add-invoker-policy-binding tag_creates --member=serviceAccount:$CONNECTION_SA
+   
 gcloud functions add-iam-policy-binding tag_deletes \
    --member=serviceAccount:$CONNECTION_SA \
    --role="roles/cloudfunctions.invoker" \
    --project=$BIGQUERY_PROJECT
+
+gcloud functions add-invoker-policy-binding tag_deletes --member=serviceAccount:$CONNECTION_SA
    
 gcloud functions add-iam-policy-binding tag_updates \
    --member=serviceAccount:$CONNECTION_SA \
    --role="roles/cloudfunctions.invoker" \
    --project=$BIGQUERY_PROJECT
+   
+gcloud functions add-invoker-policy-binding tag_updates --member=serviceAccount:$CONNECTION_SA
+
 ```
 
 
@@ -200,19 +213,19 @@ The parameter `start_date` indicates the oldest date from which to process the a
 
 #### Step 8: Run a backfill to process all the log entries
 
+Now call the remote functions, passing them your BQ project and dataset where the audit logs are stored, the BQ project and dataset where the reporting table should be stored, and NULL as the start date. When setting the start date to NULL, the functions process the audit log entries for all available dates in the audit log table in BigQuery.  
+
 ```
-SELECT `$BIGQUERY_PROJECT`.usage_tracking.entry_clicks('$BIGQUERY_PROJECT', 'audit_logs', '$BIGQUERY_PROJECT', 'reporting', NULL)
-SELECT `$BIGQUERY_PROJECT`.usage_tracking.tag_creates('$BIGQUERY_PROJECT', 'audit_logs', '$BIGQUERY_PROJECT', 'reporting', NULL)
-SELECT `$BIGQUERY_PROJECT`.usage_tracking.tag_deletes('$BIGQUERY_PROJECT', 'audit_logs', '$BIGQUERY_PROJECT', 'reporting', NULL)
-SELECT `$BIGQUERY_PROJECT`.usage_tracking.tag_updates('$BIGQUERY_PROJECT', 'audit_logs', '$BIGQUERY_PROJECT', 'reporting', NULL)
+SELECT `tag-engine-develop`.usage_tracking.entry_clicks('tag-engine-develop', 'audit_logs', 'tag-engine-develop', 'reporting', NULL)
+SELECT `tag-engine-develop`.usage_tracking.tag_creates('tag-engine-develop', 'audit_logs', 'tag-engine-develop', 'reporting', NULL)
+SELECT `tag-engine-develop`.usage_tracking.tag_deletes('tag-engine-develop', 'audit_logs', 'tag-engine-develop', 'reporting', NULL)
+SELECT `tag-engine-develop`.usage_tracking.tag_updates('tag-engine-develop', 'audit_logs', 'tag-engine-develop', 'reporting', NULL)
 ```
 
-Note: The last parameter is the `start_date`. When set to NULL, the function processes the audit log entries for all the dates which are present in the log sync table in BigQuery. 
 
+#### Step 9: Incremental updates to the reporting tables
 
-#### Step 9: Schedule the query
-
-These queries process yesterday's audit log entries:
+To keep the reporting tables up-to-date, you can wrap the following queries into a scheduled query in BigQuery:
 
 ```
 SELECT `$BIGQUERY_PROJECT`.usage_tracking.entry_clicks('$BIGQUERY_PROJECT', 'audit_logs', '$BIGQUERY_PROJECT', 'reporting', current_date()-1)
@@ -221,7 +234,9 @@ SELECT `$BIGQUERY_PROJECT`.usage_tracking.tag_deletes('$BIGQUERY_PROJECT', 'audi
 SELECT `$BIGQUERY_PROJECT`.usage_tracking.tag_updates('$BIGQUERY_PROJECT', 'audit_logs', '$BIGQUERY_PROJECT', 'reporting', current_date()-1)
 ```
 
-You can create a scheduled query in BigQuery that triggers the previous query every day:
+A start date of `current_date()-1` tells the function to process only the log entries available for yesterday. 
+
+Here is the command to create the scheduled query for the entry clicks (and the same logic applies to the other functions):
 
 ```
 bq query \
