@@ -353,7 +353,7 @@ class DataCatalogController:
             try:
                 print('tag update request: ', tag)
                 response = self.client.update_tag(tag=tag)
-                #print('response: ', response)
+                print('response: ', response)
             except Exception as e:
                 print('Error occurred during tag update: ' + str(e))
                 creation_status = constants.ERROR
@@ -362,7 +362,7 @@ class DataCatalogController:
             try:
                 print('tag create request: ', tag)
                 response = self.client.create_tag(parent=entry.name, tag=tag)
-                #print('response: ', response)
+                print('response: ', response)
                 
             except Exception as e:
                 print('Error occurred during tag create: ', e)

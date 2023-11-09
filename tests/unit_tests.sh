@@ -1,5 +1,4 @@
-export TAG_ENGINE_URL="https://tag-engine-eshsagj3ta-uc.a.run.app" # Service URL from Cloud Run
-#export TAG_ENGINE_URL="http://127.0.0.1:5000"
+export TAG_ENGINE_URL="https://tag-engine-api-eshsagj3ta-uc.a.run.app" # Service URL from Cloud Run
 
 # Bearer token
 export IAM_TOKEN=$(gcloud auth print-identity-token)
