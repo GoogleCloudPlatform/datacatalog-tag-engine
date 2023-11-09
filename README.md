@@ -118,10 +118,12 @@ python create_template.py $TAG_ENGINE_PROJECT $TAG_ENGINE_REGION data_governance
 export USER_ACCOUNT="username@example.com"
 
 gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-    --member=user:$USER_ACCOUNT --role=roles/iam.serviceAccountUser 
+    --member=user:$USER_ACCOUNT --role=roles/iam.serviceAccountUser
 
+gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
+    --member=user:$USER_ACCOUNT --role=roles/iam.serviceAccountTokenCreator 
 
-gcloud run services add-iam-policy-binding tag-engine-api \
+gcloud run services add-iam-policy-binding tag-engine-api 
     --member=user:$USER_ACCOUNT --role=roles/run.invoker \
     --region=$TAG_ENGINE_REGION	
 ```
