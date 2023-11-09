@@ -246,15 +246,14 @@ gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location
    To deploy the UI service without IAP: 
    
    ```
-	   gcloud beta run deploy tag-engine-ui \
-		   --source . \
-		   --platform managed \
-		   --region $TAG_ENGINE_REGION \
-		   --allow-unauthenticated \
-		   --ingress=all \
-		   --memory=1024Mi \
-		   --service-account=$TAG_ENGINE_SA
-   
+	gcloud beta run deploy tag-engine-ui \
+		--source . \
+		--platform managed \
+		--region $TAG_ENGINE_REGION \
+		--allow-unauthenticated \
+		--ingress=all \
+		--memory=1024Mi \
+		--service-account=$TAG_ENGINE_SA
    ``` 
    
    To deploy the UI service behind IAP: 
@@ -264,19 +263,19 @@ gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location
    Create a VPC access connector before running the next command. This connector is used to send requests to your VPC network from Cloud Run using internal DNS and internal IP addresses as opposed to going through the public internet. To create a connector, consult [this page](https://cloud.google.com/vpc/docs/configure-serverless-vpc-access#gcloud).  
 
   ```
-		gcloud beta run deploy tag-engine-ui \
-			--source . \
-			--platform managed \
-			--region $TAG_ENGINE_REGION \
-			--allow-unauthenticated \
-			--ingress=internal-and-cloud-load-balancing \
-			--port=8080 \
-			--min-instances=0 \
-			--max-instances=5 \
-			--memory=1024Mi,
-			--service-account=$TAG_ENGINE_SA \
-			--vpc-connector=projects/$TAG_ENGINE_PROJECT/locations/$TAG_ENGINE_REGION/connectors/$VPC_CONNECTOR \
-			--vpc-egress=private-ranges-only
+	gcloud beta run deploy tag-engine-ui \
+		--source . \
+		--platform managed \
+		--region $TAG_ENGINE_REGION \
+		--allow-unauthenticated \
+		--ingress=internal-and-cloud-load-balancing \
+		--port=8080 \
+		--min-instances=0 \
+		--max-instances=5 \
+		--memory=1024Mi,
+		--service-account=$TAG_ENGINE_SA \
+		--vpc-connector=projects/$TAG_ENGINE_PROJECT/locations/$TAG_ENGINE_REGION/connectors/$VPC_CONNECTOR \
+		--vpc-egress=private-ranges-only
    ```
 <br> 
 
