@@ -164,9 +164,9 @@ gcloud run services add-iam-policy-binding tag-engine-api \
 ```
 	export TAG_ENGINE_URL=$SERVICE_URL
 
-	curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @tests/configs/dynamic_table/dynamic_table_ondemand.json \
-		-H "Authorization: Bearer $IAM_TOKEN" \
-		-H "oauth_token: $OAUTH_TOKEN"
+curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @tests/configs/dynamic_table/dynamic_table_ondemand.json \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
 ```
 
    The output from this command should look similar to:
@@ -180,32 +180,32 @@ gcloud run services add-iam-policy-binding tag-engine-api \
 
    d) Trigger the job:
 
-      Before running the next command, update the `config_uuid` with your value. 
+      Note: Before running the next command, please update the `config_uuid` with your value. 
 
 ```
-	curl -i -X POST $TAG_ENGINE_URL/trigger_job \
-	  -d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"c255f764d56711edb96eb170f969c0af"}' \
-	  -H "Authorization: Bearer $IAM_TOKEN" \
-	  -H "oauth_token: $OAUTH_TOKEN"
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+	-d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"416f9694e46911ed96c5acde48001122"}' \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
 ```
 
       The output from this command should look similar to:
 
 ```
 	{
-	  "job_uuid": "9c13357ee46911ed96c5acde48001122"
+	  "job_uuid": "069a312e7f1811ee87244f918967d564"
 	}
 ```
 
    e) View the job status:
 
 
-      Before running the next command, update the `job_uuid` with your value. 
+      Note: Before running the next command, please update the `job_uuid` with your value. 
 
 ```
-	curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"9c13357ee46911ed96c5acde48001122"}' \
-		-H "Authorization: Bearer $IAM_TOKEN" \
-		-H "oauth_token: $OAUTH_TOKEN"
+curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"069a312e7f1811ee87244f918967d564"}' \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
 ```
 
       The output from this command should look like this:
