@@ -285,7 +285,7 @@ gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location
    If you are deploying the API, run:
 
    ```
-   	export API_SERVICE_URL=`gcloud run services describe tag-engine-api --format="value(status.url)"`
+	export API_SERVICE_URL=`gcloud run services describe tag-engine-api --format="value(status.url)"`
 	gcloud run services update tag-engine-api --set-env-vars SERVICE_URL=$API_SERVICE_URL
    ```
 
@@ -299,9 +299,9 @@ gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location
 <br> 
 
 
-13. Put an HTTP External Load Balancer in front of the UI Cloud Run service:
+13. [Optional] Put an HTTP External Load Balancer in front of the UI Cloud Run service:
 
-   If you are deploying the UI service in Cloud Run without a load balancer, skip this step. 
+   If you are not deploying the Tag Engine UI, skip this step. 
    
    The benefit of fronting the UI with a load balancer is to be able to secure access with IAP (Note: IAP is in addition to OAuth). 
    
@@ -319,6 +319,6 @@ gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location
 
 <br> 
 
-This completes the setup. Please consult Parts 2 and 3 of [README.md](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/README.md) for testing instructions. 
+This completes the manual setup of Tag Engine. Please consult Parts 2 and 3 of [README.md](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/README.md) for testing instructions. 
 
 <br><br>
