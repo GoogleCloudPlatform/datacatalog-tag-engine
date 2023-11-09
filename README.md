@@ -150,14 +150,14 @@ gcloud run services add-iam-policy-binding tag-engine-api \
 	export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
 ```
 
-b) Generate an IAM token (aka Bearer token) for authenticating to the Tag Engine Cloud Run service:
+   b) Generate an IAM token (aka Bearer token) for authenticating to the Tag Engine Cloud Run service:
 
 ```
 	gcloud auth login
 	export IAM_TOKEN=$(gcloud auth print-identity-token)
 ```
 
-c) Create a dynamic table config:
+   c) Create a dynamic table config:
 
    Before running the next command, update the project and dataset values in `tests/configs/dynamic_table/dynamic_table_ondemand.json`. 
 
@@ -169,7 +169,7 @@ c) Create a dynamic table config:
 		-H "oauth_token: $OAUTH_TOKEN"
 ```
 
-The output from this command should look similar to:
+   The output from this command should look similar to:
 
 ```
 	{
@@ -178,9 +178,9 @@ The output from this command should look similar to:
 	}
 ```
 
-d) Trigger the job:
+   d) Trigger the job:
 
-   Before running the next command, update the `config_uuid` with your value. 
+      Before running the next command, update the `config_uuid` with your value. 
 
 ```
 	curl -i -X POST $TAG_ENGINE_URL/trigger_job \
@@ -189,7 +189,7 @@ d) Trigger the job:
 	  -H "oauth_token: $OAUTH_TOKEN"
 ```
 
-   The output from this command should look similar to:
+      The output from this command should look similar to:
 
 ```
 	{
@@ -197,10 +197,10 @@ d) Trigger the job:
 	}
 ```
 
-e) View the job status:
+   e) View the job status:
 
 
-   Before running the next command, update the `job_uuid` with your value. 
+      Before running the next command, update the `job_uuid` with your value. 
 
 ```
 	curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"9c13357ee46911ed96c5acde48001122"}' \
@@ -208,7 +208,7 @@ e) View the job status:
 		-H "oauth_token: $OAUTH_TOKEN"
 ```
 
-   The output from this command should look like this:
+      The output from this command should look like this:
 
 ```
 	{
@@ -220,7 +220,7 @@ e) View the job status:
 	}
 ```
 
-   Open the Data Catalog UI and verify that your tag was successfully created. If your tags are not there or if you encounter an error with the previous commands, open the Cloud Run logs and investigate. 
+      Open the Data Catalog UI and verify that your tag was successfully created. If your tags are not there or if you encounter an error with the previous commands, open the Cloud Run logs and investigate. 
 <br><br>
 
 ### <a name="testb"></a> Part 3: Testing your Tag Engine Setup with a Service Account
