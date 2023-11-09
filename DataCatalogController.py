@@ -293,7 +293,7 @@ class DataCatalogController:
         entry = self.client.lookup_entry(request)
 
         tag_exists, tag_id = self.check_if_exists(parent=entry.name)
-        #print("tag_exists: " + str(tag_exists))
+        print("tag_exists: " + str(tag_exists))
         
         # create new tag
         tag = datacatalog.Tag()
@@ -346,8 +346,8 @@ class DataCatalogController:
             return constants.ERROR
                         
         if tag_exists == True:
-            #print('updating tag')
-            #print('tag request: ' + str(tag))
+            print('updating tag')
+            print('tag request: ' + str(tag))
             tag.name = tag_id
             
             try:
@@ -2143,15 +2143,23 @@ class DataCatalogController:
         
 if __name__ == '__main__':
     
-    #template_id='data_quality'
-    #template_project='tag-engine-develop'
-    #template_region='us-central1'
+    import google.auth
+    from google.auth import impersonated_credentials
+    SCOPES = ['openid', 'https://www.googleapis.com/auth/cloud-platform', 'https://www.googleapis.com/auth/userinfo.email']
     
-    config_uuid = '7619fcaaa66f11ed83adc50169b5642d'
-    target_project = 'sdw-data-gov-b1927e-dd69'
-    target_dataset = 'tag_exports'
-    target_region = 'us-central1'
-    uri = 'sdw-conf-b1927e-bcc1/datasets/crm/tables/NewCust'
+    source_credentials, _ = google.auth.default() 
     
-    dcu = DataCatalogUtils()
-    dcu.apply_export_config(config_uuid, target_project, target_dataset, target_region, uri)
+    target_service_account = config['DEFAULT']['TAG_CREATOR_SA']
+    
+    credentials = impersonated_credentials.Credentials(source_credentials=source_credentials,
+        target_principal=target_service_account,
+        target_scopes=SCOPES,
+        lifetime=1200)
+    
+    fields = [{'field_type': 'enum', 'field_id': 'data_domain', 'enum_values': ['ENG', 'PRODUCT', 'OPERATIONS', 'LOGISTICS', 'FINANCE', 'HR', 'LEGAL', 'MARKETING', 'SALES', 'CONSUMER', 'GOVERNMENT'], 'is_required': True, 'display_name': 'Data Domain', 'order': 10, 'query_expression': "select 'LOGISTICS'"}, {'field_type': 'enum', 'field_id': 'broad_data_category', 'enum_values': ['CONTENT', 'METADATA', 'CONFIGURATION'], 'is_required': True, 'display_name': 'Broad Data Category', 'order': 9, 'query_expression': "select 'CONTENT'"}]
+    uri = 'warehouse-337221/datasets/cities_311'
+    config_uuid = 'facb59187f1711eebe2b4f918967d564'
+    template_uuid = 'fa8aa3007f1711eebe2b4f918967d564'
+    
+    dcu = DataCatalogController(credentials, None, None, None)
+    dcu.apply_dynamic_table_config(fields, uri, config_uuid, template_uuid, tag_history=False, tag_stream=False)
