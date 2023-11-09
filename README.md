@@ -112,7 +112,7 @@ python create_template.py $TAG_ENGINE_PROJECT $TAG_ENGINE_REGION data_governance
 ```
 <br>
 
-2. Authorize a user account to use $TAG_CREATOR_SA and to invoke the Tag Engine API Cloud Run service:
+2. Authorize a user account to use `$TAG_CREATOR_SA` and to invoke the Tag Engine API Cloud Run service:
 
 ```
 export USER_ACCOUNT="username@example.com"
