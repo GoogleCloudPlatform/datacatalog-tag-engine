@@ -159,10 +159,10 @@ gcloud run services add-iam-policy-binding tag-engine-api \
 
    c) Create a dynamic table config:
 
-   Before running the next command, update the project and dataset values in `tests/configs/dynamic_table/dynamic_table_ondemand.json`. 
+   Before running the next command, open `tests/configs/dynamic_table/dynamic_table_ondemand.json` and update the project and dataset values in this file. 
 
 ```
-	export TAG_ENGINE_URL=$SERVICE_URL
+export TAG_ENGINE_URL=$SERVICE_URL
 
 curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @tests/configs/dynamic_table/dynamic_table_ondemand.json \
 	-H "Authorization: Bearer $IAM_TOKEN" \
@@ -172,24 +172,21 @@ curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @tests/configs/dynam
    The output from this command should look similar to:
 
 ```
-	{
-	  "config_type": "DYNAMIC_TAG_TABLE",
-	  "config_uuid": "416f9694e46911ed96c5acde48001122"
-	}
+{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"facb59187f1711eebe2b4f918967d564"}
 ```
 
    d) Trigger the job:
 
-      Note: Before running the next command, please update the `config_uuid` with your value. 
+   Note: Before running the next command, please update the `config_uuid` with your value. 
 
 ```
 curl -i -X POST $TAG_ENGINE_URL/trigger_job \
-	-d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"416f9694e46911ed96c5acde48001122"}' \
+	-d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"facb59187f1711eebe2b4f918967d564"}' \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"
 ```
 
-      The output from this command should look similar to:
+   The output from this command should look similar to:
 
 ```
 	{
@@ -200,7 +197,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
    e) View the job status:
 
 
-      Note: Before running the next command, please update the `job_uuid` with your value. 
+   Note: Before running the next command, please update the `job_uuid` with your value. 
 
 ```
 curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"069a312e7f1811ee87244f918967d564"}' \
@@ -208,7 +205,7 @@ curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"069a312e7f1811ee872
 	-H "oauth_token: $OAUTH_TOKEN"
 ```
 
-      The output from this command should look like this:
+   The output from this command should look like this:
 
 ```
 	{
@@ -220,7 +217,7 @@ curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"069a312e7f1811ee872
 	}
 ```
 
-      Open the Data Catalog UI and verify that your tag was successfully created. If your tags are not there or if you encounter an error with the previous commands, open the Cloud Run logs and investigate. 
+   Open the Data Catalog UI and verify that your tag was successfully created. If your tags are not there or if you encounter an error with the previous commands, open the Cloud Run logs and investigate. 
 <br><br>
 
 ### <a name="testb"></a> Part 3: Testing your Tag Engine Setup with a Service Account
