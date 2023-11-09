@@ -246,15 +246,14 @@ gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location
    To deploy the UI service without IAP: 
    
    ```
-	   gcloud beta run deploy tag-engine-ui \
-		   --source . \
-		   --platform managed \
-		   --region $TAG_ENGINE_REGION \
-		   --allow-unauthenticated \
-		   --ingress=all \
-		   --memory=1024Mi \
-		   --service-account=$TAG_ENGINE_SA
-   
+	gcloud beta run deploy tag-engine-ui \
+		--source . \
+		--platform managed \
+		--region $TAG_ENGINE_REGION \
+		--allow-unauthenticated \
+		--ingress=all \
+		--memory=1024Mi \
+		--service-account=$TAG_ENGINE_SA
    ``` 
    
    To deploy the UI service behind IAP: 
@@ -264,19 +263,19 @@ gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location
    Create a VPC access connector before running the next command. This connector is used to send requests to your VPC network from Cloud Run using internal DNS and internal IP addresses as opposed to going through the public internet. To create a connector, consult [this page](https://cloud.google.com/vpc/docs/configure-serverless-vpc-access#gcloud).  
 
   ```
-		gcloud beta run deploy tag-engine-ui \
-			--source . \
-			--platform managed \
-			--region $TAG_ENGINE_REGION \
-			--allow-unauthenticated \
-			--ingress=internal-and-cloud-load-balancing \
-			--port=8080 \
-			--min-instances=0 \
-			--max-instances=5 \
-			--memory=1024Mi,
-			--service-account=$TAG_ENGINE_SA \
-			--vpc-connector=projects/$TAG_ENGINE_PROJECT/locations/$TAG_ENGINE_REGION/connectors/$VPC_CONNECTOR \
-			--vpc-egress=private-ranges-only
+	gcloud beta run deploy tag-engine-ui \
+		--source . \
+		--platform managed \
+		--region $TAG_ENGINE_REGION \
+		--allow-unauthenticated \
+		--ingress=internal-and-cloud-load-balancing \
+		--port=8080 \
+		--min-instances=0 \
+		--max-instances=5 \
+		--memory=1024Mi,
+		--service-account=$TAG_ENGINE_SA \
+		--vpc-connector=projects/$TAG_ENGINE_PROJECT/locations/$TAG_ENGINE_REGION/connectors/$VPC_CONNECTOR \
+		--vpc-egress=private-ranges-only
    ```
 <br> 
 
@@ -286,7 +285,7 @@ gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location
    If you are deploying the API, run:
 
    ```
-   	export API_SERVICE_URL=`gcloud run services describe tag-engine-api --format="value(status.url)"`
+	export API_SERVICE_URL=`gcloud run services describe tag-engine-api --format="value(status.url)"`
 	gcloud run services update tag-engine-api --set-env-vars SERVICE_URL=$API_SERVICE_URL
    ```
 
@@ -300,9 +299,9 @@ gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location
 <br> 
 
 
-13. Put an HTTP External Load Balancer in front of the UI Cloud Run service:
+13. [Optional] Put an HTTP External Load Balancer in front of the UI Cloud Run service:
 
-   If you are deploying the UI service in Cloud Run without a load balancer, skip this step. 
+   If you are not deploying the Tag Engine UI, skip this step. 
    
    The benefit of fronting the UI with a load balancer is to be able to secure access with IAP (Note: IAP is in addition to OAuth). 
    
@@ -320,6 +319,6 @@ gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location
 
 <br> 
 
-This completes the setup. Please consult Parts 2 and 3 of [README.md](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/README.md) for testing instructions. 
+This completes the manual setup of Tag Engine. Please consult Parts 2 and 3 of [README.md](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/README.md) for testing instructions. 
 
 <br><br>

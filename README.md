@@ -112,7 +112,7 @@ python create_template.py $TAG_ENGINE_PROJECT $TAG_ENGINE_REGION data_governance
 ```
 <br>
 
-2. Authorize a user account to use $TAG_CREATOR_SA and to invoke the Tag Engine API Cloud Run service:
+2. Authorize a user account to use `$TAG_CREATOR_SA` and to invoke the Tag Engine API Cloud Run service:
 
 ```
 export USER_ACCOUNT="username@example.com"
@@ -150,62 +150,59 @@ gcloud run services add-iam-policy-binding tag-engine-api \
 	export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
 ```
 
-b) Generate an IAM token (aka Bearer token) for authenticating to the Tag Engine Cloud Run service:
+   b) Generate an IAM token (aka Bearer token) for authenticating to the Tag Engine Cloud Run service:
 
 ```
 	gcloud auth login
 	export IAM_TOKEN=$(gcloud auth print-identity-token)
 ```
 
-c) Create a dynamic table config:
+   c) Create a dynamic table config:
 
-   Before running the next command, update the project and dataset values in `tests/configs/dynamic_table/dynamic_table_ondemand.json`. 
-
-```
-	export TAG_ENGINE_URL=$SERVICE_URL
-
-	curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @tests/configs/dynamic_table/dynamic_table_ondemand.json \
-		-H "Authorization: Bearer $IAM_TOKEN" \
-		-H "oauth_token: $OAUTH_TOKEN"
-```
-
-The output from this command should look similar to:
+   Before running the next command, open `tests/configs/dynamic_table/dynamic_table_ondemand.json` and update the project and dataset values in this file. 
 
 ```
-	{
-	  "config_type": "DYNAMIC_TAG_TABLE",
-	  "config_uuid": "416f9694e46911ed96c5acde48001122"
-	}
+export TAG_ENGINE_URL=$SERVICE_URL
+
+curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @tests/configs/dynamic_table/dynamic_table_ondemand.json \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
 ```
 
-d) Trigger the job:
-
-   Before running the next command, update the `config_uuid` with your value. 
+   The output from this command should look similar to:
 
 ```
-	curl -i -X POST $TAG_ENGINE_URL/trigger_job \
-	  -d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"c255f764d56711edb96eb170f969c0af"}' \
-	  -H "Authorization: Bearer $IAM_TOKEN" \
-	  -H "oauth_token: $OAUTH_TOKEN"
+{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"facb59187f1711eebe2b4f918967d564"}
+```
+
+   d) Trigger the job:
+
+   Note: Before running the next command, please update the `config_uuid` with your value. 
+
+```
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+	-d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"facb59187f1711eebe2b4f918967d564"}' \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
 ```
 
    The output from this command should look similar to:
 
 ```
 	{
-	  "job_uuid": "9c13357ee46911ed96c5acde48001122"
+	  "job_uuid": "069a312e7f1811ee87244f918967d564"
 	}
 ```
 
-e) View the job status:
+   e) View the job status:
 
 
-   Before running the next command, update the `job_uuid` with your value. 
+   Note: Before running the next command, please update the `job_uuid` with your value. 
 
 ```
-	curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"9c13357ee46911ed96c5acde48001122"}' \
-		-H "Authorization: Bearer $IAM_TOKEN" \
-		-H "oauth_token: $OAUTH_TOKEN"
+curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"069a312e7f1811ee87244f918967d564"}' \
+	-H "Authorization: Bearer $IAM_TOKEN" \
+	-H "oauth_token: $OAUTH_TOKEN"
 ```
 
    The output from this command should look like this:
