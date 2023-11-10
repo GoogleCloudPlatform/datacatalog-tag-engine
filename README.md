@@ -44,7 +44,7 @@ Alternative 2: you can choose to deploy Tag Engine v2 with [gcloud commands](htt
    Name: tag-engine-oauth<br>
    Authorized redirects URIs: <i>Leave this field blank for now.</i>  
    Click Create<br>
-   Download the credentials as `client_secret.json` and place the file in the root of the `datacatalog-tag-engine` directory<br><br>
+   Download the credentials as `te_client_secret.json` and place the file in the root of the `datacatalog-tag-engine` directory<br><br>
 
    Note: The client secret file is required for establishing the authorization flow from the UI.  
 
