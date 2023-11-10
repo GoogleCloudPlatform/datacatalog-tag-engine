@@ -241,6 +241,8 @@ curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"069a312e7f1811ee872
 	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
 	    --member=serviceAccount:$CLIENT_SA --role=roles/iam.serviceAccountUser 
 
+	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
+             --member=serviceAccount:$CLIENT_SA --role=roles/iam.serviceAccountTokenCreator 
 
 	gcloud run services add-iam-policy-binding tag-engine-api \
 	    --member=serviceAccount:$CLIENT_SA --role=roles/run.invoker \
