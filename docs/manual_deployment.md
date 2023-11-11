@@ -319,6 +319,6 @@ gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location
 
 <br> 
 
-This completes the manual setup of Tag Engine. Please consult Parts 2 and 3 of [README.md](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/README.md) for testing instructions. 
+This completes the manual setup of Tag Engine. Please consult [Part 2](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#testa) and [Part 3](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#testb) of [README.md](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/README.md) for testing instructions. 
 
 <br><br>
