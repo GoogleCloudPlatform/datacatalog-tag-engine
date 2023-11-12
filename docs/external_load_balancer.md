@@ -56,14 +56,17 @@ The first 5 steps are manual, the last step is done with Terraform.
 	BIGQUERY_REGION
 	TAG_ENGINE_SA
 	TAG_CREATOR_SA
-	ENABLE_AUTH  
+        OAUTH_CLIENT_CREDENTIALS
+	ENABLE_AUTH
+	TAG_HISTORY_PROJECT
+	TAG_HISTORY_DATASET     
 	```
 
    A couple of notes: <br>
 
    - The variable `ENABLE_AUTH` is a boolean. When set to `True`, Tag Engine verifies that the end user is authorized to use `TAG_CREATOR_SA` prior to    processing their tag requests. This is the recommended value. <br>
 
-   - The `tagengine.ini` file also has two variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. Those determine the names of the tasks queues. You do not need to change them. If you change their name, you need to change them in the `deploy/variables.tf` as well.<br><br> 
+   - The `tagengine.ini` file also has two variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. Those determine the names of the cloud task queues. You do not need to change them. If you change their name, you need to also change them in the `deploy/variables.tf`.<br><br> 
 
 
 5. Set the Terraform variables:

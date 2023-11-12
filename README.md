@@ -44,7 +44,7 @@ Alternative 2: you can choose to deploy Tag Engine v2 with [gcloud commands](htt
    Name: tag-engine-oauth<br>
    Authorized redirects URIs: <i>Leave this field blank for now.</i>  
    Click Create<br>
-   Download the credentials as `client_secret.json` and place the file in the root of the `datacatalog-tag-engine` directory<br><br>
+   Download the credentials as `te_client_secret.json` and place the file in the root of the `datacatalog-tag-engine` directory<br><br>
 
    Note: The client secret file is required for establishing the authorization flow from the UI.  
 
@@ -56,14 +56,18 @@ Alternative 2: you can choose to deploy Tag Engine v2 with [gcloud commands](htt
 	BIGQUERY_REGION
 	TAG_ENGINE_SA
 	TAG_CREATOR_SA
-	ENABLE_AUTH  
+	ENABLE_AUTH
+ 	OAUTH_CLIENT_CREDENTIALS
+	ENABLE_TAG_HISTORY
+	TAG_HISTORY_PROJECT
+	TAG_HISTORY_DATASET  
 	```
 
    A couple of notes: <br>
 
    - The variable `ENABLE_AUTH` is a boolean. When set to `True`, Tag Engine verifies that the end user is authorized to use `TAG_CREATOR_SA` prior to processing their tag requests. This is the recommended value. <br>
 
-   - The `tagengine.ini` file also has two variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. Those determine the names of the tasks queues. You do not need to change them. If you change their name, you need to change them in the `deploy/variables.tf` as well.<br><br> 
+   - The `tagengine.ini` file also has two additional variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. These determine the names of the cloud task queues. You do not need to change them. If you change their name, you need to also change them in the `deploy/variables.tf`.<br><br> 
 
 
 4. Set the Terraform variables:
@@ -118,10 +122,12 @@ python create_template.py $TAG_ENGINE_PROJECT $TAG_ENGINE_REGION data_governance
 export USER_ACCOUNT="username@example.com"
 
 gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-    --member=user:$USER_ACCOUNT --role=roles/iam.serviceAccountUser 
+    --member=user:$USER_ACCOUNT --role=roles/iam.serviceAccountUser
 
+gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
+    --member=user:$USER_ACCOUNT --role=roles/iam.serviceAccountTokenCreator 
 
-gcloud run services add-iam-policy-binding tag-engine-api \
+gcloud run services add-iam-policy-binding tag-engine-api 
     --member=user:$USER_ACCOUNT --role=roles/run.invoker \
     --region=$TAG_ENGINE_REGION	
 ```
@@ -239,6 +245,8 @@ curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"069a312e7f1811ee872
 	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
 	    --member=serviceAccount:$CLIENT_SA --role=roles/iam.serviceAccountUser 
 
+	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
+             --member=serviceAccount:$CLIENT_SA --role=roles/iam.serviceAccountTokenCreator 
 
 	gcloud run services add-iam-policy-binding tag-engine-api \
 	    --member=serviceAccount:$CLIENT_SA --role=roles/run.invoker \

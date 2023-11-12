@@ -28,13 +28,13 @@ If multiple teams want to share an instance of Tag Engine and they own different
 
 3. Create an OAuth client ID for your Tag Engine web application: 
 
-   - This step is only required if you are deploying the UI. 
+   - This step is only required if you are deploying the Tag Engine UI. Skip this step if you are only deploying the API. 
 
-   - Designate a domain for your web application (e.g. tagengine.app). You can register a domain from GCP with [Cloud Domains](https://console.cloud.google.com/net-services/domains/) if you need one. 
+   - Designate a custom domain for your web application (e.g. tagengine.app). You can register a domain from GCP with [Cloud Domains](https://console.cloud.google.com/net-services/domains/) if you need one. If you don't want to use a custom domain, you can use the Cloud Run service URL instead. 
 
-   - Create an OAuth client ID from API Credentials. Set the `Authorized redirect URI` to `https://[TAG_ENGINE_DOMAIN]/oauth2callback`, where [TAG_ENGINE_DOMAIN] is your actual domain name (e.g. `https://tagengine.app/oauth2callback`). 
+   - Create an OAuth client ID from API Credentials. Set the `Authorized redirect URI` to `https://[TAG_ENGINE_DOMAIN]/oauth2callback`, where [TAG_ENGINE_DOMAIN] is your actual domain name (e.g. `https://tagengine.app/oauth2callback`). If you are planning to use the Cloud Run service URL, you can leave this field empty for now, and populate it at the end once you know your Cloud Run service URL for the Tag Engine UI. 
 
-   - Download the OAuth client secret and save the json file to your local Tag Engine git repo (e.g. `datacatalog-tag-engine/client_secret.json`).  <br><br> 
+   - Download the OAuth client secret and save the json file to the root of your local Tag Engine repository as `te_client_secret.json`.  <br><br> 
 
 
 4. Open `tagengine.ini` and set the following variables in this file. The first five should be equal to the environment variables you previously set in step 2:
@@ -46,16 +46,18 @@ If multiple teams want to share an instance of Tag Engine and they own different
 	CLOUD_RUN_ACCOUNT
 	TAG_CREATOR_ACCOUNT
 	OAUTH_CLIENT_CREDENTIALS
-	ENABLE_AUTH  
+	ENABLE_AUTH
+ 	TAG_HISTORY_PROJECT
+	TAG_HISTORY_DATASET   
 	```
 
    A couple of notes:
 
-   - Set the variable `OAUTH_CLIENT_CREDENTIALS` to the name of your OAuth client secret file (e.g. `client_secret.json`). If you are not deploying the UI, you don't need to set `OAUTH_CLIENT_CREDENTIALS`.  
+   - Set the variable `OAUTH_CLIENT_CREDENTIALS` to the name of your OAuth client secret file (e.g. `te_client_secret.json`). If you are not deploying the UI, you don't need to set `OAUTH_CLIENT_CREDENTIALS`.  
 
    - The variable `ENABLE_AUTH` is a boolean. When set to `True`, Tag Engine verifies that the end user is authorized to use `TAG_CREATOR_SA` prior to processing their tag requests. This is the recommended value. 
 
-   - The `tagengine.ini` file also has two additional variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. Those determine the names of the tasks queues. You do not need to change them. The queues are created in step 5 of this setup.  <br><br> 
+   - The `tagengine.ini` file also has two additional variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. These determine the names of the cloud tasks queues. You do not need to change them. The queues are created in step 6 of this setup.  <br><br> 
 
 
 5. Enable the required Google Cloud APIs in your project:
@@ -319,6 +321,6 @@ gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location
 
 <br> 
 
-This completes the manual setup of Tag Engine. Please consult Parts 2 and 3 of [README.md](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/README.md) for testing instructions. 
+This completes the manual setup of Tag Engine. Please consult [Part 2](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#testa) and [Part 3](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#testb) of [README.md](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/README.md) for testing instructions. 
 
 <br><br>
