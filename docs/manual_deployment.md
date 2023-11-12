@@ -46,7 +46,9 @@ If multiple teams want to share an instance of Tag Engine and they own different
 	CLOUD_RUN_ACCOUNT
 	TAG_CREATOR_ACCOUNT
 	OAUTH_CLIENT_CREDENTIALS
-	ENABLE_AUTH  
+	ENABLE_AUTH
+ 	TAG_HISTORY_PROJECT
+	TAG_HISTORY_DATASET   
 	```
 
    A couple of notes:
@@ -55,7 +57,7 @@ If multiple teams want to share an instance of Tag Engine and they own different
 
    - The variable `ENABLE_AUTH` is a boolean. When set to `True`, Tag Engine verifies that the end user is authorized to use `TAG_CREATOR_SA` prior to processing their tag requests. This is the recommended value. 
 
-   - The `tagengine.ini` file also has two additional variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. Those determine the names of the tasks queues. You do not need to change them. The queues are created in step 5 of this setup.  <br><br> 
+   - The `tagengine.ini` file also has two additional variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. These determine the names of the cloud tasks queues. You do not need to change them. The queues are created in step 6 of this setup.  <br><br> 
 
 
 5. Enable the required Google Cloud APIs in your project:
