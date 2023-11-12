@@ -5,11 +5,6 @@
     <link rel="stylesheet" type="text/css" href="/static/style.css">
   </head>  
     <body>
-	    {% if settings == 1 %}
-	    <table><tr><td>
-	    &nbsp;<span style="color:green;">Settings Saved!</span>
-         </td></tr></table><p>
-	    {% endif %}
 	    
 	   <div class="pagetitle">
 	   <h1>Tag Engine for Data Catalog</h1>
@@ -18,46 +13,34 @@
 	   <h2>Tag History Settings</h2>
 	   </div>
 	   <span style="color:#9d9a9a;">
-		   <h6>&nbsp;&nbsp;Tag history lets you save a copy of your Data Catalog tags in BigQuery. As you create new tags through Tag Engine, a copy of those tags is written into one or more BigQuery tables. 
-			   <br>&nbsp;&nbsp;Tag Engine creates one BigQuery table per tag template and writes one record in this table for each tag update. 
-			 
-			 <br><br>&nbsp;&nbsp;Enter the BQ details for your tag history tables. Tag Engine will not create the BQ dataset, you must create it outside of Tag Engine before enabling tag history. 
-			 <br><br>&nbsp;&nbsp;Mandatory settings are marked by <span style="color:red;">*</span>
+		   <h6>&nbsp;&nbsp;Tag History lets you save a copy of your Data Catalog tags in BigQuery. As you create or update tags through Tag Engine, a copy of those tags is written into one or more BigQuery tables. 
+			   <br>&nbsp;&nbsp;Tag Engine creates one BigQuery table per tag template and writes one record in this table for each tag create or update.			 
+			 <br><br>
 		   </h6>
 	   </span> 
-         <form method="post" action="/set_tag_history">
-		   
+ 
 		   <table>
-			   <tr><td><span style="color:red;">*</span>&nbsp;Enable Tag History:</td>
-				   <td>&nbsp;<select name="enabled" style="width: 80px;">`
-						   {% if enabled %}
-						   	<option value="on" selected>ON</option>
-							<option value="off">OFF</option>
-						   {% else %}
-							<option value="off" selected>OFF</option>
-							<option value="on">ON</option>
-						   {% endif %}
-						   </select>
-			    	  </td>
-		    </tr>
-	    
-		        <tr>
-		          <td><span style="color:red;">*</span>&nbsp;BigQuery Project Id:</td>
-		          <td>&nbsp;<input type="text" name="bigquery_project" value="{{ bigquery_project }}" style="width: 150px;padding: 3px;"></td>
-			   </tr>
-		        <tr>
-		          <td><span style="color:red;">*</span>&nbsp;BigQuery Region:</td>
-		          <td>&nbsp;<input type="text" name="bigquery_region" value="{{ bigquery_region }}" style="width: 150px;padding: 3px;"></td>
-			   </tr>
-		        <tr>
-		          <td><span style="color:red;">*</span>&nbsp;BigQuery Dataset:</td>
-		          <td>&nbsp;<input type="text" name="bigquery_dataset" value="{{ bigquery_dataset }}" style="width: 150px;padding: 3px;"></td>
-			   </tr>
+			  {% if enabled %}
+			   	   <tr><td>&nbsp;Tag History Enabled:</td>
+					    <td>&nbsp;TRUE</td>
+		      	   </tr>
+			        <tr>
+			          <td><span style="color:red;">*</span>&nbsp;BigQuery Project Id:</td>
+			          <td>&nbsp;{{ bigquery_project }}</td>
+				   </tr>
+			        <tr>
+			          <td><span style="color:red;">*</span>&nbsp;BigQuery Region:</td>
+			          <td>&nbsp;{{ bigquery_region }}</td>
+				   </tr>
+			        <tr>
+			          <td><span style="color:red;">*</span>&nbsp;BigQuery Dataset:</td>
+			          <td>&nbsp;{{ bigquery_dataset }}</td>
+				   </tr>
+			   {% else %}
 			   <tr>
-			   <td></td>
-			    <td>&nbsp;<input type="submit" value="Save Settings" name="submit" style="width: 160px;padding: 3px;"></td> 
-			     
+			    <td>&nbsp;<span style="color:red;">Tag History is currently disabled. To enable it, ask your admin to set it in tagengine.ini.</span></td> 
 			  </tr>
+			  {% endif %}
 		    </table>
            
          </form>

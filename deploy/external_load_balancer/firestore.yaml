@@ -92,8 +92,8 @@ indexes:
   - collection: restore_configs
     fields:
       - field: service_account
-      - field: config_status
       - field: target_template_uuid
+      - field: config_status
   - collection: dynamic_column_configs
     fields:
       - field: config_type

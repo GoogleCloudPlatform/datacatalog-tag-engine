@@ -15,7 +15,5 @@
     "included_uris": "bigquery/project/tag-engine-develop/dataset/finwire/*",
     "create_policy_tags": true,
     "taxonomy_id": "projects/tag-engine-develop/locations/us-central1/taxonomies/317244085807144487",
-    "refresh_mode": "ON_DEMAND",
-    "tag_history": true,
-    "tag_stream": false   
+    "refresh_unit": "ON_DEMAND"  
 }

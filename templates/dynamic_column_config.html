@@ -111,24 +111,20 @@
 							  </select></td>
 		         </tr>
 		        </table>
-			    {% if display_tag_history %}
-			      <p>&nbsp;</p>
-				<h3>Tag History Option</h3>
-			    <table>
-			    <tr><td><span style="color:red;">*</span> <input type="checkbox" class="form-control move-left" name="tag_history" value="selected" checked>
-				    Save tag values from this config to BigQuery tag history table.&nbsp;&nbsp;
-			    </td></tr>
-			    </table>
-			    {% endif %}
-			    {% if display_tag_stream %}
-			      <p>&nbsp;</p>
-				<h3>Tag Stream Option</h3>
-			    <table>
-			    <tr><td><span style="color:red;">*</span> <input type="checkbox" class="form-control move-left" name="tag_stream" value="selected" checked>
-				    Publish tag values from this config to Pub/Sub tag stream topic.&nbsp;&nbsp;
-			    </td></tr>
-			    </table>
-			    {% endif %}
+			    
+			<p>&nbsp;</p>
+		    <h3>Tag History Option:</h3>
+			
+		    <table>
+		    <tr><td>&nbsp;&nbsp;
+			{% if tag_history_option %}
+				ON
+			{% else %}
+				OFF
+			{% endif %}
+		    </td></tr>
+		    </table>
+			    
 	         <p>&nbsp;</p>
 		        <table>
 		        <tr>

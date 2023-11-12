@@ -205,34 +205,19 @@
    							  </select></td>
 		         </tr>
 		         </table>
-			    {% if display_tag_history_option == 1 %}
-			      <p>&nbsp;</p>
-				<h3>Tag History Option</h3>
-			    <table>
-			    <tr><td>
-				    {% if config['tag_history'] == True %} 
-				    		<input type="checkbox" class="form-control move-left" name="tag_history" value="selected" checked>
-				    {% else %}
-				         	<input type="checkbox" class="form-control move-left" name="tag_history" value="selected">
-				    {% endif %}
-				    Save tag values to BigQuery history table&nbsp;&nbsp;
-			    </td></tr>
-			    </table>
-			    {% endif %}
-			    {% if display_tag_stream_option == 1 %}
-			      <p>&nbsp;</p>
-				<h3>Tag Stream Option</h3>
-			    <table>
-			    <tr><td>
-				    {% if config['tag_stream'] == True %} 
-				    		<input type="checkbox" class="form-control move-left" name="tag_stream" value="selected" checked>
-				    {% else %}
-				         	<input type="checkbox" class="form-control move-left" name="tag_stream" value="selected">
-				    {% endif %}
-				    Save tag values to Pub/Sub tag stream topic&nbsp;&nbsp;
-			    </td></tr>
-			    </table>
-			    {% endif %}
+			    
+		    <p>&nbsp;</p>
+			<h3>Tag History Option</h3>
+		    <table>
+		    <tr><td>
+			    {% if config['tag_history'] == True %} 
+			    		ON
+			    {% else %}
+			         	OFF
+			    {% endif %}   
+		    </td></tr>
+		    </table>	
+				
 	         <p>&nbsp;</p>
 		        <table>
 		        <tr>

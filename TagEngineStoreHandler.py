@@ -101,36 +101,6 @@ class TagEngineStoreHandler:
         return write_status
 
 
-    def read_tag_stream_settings(self):
-        
-        settings = {}
-        enabled = False
-        
-        doc_ref = self.db.collection('settings').document('tag_stream')
-        doc = doc_ref.get()
-        
-        if doc.exists:
-            settings = doc.to_dict()
-            
-            if settings['enabled']:
-                enabled = True
-            
-        return enabled, settings
-   
-   
-    def write_tag_stream_settings(self, enabled, pubsub_project, pubsub_topic):
-       
-       history_settings = self.db.collection('settings')
-       doc_ref = history_settings.document('tag_stream')
-       doc_ref.set({
-           'enabled': bool(enabled),
-           'pubsub_project': pubsub_project,
-           'pubsub_topic':  pubsub_topic
-       })
-       
-       print('Saved tag stream settings.')
-   
-   
     def read_coverage_report_settings(self):
         
         settings = {}
@@ -288,14 +258,7 @@ class TagEngineStoreHandler:
             'version': version,
             'next_run' : next_run
         })
-            
-    def update_overwrite_flag(self, config_uuid, config_type):
-        
-        coll_name = self.lookup_config_collection(config_type)
-        self.db.collection(coll_name).document(config_uuid).update({
-            'overwrite': False
-        })
-                                                                             
+                                                                                  
     def read_tag_template_config(self, template_uuid):
                 
         template_ref = self.db.collection('tag_templates').document(template_uuid)
@@ -352,7 +315,7 @@ class TagEngineStoreHandler:
         
         
     def write_static_asset_config(self, service_account, fields, included_assets_uris, excluded_assets_uris, template_uuid, \
-                                  refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite=False):
+                                  refresh_mode, refresh_frequency, refresh_unit, tag_history, overwrite=False):
         
         print('*** enter write_static_asset_config ***')
         
@@ -401,7 +364,6 @@ class TagEngineStoreHandler:
                 'refresh_frequency': delta,
                 'refresh_unit': refresh_unit,
                 'tag_history': tag_history,
-                'tag_stream': tag_stream,
                 'scheduling_status': 'ACTIVE',
                 'next_run': next_run,
                 'version': 1,
@@ -426,7 +388,6 @@ class TagEngineStoreHandler:
                 'refresh_mode': refresh_mode, # ON_DEMAND refresh mode
                 'refresh_frequency': 0, # N/A
                 'tag_history': tag_history,
-                'tag_stream': tag_stream,
                 'version': 1,
                 'overwrite': overwrite,
                 'service_account': service_account
@@ -438,7 +399,7 @@ class TagEngineStoreHandler:
     
     
     def write_dynamic_table_config(self, service_account, fields, included_tables_uris, excluded_tables_uris, template_uuid, refresh_mode,\
-                                   refresh_frequency, refresh_unit, tag_history, tag_stream):
+                                   refresh_frequency, refresh_unit, tag_history):
         
         included_tables_uris_hash = hashlib.md5(included_tables_uris.encode()).hexdigest()
         
@@ -484,7 +445,6 @@ class TagEngineStoreHandler:
                 'refresh_frequency': delta,
                 'refresh_unit': refresh_unit,
                 'tag_history': tag_history,
-                'tag_stream': tag_stream,
                 'scheduling_status': 'ACTIVE',
                 'next_run': next_run,
                 'version': 1,
@@ -505,7 +465,6 @@ class TagEngineStoreHandler:
                 'refresh_mode': refresh_mode, # ON_DEMAND refresh mode
                 'refresh_frequency': 0,
                 'tag_history': tag_history,
-                'tag_stream': tag_stream,
                 'version': 1,
                 'service_account': service_account
             })
@@ -516,7 +475,7 @@ class TagEngineStoreHandler:
 
     
     def write_dynamic_column_config(self, service_account, fields, included_columns_query, included_tables_uris, excluded_tables_uris, \
-                                    template_uuid, refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream):
+                                    template_uuid, refresh_mode, refresh_frequency, refresh_unit, tag_history):
         
         included_tables_uris_hash = hashlib.md5(included_tables_uris.encode()).hexdigest()
         
@@ -563,7 +522,6 @@ class TagEngineStoreHandler:
                 'refresh_frequency': delta,
                 'refresh_unit': refresh_unit,
                 'tag_history': tag_history,
-                'tag_stream': tag_stream,
                 'scheduling_status': 'ACTIVE',
                 'next_run': next_run,
                 'version': 1,
@@ -585,7 +543,6 @@ class TagEngineStoreHandler:
                 'refresh_mode': refresh_mode, # ON_DEMAND refresh mode
                 'refresh_frequency': 0,
                 'tag_history': tag_history,
-                'tag_stream': tag_stream,
                 'version': 1,
                 'service_account': service_account
             })
@@ -622,7 +579,7 @@ class TagEngineStoreHandler:
     
     
     def write_entry_config(self, service_account, fields, included_assets_uris, excluded_assets_uris, template_uuid, refresh_mode,\
-                           refresh_frequency, refresh_unit, tag_history, tag_stream):
+                           refresh_frequency, refresh_unit, tag_history):
         
         print('** enter write_entry_config **')
         
@@ -670,7 +627,6 @@ class TagEngineStoreHandler:
                 'refresh_frequency': delta,
                 'refresh_unit': refresh_unit,
                 'tag_history': tag_history,
-                'tag_stream': tag_stream,
                 'scheduling_status': 'ACTIVE',
                 'next_run': next_run,
                 'version': 1,
@@ -691,7 +647,6 @@ class TagEngineStoreHandler:
                 'refresh_mode': refresh_mode, # ON_DEMAND refresh mode
                 'refresh_frequency': 0,
                 'tag_history': tag_history,
-                'tag_stream': tag_stream,
                 'version': 1,
                 'service_account': service_account
             })
@@ -703,7 +658,7 @@ class TagEngineStoreHandler:
     
     def write_glossary_asset_config(self, service_account, fields, mapping_table, included_assets_uris, excluded_assets_uris, \
                                     template_uuid, refresh_mode, refresh_frequency, refresh_unit, tag_history, \
-                                    tag_stream, overwrite=False):
+                                    overwrite=False):
         
         print('** enter write_glossary_asset_config **')
         
@@ -752,7 +707,6 @@ class TagEngineStoreHandler:
                 'refresh_frequency': delta,
                 'refresh_unit': refresh_unit,
                 'tag_history': tag_history,
-                'tag_stream': tag_stream,
                 'scheduling_status': 'ACTIVE',
                 'next_run': next_run,
                 'version': 1,
@@ -775,7 +729,6 @@ class TagEngineStoreHandler:
                 'refresh_mode': refresh_mode, # ON_DEMAND refresh mode
                 'refresh_frequency': 0,
                 'tag_history': tag_history,
-                'tag_stream': tag_stream,
                 'version': 1,
                 'overwrite': overwrite,
                 'service_account': service_account
@@ -788,7 +741,7 @@ class TagEngineStoreHandler:
 
     def write_sensitive_column_config(self, service_account, fields, dlp_dataset, infotype_selection_table, infotype_classification_table, \
                                         included_tables_uris, excluded_tables_uris, create_policy_tags, taxonomy_id, template_uuid, \
-                                        refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite=False):
+                                        refresh_mode, refresh_frequency, refresh_unit, tag_history, overwrite=False):
         
         print('** enter write_sensitive_column_config **')
         
@@ -841,7 +794,6 @@ class TagEngineStoreHandler:
                 'refresh_frequency': delta,
                 'refresh_unit': refresh_unit,
                 'tag_history': tag_history,
-                'tag_stream': tag_stream,
                 'scheduling_status': 'ACTIVE',
                 'next_run': next_run,
                 'version': 1,
@@ -868,7 +820,6 @@ class TagEngineStoreHandler:
                 'refresh_mode': refresh_mode, # ON_DEMAND refresh mode
                 'refresh_frequency': 0,
                 'tag_history': tag_history,
-                'tag_stream': tag_stream,
                 'version': 1,
                 'overwrite': overwrite,
                 'service_account': service_account
@@ -881,7 +832,7 @@ class TagEngineStoreHandler:
     
     def write_tag_restore_config(self, service_account, source_template_uuid, source_template_id, source_template_project, source_template_region, \
                                  target_template_uuid, target_template_id, target_template_project, target_template_region, \
-                                 metadata_export_location, tag_history, tag_stream, overwrite=False):
+                                 metadata_export_location, tag_history, overwrite=True):
                                     
         print('** write_tag_restore_config **')
         
@@ -923,7 +874,6 @@ class TagEngineStoreHandler:
             'target_template_region': target_template_region,
             'metadata_export_location': metadata_export_location,
             'tag_history': tag_history,
-            'tag_stream': tag_stream,
             'overwrite': overwrite,
             'service_account': service_account
         })
@@ -932,7 +882,7 @@ class TagEngineStoreHandler:
         
 
     def write_tag_import_config(self, service_account, template_uuid, template_id, template_project, template_region, \
-                                metadata_import_location, tag_history, tag_stream, overwrite=False):
+                                metadata_import_location, tag_history, overwrite=True):
                                     
         print('** write_tag_import_config **')
         
@@ -970,7 +920,6 @@ class TagEngineStoreHandler:
             'template_region': template_region,
             'metadata_import_location': metadata_import_location,
             'tag_history': tag_history,
-            'tag_stream': tag_stream,
             'overwrite': overwrite,
             'service_account': service_account
         })
@@ -1324,7 +1273,7 @@ class TagEngineStoreHandler:
         
 
     def update_config(self, old_config_uuid, config_type, config_status, fields, included_uris, excluded_uris, template_uuid, \
-                      refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite=False, mapping_table=None):
+                      refresh_mode, refresh_frequency, refresh_unit, tag_history, overwrite=False, mapping_table=None):
         
         #print('enter update_config')
         #print('old_config_uuid: ', old_config_uuid)
@@ -1340,22 +1289,22 @@ class TagEngineStoreHandler:
         if config_type == 'STATIC_TAG_ASSET':
             new_config_uuid = self.write_static_asset_config(config_status, fields, included_uris, excluded_uris, template_uuid, \
                                                              refresh_mode, refresh_frequency, refresh_unit, \
-                                                             tag_history, tag_stream, overwrite)
+                                                             tag_history, overwrite)
         
         if config_type == 'DYNAMIC_TAG_TABLE':
             new_config_uuid = self.write_dynamic_table_config(config_status, fields, included_uris, excluded_uris, \
                                                                                   template_uuid, refresh_mode, refresh_frequency, refresh_unit,\
-                                                                                  tag_history, tag_stream)
+                                                                                  tag_history)
                 
         if config_type == 'ENTRY_CREATE':
             new_config_uuid = self.write_entry_config(config_status, fields, included_uris, excluded_uris, \
                                                                           template_uuid, refresh_mode, refresh_frequency, refresh_unit,\
-                                                                          tag_history, tag_stream)
+                                                                          tag_history)
                                                                      
         if config_type == 'GLOSSARY_TAG_ASSET':
             new_config_uuid = self.write_glossary_asset_config(config_status, fields, mapping_table, included_uris, excluded_uris, \
                                                                             template_uuid, refresh_mode, refresh_frequency, refresh_unit,\
-                                                                            tag_history, tag_stream, overwrite)
+                                                                            tag_history, overwrite)
         # note: no need to return the included_uris_hash
             
         return new_config_uuid
@@ -1363,7 +1312,7 @@ class TagEngineStoreHandler:
 
     def update_dynamic_column_config(self, old_config_uuid, config_type, config_status, fields, included_columns_query, included_tables_uris,\
                                      excluded_tables_uris, template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
-                                     tag_history, tag_stream):
+                                     tag_history):
         
         self.db.collection('dynamic_column_configs').document(old_config_uuid).update({
             'config_status' : "INACTIVE"
@@ -1373,14 +1322,14 @@ class TagEngineStoreHandler:
         new_config_uuid, included_tables_uris_hash = self.write_dynamic_column_config(config_status, fields, included_columns_query, \
                                                                                       included_tables_uris, excluded_tables_uris, \
                                                                                       template_uuid, refresh_mode, refresh_frequency, \
-                                                                                      refresh_unit, tag_history, tag_stream)
+                                                                                      refresh_unit, tag_history)
         
         return new_config_uuid
         
 
     def update_sensitive_column_config(self, old_config_uuid, config_status, dlp_dataset, infotype_selection_table, infotype_classification_table, \
                                       included_tables_uris, excluded_tables_uris, create_policy_tags, taxonomy_id, template_uuid, \
-                                      refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite):
+                                      refresh_mode, refresh_frequency, refresh_unit, tag_history, overwrite):
         
         self.db.collection('sensitive_column_configs').document(old_config_uuid).update({
             'config_status' : "INACTIVE"
@@ -1392,7 +1341,7 @@ class TagEngineStoreHandler:
                                                                           infotype_selection_table, infotype_classification_table, \
                                                                           included_tables_uris, excluded_tables_uris, \
                                                                           create_policy_tags, taxonomy_id, template_uuid, \
-                                                                          refresh_mode, refresh_frequency, refresh_unit, tag_history, tag_stream, overwrite)
+                                                                          refresh_mode, refresh_frequency, refresh_unit, tag_history, overwrite)
         
         
         return new_config_uuid
@@ -1400,7 +1349,7 @@ class TagEngineStoreHandler:
 
     def update_tag_restore_config(self, old_config_uuid, config_status, source_template_uuid, source_template_id, source_template_project, 
                               source_template_region, target_template_uuid, target_template_id, target_template_project, \
-                              target_template_region, metadata_export_location, tag_history, tag_stream, overwrite=False):
+                              target_template_region, metadata_export_location, tag_history, overwrite=False):
         
         self.db.collection('restore_configs').document(old_config_uuid).update({
             'config_status' : "INACTIVE"
@@ -1409,7 +1358,7 @@ class TagEngineStoreHandler:
         new_config_uuid = self.write_tag_restore_config(config_status, source_template_uuid, source_template_id, source_template_project, \
                                                         source_template_region, target_template_uuid, target_template_id, \
                                                         target_template_project, target_template_region, \
-                                                        metadata_export_location, tag_history, tag_stream, overwrite=False)
+                                                        metadata_export_location, tag_history, overwrite)
                     
         return new_config_uuid
     

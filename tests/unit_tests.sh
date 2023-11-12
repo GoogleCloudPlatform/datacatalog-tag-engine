@@ -1,4 +1,4 @@
-export TAG_ENGINE_URL="https://tag-engine-api-eshsagj3ta-uc.a.run.app" # Service URL from Cloud Run
+export TAG_ENGINE_URL="https://tag-engine-api-eshsagj3ta-uc.a.run.app" # replace with Service URL from Cloud Run
 
 # Bearer token
 export IAM_TOKEN=$(gcloud auth print-identity-token)
@@ -8,8 +8,8 @@ gcloud auth application-default login
 export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
 
 ####### tag template section #######
-# These tag templates are referenced by the unit tests. 
-# Create the tag templates before running the examples. 
+# Note: tag templates are referenced by the unit tests. 
+# Create the tag templates before creating the tag configurations. 
 
 export TEMPLATE_PROJECT="tag-engine-run"
 export TEMPLATE_REGION="us-central1"
@@ -23,14 +23,7 @@ python create_template.py $TEMPLATE_PROJECT $TEMPLATE_REGION enterprise_glossary
 python create_template.py $TEMPLATE_PROJECT $TEMPLATE_REGION data_discovery.yaml
 python create_template.py $TEMPLATE_PROJECT $TEMPLATE_REGION compliance_template.yaml
 
-####### tag history #######
-
 cd datacatalog-tag-engine/
-
-curl -X POST $TAG_ENGINE_URL/configure_tag_history \
-	-d '{"bigquery_region":"us-central1", "bigquery_project":"tag-engine-run", "bigquery_dataset":"tag_history", "enabled":true}' \
-	-H "Authorization: Bearer $IAM_TOKEN" \
-	-H "oauth_token: $OAUTH_TOKEN"
 
 ####### static tags #######
 

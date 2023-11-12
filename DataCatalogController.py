@@ -33,7 +33,6 @@ from google.cloud import storage
 import Resources as res
 import TagEngineStoreHandler as tesh
 import BigQueryUtils as bq
-import PubSubUtils as ps
 import constants
 
 config = configparser.ConfigParser()
@@ -203,7 +202,7 @@ class DataCatalogController:
         return tag_exists, tag_id
     
     
-    def apply_static_asset_config(self, fields, uri, config_uuid, template_uuid, tag_history, tag_stream, overwrite=False):
+    def apply_static_asset_config(self, fields, uri, config_uuid, template_uuid, tag_history, overwrite=False):
         
         print('*** apply_static_asset_config ***')
         print('fields: ', fields)
@@ -264,12 +263,12 @@ class DataCatalogController:
             creation_status = constants.SUCCESS
             return creation_status
         
-        creation_status = self.create_update_tag(fields, tag_exists, tag_id, config_uuid, 'STATIC_ASSET_TAG', tag_history, tag_stream, entry, uri)    
+        creation_status = self.create_update_tag(fields, tag_exists, tag_id, config_uuid, 'STATIC_ASSET_TAG', tag_history, entry, uri)    
            
         return creation_status
 
 
-    def apply_dynamic_table_config(self, fields, uri, config_uuid, template_uuid, tag_history, tag_stream, batch_mode=False):
+    def apply_dynamic_table_config(self, fields, uri, config_uuid, template_uuid, tag_history, batch_mode=False):
         
         print('*** apply_dynamic_table_config ***')
         print('fields:', fields) 
@@ -277,7 +276,6 @@ class DataCatalogController:
         print('config_uuid:', config_uuid)
         print('template_uuid:', template_uuid)
         print('tag_history:', tag_history)
-        print('tag_stream:', tag_stream)
         
         store = tesh.TagEngineStoreHandler()
 
@@ -372,16 +370,11 @@ class DataCatalogController:
             bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
             template_fields = self.get_template()
             bqu.copy_tag(self.template_id, template_fields, uri, None, fields)
-            
-        if creation_status == constants.SUCCESS and tag_stream:
-            psu = ps.PubSubUtils()
-            psu.copy_tag(self.template_id, uri, None, fields)
-                
-                                 
+                                         
         return creation_status
 
 
-    def apply_dynamic_column_config(self, fields, columns_query, uri, config_uuid, template_uuid, tag_history, tag_stream, batch_mode=False):
+    def apply_dynamic_column_config(self, fields, columns_query, uri, config_uuid, template_uuid, tag_history, batch_mode=False):
         
         print('*** apply_dynamic_column_config ***')
         #print('fields:', fields) 
@@ -390,7 +383,6 @@ class DataCatalogController:
         #print('config_uuid:', config_uuid)
         #print('template_uuid:', template_uuid)
         #print('tag_history:', tag_history)
-        #print('tag_stream:', tag_stream)
                 
         store = tesh.TagEngineStoreHandler()
 
@@ -518,16 +510,12 @@ class DataCatalogController:
                 template_fields = self.get_template()
                 bqu.copy_tag(self.template_id, template_fields, uri, column, fields)
             
-            if creation_status == constants.SUCCESS and tag_stream:
-                psu = ps.PubSubUtils()
-                psu.copy_tag(self.template_id, uri, column, fields)
-
         # outer loop ends here                
                                  
         return creation_status
 
 
-    def apply_entry_config(self, fields, uri, config_uuid, template_uuid, tag_history, tag_stream):
+    def apply_entry_config(self, fields, uri, config_uuid, template_uuid, tag_history):
         
         print('** apply_entry_config **')
         
@@ -702,11 +690,7 @@ class DataCatalogController:
                 bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
                 template_fields = self.get_template()
                 bqu.copy_tag(self.template_id, template_fields, '/'.join(uri), None, fields)
-            
-            if tag_stream:
-                psu = ps.PubSubUtils()
-                psu.copy_tag(self.template_id, uri, column, fields)
-                                    
+                                                
         return creation_status
 
 
@@ -735,7 +719,7 @@ class DataCatalogController:
         return entry_group.name
            
 
-    def apply_glossary_asset_config(self, fields, mapping_table, uri, config_uuid, template_uuid, tag_history, tag_stream, overwrite=False):
+    def apply_glossary_asset_config(self, fields, mapping_table, uri, config_uuid, template_uuid, tag_history, overwrite=False):
         
         print('** enter apply_glossary_asset_config **')
         #print('fields: ', fields)
@@ -744,7 +728,6 @@ class DataCatalogController:
         #print('config_uuid: ', config_uuid)
         #print('template_uuid: ', template_uuid)
         #print('tag_history: ', tag_history)
-        #print('tag_stream: ', tag_stream)
  
         # uri is either a BQ table/view path or GCS file path
         store = tesh.TagEngineStoreHandler()        
@@ -882,20 +865,13 @@ class DataCatalogController:
                 bqu.copy_tag(self.template_id, template_fields, '/'.join(uri), None, fields)
             if is_bq:
                 bqu.copy_tag(self.template_id, template_fields, uri, None, fields)
-        
-        if tag_stream:
-            psu = ps.PubSubUtils()
-            if is_gcs:
-                bqu.copy_tag(self.template_id, '/'.join(uri), None, fields)
-            if is_bq:
-                psu.copy_tag(self.template_id, uri, None, fields)
-           
+                   
         return creation_status
       
                  
     def apply_sensitive_column_config(self, fields, dlp_dataset, infotype_selection_table, infotype_classification_table, \
                                       uri, create_policy_tags, taxonomy_id, config_uuid, template_uuid, \
-                                      tag_history, tag_stream, overwrite=False):
+                                      tag_history, overwrite=False):
         
         print('** enter apply_sensitive_column_config **')
         print('fields: ', fields)
@@ -1169,11 +1145,7 @@ class DataCatalogController:
                 template_fields = self.get_template()
                 bqu.copy_tag(self.template_id, template_fields, uri, infotype_field, fields)
         
-            if creation_status == constants.SUCCESS and tag_stream:
-                psu = ps.PubSubUtils()
-                psu.copy_tag(self.template_id, uri, infotype_field, fields)
-        
-                
+                        
         # once we have created the regular tags, we can create/update the policy tags
         if create_policy_tags and len(policy_tag_requests) > 0:
             table_id = uri.replace('/datasets/', '.').replace('/tables/', '.')
@@ -1342,7 +1314,7 @@ class DataCatalogController:
         return export_status
         
             
-    def apply_import_config(self, config_uuid, tag_dict, tag_history, tag_stream, overwrite=False):
+    def apply_import_config(self, config_uuid, tag_dict, tag_history, overwrite=False):
         
         print('** enter apply_import_config **')
         #print('tag_dict: ', tag_dict)
@@ -1410,13 +1382,13 @@ class DataCatalogController:
             tag_fields.append(field)
             
         
-        creation_status = self.create_update_tag(tag_fields, tag_exists, tag_id, config_uuid, 'IMPORT_TAG', tag_history, tag_stream, \
+        creation_status = self.create_update_tag(tag_fields, tag_exists, tag_id, config_uuid, 'IMPORT_TAG', tag_history, \
                                                  entry, uri, column_name)
                                 
         return creation_status
     
 
-    def apply_restore_config(self, config_uuid, tag_extract, tag_history, tag_stream, overwrite=False):
+    def apply_restore_config(self, config_uuid, tag_extract, tag_history, overwrite=False):
         
         print('** enter apply_restore_config **')
         print('config_uuid:', config_uuid)
@@ -1472,7 +1444,7 @@ class DataCatalogController:
             
                     # create or update column-level tag
                     uri = entry.linked_resource.replace('//bigquery.googleapis.com/projects/', '') + '/column/' + column_name
-                    creation_status = self.create_update_tag(fields, tag_exists, tag_id, config_uuid, 'RESTORE_TAG', tag_history, tag_stream, \
+                    creation_status = self.create_update_tag(fields, tag_exists, tag_id, config_uuid, 'RESTORE_TAG', tag_history, \
                                                              entry, uri, column_name)
             
             if 'tags' in json_obj:
@@ -1497,12 +1469,12 @@ class DataCatalogController:
                 # create or update table-level tag
                 uri = entry.linked_resource.replace('//bigquery.googleapis.com/projects/', '')
                 creation_status = self.create_update_tag(fields, tag_exists, tag_id, config_uuid, 'RESTORE_TAG', tag_history, \
-                                                         tag_stream, entry, uri)                     
+                                                         entry, uri)                     
                     
         return creation_status
         
     # used by apply_static_assets_config, apply_import_config, and apply_restore_config
-    def create_update_tag(self, fields, tag_exists, tag_id, config_uuid, config_type, tag_history, tag_stream, entry, uri, column_name=''):
+    def create_update_tag(self, fields, tag_exists, tag_id, config_uuid, config_type, tag_history, entry, uri, column_name=''):
         
         print('create_update_tag')
         print('tag_history:', tag_history)
@@ -1649,10 +1621,6 @@ class DataCatalogController:
             if success == False:
                 print('Error occurred while writing to tag history table.')
                 creation_status = constants.ERROR
-
-        if tag_stream:
-            psu = ps.PubSubUtils()
-            psu.copy_tag(self.template_id, uri, column_name, fields)
        
         return creation_status
         
@@ -2162,4 +2130,4 @@ if __name__ == '__main__':
     template_uuid = 'fa8aa3007f1711eebe2b4f918967d564'
     
     dcu = DataCatalogController(credentials, None, None, None)
-    dcu.apply_dynamic_table_config(fields, uri, config_uuid, template_uuid, tag_history=False, tag_stream=False)
+    dcu.apply_dynamic_table_config(fields, uri, config_uuid, template_uuid, tag_history=False)

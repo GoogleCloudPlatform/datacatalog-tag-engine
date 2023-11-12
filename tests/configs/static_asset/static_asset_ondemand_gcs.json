@@ -38,7 +38,5 @@
     ],
     "included_assets_uris": "gs://discovery-area/cities_311/*",
     "excluded_assets_uris": "gs://discovery-area/cities_311/austin_311_service_requests.parquet",
-    "refresh_mode": "ON_DEMAND",
-    "tag_history": true,
-    "tag_stream": false   
+    "refresh_unit": "ON_DEMAND"  
 }

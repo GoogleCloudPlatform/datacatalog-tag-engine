@@ -49,6 +49,34 @@ import ConfigType as ct
 config = configparser.ConfigParser()
 config.read("tagengine.ini")
 
+##################### INIT GLOBAL VARIABLES ##################################
+    
+TAG_ENGINE_PROJECT = config['DEFAULT']['TAG_ENGINE_PROJECT'].strip()
+TAG_ENGINE_REGION = config['DEFAULT']['TAG_ENGINE_REGION'].strip()
+    
+TAG_ENGINE_SA = config['DEFAULT']['TAG_ENGINE_SA'].strip()
+TAG_CREATOR_SA = config['DEFAULT']['TAG_CREATOR_SA'].strip()
+
+BIGQUERY_REGION = config['DEFAULT']['BIGQUERY_REGION'].strip()
+
+SPLIT_WORK_HANDLER = os.environ['SERVICE_URL'] + '/_split_work'
+RUN_TASK_HANDLER = os.environ['SERVICE_URL'] + '/_run_task'
+
+INJECTOR_QUEUE = config['DEFAULT']['INJECTOR_QUEUE'].strip()
+WORK_QUEUE = config['DEFAULT']['WORK_QUEUE'].strip()
+
+jm = jobm.JobManager(TAG_ENGINE_SA, TAG_ENGINE_PROJECT, TAG_ENGINE_REGION, INJECTOR_QUEUE, SPLIT_WORK_HANDLER)                   
+tm = taskm.TaskManager(TAG_ENGINE_SA, TAG_ENGINE_PROJECT, TAG_ENGINE_REGION, WORK_QUEUE, RUN_TASK_HANDLER)
+
+SCOPES = ['openid', 'https://www.googleapis.com/auth/cloud-platform', 'https://www.googleapis.com/auth/userinfo.email']
+ 
+USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v2'
+store = tesh.TagEngineStoreHandler()
+
+ENABLE_TAG_HISTORY = config['DEFAULT']['ENABLE_TAG_HISTORY'].strip()
+TAG_HISTORY_PROJECT = config['DEFAULT']['TAG_HISTORY_PROJECT'].strip()
+TAG_HISTORY_DATASET = config['DEFAULT']['TAG_HISTORY_DATASET'].strip()
+
 ##################### CHECK SERVICE_URL #####################
 def check_service_url():
     if os.environ['SERVICE_URL'] == None:
@@ -76,27 +104,127 @@ else:
     else:
         print('Info: running in API mode without the client secret file')
 
-##################### INIT GLOBAL VARIABLES ##################################
-    
-TAG_ENGINE_PROJECT = config['DEFAULT']['TAG_ENGINE_PROJECT'].strip()
-TAG_ENGINE_REGION = config['DEFAULT']['TAG_ENGINE_REGION'].strip()
-    
-TAG_ENGINE_SA = config['DEFAULT']['TAG_ENGINE_SA'].strip()
-TAG_CREATOR_SA = config['DEFAULT']['TAG_CREATOR_SA'].strip()
-
-SPLIT_WORK_HANDLER = os.environ['SERVICE_URL'] + '/_split_work'
-RUN_TASK_HANDLER = os.environ['SERVICE_URL'] + '/_run_task'
-
-INJECTOR_QUEUE = config['DEFAULT']['INJECTOR_QUEUE'].strip()
-WORK_QUEUE = config['DEFAULT']['WORK_QUEUE'].strip()
-
-jm = jobm.JobManager(TAG_ENGINE_SA, TAG_ENGINE_PROJECT, TAG_ENGINE_REGION, INJECTOR_QUEUE, SPLIT_WORK_HANDLER)                   
-tm = taskm.TaskManager(TAG_ENGINE_SA, TAG_ENGINE_PROJECT, TAG_ENGINE_REGION, WORK_QUEUE, RUN_TASK_HANDLER)
-
-SCOPES = ['openid', 'https://www.googleapis.com/auth/cloud-platform', 'https://www.googleapis.com/auth/userinfo.email']
+##################### CONFIGURE TAG HISTORY ##################################
  
-USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v2'
-store = tesh.TagEngineStoreHandler()
+def configure_tag_history(): 
+        
+    if ENABLE_TAG_HISTORY:
+        
+        if TAG_HISTORY_PROJECT == None:
+            print('Error: unable to configure tag history, TAG_HISTORY_PROJECT is missing from tagengine.ini')
+        
+        if TAG_HISTORY_DATASET == None:
+            print('Error: unable to configure tag history, TAG_HISTORY_DATASET is missing from tagengine.ini')
+    
+        status = store.write_tag_history_settings(ENABLE_TAG_HISTORY, TAG_HISTORY_PROJECT, BIGQUERY_REGION, TAG_HISTORY_DATASET)
+
+        if status:
+            print('Tag History successfully configured.')
+        else:
+            print('Error writing tag history settings to Firestore.')
+
+configure_tag_history()
+
+##################### API and UI AUTH METHODS ##################################
+# API passes in an access_token while UI passes in the oauth credentials
+
+# used whenever TAG_CREATOR_SA credentials are needed 
+def get_target_credentials(target_service_account):
+    
+    print('*** enter get_target_credentials ***')
+    source_credentials, _ = google.auth.default() 
+
+    try:
+        target_credentials = impersonated_credentials.Credentials(source_credentials=source_credentials,
+            target_principal=target_service_account,
+            target_scopes=SCOPES,
+            lifetime=1200) # lifetime is in seconds -> 20 minutes should be enough time
+        success = True
+        
+    except Exception as e:
+        print('Error impersonating credentials: ', e)
+        success = False
+        
+    return target_credentials, success
+
+def check_user_credentials(access_token, credentials_dict, service_account):
+    
+    has_permission = False
+    
+    if access_token:
+        credentials = google.oauth2.credentials.Credentials(access_token)
+    
+    if credentials_dict:
+        credentials = dict_to_credentials(credentials_dict)
+                                                                                                            
+    service = discovery.build('iam', 'v1', credentials=credentials)
+
+    # get the GCP project which owns the service account
+    start_index = service_account.index('@') + 1 
+    end_index = service_account.index('.') 
+    service_account_project = service_account[start_index:end_index]
+    resource = 'projects/{}/serviceAccounts/{}'.format(service_account_project, service_account)
+    permissions = ["iam.serviceAccounts.actAs", "iam.serviceAccounts.get"]
+    body={"permissions": permissions}
+
+    request = service.projects().serviceAccounts().testIamPermissions(resource=resource, body=body)
+    response = request.execute()
+    
+    if 'permissions' in response:
+        #print('allowed permissions:', response['permissions'])
+        user_permissions = response['permissions']
+        if "iam.serviceAccounts.actAs" in user_permissions and "iam.serviceAccounts.get" in user_permissions:
+            has_permission = True
+          
+    return has_permission
+
+# get the service account intended to process the request 
+def get_requested_service_account(json): 
+    
+    if isinstance(json, dict) and 'service_account' in json:
+        service_account = json['service_account']
+    elif isinstance(json, dict) and 'config_uuid' in json and 'config_type' in json:
+        service_account = store.lookup_service_account(json['config_type'], json['config_uuid'])
+    else:
+        service_account = TAG_CREATOR_SA
+    
+    return service_account
+    
+def do_authentication(json, headers):
+    
+    print('** enter do_authentication **')
+    print('json:', json)
+    print('headers:', headers)
+    
+    service_account = get_requested_service_account(json)
+    
+    print('service_account:', service_account)
+    print('ENABLE_AUTH:', ENABLE_AUTH)
+    
+    if ENABLE_AUTH == False:
+        return True, None, service_account
+        
+    oauth_token = headers.get('oauth_token', None)
+
+    if oauth_token == None:
+        response = {
+            "status": "error",
+            "message": "Fatal error: oauth_token field missing from request header.",
+        }
+        return False, response, service_account
+        
+    has_permission  = check_user_credentials(oauth_token, None, service_account)   
+    print('user has permission:', has_permission)
+    
+    if has_permission == False:
+        response = {
+            "status": "error",
+            "message": "Fatal error: User does not have permission to use service account " + service_account,
+        }
+        return False, response, service_account
+       
+    return True, None, service_account
+
 
 ##################### UI METHODS #################
 
@@ -174,7 +302,12 @@ def get_log_entries(service_account):
     
     formatted_entries = []
     
-    logging_client = logging_v2.Client(project=TAG_ENGINE_PROJECT, credentials=get_target_credentials(service_account), client_info=ClientInfo(user_agent=USER_AGENT))
+    credentials, success = get_target_credentials(service_account)
+    
+    if success == False:
+        print('Error acquiring credentials from', service_account)
+    
+    logging_client = logging_v2.Client(project=TAG_ENGINE_PROJECT, credentials=credentials, client_info=ClientInfo(user_agent=USER_AGENT))
     query="resource.type: cloud_run_revision"
     
     try:
@@ -285,8 +418,8 @@ def coverage_report_settings(saved):
         settings=saved)
     # [END render_template]
     
-@app.route("/tag_history_settings<int:saved>", methods=["GET"])
-def tag_history_settings(saved):
+@app.route("/tag_history_settings", methods=["GET"])
+def tag_history_settings():
     
     if 'credentials' not in session:
         return redirect('/')
@@ -298,11 +431,7 @@ def tag_history_settings(saved):
         bigquery_project = settings['bigquery_project']
         bigquery_region = settings['bigquery_region']
         bigquery_dataset = settings['bigquery_dataset']
-    else:
-        bigquery_project = "{your_bigquery_project}"
-        bigquery_region = "{your_bigquery_region}"
-        bigquery_dataset = "{your_bigquery_dataset}"
-    
+      
     # [END tag_history_settings]
     # [START render_template]
     return render_template(
@@ -313,33 +442,6 @@ def tag_history_settings(saved):
         bigquery_dataset=bigquery_dataset,
         settings=saved)
     # [END render_template]
-
-@app.route("/tag_stream_settings<int:saved>", methods=["GET"])
-def tag_stream_settings(saved):
-    
-    if 'credentials' not in session:
-        return redirect('/')
-        
-    enabled, settings = store.read_tag_stream_settings()
-    
-    if enabled:
-        enabled = settings['enabled']
-        pubsub_project = settings['pubsub_project']
-        pubsub_topic = settings['pubsub_topic']
-    else:
-        pubsub_project = "{your_pubsub_project}"
-        pubsub_topic = "{your_pubsub_topic}"
-    
-    # [END tag_stream_settings]
-    # [START render_template]
-    return render_template(
-        'tag_stream_settings.html',
-        enabled=enabled,
-        pubsub_project=pubsub_project,
-        pubsub_topic=pubsub_topic,
-        settings=saved)
-    # [END render_template]
-    
 
 @app.route("/set_default_settings", methods=['POST'])
 def set_default_settings():
@@ -366,83 +468,7 @@ def set_default_settings():
         
     return default_settings(1)
         
-        
-@app.route("/set_tag_history", methods=['POST'])
-def set_tag_history():
-    
-    if 'credentials' not in session:
-        return redirect('/')
-        
-    enabled = request.form['enabled'].rstrip()
-    bigquery_project = request.form['bigquery_project'].rstrip()
-    bigquery_region = request.form['bigquery_region'].rstrip()
-    bigquery_dataset = request.form['bigquery_dataset'].rstrip()
-    
-    print("enabled: " + enabled)
-    print("bigquery_project: " + bigquery_project)
-    print("bigquery_region: " + bigquery_region)
-    print("bigquery_dataset: " + bigquery_dataset)
-    
-    if enabled == "on":
-        enabled = True
-    else:
-        enabled = False    
-    
-    if bigquery_project == "{your_bigquery_project}":
-        bigquery_project = None
-    if bigquery_region == "{your_bigquery_region}":
-        bigquery_region = None
-    if bigquery_dataset == "{your_bigquery_dataset}":
-        bigquery_dataset = None
-    
-    # can't be enabled if either of the required fields are NULL
-    if enabled and (bigquery_project == None or bigquery_region == None or bigquery_dataset == None):
-        enabled = False
-    
-    if bigquery_project != None or bigquery_region != None or bigquery_dataset != None:
-        store.write_tag_history_settings(enabled, bigquery_project, bigquery_region, bigquery_dataset)
-        
-        return tag_history_settings(1)
-    else:
-        return tag_history_settings(0)
-
-
-@app.route("/set_tag_stream", methods=['POST'])
-def set_tag_stream():
-    
-    if 'credentials' not in session:
-        return redirect('/')
-        
-    enabled = request.form['enabled'].rstrip()
-    pubsub_project = request.form['pubsub_project'].rstrip()
-    pubsub_topic = request.form['pubsub_topic'].rstrip()
-
-    print("enabled: " + enabled)
-    print("pubsub_project: " + pubsub_project)
-    print("pubsub_topic: " + pubsub_topic)
-    
-    if enabled == "on":
-        enabled = True
-    else:
-        enabled = False    
-    
-    if pubsub_project == "{your_pubsub_project}":
-        pubsub_project = None
-    if pubsub_topic == "{your_pubsub_topic}":
-        pubsub_topic = None
-    
-    # can't be enabled if either the required fields are NULL
-    if enabled and (pubsub_project == None or pubsub_topic == None):
-        enabled = False
-    
-    if pubsub_project != None or pubsub_topic != None:
-        store.write_tag_stream_settings(enabled, pubsub_project, pubsub_topic)
-        
-        return tag_stream_settings(1)
-    else:
-        return tag_stream_settings(0)
-        
-        
+                
 @app.route("/set_coverage_report", methods=['POST'])
 def set_coverage_report():
     
@@ -541,7 +567,12 @@ def search_tag_template():
                 service_account=service_account,
                 missing_permissions=True)
       
-    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
+    credentials, success = get_target_credentials(service_account)
+    
+    if success == False:
+        print('Error acquiring credentials from', service_account)
+     
+    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
     fields = dcc.get_template()
     
     if len(fields) == 0:
@@ -567,33 +598,6 @@ def search_tag_template():
         fields=fields)
     # [END render_template]
         
-@app.route('/choose_action', methods=['GET'])
-def choose_action():
-    
-    if 'credentials' not in session:
-        return redirect('/')
-        
-    template_id = request.args.get('template_id')
-    template_project = request.args.get('template_project')
-    template_region = request.args.get('template_region')
-    
-    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
-    fields = dcc.get_template()
-    
-    #print("fields: " + str(fields))
-    
-    # [END choose_action]
-    # [START render_template]
-    return render_template(
-        'tag_template.html',
-        template_id=template_id,
-        template_project=template_project,
-        template_region=template_region,
-        service_account=service_account, 
-        fields=fields)
-    # [END render_template]
-
-
 def view_remaining_configs(service_account, template_id, template_project, template_region):
     
     if 'credentials' not in session:
@@ -604,11 +608,13 @@ def view_remaining_configs(service_account, template_id, template_project, templ
     print("template_region: " + str(template_region))
     print("service_account: " + str(service_account))
     
-    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
-    template_fields = dcc.get_template()
+    credentials, success = get_target_credentials(service_account)
     
-    history_enabled, history_settings = store.read_tag_history_settings()
-    stream_enabled, stream_settings = store.read_tag_stream_settings()
+    if success == False:
+        print('Error acquiring credentials from', service_account)
+    
+    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
+    template_fields = dcc.get_template()
     
     configs = store.read_configs(service_account, 'ALL', template_id, template_project, template_region)
     
@@ -658,11 +664,15 @@ def view_config_options():
     print("template_region: " + str(template_region))
     print("action: " + str(action))
     
-    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
+    credentials, success = get_target_credentials(service_account)
+    
+    if success == False:
+        print('Error acquiring credentials from', service_account)
+    
+    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
     template_fields = dcc.get_template()
     
-    history_enabled, history_settings = store.read_tag_history_settings()
-    stream_enabled, stream_settings = store.read_tag_stream_settings()
+    history_enabled, _ = store.read_tag_history_settings()
     
     if action == "View Existing Configs":
 
@@ -687,8 +697,7 @@ def view_config_options():
             service_account=service_account,
             fields=template_fields,
             current_time=datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
-            display_tag_history=history_enabled,
-            display_tag_stream=stream_enabled)
+            tag_history_option=history_enabled)
             
     elif action == "Create Dynamic Table Tags":
         return render_template(
@@ -698,8 +707,7 @@ def view_config_options():
             template_region=template_region,
             service_account=service_account,
             fields=template_fields,
-            display_tag_history=history_enabled,
-            display_tag_stream=stream_enabled)
+            tag_history_option=history_enabled)
             
     elif action == "Create Dynamic Column Tags":
         return render_template(
@@ -709,8 +717,7 @@ def view_config_options():
             template_region=template_region,
             service_account=service_account,
             fields=template_fields,
-            display_tag_history=history_enabled,
-            display_tag_stream=stream_enabled)
+            tag_history_option=history_enabled)
             
     elif action == "Create Data Catalog Entries":
         return render_template(
@@ -720,8 +727,7 @@ def view_config_options():
             template_region=template_region,
             service_account=service_account,
             fields=template_fields,
-            display_tag_history=history_enabled,
-            display_tag_stream=stream_enabled)
+            tag_history_option=history_enabled)
             
     elif action == "Create Glossary Asset Tags":
         return render_template(
@@ -731,8 +737,7 @@ def view_config_options():
             template_region=template_region,
             service_account=service_account,
             fields=template_fields,
-            display_tag_history=history_enabled,
-            display_tag_stream=stream_enabled)
+            tag_history_option=history_enabled)
     
     elif action == "Create Sensitive Column Tags":
         return render_template(
@@ -742,8 +747,7 @@ def view_config_options():
             template_region=template_region,
             service_account=service_account,
             fields=template_fields,
-            display_tag_history=history_enabled,
-            display_tag_stream=stream_enabled)
+            tag_history_option=history_enabled)
                         
     elif action == "Import Tags":
         return render_template(
@@ -753,8 +757,7 @@ def view_config_options():
             template_region=template_region,
             service_account=service_account,
             fields=template_fields,
-            display_tag_history=history_enabled,
-            display_tag_stream=stream_enabled)
+            tag_history_option=history_enabled)
     
     elif action == "Restore Tags":
         return render_template(
@@ -764,8 +767,7 @@ def view_config_options():
             template_region=template_region,
             service_account=service_account,
             fields=template_fields,
-            display_tag_history=history_enabled,
-            display_tag_stream=stream_enabled)
+            tag_history_option=history_enabled)
             
     elif action == "Switch Template / Return Home" or action == 'Return Home':
         return render_template(
@@ -1019,28 +1021,15 @@ def choose_config_action():
     config = store.read_config(service_account, config_uuid, config_type)
     print("config: " + str(config))
     
-    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
+    credentials, success = get_target_credentials(service_account)
+    
+    if success == False:
+        print('Error acquiring credentials from', service_account)
+    
+    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
     template_fields = dcc.get_template()
     print('template_fields:', template_fields)
     
-    enabled, settings = store.read_tag_history_settings()
-    
-    if enabled:
-        tag_history = 1
-    else:
-        tag_history = 0
-    
-    print("tag_history: " + str(tag_history))
-
-    enabled, settings = store.read_tag_stream_settings()
-    
-    if enabled:
-        tag_stream = 1
-    else:
-        tag_stream = 0
-    
-    print("tag_stream: " + str(tag_stream))
-
     if config_type == "STATIC_TAG_ASSET":
         return render_template(
             'update_static_asset_config.html',
@@ -1050,9 +1039,7 @@ def choose_config_action():
             service_account=service_account,
             fields=template_fields,
             config=config, 
-            current_time=datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
-            display_tag_history_option=tag_history,
-            display_tag_stream_option=tag_stream)
+            current_time=datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
     
     if config_type == "DYNAMIC_TAG_TABLE":
         return render_template(
@@ -1062,9 +1049,7 @@ def choose_config_action():
             template_region=template_region,
             service_account=service_account,
             fields=template_fields,
-            config=config,
-            display_tag_history_option=tag_history,
-            display_tag_stream_option=tag_stream)
+            config=config)
             
     if config_type == "DYNAMIC_TAG_COLUMN":
         return render_template(
@@ -1074,9 +1059,7 @@ def choose_config_action():
             template_region=template_region,
             service_account=service_account,
             fields=template_fields,
-            config=config,
-            display_tag_history_option=tag_history,
-            display_tag_stream_option=tag_stream)
+            config=config)
             
     if config_type == "ENTRY_CREATE":
         return render_template(
@@ -1086,9 +1069,7 @@ def choose_config_action():
             template_region=template_region,
             service_account=service_account,
             fields=template_fields,
-            config=config,
-            display_tag_history_option=tag_history,
-            display_tag_stream_option=tag_stream)
+            config=config)
             
     if config_type == "GLOSSARY_TAG_ASSET":
         return render_template(
@@ -1098,9 +1079,7 @@ def choose_config_action():
             template_region=template_region,
             service_account=service_account,
             fields=template_fields,
-            config=config,
-            display_tag_history_option=tag_history,
-            display_tag_stream_option=tag_stream)
+            config=config)
             
     if config_type == "SENSITIVE_TAG_COLUMN":
         return render_template(
@@ -1110,9 +1089,7 @@ def choose_config_action():
             template_region=template_region,
             service_account=service_account,
             fields=template_fields,
-            config=config,
-            display_tag_history_option=tag_history,
-            display_tag_stream_option=tag_stream)
+            config=config)
     
     if config_type == "TAG_IMPORT":
         return render_template(
@@ -1121,9 +1098,7 @@ def choose_config_action():
             template_project=template_project,
             template_region=template_region,
             service_account=service_account,
-            config=config,
-            display_tag_history_option=tag_history,
-            display_tag_stream_option=tag_stream)
+            config=config)
             
     if config_type == "TAG_RESTORE":
         return render_template(
@@ -1132,9 +1107,7 @@ def choose_config_action():
             template_project=template_project,
             template_region=template_region,
             service_account=service_account,
-            config=config,
-            display_tag_history_option=tag_history,
-            display_tag_stream_option=tag_stream)
+            config=config)
     # [END render_template]
     
 
@@ -1193,7 +1166,6 @@ def choose_job_history_action():
             service_account=service_account)
     
     
- 
 @app.route('/update_export_config', methods=['POST'])
 def update_export_config():
     
@@ -1238,14 +1210,16 @@ def process_static_asset_config():
     print('excluded_assets_uris: ' + excluded_assets_uris)
     print('service_account: ' + service_account)
 
-    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
+    credentials, success = get_target_credentials(service_account)
+    
+    if success == False:
+        print('Error acquiring credentials from', service_account)
+
+    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
         
-        history_enabled, history_settings = store.read_tag_history_settings()
-        stream_enabled, stream_settings = store.read_tag_stream_settings()
-    
         return render_template(
             'tag_template.html',
             template_id=template_id,
@@ -1301,30 +1275,17 @@ def process_static_asset_config():
     if excluded_assets_uris == 'None':
         excluded_assets_uris = ''
     
-    tag_history_option = False
-    tag_history_enabled = "OFF"
+    tag_history_option, _ = store.read_tag_history_settings()
     
-    if "tag_history" in request.form:
-        tag_history = request.form.get("tag_history")
-    
-        if tag_history == "selected":
-            tag_history_option = True
-            tag_history_enabled = "ON"
-            
-    tag_stream_option = False
-    tag_stream_enabled = "OFF"
-    
-    if "tag_stream" in request.form:
-        tag_stream = request.form.get("tag_stream")
-    
-        if tag_stream == "selected":
-            tag_stream_option = True
-            tag_stream_enabled = "ON"            
-        
+    if tag_history_option == True:
+        tag_history_display = "ON"
+    else:
+        tag_history_display = "OFF"
+                    
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     config_uuid = store.write_static_asset_config(service_account, fields, included_assets_uris, excluded_assets_uris, \
                                                   template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
-                                                  tag_history_option, tag_stream_option)
+                                                  tag_history_option)
     
     # [START render_template]
     return render_template(
@@ -1338,8 +1299,7 @@ def process_static_asset_config():
         fields=fields,
         included_assets_uris=included_assets_uris,
         excluded_assets_uris=excluded_assets_uris,
-        tag_history=tag_history_enabled,
-        tag_stream=tag_stream_enabled)
+        tag_history=tag_history_display)
     # [END render_template]
 
 
@@ -1360,7 +1320,12 @@ def process_dynamic_table_config():
     refresh_unit = request.form['refresh_unit']
     action = request.form['action']
     
-    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
+    credentials, success = get_target_credentials(service_account)
+    
+    if success == False:
+        print('Error acquiring credentials from', service_account)
+    
+    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1400,30 +1365,17 @@ def process_dynamic_table_config():
     if excluded_tables_uris == 'None':
         excluded_tables_uris = ''
     
-    tag_history_option = False
-    tag_history_enabled = "OFF"
+    tag_history_option, _ = store.read_tag_history_settings()
     
-    if "tag_history" in request.form:
-        tag_history = request.form.get("tag_history")
-    
-        if tag_history == "selected":
-            tag_history_option = True
-            tag_history_enabled = "ON"
-            
-    tag_stream_option = False
-    tag_stream_enabled = "OFF"
-    
-    if "tag_stream" in request.form:
-        tag_stream = request.form.get("tag_stream")
-    
-        if tag_stream == "selected":
-            tag_stream_option = True
-            tag_stream_enabled = "ON"
+    if tag_history_option == True:
+        tag_history_display = "ON"
+    else:
+        tag_history_display = "OFF"
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     config_uuid = store.write_dynamic_table_config(service_account, fields, included_tables_uris, excluded_tables_uris, \
                                                    template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
-                                                   tag_history_option, tag_stream_option)
+                                                   tag_history_option)
      
     # [END process_dynamic_table_config]
     # [START render_template]
@@ -1441,8 +1393,7 @@ def process_dynamic_table_config():
         refresh_mode=refresh_mode,
         refresh_frequency=refresh_frequency,
         refresh_unit=refresh_unit,
-        tag_history=tag_history_enabled,
-        tag_stream=tag_stream_enabled)
+        tag_history=tag_history_display)
     # [END render_template]
 
 
@@ -1460,7 +1411,12 @@ def process_dynamic_column_config():
     refresh_unit = request.form['refresh_unit']
     action = request.form['action']
     
-    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
+    credentials, success = get_target_credentials(service_account)
+    
+    if success == False:
+        print('Error acquiring credentials from', service_account)
+    
+    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1500,31 +1456,18 @@ def process_dynamic_column_config():
     if excluded_tables_uris == 'None':
         excluded_tables_uris = ''
     
-    tag_history_option = False
-    tag_history_enabled = "OFF"
+    tag_history_option, _ = store.read_tag_history_settings()
     
-    if "tag_history" in request.form:
-        tag_history = request.form.get("tag_history")
-    
-        if tag_history == "selected":
-            tag_history_option = True
-            tag_history_enabled = "ON"
-            
-    tag_stream_option = False
-    tag_stream_enabled = "OFF"
-    
-    if "tag_stream" in request.form:
-        tag_stream = request.form.get("tag_stream")
-    
-        if tag_stream == "selected":
-            tag_stream_option = True
-            tag_stream_enabled = "ON"
-    
+    if tag_history_option == True:
+        tag_history_display = "ON"
+    else:
+        tag_history_display = "OFF"
+     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     config_uuid = store.write_dynamic_column_config(service_account, fields, included_columns_query, \
                                                     included_tables_uris, excluded_tables_uris, template_uuid,\
                                                     refresh_mode, refresh_frequency, refresh_unit, \
-                                                    tag_history_option, tag_stream_option)
+                                                    tag_history_option)
      
     # [END process_dynamic_column_config]
     # [START render_template]
@@ -1543,8 +1486,7 @@ def process_dynamic_column_config():
         refresh_mode=refresh_mode,
         refresh_frequency=refresh_frequency,
         refresh_unit=refresh_unit,
-        tag_history=tag_history_enabled,
-        tag_stream=tag_stream_enabled)
+        tag_history=tag_history_display)
     # [END render_template]
 
 
@@ -1567,7 +1509,12 @@ def process_entry_config():
     #print('refresh_frequency: ' + refresh_frequency)
     #print('refresh_unit: ' + refresh_unit)
     
-    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
+    credentials, success = get_target_credentials(service_account)
+    
+    if success == False:
+        print('Error acquiring credentials from', service_account)
+    
+    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1605,30 +1552,17 @@ def process_entry_config():
     if excluded_assets_uris == 'None':
         excluded_assets_uris = ''
     
-    tag_history_option = False
-    tag_history_enabled = "OFF"
+    tag_history_option, _ = store.read_tag_history_settings()
     
-    if "tag_history" in request.form:
-        tag_history = request.form.get("tag_history")
-    
-        if tag_history == "selected":
-            tag_history_option = True
-            tag_history_enabled = "ON"
-            
-    tag_stream_option = False
-    tag_stream_enabled = "OFF"
-    
-    if "tag_stream" in request.form:
-        tag_stream = request.form.get("tag_stream")
-    
-        if tag_stream == "selected":
-            tag_stream_option = True
-            tag_stream_enabled = "ON"
-    
+    if tag_history_option == True:
+        tag_history_display = "ON"
+    else:
+        tag_history_display = "OFF"
+        
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     config_uuid = store.write_entry_config(service_account, fields, included_assets_uris, excluded_assets_uris, template_uuid,\
                                             refresh_mode, refresh_frequency, refresh_unit, \
-                                            tag_history_option, tag_stream_option)
+                                            tag_history_option)
      
     # [END process_entry_config]
     # [START render_template]
@@ -1646,8 +1580,7 @@ def process_entry_config():
         refresh_mode=refresh_mode,
         refresh_frequency=refresh_frequency,
         refresh_unit=refresh_unit,
-        tag_history=tag_history_enabled,
-        tag_stream=tag_stream_enabled)
+        tag_history=tag_history_display)
     # [END render_template]
 
 
@@ -1666,7 +1599,12 @@ def process_glossary_asset_config():
     overwrite = True # set to true as we are creating a new glossary asset config
     action = request.form['action']
     
-    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
+    credentials, success = get_target_credentials(service_account)
+    
+    if success == False:
+        print('Error acquiring credentials from', service_account)
+    
+    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1704,32 +1642,19 @@ def process_glossary_asset_config():
     if excluded_assets_uris == 'None':
         excluded_assets_uris = ''
     
-    tag_history_option = False
-    tag_history_enabled = "OFF"
+    tag_history_option, _ = store.read_tag_history_settings()
     
-    if "tag_history" in request.form:
-        tag_history = request.form.get("tag_history")
-    
-        if tag_history == "selected":
-            tag_history_option = True
-            tag_history_enabled = "ON"
-            
-    tag_stream_option = False
-    tag_stream_enabled = "OFF"
-    
-    if "tag_stream" in request.form:
-        tag_stream = request.form.get("tag_stream")
-    
-        if tag_stream == "selected":
-            tag_stream_option = True
-            tag_stream_enabled = "ON"
+    if tag_history_option == True:
+        tag_history_display = "ON"
+    else:
+        tag_history_display = "OFF"
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
 
     config_uuid = store.write_glossary_asset_config(service_account, fields, mapping_table, included_assets_uris, \
                                                     excluded_assets_uris, template_uuid,\
                                                     refresh_mode, refresh_frequency, refresh_unit, \
-                                                    tag_history_option, tag_stream_option, overwrite)
+                                                    tag_history_option, overwrite)
      
     # [END process_dynamic_tag]
     # [START render_template]
@@ -1748,8 +1673,7 @@ def process_glossary_asset_config():
         refresh_mode=refresh_mode,
         refresh_frequency=refresh_frequency,
         refresh_unit=refresh_unit,
-        tag_history=tag_history_enabled,
-        tag_stream=tag_stream_enabled)
+        tag_history=tag_history_display)
     # [END render_template]
 
 
@@ -1780,7 +1704,12 @@ def process_sensitive_column_config():
     overwrite = True # set to true as we are creating a new sensitive config
     action = request.form['action']
     
-    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
+    credentials, success = get_target_credentials(service_account)
+    
+    if success == False:
+        print('Error acquiring credentials from', service_account)
+    
+    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1818,25 +1747,12 @@ def process_sensitive_column_config():
     if excluded_tables_uris == 'None':
         excluded_tables_uris = ''
     
-    tag_history_option = False
-    tag_history_enabled = "OFF"
+    tag_history_option, _ = store.read_tag_history_settings()
     
-    if "tag_history" in request.form:
-        tag_history = request.form.get("tag_history")
-    
-        if tag_history == "selected":
-            tag_history_option = True
-            tag_history_enabled = "ON"
-            
-    tag_stream_option = False
-    tag_stream_enabled = "OFF"
-    
-    if "tag_stream" in request.form:
-        tag_stream = request.form.get("tag_stream")
-    
-        if tag_stream == "selected":
-            tag_stream_option = True
-            tag_stream_enabled = "ON"
+    if tag_history_option == True:
+        tag_history_display = "ON"
+    else:
+        tag_history_display = "OFF"
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
 
@@ -1844,7 +1760,7 @@ def process_sensitive_column_config():
                                                       infotype_classification_table, included_tables_uris, excluded_tables_uris, \
                                                       create_policy_tags, taxonomy_id, template_uuid, \
                                                       refresh_mode, refresh_frequency, refresh_unit, \
-                                                      tag_history_option, tag_stream_option, overwrite)
+                                                      tag_history_option, overwrite)
      
     # [END process_sensitive_column_config]
     # [START render_template]
@@ -1867,8 +1783,7 @@ def process_sensitive_column_config():
         refresh_mode=refresh_mode,
         refresh_frequency=refresh_frequency,
         refresh_unit=refresh_unit,
-        tag_history=tag_history_enabled,
-        tag_stream=tag_stream_enabled)
+        tag_history=tag_history_display)
     # [END render_template]
 
 
@@ -1881,7 +1796,12 @@ def process_restore_config():
     service_account = request.form['service_account']
     action = request.form['action']
     
-    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
+    credentials, success = get_target_credentials(service_account)
+    
+    if success == False:
+        print('Error acquiring credentials from', service_account)
+    
+    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1906,35 +1826,19 @@ def process_restore_config():
     
     action = request.form['action']
       
-    tag_history_option = False
-    tag_history_enabled = "OFF"
+    tag_history_option, _ = store.read_tag_history_settings()
     
-    if "tag_history" in request.form:
-        tag_history = request.form.get("tag_history")
-    
-        if tag_history == "selected":
-            tag_history_option = True
-            tag_history_enabled = "ON"
-            
-    tag_stream_option = False
-    tag_stream_enabled = "OFF"
-    
-    if "tag_stream" in request.form:
-        tag_stream = request.form.get("tag_stream")
-    
-        if tag_stream == "selected":
-            tag_stream_option = True
-            tag_stream_enabled = "ON"            
+    if tag_history_option == True:
+        tag_history_display = "ON"
+    else:
+        tag_history_display = "OFF"
         
     source_template_uuid = store.write_tag_template(source_template_id, source_template_project, source_template_region)
     target_template_uuid = store.write_tag_template(target_template_id, target_template_project, target_template_region)
     
-    overwrite = True
-    
     config_uuid = store.write_tag_restore_config(service_account, source_template_uuid, source_template_id, source_template_project, \
                                                  source_template_region, target_template_uuid, target_template_id, target_template_project, \
-                                                 target_template_region, metadata_export_location, tag_history_option, tag_stream_option, overwrite)                                                      
-
+                                                 target_template_region, metadata_export_location, tag_history_option)                                                      
 
     # [END process_restore_config]
     # [START render_template]
@@ -1950,8 +1854,7 @@ def process_restore_config():
         target_template_region=target_template_region,
         service_account = service_account,
         metadata_export_location=metadata_export_location,
-        tag_history=tag_history_enabled,
-        tag_stream=tag_stream_enabled)
+        tag_history=tag_history_display)
     # [END render_template]
 
 
@@ -1966,7 +1869,12 @@ def process_import_config():
     
     action = request.form['action']
     
-    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
+    credentials, success = get_target_credentials(service_account)
+    
+    if success == False:
+        print('Error acquiring credentials from', service_account)
+    
+    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1979,32 +1887,17 @@ def process_import_config():
             service_account=service_account, 
             fields=template)
         
-    tag_history_option = False
-    tag_history_enabled = "OFF"
+    tag_history_option, _ = store.read_tag_history_settings()
     
-    if "tag_history" in request.form:
-        tag_history = request.form.get("tag_history")
-    
-        if tag_history == "selected":
-            tag_history_option = True
-            tag_history_enabled = "ON"
-            
-    tag_stream_option = False
-    tag_stream_enabled = "OFF"
-    
-    if "tag_stream" in request.form:
-        tag_stream = request.form.get("tag_stream")
-    
-        if tag_stream == "selected":
-            tag_stream_option = True
-            tag_stream_enabled = "ON"            
+    if tag_history_option == True:
+        tag_history_display = "ON"
+    else:
+        tag_history_display = "OFF"          
         
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
-  
-    overwrite = True
-    
+          
     config_uuid = store.write_tag_import_config(service_account, template_uuid, template_id, template_project, template_region, \
-                                                metadata_import_location, tag_history_option, tag_stream_option, overwrite)                                                      
+                                                metadata_import_location, tag_history_option)                                                      
 
     # [END process_import_config]
     # [START render_template]
@@ -2017,8 +1910,7 @@ def process_import_config():
         template_region=template_region,
         service_account=service_account,
         metadata_import_location=metadata_import_location,
-        tag_history=tag_history_enabled,
-        tag_stream=tag_stream_enabled)
+        tag_history=tag_history_display)
     # [END render_template]
 
 
@@ -2132,69 +2024,7 @@ def check_template_parameters(request_name, json_request):
 
     return valid_parameters, template_id, template_project, template_region
 
-# used by API and UI whenever the TAG_CREATOR_SA credentials are needed 
-def get_target_credentials(target_service_account):
-    
-    print('*** enter get_target_credentials ***')
-    
-    source_credentials, _ = google.auth.default() 
-
-    target_credentials = impersonated_credentials.Credentials(source_credentials=source_credentials,
-        target_principal=target_service_account,
-        target_scopes=SCOPES,
-        lifetime=1200) # lifetime is in seconds -> 20 minutes should be enough time
-    
-    #print('target_credentials:', target_credentials)
-    
-    return target_credentials
-
-# Used by API and UI methods
-# API passes in an access_token while UI passes in the oauth credentials
-def check_user_credentials(access_token, credentials_dict, service_account):
-    
-    has_permission = False
-    
-    if access_token:
-        credentials = google.oauth2.credentials.Credentials(access_token)
-    
-    if credentials_dict:
-        credentials = dict_to_credentials(credentials_dict)
-                                                                                                            
-    service = discovery.build('iam', 'v1', credentials=credentials)
-
-    # get the GCP project which owns the service account
-    start_index = service_account.index('@') + 1 
-    end_index = service_account.index('.') 
-    service_account_project = service_account[start_index:end_index]
-    resource = 'projects/{}/serviceAccounts/{}'.format(service_account_project, service_account)
-    permissions = ["iam.serviceAccounts.actAs", "iam.serviceAccounts.get"]
-    body={"permissions": permissions}
-
-    request = service.projects().serviceAccounts().testIamPermissions(resource=resource, body=body)
-    response = request.execute()
-    
-    if 'permissions' in response:
-        #print('allowed permissions:', response['permissions'])
-        user_permissions = response['permissions']
-        if "iam.serviceAccounts.actAs" in user_permissions and "iam.serviceAccounts.get" in user_permissions:
-            has_permission = True
-          
-    return has_permission
- 
- 
-# get the service account intended to process the request 
-def get_requested_service_account(json): 
-    
-    if isinstance(json, dict) and 'service_account' in json:
-        service_account = json['service_account']
-    elif isinstance(json, dict) and 'config_uuid' in json and 'config_type' in json:
-        service_account = store.lookup_service_account(json['config_type'], json['config_uuid'])
-    else:
-        service_account = TAG_CREATOR_SA
-    
-    return service_account
-    
-    
+      
 def check_config_type(requested_ct):
     
     print('*** enter check_config_type ***')
@@ -2216,41 +2046,6 @@ def get_available_config_types():
             
     return config_types[0:-2]
 
-
-def do_authentication(json, headers):
-    
-    print('** enter do_authentication **')
-    print('json:', json)
-    print('headers:', headers)
-    
-    service_account = get_requested_service_account(json)
-    
-    print('service_account:', service_account)
-    print('ENABLE_AUTH:', ENABLE_AUTH)
-    
-    if ENABLE_AUTH == False:
-        return True, None, service_account
-        
-    oauth_token = headers.get('oauth_token', None)
-
-    if oauth_token == None:
-        response = {
-            "status": "error",
-            "message": "Fatal error: oauth_token field missing from request header.",
-        }
-        return False, response, service_account
-        
-    has_permission  = check_user_credentials(oauth_token, None, service_account)   
-    print('user has permission:', has_permission)
-    
-    if has_permission == False:
-        response = {
-            "status": "error",
-            "message": "Fatal error: User does not have permission to use service account " + service_account,
-        }
-        return False, response, service_account
-       
-    return True, None, service_account
     
 ##################### API METHODS #################
 
@@ -2265,8 +2060,6 @@ Args:
     refresh_mode: AUTO or ON_DEMAND
     refresh_frequency: positive integer
     refresh_unit: minutes or hours
-    tag_history: true if tag history is on, false otherwise 
-    tag_stream: true if tag stream is on, false otherwise
 Returns:
     config_uuid
 """
@@ -2298,7 +2091,13 @@ def create_static_asset_config():
     print('template_region: ' + template_region)
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
-    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
+    
+    credentials, success = get_target_credentials(service_account)
+    
+    if success == False:
+        print('Error acquiring credentials from', service_account)
+    
+    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
     fields = dcc.get_template(included_fields=json['fields'])
     #print('fields:', fields)
     
@@ -2313,24 +2112,19 @@ def create_static_asset_config():
         excluded_assets_uris = json['excluded_assets_uris']
     else:
         excluded_assets_uris = ''
-
-    if 'tag_history' in json:
-        tag_history = json['tag_history']
-    else:
-        tag_history = None
-      
-    if 'tag_stream' in json:  
-        tag_stream = json['tag_stream']
-    else:
-        tag_stream = None
     
     refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
     
-    overwrite = True  
+    if 'overwrite' in json:  
+        overwrite = json['overwrite']
+    else:
+        overwrite = True
+    
+    tag_history_option, _ = store.read_tag_history_settings()     
     config_uuid = store.write_static_asset_config(service_account, fields, included_assets_uris, \
                                                   excluded_assets_uris, template_uuid,\
                                                   refresh_mode, refresh_frequency, refresh_unit, \
-                                                  tag_history, tag_stream, overwrite)
+                                                  tag_history_option, overwrite)
 
     return jsonify(config_uuid=config_uuid, config_type='STATIC_TAG_ASSET')
 
@@ -2346,8 +2140,6 @@ Args:
     refresh_mode: AUTO or ON_DEMAND
     refresh_frequency: positive integer
     refresh_unit: minutes or hours
-    tag_history: true if tag history is on, false otherwise 
-    tag_stream: true if tag stream is on, false otherwise
 Returns:
     config_uuid 
 """
@@ -2376,9 +2168,16 @@ def create_dynamic_table_config():
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
-    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
+    credentials, success = get_target_credentials(service_account)
+    
+    if success == False:
+        print('Error acquiring credentials from', service_account)
+    
+    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
     included_fields = json['fields']
+    
     fields = dcc.get_template(included_fields=included_fields)
+    print('field:', fields)
     
     if 'included_tables_uris' in json:
         included_tables_uris = json['included_tables_uris']
@@ -2394,19 +2193,10 @@ def create_dynamic_table_config():
     
     refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
     
-    if 'tag_history' in json:
-        tag_history = json['tag_history']
-    else:
-        tag_history = None
-      
-    if 'tag_stream' in json:  
-        tag_stream = json['tag_stream']
-    else:
-        tag_stream = None
-    
+    tag_history_option, _ = store.read_tag_history_settings()
     config_uuid = store.write_dynamic_table_config(service_account, fields, included_tables_uris, excluded_tables_uris, \
                                                    template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
-                                                   tag_history, tag_stream)                                                      
+                                                   tag_history_option)                                                      
 
 
     return jsonify(config_uuid=config_uuid, config_type='DYNAMIC_TAG_TABLE')
@@ -2423,8 +2213,6 @@ Args:
     refresh_mode: AUTO or ON_DEMAND
     refresh_frequency: positive integer
     refresh_unit: minutes or hours
-    tag_history: true if tag history is on, false otherwise 
-    tag_stream: true if tag stream is on, false otherwise
 Returns:
     job_uuid 
 """
@@ -2453,7 +2241,12 @@ def create_dynamic_column_config():
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
-    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
+    credentials, success = get_target_credentials(service_account)
+    
+    if success == False:
+        print('Error acquiring credentials from', service_account)
+    
+    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
     included_fields = json['fields']
     fields = dcc.get_template(included_fields=included_fields)
 
@@ -2478,19 +2271,10 @@ def create_dynamic_column_config():
     
     refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
     
-    if 'tag_history' in json:
-        tag_history = json['tag_history']
-    else:
-        tag_history = None
-      
-    if 'tag_stream' in json:  
-        tag_stream = json['tag_stream']
-    else:
-        tag_stream = None
-    
+    tag_history_option, _ = store.read_tag_history_settings()
     config_uuid = store.write_dynamic_column_config(service_account, fields, included_columns_query, included_tables_uris, \
                                                     excluded_tables_uris, template_uuid, refresh_mode, refresh_frequency, \
-                                                    refresh_unit, tag_history, tag_stream)                                                      
+                                                    refresh_unit, tag_history_option)                                                      
 
 
     return jsonify(config_uuid=config_uuid, config_type='DYNAMIC_TAG_COLUMN')
@@ -2507,8 +2291,6 @@ Args:
     refresh_mode: AUTO or ON_DEMAND
     refresh_frequency: positive integer
     refresh_unit: minutes or hours
-    tag_history: true if tag history is on, false otherwise 
-    tag_stream: true if tag stream is on, false otherwise
 Returns:
     config_uuid 
 """
@@ -2537,7 +2319,12 @@ def create_entry_config():
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
-    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
+    credentials, success = get_target_credentials(service_account)
+    
+    if success == False:
+        print('Error acquiring credentials from', service_account)
+        
+    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
     fields = dcc.get_template(included_fields=json['fields'])
 
     if 'included_assets_uris' in json:
@@ -2554,19 +2341,11 @@ def create_entry_config():
     
     refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
     
-    if 'tag_history' in json:
-        tag_history = json['tag_history']
-    else:
-        tag_history = None
-      
-    if 'tag_stream' in json:  
-        tag_stream = json['tag_stream']
-    else:
-        tag_stream = None
+    tag_history_option, _ = store.read_tag_history_settings()
     
     config_uuid = store.write_entry_config(service_account, fields, included_assets_uris, excluded_assets_uris,\
                                             template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
-                                            tag_history, tag_stream)                                                      
+                                            tag_history_option)                                                      
 
     return jsonify(config_uuid=config_uuid, config_type='ENTRY_CREATE')
 
@@ -2583,8 +2362,6 @@ Args:
     refresh_mode: AUTO or ON_DEMAND
     refresh_frequency: positive integer
     refresh_unit: minutes or hours
-    tag_history: true if tag history is on, false otherwise 
-    tag_stream: true if tag stream is on, false otherwise
 Returns:
     config_uuid 
 """
@@ -2609,7 +2386,12 @@ def create_glossary_asset_config():
      
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
-    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
+    credentials, success = get_target_credentials(service_account)
+    
+    if success == False:
+        print('Error acquiring credentials from', service_account)
+        
+    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
     fields = dcc.get_template(included_fields=json['fields'])
     
     # validate mapping_table field
@@ -2634,21 +2416,16 @@ def create_glossary_asset_config():
     
     refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
     
-    if 'tag_history' in json:
-        tag_history = json['tag_history']
+    if 'overwrite' in json:  
+        overwrite = json['overwrite']
     else:
-        tag_history = None
-      
-    if 'tag_stream' in json:  
-        tag_stream = json['tag_stream']
-    else:
-        tag_stream = None
-
-    overwrite = True
-    
+        overwrite = True
+     
+    tag_history_option, _ = store.read_tag_history_settings()
+        
     config_uuid = store.write_glossary_asset_config(service_account, fields, mapping_table, included_assets_uris, \
                                                     excluded_assets_uris, template_uuid, refresh_mode, refresh_frequency, \
-                                                    refresh_unit, tag_history, tag_stream, overwrite)                                                      
+                                                    refresh_unit, tag_history_option, overwrite)                                                      
     
     return jsonify(config_uuid=config_uuid, config_type='GLOSSARY_TAG_ASSET')
 
@@ -2669,8 +2446,6 @@ Args:
     refresh_mode: AUTO or ON_DEMAND
     refresh_frequency: positive integer
     refresh_unit: minutes or hours
-    tag_history: true if tag history is on, false otherwise 
-    tag_stream: true if tag stream is on, false otherwise
 Returns:
     config_uuid 
 """
@@ -2699,7 +2474,12 @@ def create_sensitive_column_config():
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
-    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
+    credentials, success = get_target_credentials(service_account)
+    
+    if success == False:
+        print('Error acquiring credentials from', service_account)
+    
+    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
     fields = dcc.get_template(included_fields=json['fields'])
 
     # validate dlp_dataset parameter
@@ -2756,23 +2536,18 @@ def create_sensitive_column_config():
         
     refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
             
-    if 'tag_history' in json:
-        tag_history = json['tag_history']
+    tag_history_option, _ = store.read_tag_history_settings()
+  
+    if 'overwrite' in json:  
+        overwrite = json['overwrite']
     else:
-        tag_history = None
-      
-    if 'tag_stream' in json:  
-        tag_stream = json['tag_stream']
-    else:
-        tag_stream = None
-
-    overwrite = True
-    
+        overwrite = True
+        
     config_uuid = store.write_sensitive_column_config(service_account, fields, dlp_dataset, infotype_selection_table,\
                                                       infotype_classification_table, included_tables_uris, \
                                                       excluded_tables_uris, create_policy_tags, \
                                                       taxonomy_id, template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
-                                                      tag_history, tag_stream, overwrite)                                                      
+                                                      tag_history_option, overwrite)                                                      
     
     return jsonify(config_uuid=config_uuid, config_type='SENSITIVE_TAG_COLUMN')
 
@@ -2786,8 +2561,6 @@ Args:
     target_template_project: The source tag template's project id 
     target_template_region: The source tag template's region
     metadata_export_location: The path to the export files on GCS (Cloud Storage)
-    tag_history: true if tag history is on, false otherwise 
-    tag_stream: true if tag stream is on, false otherwise
 Returns:
     config_uuid 
 """
@@ -2853,23 +2626,18 @@ def create_restore_config():
     source_template_uuid = store.write_tag_template(source_template_id, source_template_project, source_template_region)
     target_template_uuid = store.write_tag_template(target_template_id, target_template_project, target_template_region)
     
-    if 'tag_history' in json:
-        tag_history = json['tag_history']
-    else:
-        tag_history = None
-      
-    if 'tag_stream' in json:  
-        tag_stream = json['tag_stream']
-    else:
-        tag_stream = None
+    tag_history_option, _ = store.read_tag_history_settings()
 
-    overwrite = True
-    
+    if 'overwrite' in json:  
+        overwrite = json['overwrite']
+    else:
+        overwrite = True
+        
     config_uuid = store.write_tag_restore_config(service_account, source_template_uuid, source_template_id, \
                                                 source_template_project, source_template_region, \
                                                 target_template_uuid, target_template_id, \
                                                 target_template_project, target_template_region, \
-                                                metadata_export_location, tag_history, tag_stream, overwrite)                                                      
+                                                metadata_export_location, tag_history_option, overwrite)                                                      
     
     return jsonify(config_uuid=config_uuid, config_type='TAG_RESTORE')
 
@@ -2908,20 +2676,15 @@ def create_import_config():
         
     metadata_import_location = json['metadata_import_location']
            
-    if 'tag_history' in json:
-        tag_history = json['tag_history']
+    if 'overwrite' in json:  
+        overwrite = json['overwrite']
     else:
-        tag_history = None
-      
-    if 'tag_stream' in json:  
-        tag_stream = json['tag_stream']
-    else:
-        tag_stream = None
+        overwrite = True
+        
+    tag_history_option, _ = store.read_tag_history_settings()
 
-    overwrite = True
-    
     config_uuid = store.write_tag_import_config(service_account, template_uuid, template_id, template_project, template_region, \
-                                                metadata_import_location, tag_history, tag_stream, overwrite)                                                      
+                                                metadata_import_location, tag_history_option, overwrite)                                                      
     
     return jsonify(config_uuid=config_uuid, config_type='TAG_IMPORT')
 
@@ -3084,7 +2847,12 @@ def copy_tags():
      }
          return jsonify(response), 400
 
-    dcc = controller.DataCatalogController(get_target_credentials(service_account))
+    credentials, success = get_target_credentials(service_account)
+    
+    if success == False:
+        print('Error acquiring credentials from', service_account)
+    
+    dcc = controller.DataCatalogController(credentials)
     success = dcc.copy_tags(source_project, source_dataset, source_table, target_project, target_dataset, target_table)                                                      
     
     if success:
@@ -3133,7 +2901,12 @@ def update_tag_subset():
      }
          return jsonify(response), 400
 
-    dcc = controller.DataCatalogController(get_target_credentials(service_account), template_id, template_project, template_region)
+    credentials, success = get_target_credentials(service_account)
+    
+    if success == False:
+        print('Error acquiring credentials from', service_account)
+        
+    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
     success = dcc.update_tag_subset(template_id, template_project, template_region, entry_name, changed_fields)
 
     if success:
@@ -3300,64 +3073,6 @@ def scheduled_auto_updates():
         resp = jsonify(success=False, message='failed scheduled_auto_updates ' + str(e))
     
     return resp
-
-
-"""
-Method called to configure tag history settings
-Args:
-    bigquery_region = The BigQuery region
-    bigquery_project = The BigQuery project id
-    bigquery_dataset = The BigQuery dataset
-    enabled = one of True or False
-Returns:
-    True if the request succeeded, False otherwise
-""" 
-@app.route("/configure_tag_history", methods=['POST'])
-def configure_tag_history(): 
-    
-    json = request.get_json(force=True)
-    print(json)
-    
-    status, response, _ = do_authentication(json, request.headers)
-    
-    if status == False:
-        return jsonify(response), 400
-    
-    if 'bigquery_region' in json:
-        bigquery_region = json['bigquery_region']
-    else:
-        print("The configure_tag_history request is missing the required parameter bigquery_region. Please add this parameter to the json object.")
-        resp = jsonify(success=False)
-        return resp
-    
-    if 'bigquery_project' in json:
-        bigquery_project = json['bigquery_project']
-    else:
-        print("The configure_tag_history request is missing the required parameter bigquery_project. Please add this parameter to the json object.")
-        resp = jsonify(success=False)
-        return resp
-        
-    if 'bigquery_dataset' in json:
-        bigquery_dataset = json['bigquery_dataset']
-    else:
-        print("The configure_tag_history request is missing the required parameter bigquery_dataset. Please add this parameter to the json object.")
-        resp = jsonify(success=False)
-        return resp
-    
-    if 'enabled' in json:
-        enabled = json['enabled']
-    else:
-        print("set_tag_history request is missing the required parameter enabled. Please add this parameter to the json object.")
-        resp = jsonify(success=False)
-        return resp
-        
-    status = store.write_tag_history_settings(enabled, bigquery_project, bigquery_region, bigquery_dataset)
-    print('status: ', status)
-    
-    if status == False:
-        return jsonify(success=False, message="Error occurred while writing to Firestore.")
-    else:
-        return jsonify(success=True)
 
 
 """
@@ -3555,8 +3270,17 @@ def _split_work():
     if config == {}:
        resp = jsonify(success=False)
        return resp 
+    
+    # get the credentials for the SA that is associated with this config
+    credentials, success = get_target_credentials(config.get('service_account'))
+    
+    if success == False:
+        print('Error acquiring credentials from', config.get('service_account'))
+        update_job_status(self, config_uuid, config_type, 'ERROR')
+        resp = jsonify(success=False)
+        return resp
        
-    re = res.Resources(get_target_credentials(config.get('service_account'))) 
+    re = res.Resources(credentials) 
     
     # dynamic table and dynamic column and sensitive column configs
     if 'included_tables_uris' in config:
@@ -3581,7 +3305,7 @@ def _split_work():
     # export tag config
     if config_type == 'TAG_EXPORT':
         
-        bqu = bq.BigQueryUtils(get_target_credentials(config.get('service_account')), config['target_region'])
+        bqu = bq.BigQueryUtils(credentials, config['target_region'])
         
         # create report tables if they don't exist
         tables_created = bqu.create_report_tables(config['target_project'], config['target_dataset'])
@@ -3603,17 +3327,29 @@ def _split_work():
         jm.update_job_running(job_uuid) 
         tm.create_config_uuid_tasks(service_account, job_uuid, config_uuid, config_type, uris)
     
-    # import or restore tag configs
+    # import or restore tag config
     if config_type == 'TAG_IMPORT' or config_type == 'TAG_RESTORE':
                     
         if config_type == 'TAG_IMPORT':
             csv_files = list(re.get_resources(config.get('metadata_import_location'), None))
-            #print('csv_files: ', csv_files)
-        
+            print('csv_files: ', csv_files)
+            
+            if len(csv_files) == 0:
+                print('Error: unable to read CSV from', config.get('metadata_import_location')) 
+                store.update_job_status(config_uuid, config_type, 'ERROR')
+                resp = jsonify(success=False)
+                return resp
+            
             extracted_tags = []
         
             for csv_file in csv_files:
-                extracted_tags.extend(cp.CsvParser.extract_tags(get_target_credentials(config.get('service_account')), csv_file))
+                extracted_tags.extend(cp.CsvParser.extract_tags(credentials, csv_file))
+                
+            if len(extracted_tags) == 0:
+                print('Error: unable to extract tags from CSV. Please verify the format of the CSV.') 
+                store.update_job_status(config_uuid, config_type, 'ERROR')
+                resp = jsonify(success=False)
+                return resp
     
         if config_type == 'TAG_RESTORE':
             bkp_files = list(re.get_resources(config.get('metadata_export_location'), None))
@@ -3622,7 +3358,7 @@ def _split_work():
             extracted_tags = []
         
             for bkp_file in bkp_files:
-                extracted_tags.append(bfp.BackupFileParser.extract_tags(get_target_credentials(config.get('service_account')), \
+                extracted_tags.append(bfp.BackupFileParser.extract_tags(credentials, \
                                                                         config.get('source_template_id'), \
                                                                         config.get('source_template_project'), \
                                                                         bkp_file))
@@ -3678,7 +3414,10 @@ def _run_task():
     config = store.read_config(service_account, config_uuid, config_type)
     print('config: ', config)
     
-    credentials = get_target_credentials(config.get('service_account'))
+    credentials, success = get_target_credentials(config.get('service_account'))
+    
+    if success == False:
+        print('Error acquiring credentials from', service_account)   
        
     if config_type == 'TAG_EXPORT':
         dcc = controller.DataCatalogController(credentials)
@@ -3727,39 +3466,35 @@ def _run_task():
     
     if config_type == 'DYNAMIC_TAG_TABLE':
         creation_status = dcc.apply_dynamic_table_config(config['fields'], uri, config['config_uuid'], \
-                                                         config['template_uuid'], config['tag_history'], \
-                                                         config['tag_stream'])                                               
+                                                         config['template_uuid'], config['tag_history'])                                               
     if config_type == 'DYNAMIC_TAG_COLUMN':
         creation_status = dcc.apply_dynamic_column_config(config['fields'], config['included_columns_query'], uri, config['config_uuid'], \
-                                                          config['template_uuid'], config['tag_history'], \
-                                                          config['tag_stream'])
+                                                          config['template_uuid'], config['tag_history'])
     if config_type == 'STATIC_TAG_ASSET':
         creation_status = dcc.apply_static_asset_config(config['fields'], uri, config['config_uuid'], \
                                                         config['template_uuid'], config['tag_history'], \
-                                                        config['tag_stream'], config['overwrite'])                                                   
+                                                        config['overwrite'])                                                   
     if config_type == 'ENTRY_CREATE':
         creation_status = dcc.apply_entry_config(config['fields'], uri, config['config_uuid'], \
-                                                 config['template_uuid'], config['tag_history'], \
-                                                 config['tag_stream']) 
+                                                 config['template_uuid'], config['tag_history']) 
     if config_type == 'GLOSSARY_TAG_ASSET':
         creation_status = dcc.apply_glossary_asset_config(config['fields'], config['mapping_table'], uri, config['config_uuid'], \
-                                                    config['template_uuid'], config['tag_history'], \
-                                                    config['tag_stream'], config['overwrite'])
+                                                    config['template_uuid'], config['tag_history'], config['overwrite'])
     if config_type == 'SENSITIVE_TAG_COLUMN':
         creation_status = dcc.apply_sensitive_column_config(config['fields'], config['dlp_dataset'], config['infotype_selection_table'], \
                                                             config['infotype_classification_table'], uri, config['create_policy_tags'], \
                                                             config['taxonomy_id'], config['config_uuid'], \
                                                             config['template_uuid'], config['tag_history'], \
-                                                            config['tag_stream'], config['overwrite'])
+                                                            config['overwrite'])
     if config_type == 'TAG_EXPORT':
         creation_status = dcc.apply_export_config(config['config_uuid'], config['target_project'], config['target_dataset'], config['target_region'], uri)
     
     if config_type == 'TAG_IMPORT':
         creation_status = dcc.apply_import_config(config['config_uuid'], tag_extract, \
-                                                  config['tag_history'], config['tag_stream'], config['overwrite'])
+                                                  config['tag_history'], config['overwrite'])
     if config_type == 'TAG_RESTORE':
         creation_status = dcc.apply_restore_config(config['config_uuid'], tag_extract, \
-                                                   config['tag_history'], config['tag_stream'], config['overwrite'])
+                                                   config['tag_history'], config['overwrite'])
                                               
     if creation_status == constants.SUCCESS:
         tm.update_task_status(shard_uuid, task_uuid, 'SUCCESS')
@@ -3776,7 +3511,6 @@ def _run_task():
         if tasks_failed > 0:
             store.update_job_status(config_uuid, config_type, 'ERROR')
             store.update_scheduling_status(config_uuid, config_type, 'READY')
-            store.update_overwrite_flag(config_uuid, config_type)
             resp = jsonify(success=True)
         else:
             store.update_job_status(config_uuid, config_type, 'SUCCESS')
@@ -3792,7 +3526,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 2.1.3\n"
+    return "Welcome to Tag Engine version 2.1.4\n"
     
 ####################### TEST METHOD ####################################  
     

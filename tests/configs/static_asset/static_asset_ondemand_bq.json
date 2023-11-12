@@ -38,7 +38,5 @@
     ],
     "included_assets_uris": "bigquery/project/tag-engine-run/dataset/GCP_Mockup/*",
     "excluded_assets_uris": "",
-    "refresh_mode": "ON_DEMAND",
-    "tag_history": true,
-    "tag_stream": false   
+    "refresh_unit": "ON_DEMAND"  
 }

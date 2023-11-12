@@ -40,7 +40,5 @@
     "excluded_assets_uris": "",
     "refresh_mode": "AUTO",
     "refresh_frequency": 24,
-    "refresh_unit": "hours",
-    "tag_history": true,
-    "tag_stream": false   
+    "refresh_unit": "hours"   
 }

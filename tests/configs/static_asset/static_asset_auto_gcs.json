@@ -40,7 +40,5 @@
     "excluded_assets_uris": "gs://discovery-area/cities_311/austin_311_service_requests.parquet",
     "refresh_mode": "AUTO",
     "refresh_frequency": 60,
-    "refresh_unit": "minutes",
-    "tag_history": true,
-    "tag_stream": false   
+    "refresh_unit": "minutes"   
 }

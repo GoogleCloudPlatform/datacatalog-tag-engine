@@ -18,7 +18,5 @@
     "taxonomy_id": "projects/tag-engine-run/locations/us-central1/taxonomies/5608646722452187542",
     "refresh_mode": "AUTO",
     "refresh_frequency": 24,
-    "refresh_unit": "hours",
-    "tag_history": true,
-    "tag_stream": false   
+    "refresh_unit": "hours"   
 }

@@ -72,7 +72,5 @@
     ],
 	"mapping_table": "bigquery/project/tag-engine-develop/dataset/enterprise_glossary/mapping",
     "included_assets_uris": "gs://discovery-area/sample_data/*",
-    "refresh_mode": "ON_DEMAND",
-    "tag_history": true,
-    "tag_stream": false   
+    "refresh_unit": "ON_DEMAND"  
 }
