@@ -13,34 +13,36 @@
 	   <h2>Tag History Settings</h2>
 	   </div>
 	   <span style="color:#9d9a9a;">
-		   <h6>&nbsp;&nbsp;Tag History lets you save a copy of your Data Catalog tags in BigQuery. As you create or update tags through Tag Engine, a copy of those tags is written into one or more BigQuery tables. 
+		   <h5>&nbsp;&nbsp;Tag History lets you save a copy of your Data Catalog tags in BigQuery. As you create or update tags through Tag Engine, a copy of those tags is written into one or more BigQuery tables. 
 			   <br>&nbsp;&nbsp;Tag Engine creates one BigQuery table per tag template and writes one record in this table for each tag create or update.			 
 			 <br><br>
-		   </h6>
+		   </h5>
 	   </span> 
  
-		   <table>
 			  {% if enabled %}
+			  <table>
 			   	   <tr><td>&nbsp;Tag History Enabled:</td>
-					    <td>&nbsp;TRUE</td>
+					    <td>&nbsp;True</td>
 		      	   </tr>
+			  {% else %}
+			   <h5>&nbsp;&nbsp;<span style="color:red;">Tag History is currently disabled. To enable it, ask your admin to set it in tagengine.ini.</span></h5> 
+			  <table>
+	   	   		   <tr><td>&nbsp;Tag History Enabled:</td>
+			    	   <td>&nbsp;False</td>
+      	   			</tr>
+			  {% endif %}
 			        <tr>
-			          <td><span style="color:red;">*</span>&nbsp;BigQuery Project Id:</td>
+			          <td>&nbsp;BigQuery Project Id:</td>
 			          <td>&nbsp;{{ bigquery_project }}</td>
 				   </tr>
 			        <tr>
-			          <td><span style="color:red;">*</span>&nbsp;BigQuery Region:</td>
+			          <td>&nbsp;BigQuery Region:</td>
 			          <td>&nbsp;{{ bigquery_region }}</td>
 				   </tr>
 			        <tr>
-			          <td><span style="color:red;">*</span>&nbsp;BigQuery Dataset:</td>
+			          <td>&nbsp;BigQuery Dataset:</td>
 			          <td>&nbsp;{{ bigquery_dataset }}</td>
-				   </tr>
-			   {% else %}
-			   <tr>
-			    <td>&nbsp;<span style="color:red;">Tag History is currently disabled. To enable it, ask your admin to set it in tagengine.ini.</span></td> 
-			  </tr>
-			  {% endif %}
+				   </tr>  
 		    </table>
            
          </form>

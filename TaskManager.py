@@ -45,7 +45,7 @@ class TaskManager:
 
 ##################### API METHODS #################
         
-    def create_config_uuid_tasks(self, service_account, job_uuid, config_uuid, config_type, uris):
+    def create_config_uuid_tasks(self, tag_creator_account, tag_invoker_account, job_uuid, config_uuid, config_type, uris):
         
         print('*** enter create_config_uuid_tasks ***')
         
@@ -76,7 +76,7 @@ class TaskManager:
                 task_id = hashlib.md5(task_id_raw.encode()).hexdigest()
             
                 task_uuid = self._record_config_uuid_task(job_uuid, shard_uuid, task_id, config_uuid, config_type, uri_val)
-                self._create_config_uuid_task(service_account, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, uri_val)
+                self._create_config_uuid_task(tag_creator_account, tag_invoker_account, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, uri_val)
                 
                 task_counter += 1
                 task_running_total += 1
@@ -91,7 +91,7 @@ class TaskManager:
             self._update_shard_tasks(job_uuid, shard_uuid, task_counter)
 
     
-    def create_tag_extract_tasks(self, service_account, job_uuid, config_uuid, config_type, tag_extract_list):
+    def create_tag_extract_tasks(self, tag_creator_account, tag_invoker_account, job_uuid, config_uuid, config_type, tag_extract_list):
         
         print('*** enter create_tag_extract_tasks ***')
         #print('len(tag_extract_list): ', len(tag_extract_list))
@@ -124,7 +124,7 @@ class TaskManager:
                 print('task_id: ', task_id)
 
                 task_uuid = self._record_tag_extract_task(job_uuid, shard_uuid, task_id, config_uuid, config_type, extract_val)
-                self._create_tag_extract_task(service_account, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, extract_val)
+                self._create_tag_extract_task(tag_creator_account, tag_invoker_account, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, extract_val)
                 
                 task_counter += 1
                 task_running_total += 1
@@ -230,14 +230,16 @@ class TaskManager:
         return task_uuid
     
     
-    def _create_config_uuid_task(self, service_account, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, uri):
+    def _create_config_uuid_task(self, tag_creator_account, tag_invoker_account, job_uuid, shard_uuid, task_uuid, task_id, \
+                                 config_uuid, config_type, uri):
         
         print('*** enter _create_config_uuid_task ***')
  
         success = True
         
         payload = {'job_uuid': job_uuid, 'shard_uuid': shard_uuid, 'task_uuid': task_uuid, 'config_uuid': config_uuid, \
-                   'config_type': config_type, 'uri': uri, 'service_account': service_account}
+                   'config_type': config_type, 'uri': uri, 'tag_creator_account': tag_creator_account, \
+                   'tag_invoker_account': tag_invoker_account}
         
         client = tasks_v2.CloudTasksClient()
         parent = client.queue_path(self.tag_engine_project, self.queue_region, self.queue_name)
@@ -265,14 +267,15 @@ class TaskManager:
         return success
                   
         
-    def _create_tag_extract_task(self, service_account, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, extract):
+    def _create_tag_extract_task(self, tag_creator_account, tag_invoker_account, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, extract):
         
         print('*** enter _create_tag_extract_task ***')
  
         success = True
     
         payload = {'job_uuid': job_uuid, 'shard_uuid': shard_uuid, 'task_uuid': task_uuid, 'config_uuid': config_uuid, \
-                   'config_type': config_type, 'tag_extract': extract, 'service_account': service_account}
+                   'config_type': config_type, 'tag_extract': extract, 'tag_creator_account': tag_creator_account, \
+                   'tag_invoker_account': tag_invoker_account}
         
         client = tasks_v2.CloudTasksClient()
         parent = client.queue_path(self.tag_engine_project, self.queue_region, self.queue_name)

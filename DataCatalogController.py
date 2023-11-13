@@ -42,8 +42,11 @@ USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v2'
 
 class DataCatalogController:
     
-    def __init__(self, credentials, template_id=None, template_project=None, template_region=None):
+    def __init__(self, credentials, tag_creator_account=None, tag_invoker_account=None, \
+                 template_id=None, template_project=None, template_region=None):
         self.credentials = credentials
+        self.tag_creator_account = tag_creator_account
+        self.tag_invoker_account = tag_invoker_account
         self.template_id = template_id
         self.template_project = template_project
         self.template_region = template_region
@@ -369,7 +372,7 @@ class DataCatalogController:
         if creation_status == constants.SUCCESS and tag_history:
             bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
             template_fields = self.get_template()
-            bqu.copy_tag(self.template_id, template_fields, uri, None, fields)
+            bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, self.template_id, template_fields, uri, None, fields)
                                          
         return creation_status
 
@@ -508,7 +511,7 @@ class DataCatalogController:
             if creation_status == constants.SUCCESS and tag_history:
                 bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
                 template_fields = self.get_template()
-                bqu.copy_tag(self.template_id, template_fields, uri, column, fields)
+                bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, self.template_id, template_fields, uri, column, fields)
             
         # outer loop ends here                
                                  
@@ -689,7 +692,7 @@ class DataCatalogController:
             if tag_history:
                 bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
                 template_fields = self.get_template()
-                bqu.copy_tag(self.template_id, template_fields, '/'.join(uri), None, fields)
+                bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, self.template_id, template_fields, '/'.join(uri), None, fields)
                                                 
         return creation_status
 
@@ -862,9 +865,9 @@ class DataCatalogController:
             bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
             template_fields = self.get_template()
             if is_gcs:
-                bqu.copy_tag(self.template_id, template_fields, '/'.join(uri), None, fields)
+                bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, self.template_id, template_fields, '/'.join(uri), None, fields)
             if is_bq:
-                bqu.copy_tag(self.template_id, template_fields, uri, None, fields)
+                bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, self.template_id, template_fields, uri, None, fields)
                    
         return creation_status
       
@@ -1143,7 +1146,7 @@ class DataCatalogController:
             if creation_status == constants.SUCCESS and tag_history:
                 bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
                 template_fields = self.get_template()
-                bqu.copy_tag(self.template_id, template_fields, uri, infotype_field, fields)
+                bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, self.template_id, template_fields, uri, infotype_field, fields)
         
                         
         # once we have created the regular tags, we can create/update the policy tags
@@ -1616,7 +1619,7 @@ class DataCatalogController:
         if tag_history:
             bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
             template_fields = self.get_template()
-            success = bqu.copy_tag(self.template_id, template_fields, uri, column_name, fields)
+            success = bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, self.template_id, template_fields, uri, column_name, fields)
             
             if success == False:
                 print('Error occurred while writing to tag history table.')

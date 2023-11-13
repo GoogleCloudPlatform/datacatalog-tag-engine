@@ -23,7 +23,7 @@ class CsvParser:
         gcs_client = storage.Client(credentials=credentials)
         extracted_tags = [] # stores the result set
 
-        # download the CSV file from GCS
+        # download CSV file from GCS
         bucket_name, filename = csv_file
         bucket = gcs_client.get_bucket(bucket_name)
         blob = bucket.get_blob(filename)

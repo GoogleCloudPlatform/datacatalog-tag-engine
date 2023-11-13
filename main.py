@@ -15,7 +15,7 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, json, session
 from flask_session import Session
 
-import datetime, time, configparser, os
+import datetime, time, configparser, os, base64
 import requests
 
 from google.api_core.client_info import ClientInfo
@@ -73,9 +73,20 @@ SCOPES = ['openid', 'https://www.googleapis.com/auth/cloud-platform', 'https://w
 USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v2'
 store = tesh.TagEngineStoreHandler()
 
-ENABLE_TAG_HISTORY = config['DEFAULT']['ENABLE_TAG_HISTORY'].strip()
-TAG_HISTORY_PROJECT = config['DEFAULT']['TAG_HISTORY_PROJECT'].strip()
-TAG_HISTORY_DATASET = config['DEFAULT']['TAG_HISTORY_DATASET'].strip()
+if 'ENABLE_TAG_HISTORY' in config['DEFAULT'] and config['DEFAULT']['ENABLE_TAG_HISTORY'].strip().lower() == 'true':
+    ENABLE_TAG_HISTORY = True
+else:
+    ENABLE_TAG_HISTORY = False
+
+if 'TAG_HISTORY_PROJECT' in config['DEFAULT']:
+    TAG_HISTORY_PROJECT = config['DEFAULT']['TAG_HISTORY_PROJECT'].strip()
+else:
+    TAG_HISTORY_PROJECT = None
+
+if 'TAG_HISTORY_DATASET' in config['DEFAULT']:    
+    TAG_HISTORY_DATASET = config['DEFAULT']['TAG_HISTORY_DATASET'].strip()
+else:
+    TAG_HISTORY_DATASET = None
 
 ##################### CHECK SERVICE_URL #####################
 def check_service_url():
@@ -116,13 +127,13 @@ def configure_tag_history():
         if TAG_HISTORY_DATASET == None:
             print('Error: unable to configure tag history, TAG_HISTORY_DATASET is missing from tagengine.ini')
     
-        status = store.write_tag_history_settings(ENABLE_TAG_HISTORY, TAG_HISTORY_PROJECT, BIGQUERY_REGION, TAG_HISTORY_DATASET)
+    status = store.write_tag_history_settings(ENABLE_TAG_HISTORY, TAG_HISTORY_PROJECT, BIGQUERY_REGION, TAG_HISTORY_DATASET)
 
-        if status:
-            print('Tag History successfully configured.')
-        else:
-            print('Error writing tag history settings to Firestore.')
-
+    if status:
+        print('Tag History is set to', ENABLE_TAG_HISTORY)
+    else:
+        print('Error writing tag history settings to Firestore.')
+        
 configure_tag_history()
 
 ##################### API and UI AUTH METHODS ##################################
@@ -225,6 +236,21 @@ def do_authentication(json, headers):
        
     return True, None, service_account
 
+# get the account (user or service) which invoked the job
+# this account is then passed to the tag history function to record the tag creation / update event
+def get_tag_invoker_account(raw_token):
+
+    token = raw_token.replace("Bearer ", "").replace("bearer ", "").replace(" ","")
+    if '.' in token:
+        token = token.split('.')[1]
+
+    padded_token = token + "="*divmod(len(token),4)[1]
+    raw_decode = base64.b64decode(padded_token) 
+    txt_decode = raw_decode.decode("utf-8")
+    token_obj = json.loads(txt_decode)
+    tag_invoker_account = token_obj['email']
+
+    return tag_invoker_account 
 
 ##################### UI METHODS #################
 
@@ -426,11 +452,9 @@ def tag_history_settings():
         
     enabled, settings = store.read_tag_history_settings()
     
-    if enabled:
-        enabled = settings['enabled']
-        bigquery_project = settings['bigquery_project']
-        bigquery_region = settings['bigquery_region']
-        bigquery_dataset = settings['bigquery_dataset']
+    bigquery_project = settings['bigquery_project']
+    bigquery_region = settings['bigquery_region']
+    bigquery_dataset = settings['bigquery_dataset']
       
     # [END tag_history_settings]
     # [START render_template]
@@ -439,8 +463,7 @@ def tag_history_settings():
         enabled=enabled,
         bigquery_project=bigquery_project,
         bigquery_region=bigquery_region,
-        bigquery_dataset=bigquery_dataset,
-        settings=saved)
+        bigquery_dataset=bigquery_dataset)
     # [END render_template]
 
 @app.route("/set_default_settings", methods=['POST'])
@@ -509,7 +532,7 @@ def coverage_report():
     if 'credentials' not in session:
         return redirect('/')
         
-    summary_report, detailed_report = store.generate_coverage_report()
+    summary_report, detailed_report = store.generate_coverage_report(session['credentials'])
     
     print('summary_report: ' + str(summary_report))
     print('detailed_report: ' + str(detailed_report))
@@ -572,7 +595,7 @@ def search_tag_template():
     if success == False:
         print('Error acquiring credentials from', service_account)
      
-    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     fields = dcc.get_template()
     
     if len(fields) == 0:
@@ -613,7 +636,7 @@ def view_remaining_configs(service_account, template_id, template_project, templ
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template_fields = dcc.get_template()
     
     configs = store.read_configs(service_account, 'ALL', template_id, template_project, template_region)
@@ -669,7 +692,7 @@ def view_config_options():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template_fields = dcc.get_template()
     
     history_enabled, _ = store.read_tag_history_settings()
@@ -1026,7 +1049,7 @@ def choose_config_action():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template_fields = dcc.get_template()
     print('template_fields:', template_fields)
     
@@ -1215,7 +1238,7 @@ def process_static_asset_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
 
-    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1325,7 +1348,7 @@ def process_dynamic_table_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1416,7 +1439,7 @@ def process_dynamic_column_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1514,7 +1537,7 @@ def process_entry_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1604,7 +1627,7 @@ def process_glossary_asset_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1709,7 +1732,7 @@ def process_sensitive_column_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1801,7 +1824,7 @@ def process_restore_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1874,7 +1897,7 @@ def process_import_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -2097,7 +2120,7 @@ def create_static_asset_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     fields = dcc.get_template(included_fields=json['fields'])
     #print('fields:', fields)
     
@@ -2173,7 +2196,7 @@ def create_dynamic_table_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     included_fields = json['fields']
     
     fields = dcc.get_template(included_fields=included_fields)
@@ -2246,7 +2269,7 @@ def create_dynamic_column_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     included_fields = json['fields']
     fields = dcc.get_template(included_fields=included_fields)
 
@@ -2324,7 +2347,7 @@ def create_entry_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
         
-    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     fields = dcc.get_template(included_fields=json['fields'])
 
     if 'included_assets_uris' in json:
@@ -2391,7 +2414,7 @@ def create_glossary_asset_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
         
-    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     fields = dcc.get_template(included_fields=json['fields'])
     
     # validate mapping_table field
@@ -2479,7 +2502,7 @@ def create_sensitive_column_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     fields = dcc.get_template(included_fields=json['fields'])
 
     # validate dlp_dataset parameter
@@ -2906,7 +2929,7 @@ def update_tag_subset():
     if success == False:
         print('Error acquiring credentials from', service_account)
         
-    dcc = controller.DataCatalogController(credentials, template_id, template_project, template_region)
+    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     success = dcc.update_tag_subset(template_id, template_project, template_region, entry_name, changed_fields)
 
     if success:
@@ -2916,7 +2939,7 @@ def update_tag_subset():
     
     return jsonify(response)
 
-
+    
 """
 Args:
     config_type = on of (STATIC_TAG_ASSET, DYNAMIC_TAG_TABLE, DYNAMIC_TAG_COLUMN, etc.) 
@@ -2927,12 +2950,17 @@ Returns:
 @app.route("/trigger_job", methods=['POST'])
 def trigger_job(): 
     
+    print('enter trigger_job')
     json = request.get_json(force=True)
-    
-    status, response, service_account = do_authentication(json, request.headers)
+
+    status, response, tag_creator_account = do_authentication(json, request.headers)
+    print('status:', status, ', response:', response, ', tag_creator_account:', tag_creator_account)
     
     if status == False:
         return jsonify(response), 400
+    
+    tag_invoker_account = get_tag_invoker_account(request.headers.get('Authorization'))
+    print('tag_invoker_account:', tag_invoker_account)
     
     if 'config_type' in json:
         config_type = json['config_type']
@@ -2985,7 +3013,7 @@ def trigger_job():
         resp = jsonify(success=False)
         return resp
     
-    job_uuid = jm.create_job(service_account, config_uuid, json['config_type'])
+    job_uuid = jm.create_job(tag_creator_account, tag_invoker_account, config_uuid, json['config_type'])
     
     return jsonify(job_uuid=job_uuid)
 
@@ -3261,9 +3289,10 @@ def _split_work():
     job_uuid = json['job_uuid']
     config_uuid = json['config_uuid']
     config_type = json['config_type']
-    service_account = json['service_account']
+    tag_creator_account = json['tag_creator_account']
+    tag_invoker_account = json['tag_invoker_account']
 
-    config = store.read_config(service_account, config_uuid, config_type)
+    config = store.read_config(tag_creator_account, config_uuid, config_type)
     
     print('config: ', config)
     
@@ -3272,10 +3301,10 @@ def _split_work():
        return resp 
     
     # get the credentials for the SA that is associated with this config
-    credentials, success = get_target_credentials(config.get('service_account'))
+    credentials, success = get_target_credentials(tag_creator_account)
     
     if success == False:
-        print('Error acquiring credentials from', config.get('service_account'))
+        print('Error acquiring credentials from', tag_creator_account)
         update_job_status(self, config_uuid, config_type, 'ERROR')
         resp = jsonify(success=False)
         return resp
@@ -3290,7 +3319,7 @@ def _split_work():
         
         jm.record_num_tasks(job_uuid, len(uris))
         jm.update_job_running(job_uuid) 
-        tm.create_config_uuid_tasks(service_account, job_uuid, config_uuid, config_type, uris)
+        tm.create_config_uuid_tasks(tag_creator_account, tag_invoker_account, job_uuid, config_uuid, config_type, uris)
     
     # static asset config and glossary asset config    
     if 'included_assets_uris' in config:
@@ -3300,7 +3329,7 @@ def _split_work():
         
         jm.record_num_tasks(job_uuid, len(uris))
         jm.update_job_running(job_uuid) 
-        tm.create_config_uuid_tasks(service_account, job_uuid, config_uuid, config_type, uris)
+        tm.create_config_uuid_tasks(tag_creator_account, tag_invoker_account, job_uuid, config_uuid, config_type, uris)
     
     # export tag config
     if config_type == 'TAG_EXPORT':
@@ -3325,17 +3354,24 @@ def _split_work():
         
         jm.record_num_tasks(job_uuid, len(uris))
         jm.update_job_running(job_uuid) 
-        tm.create_config_uuid_tasks(service_account, job_uuid, config_uuid, config_type, uris)
+        tm.create_config_uuid_tasks(tag_creator_account, tag_invoker_account, job_uuid, config_uuid, config_type, uris)
     
     # import or restore tag config
     if config_type == 'TAG_IMPORT' or config_type == 'TAG_RESTORE':
                     
         if config_type == 'TAG_IMPORT':
-            csv_files = list(re.get_resources(config.get('metadata_import_location'), None))
-            print('csv_files: ', csv_files)
+            
+            try:
+                csv_files = list(re.get_resources(config.get('metadata_import_location'), None))
+                print('csv_files: ', csv_files)
+            except Exception as e:
+                print('Error: unable to read CSV from', config.get('metadata_import_location'), e)
+                store.update_job_status(config_uuid, config_type, 'ERROR')
+                resp = jsonify(success=False)
+                return resp
             
             if len(csv_files) == 0:
-                print('Error: unable to read CSV from', config.get('metadata_import_location')) 
+                print('Error: unable to read CSV from', config.get('metadata_import_location'), e) 
                 store.update_job_status(config_uuid, config_type, 'ERROR')
                 resp = jsonify(success=False)
                 return resp
@@ -3370,7 +3406,7 @@ def _split_work():
         
         jm.record_num_tasks(job_uuid, len(extracted_tags))
         jm.update_job_running(job_uuid) 
-        tm.create_tag_extract_tasks(service_account, job_uuid, config_uuid, config_type, extracted_tags)
+        tm.create_tag_extract_tasks(tag_creator_account, tag_invoker_account, job_uuid, config_uuid, config_type, extracted_tags)
     
 
     # update the status of the config, no matter which config type is running
@@ -3393,7 +3429,8 @@ def _run_task():
     config_type = json['config_type']
     shard_uuid = json['shard_uuid']
     task_uuid = json['task_uuid']
-    service_account = json['service_account']
+    tag_creator_account = json['tag_creator_account']
+    tag_invoker_account = json['tag_invoker_account']
     
     if 'uri' in json:
         uri = json['uri']
@@ -3408,17 +3445,18 @@ def _run_task():
         tag_extract = None
         
     
-    tm.update_task_status(shard_uuid, task_uuid, 'RUNNING')
-    
-    # retrieve the config 
-    config = store.read_config(service_account, config_uuid, config_type)
-    print('config: ', config)
-    
-    credentials, success = get_target_credentials(config.get('service_account'))
+    credentials, success = get_target_credentials(tag_creator_account)
     
     if success == False:
-        print('Error acquiring credentials from', service_account)   
-       
+        print('Error acquiring credentials from', tag_creator_account)
+        tm.update_task_status(shard_uuid, task_uuid, 'ERROR')   
+    
+    # retrieve the config 
+    tm.update_task_status(shard_uuid, task_uuid, 'RUNNING')
+    
+    config = store.read_config(tag_creator_account, config_uuid, config_type)
+    print('config: ', config)
+           
     if config_type == 'TAG_EXPORT':
         dcc = controller.DataCatalogController(credentials)
     
@@ -3431,8 +3469,8 @@ def _run_task():
             }
             return jsonify(response), 400
         
-        dcc = controller.DataCatalogController(credentials, config['template_id'], \
-                                               config['template_project'], config['template_region'])
+        dcc = controller.DataCatalogController(credentials, tag_creator_account, tag_invoker_account, \
+                                               config['template_id'], config['template_project'], config['template_region'])
     
     elif config_type == 'TAG_RESTORE':
         
@@ -3449,8 +3487,9 @@ def _run_task():
             }
             return jsonify(response), 400
         
-        dcc = controller.DataCatalogController(credentials, config['target_template_id'], \
-                                                config['target_template_project'], config['target_template_region'])
+        dcc = controller.DataCatalogController(credentials, tag_creator_account, tag_invoker_account, \
+                                                config['target_template_id'], config['target_template_project'], 
+                                                config['target_template_region'])
     else:
         if 'template_uuid' not in config:
             response = {
@@ -3460,8 +3499,9 @@ def _run_task():
             return jsonify(response), 400
             
         template_config = store.read_tag_template_config(config['template_uuid'])
-        dcc = controller.DataCatalogController(credentials, template_config['template_id'], \
-                                                template_config['template_project'], template_config['template_region'])
+        dcc = controller.DataCatalogController(credentials, tag_creator_account, tag_invoker_account, \
+                                               template_config['template_id'], template_config['template_project'], \
+                                               template_config['template_region'])
             
     
     if config_type == 'DYNAMIC_TAG_TABLE':
@@ -3526,7 +3566,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 2.1.4\n"
+    return "Welcome to Tag Engine version 2.1.5\n"
     
 ####################### TEST METHOD ####################################  
     

@@ -49,13 +49,13 @@ variable "tag_creator_sa" {
 variable "injector_queue" {
      type = string
 	 description = "name of the task queue used for tracking job requests. Make sure that it matches the same variable in tagengine.ini"
-	 default = "te-injector-task-queue"
+	 default = "tag-engine-injector-queue"
 }
 
 variable "work_queue" {
      type = string
 	 description = "name of the task queue used for tracking individual work items. Make sure that it matches the same variable in tagengine.ini"
-	 default = "te-work-task-queue"
+	 default = "tag-engine-work-queue"
 }
 
 variable "csv_bucket" {

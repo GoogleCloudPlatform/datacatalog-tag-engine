@@ -339,7 +339,9 @@ if __name__ == '__main__':
     
     credentials, _ = google.auth.default()
     res = Resources(credentials)
-    uris = res.get_resources('bigquery/project/tag-engine-run/dataset/GCP_Mockup/*', None)
+    #uris = res.get_resources('bigquery/project/tag-engine-run/dataset/GCP_Mockup/*', None)
+    #uris = res.get_resources('gs://csv-meta-tags/sakila/sakila_column_tags.csv', None)
+    uris = res.get_resources('gs://csv-meta-tags/sakila/*', None)
     #uris = get_resources_by_project(['record-manager-service'])
     #uris = get_resources_by_folder('folders/a593258468753') 
     print(uris)   

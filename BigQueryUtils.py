@@ -104,7 +104,7 @@ class BigQueryUtils:
         return success
         
     # API method used by tag history function
-    def copy_tag(self, table_name, table_fields, tagged_table, tagged_column, tagged_values):
+    def copy_tag(self, tag_creator_account, tag_invoker_account, table_name, table_fields, tagged_table, tagged_column, tagged_values):
         
         exists, table_id, settings = self.history_table_exists(table_name)
         
@@ -125,7 +125,7 @@ class BigQueryUtils:
         asset_name = asset_name.replace("datasets", "dataset").replace("tables", "table")
         print('asset_name: ', asset_name)
                 
-        success = self.insert_history_row(table_id, asset_name, tagged_values)  
+        success = self.insert_history_row(tag_creator_account, tag_invoker_account, table_id, asset_name, tagged_values)  
         
         return success
         
@@ -261,8 +261,10 @@ class BigQueryUtils:
     # used by tag history function
     def create_history_table(self, dataset_id, table_name, fields):
         
-        schema = [bigquery.SchemaField('event_time', 'TIMESTAMP', mode='REQUIRED'), \
-                  bigquery.SchemaField('asset_name', 'STRING', mode='REQUIRED')]
+        schema = [bigquery.SchemaField('event_time', 'TIMESTAMP', mode='REQUIRED'), 
+                  bigquery.SchemaField('asset_name', 'STRING', mode='REQUIRED'), 
+                  bigquery.SchemaField('tag_creator_account', 'STRING', mode='REQUIRED'), 
+                  bigquery.SchemaField('tag_invoker_account', 'STRING', mode='REQUIRED')]
 
         for field in fields:
             
@@ -307,7 +309,7 @@ class BigQueryUtils:
         return table_id
     
     # writes tag history record
-    def insert_history_row(self, table_id, asset_name, tagged_values):
+    def insert_history_row(self, tag_creator_account, tag_invoker_account, table_id, asset_name, tagged_values):
         
         print('enter insert_history_row')
         print('table_id:', table_id)
@@ -316,7 +318,8 @@ class BigQueryUtils:
         
         success = True
         
-        row = {'event_time': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f') + ' UTC', 'asset_name': asset_name}
+        row = {'event_time': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f') + ' UTC', 'asset_name': asset_name, 
+               'tag_creator_account': tag_creator_account, 'tag_invoker_account': tag_invoker_account}
         
         for tagged_value in tagged_values:
             

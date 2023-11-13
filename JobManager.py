@@ -46,13 +46,13 @@ class JobManager:
 
 ##################### API METHODS #################
 
-    def create_job(self, service_account, config_uuid, config_type):
+    def create_job(self, tag_creator_account, tag_invoker_account, config_uuid, config_type):
         
         print('*** enter create_job ***')
         print('config_uuid: ', config_uuid, ', config_type: ', config_type)
         
         job_uuid = self._create_job_record(config_uuid, config_type)
-        resp = self._create_job_task(service_account, job_uuid, config_uuid, config_type)
+        resp = self._create_job_task(tag_creator_account, tag_invoker_account, job_uuid, config_uuid, config_type)
         
         return job_uuid 
         
@@ -173,11 +173,12 @@ class JobManager:
         return job_uuid
 
     
-    def _create_job_task(self, service_account, job_uuid, config_uuid, config_type):
+    def _create_job_task(self, tag_creator_account, tag_invoker_account, job_uuid, config_uuid, config_type):
         
         print('*** enter _create_cloud_task ***')
                 
-        payload = {'job_uuid': job_uuid, 'config_uuid': config_uuid, 'config_type': config_type, 'service_account': service_account}
+        payload = {'job_uuid': job_uuid, 'config_uuid': config_uuid, 'config_type': config_type, \
+                   'tag_creator_account': tag_creator_account, 'tag_invoker_account': tag_invoker_account}
         
         task = {
             'http_request': {  

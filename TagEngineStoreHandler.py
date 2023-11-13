@@ -129,7 +129,7 @@ class TagEngineStoreHandler:
         print('Saved coverage report settings.')
         
         
-    def generate_coverage_report(self):    
+    def generate_coverage_report(self, credentials):    
     
         summary_report = []
         detailed_report = []
@@ -168,7 +168,7 @@ class TagEngineStoreHandler:
                 table_list = []
                 tables = list(bq_client.list_tables(dataset_id))
                 
-                dcc = controller.DataCatalogController()
+                dcc = controller.DataCatalogController(credentials)
                 linked_resources = dcc.search_catalog(project_id, dataset_id)
                 
                 print('linked_resources: ' + str(linked_resources))
@@ -1121,6 +1121,23 @@ class TagEngineStoreHandler:
         
         return job_results
         
+    
+    def read_service_account(self, config_type, config_uuid):
+                
+        service_account = None
+        
+        coll_name = self.lookup_config_collection(config_type)
+        config_ref = self.db.collection(coll_name).document(config_uuid)
+        
+        doc = config_ref.get()
+        
+        if doc.exists:
+            config = doc.to_dict()
+            service_account = config['service_account']
+            #print(str(config))
+            
+        return service_account
+    
     
     def delete_config(self, service_account, config_uuid, config_type):
         
