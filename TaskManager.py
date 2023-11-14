@@ -68,10 +68,10 @@ class TaskManager:
 
                 # create the task
                 if isinstance(uri_val, str):
-                    task_id_raw = job_uuid + uri_val
+                    task_id_raw = job_uuid + uri_val + str(datetime.datetime.utcnow())
                     
                 if isinstance(uri_val, tuple):
-                    task_id_raw = job_uuid + ''.join(uri_val) # uri_val is a tuple when it contains a gcs path
+                    task_id_raw = job_uuid + ''.join(uri_val) + str(datetime.datetime.utcnow()) # uri_val is a tuple when it contains a gcs path
                 
                 task_id = hashlib.md5(task_id_raw.encode()).hexdigest()
             
@@ -118,7 +118,7 @@ class TaskManager:
                 print('extract_val: ', extract_val)
                 
                 # create the task
-                task_id_raw = job_uuid + ''.join(str(extract_val))
+                task_id_raw = job_uuid + ''.join(str(extract_val)) + str(datetime.datetime.utcnow())
                 task_id = hashlib.md5(task_id_raw.encode()).hexdigest()
                 
                 print('task_id: ', task_id)

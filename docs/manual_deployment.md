@@ -75,14 +75,14 @@ If multiple teams want to share an instance of Tag Engine and they own different
 	```
 <br> 
 
-6. Create two task queues, the first one is used to queue the tag request, the second is used to queue the individual work items:
+6. Create two cloud task queues, the first one is used to queue the entire job while the second is used to queue individual work items. If the first task fails, a second one will get created due to `max-attempts=2`:
 
 	```
 	gcloud tasks queues create tag-engine-injector-queue \
-		--location=$TAG_ENGINE_REGION --max-attempts=1 --max-concurrent-dispatches=100
+		--location=$TAG_ENGINE_REGION --max-attempts=2 --max-concurrent-dispatches=100
 
 	gcloud tasks queues create tag-engine-work-queue \
-		--location=$TAG_ENGINE_REGION --max-attempts=1 --max-concurrent-dispatches=100
+		--location=$TAG_ENGINE_REGION --max-attempts=2 --max-concurrent-dispatches=100
 	```
 <br>
 
