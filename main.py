@@ -204,8 +204,8 @@ def get_requested_service_account(json):
 def do_authentication(json, headers):
     
     print('** enter do_authentication **')
-    print('json:', json)
-    print('headers:', headers)
+    #print('json:', json) # only uncomment for debugging
+    #print('headers:', headers) # only uncomment for debugging
     
     service_account = get_requested_service_account(json)
     
