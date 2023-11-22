@@ -101,12 +101,49 @@ class TagEngineStoreHandler:
         return write_status
 
 
-    def read_coverage_report_settings(self):
+    def write_job_metadata_settings(self, enabled, bigquery_project, bigquery_region, bigquery_dataset):
+        
+        write_status = True
+        settings = self.db.collection('settings')
+        doc_ref = settings.document('job_metadata')
+        
+        try:
+            doc_ref.set({
+                'enabled': bool(enabled),
+                'bigquery_project': bigquery_project,
+                'bigquery_region':  bigquery_region,
+                'bigquery_dataset': bigquery_dataset
+            })
+        except Exception as e:
+            print('Error occurred during write_job_metadata_settings:', e)
+            write_status = False
+        
+        return write_status
+        
+    
+    def read_tag_history_settings(self):
+        
+        settings = {}
+        enabled = False
+        
+        doc_ref = self.db.collection('settings').document('tag_history')
+        doc = doc_ref.get()
+        
+        if doc.exists:
+            settings = doc.to_dict()
+            
+            if settings['enabled']:
+                enabled = True
+            
+        return enabled, settings
+    
+        
+    def read_job_metadata_settings(self):
         
         settings = {}
         exists = False
         
-        doc_ref = self.db.collection('settings').document('coverage_report')
+        doc_ref = self.db.collection('settings').document('job_metadata')
         doc = doc_ref.get()
         
         if doc.exists:
@@ -1020,7 +1057,8 @@ class TagEngineStoreHandler:
         coll = None
         
         for available_ct in (ct.ConfigType):
-            if available_ct.name == requested_ct:
+            
+            if available_ct.name == requested_ct.strip():
                 coll = available_ct.value
         
         return coll
@@ -1120,6 +1158,24 @@ class TagEngineStoreHandler:
             job_results.append(job.to_dict())
         
         return job_results
+       
+        
+    def read_config_by_job(self, job_uuid):
+        
+        print('read_config_by_job, job_uuid:', job_uuid)
+        
+        config_uuid = None
+        config_type = None
+        
+        job_ref = self.db.collection('jobs').document(job_uuid)
+        doc = job_ref.get()
+        
+        if doc.exists:
+            job = doc.to_dict()
+            config_uuid = job['config_uuid']
+            config_type = job['config_type']
+   
+        return config_uuid, config_type
         
     
     def read_service_account(self, config_type, config_uuid):
@@ -1273,6 +1329,22 @@ class TagEngineStoreHandler:
         return success, config_uuid
 
 
+    def lookup_tag_template(self, config_type, config_uuid):
+        
+        template_id = None
+
+        coll_name = self.lookup_config_collection(config_type)
+        doc = self.db.collection(coll_name).document(config_uuid).get()
+        
+        if doc.exists:
+            config = doc.to_dict()
+            template_id = config['template_id']
+        else:
+            print('Error: could not locate the config')
+                  
+        return template_id
+
+
     def lookup_service_account(self, config_type, config_uuid):
         
         service_account = None
@@ -1284,7 +1356,7 @@ class TagEngineStoreHandler:
             config = doc.to_dict()
             service_account = config['service_account']
         else:
-            print('Error: could not locate the config')
+            print('Error: could not locate the config, returning an empty service account')
                   
         return service_account
         

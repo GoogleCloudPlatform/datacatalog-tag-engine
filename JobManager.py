@@ -46,14 +46,18 @@ class JobManager:
 
 ##################### API METHODS #################
 
-    def create_job(self, tag_creator_account, tag_invoker_account, config_uuid, config_type):
+    def create_job(self, tag_creator_account, tag_invoker_account, config_uuid, config_type, metadata=None):
         
         print('*** enter create_job ***')
         print('config_uuid: ', config_uuid, ', config_type: ', config_type)
         
         job_uuid = self._create_job_record(config_uuid, config_type)
-        resp = self._create_job_task(tag_creator_account, tag_invoker_account, job_uuid, config_uuid, config_type)
         
+        if metadata != None:
+            self._create_job_metadata_record(job_uuid, config_uuid, config_type, metadata)
+        
+        resp = self._create_job_task(tag_creator_account, tag_invoker_account, job_uuid, config_uuid, config_type)
+                
         return job_uuid 
         
     
@@ -233,7 +237,24 @@ class JobManager:
            tasks_failed += shard.to_dict().get('tasks_failed', 0) 
        
        return tasks_failed
-               
+
+
+    def _create_job_metadata_record(self, job_uuid, config_uuid, config_type, metadata):
+        
+        print('*** _create_job_metadata_record ***')
+        
+        job_ref = self.db.collection('job_metadata').document(job_uuid)
+
+        job_ref.set({
+            'job_uuid': job_uuid,
+            'config_uuid': config_uuid,
+            'config_type': config_type,
+            'metadata': metadata,
+            'creation_time': datetime.datetime.utcnow()
+        })
+        
+        print('Created job_metadata record.')
+    
         
 if __name__ == '__main__':
 

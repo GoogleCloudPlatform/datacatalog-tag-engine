@@ -87,6 +87,22 @@ if 'TAG_HISTORY_DATASET' in config['DEFAULT']:
     TAG_HISTORY_DATASET = config['DEFAULT']['TAG_HISTORY_DATASET'].strip()
 else:
     TAG_HISTORY_DATASET = None
+    
+if 'ENABLE_JOB_METADATA' in config['DEFAULT'] and config['DEFAULT']['ENABLE_JOB_METADATA'].strip().lower() == 'true':    
+    ENABLE_JOB_METADATA = True
+else:
+    ENABLE_JOB_METADATA = False
+    
+if 'JOB_METADATA_PROJECT' in config['DEFAULT']:
+    JOB_METADATA_PROJECT = config['DEFAULT']['JOB_METADATA_PROJECT'].strip()
+else:
+    JOB_METADATA_PROJECT = None
+
+if 'JOB_METADATA_DATASET' in config['DEFAULT']:    
+    JOB_METADATA_DATASET = config['DEFAULT']['JOB_METADATA_DATASET'].strip()
+else:
+    JOB_METADATA_DATASET = None
+
 
 ##################### CHECK SERVICE_URL #####################
 def check_service_url():
@@ -135,6 +151,24 @@ def configure_tag_history():
         print('Error writing tag history settings to Firestore.')
         
 configure_tag_history()
+
+
+##################### CONFIGURE JOB METADATA ##################################
+ 
+def configure_job_metadata(): 
+        
+    if ENABLE_JOB_METADATA:
+        
+        if JOB_METADATA_PROJECT == None:
+            print('Error: unable to configure tag history, JOB_METADATA_PROJECT is missing from tagengine.ini')
+        
+        if JOB_METADATA_DATASET == None:
+            print('Error: unable to configure tag history, JOB_METADATA_DATASET is missing from tagengine.ini')
+    
+    status = store.write_job_metadata_settings(ENABLE_JOB_METADATA, JOB_METADATA_PROJECT, BIGQUERY_REGION, JOB_METADATA_DATASET)
+            
+configure_job_metadata()
+
 
 ##################### API and UI AUTH METHODS ##################################
 # API passes in an access_token while UI passes in the oauth credentials
@@ -196,6 +230,9 @@ def get_requested_service_account(json):
         service_account = json['service_account']
     elif isinstance(json, dict) and 'config_uuid' in json and 'config_type' in json:
         service_account = store.lookup_service_account(json['config_type'], json['config_uuid'])
+    elif isinstance(json, dict) and 'job_uuid' in json:
+        config_uuid, config_type = store.read_config_by_job(json['job_uuid'])
+        service_account = store.lookup_service_account(config_type, config_uuid)
     else:
         service_account = TAG_CREATOR_SA
     
@@ -2944,6 +2981,7 @@ def update_tag_subset():
 Args:
     config_type = on of (STATIC_TAG_ASSET, DYNAMIC_TAG_TABLE, DYNAMIC_TAG_COLUMN, etc.) 
     config_id = config identifier
+    job_metadata = json object containing metadata about the workflow. This parameter is optional. 
 Returns:
     True if request succeeded, False otherwise
 """ 
@@ -2978,9 +3016,10 @@ def trigger_job():
     if 'config_uuid' in json:
         
         config_uuid = json['config_uuid']
+        config_type = json['config_type']
         
         if isinstance(config_uuid, str):
-            is_active = store.check_active_config(config_uuid, json['config_type'])
+            is_active = store.check_active_config(config_uuid, config_type)
             
             if is_active != True:
                 print('Error: The config_uuid', config_uuid, 'is not active and cannot be used to run a job.')
@@ -3012,8 +3051,30 @@ def trigger_job():
         print("trigger_job request is missing the required parameters. Please add the config_uuid or the template_id, template_project, template_region, and included_uris to the json object.")
         resp = jsonify(success=False)
         return resp
+        
+    if 'job_metadata' in json:
+        
+        job_metadata = json['job_metadata']
+        
+        if isinstance(job_metadata, dict) == False:
+            print('Warning: job metadata cannot be recorded because', job_metadata, 'is not a json object') 
+        
+        else: 
+            if ENABLE_JOB_METADATA == False:
+                print('Warning: Ignoring job metadata in request because ENABLE_JOB_METADATA = False in tagengine.ini')
+                job_uuid = jm.create_job(tag_creator_account, tag_invoker_account, config_uuid, json['config_type'])
+            else:
+                job_uuid = jm.create_job(tag_creator_account, tag_invoker_account, config_uuid, config_type, job_metadata)
+                template_id = store.lookup_tag_template(config_type, config_uuid)
+                
+                credentials, success = get_target_credentials(tag_creator_account)
+                bqu = bq.BigQueryUtils(credentials, BIGQUERY_REGION)
+                success = bqu.write_job_metadata(job_uuid, template_id, job_metadata)
+                print('Wrote job metadata to BigQuery for job', job_uuid, '. Success =', success)
+                       
+    else:    
+        job_uuid = jm.create_job(tag_creator_account, tag_invoker_account, config_uuid, config_type)
     
-    job_uuid = jm.create_job(tag_creator_account, tag_invoker_account, config_uuid, json['config_type'])
     
     return jsonify(job_uuid=job_uuid)
 
@@ -3032,8 +3093,10 @@ Returns:
 def get_job_status(): 
     
     json = request.get_json(force=True)
+    print('json:', json)
     
     status, response, service_account = do_authentication(json, request.headers)
+    print('service_account:', service_account)
     
     if status == False:
         return jsonify(response), 400
@@ -3505,35 +3568,35 @@ def _run_task():
             
     
     if config_type == 'DYNAMIC_TAG_TABLE':
-        creation_status = dcc.apply_dynamic_table_config(config['fields'], uri, config['config_uuid'], \
+        creation_status = dcc.apply_dynamic_table_config(config['fields'], uri, job_uuid, config_uuid, \
                                                          config['template_uuid'], config['tag_history'])                                               
     if config_type == 'DYNAMIC_TAG_COLUMN':
-        creation_status = dcc.apply_dynamic_column_config(config['fields'], config['included_columns_query'], uri, config['config_uuid'], \
+        creation_status = dcc.apply_dynamic_column_config(config['fields'], config['included_columns_query'], uri, job_uuid, config_uuid, \
                                                           config['template_uuid'], config['tag_history'])
     if config_type == 'STATIC_TAG_ASSET':
-        creation_status = dcc.apply_static_asset_config(config['fields'], uri, config['config_uuid'], \
+        creation_status = dcc.apply_static_asset_config(config['fields'], uri, job_uuid, config_uuid, \
                                                         config['template_uuid'], config['tag_history'], \
                                                         config['overwrite'])                                                   
     if config_type == 'ENTRY_CREATE':
-        creation_status = dcc.apply_entry_config(config['fields'], uri, config['config_uuid'], \
+        creation_status = dcc.apply_entry_config(config['fields'], uri, job_uuid, config_uuid, \
                                                  config['template_uuid'], config['tag_history']) 
     if config_type == 'GLOSSARY_TAG_ASSET':
-        creation_status = dcc.apply_glossary_asset_config(config['fields'], config['mapping_table'], uri, config['config_uuid'], \
+        creation_status = dcc.apply_glossary_asset_config(config['fields'], config['mapping_table'], uri, job_uuid, config_uuid, \
                                                     config['template_uuid'], config['tag_history'], config['overwrite'])
     if config_type == 'SENSITIVE_TAG_COLUMN':
         creation_status = dcc.apply_sensitive_column_config(config['fields'], config['dlp_dataset'], config['infotype_selection_table'], \
                                                             config['infotype_classification_table'], uri, config['create_policy_tags'], \
-                                                            config['taxonomy_id'], config['config_uuid'], \
+                                                            config['taxonomy_id'], job_uuid, config_uuid, \
                                                             config['template_uuid'], config['tag_history'], \
                                                             config['overwrite'])
     if config_type == 'TAG_EXPORT':
         creation_status = dcc.apply_export_config(config['config_uuid'], config['target_project'], config['target_dataset'], config['target_region'], uri)
     
     if config_type == 'TAG_IMPORT':
-        creation_status = dcc.apply_import_config(config['config_uuid'], tag_extract, \
+        creation_status = dcc.apply_import_config(job_uuid, config_uuid, tag_extract, \
                                                   config['tag_history'], config['overwrite'])
     if config_type == 'TAG_RESTORE':
-        creation_status = dcc.apply_restore_config(config['config_uuid'], tag_extract, \
+        creation_status = dcc.apply_restore_config(job_uuid, config_uuid, tag_extract, \
                                                    config['tag_history'], config['overwrite'])
                                               
     if creation_status == constants.SUCCESS:

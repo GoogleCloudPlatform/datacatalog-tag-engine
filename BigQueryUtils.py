@@ -104,7 +104,7 @@ class BigQueryUtils:
         return success
         
     # API method used by tag history function
-    def copy_tag(self, tag_creator_account, tag_invoker_account, table_name, table_fields, tagged_table, tagged_column, tagged_values):
+    def copy_tag(self, tag_creator_account, tag_invoker_account, job_uuid, table_name, table_fields, tagged_table, tagged_column, tagged_values):
         
         exists, table_id, settings = self.history_table_exists(table_name)
         
@@ -125,11 +125,30 @@ class BigQueryUtils:
         asset_name = asset_name.replace("datasets", "dataset").replace("tables", "table")
         print('asset_name: ', asset_name)
                 
-        success = self.insert_history_row(tag_creator_account, tag_invoker_account, table_id, asset_name, tagged_values)  
+        success = self.insert_history_row(tag_creator_account, tag_invoker_account, job_uuid, table_id, asset_name, tagged_values)  
         
         return success
         
-
+    
+    # API method used by job metadata function
+    def write_job_metadata(self, job_uuid, table_name, metadata):
+        
+        exists, table_id, settings = self.job_metadata_table_exists(table_name)
+        
+        if exists != True:
+            success, dataset_id = self.create_dataset(settings['bigquery_project'], settings['bigquery_dataset'])
+            #print('created_dataset:', success)
+            
+            if success:
+                table_id = self.create_job_metadata_table(dataset_id, table_name)
+            else:
+                print('Error creating tag_history dataset')
+                
+        success = self.insert_job_metadata_row(table_id, job_uuid, metadata)  
+        
+        return success
+    
+        
 ############### Internal processing methods ###############
 
     # used by both tag history and tag export
@@ -264,7 +283,8 @@ class BigQueryUtils:
         schema = [bigquery.SchemaField('event_time', 'TIMESTAMP', mode='REQUIRED'), 
                   bigquery.SchemaField('asset_name', 'STRING', mode='REQUIRED'), 
                   bigquery.SchemaField('tag_creator_account', 'STRING', mode='REQUIRED'), 
-                  bigquery.SchemaField('tag_invoker_account', 'STRING', mode='REQUIRED')]
+                  bigquery.SchemaField('tag_invoker_account', 'STRING', mode='REQUIRED'),
+                  bigquery.SchemaField('job_uuid', 'STRING', mode='REQUIRED')]
 
         for field in fields:
             
@@ -309,9 +329,10 @@ class BigQueryUtils:
         return table_id
     
     # writes tag history record
-    def insert_history_row(self, tag_creator_account, tag_invoker_account, table_id, asset_name, tagged_values):
+    def insert_history_row(self, tag_creator_account, tag_invoker_account, job_uuid, table_id, asset_name, tagged_values):
         
         print('enter insert_history_row')
+        print('job_uuid:', job_uuid)
         print('table_id:', table_id)
         print('asset_name:', asset_name)
         print('tagged_values:', tagged_values)
@@ -319,7 +340,7 @@ class BigQueryUtils:
         success = True
         
         row = {'event_time': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f') + ' UTC', 'asset_name': asset_name, 
-               'tag_creator_account': tag_creator_account, 'tag_invoker_account': tag_invoker_account}
+               'tag_creator_account': tag_creator_account, 'tag_invoker_account': tag_invoker_account, 'job_uuid': job_uuid}
         
         for tagged_value in tagged_values:
             
@@ -359,14 +380,108 @@ class BigQueryUtils:
                     success = False
         
         return success 
+
+    # used by job metadata function
+    def job_metadata_table_exists(self, table_name):
+        
+        store = tesh.TagEngineStoreHandler()
+        enabled, settings = store.read_job_metadata_settings()
+        
+        if enabled == False:
+            return enabled, settings
+        
+        bigquery_project = settings['bigquery_project']
+        bigquery_region = settings['bigquery_region']
+        bigquery_dataset = settings['bigquery_dataset']
+        
+        dataset_id = self.client.dataset(bigquery_dataset, project=bigquery_project)
+        table_id = dataset_id.table(table_name)
+        
+        try:
+            self.client.get_table(table_id) 
+            exists = True 
+            print("Job metadata table {} already exists.".format(table_name))
+        except NotFound:
+            exists = False
+            print("Job metadata table {} not found.".format(table_name))
+        
+        return exists, table_id, settings
+
+    # used by job metadata function
+    def create_job_metadata_table(self, dataset_id, table_name):
+        
+        schema = [bigquery.SchemaField('event_time', 'TIMESTAMP', mode='REQUIRED'),
+                  bigquery.SchemaField('job_uuid', 'STRING', mode='REQUIRED'), 
+                  bigquery.SchemaField('metadata', 'JSON', mode='REQUIRED')]
+        
+        table_id = dataset_id.table(table_name)
+        table = bigquery.Table(table_id, schema=schema)
+        table.time_partitioning = bigquery.TimePartitioning(type_=bigquery.TimePartitioningType.DAY, field="event_time")  
+        table = self.client.create_table(table, exists_ok=True)  
+        
+        print("Created table {}.{}.{}".format(table.project, table.dataset_id, table.table_id))        
+        table_id = ("{}.{}.{}".format(table.project, table.dataset_id, table.table_id))
+        
+        return table_id
+        
+    # write job metadata record  
+    def insert_job_metadata_row(self, table_id, job_uuid, metadata):
+        
+        print('enter insert_job_metadata_row')
+        print('job_uuid:', job_uuid)
+                
+        success = True
+        
+        row = {'event_time': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f') + ' UTC', 
+               'job_uuid': job_uuid, 'metadata': json.dumps(metadata)}
+            
+        #print('row:', row)
+        row_to_insert = [row,]
+
+        try:
+            status = self.client.insert_rows_json(table_id, row_to_insert) 
+            
+            if len(status) > 0: 
+                print('Inserted row into job metadata table. Return status: ', status) 
+        
+        except Exception as e:
+            print('Error while writing to job metadata table:', e)
+            if '404' in str(e):
+                # table isn't quite ready to be written to
+                print('Job metadata table not ready to be written to. Sleeping for 5 seconds.')
+                time.sleep(5)
+                try:
+                    status = self.client.insert_rows_json(table_id, row_to_insert) 
+                    print('Retrying insert row into job metadata table. Return status: ', status) 
+                except Exception as e:
+                    print('Error occurred while writing to job metadata table: {}'.format(e))
+                    success = False
+        
+        return success 
+    
+        
     
 if __name__ == '__main__':
     
-    bqu = BigQueryUtils()
-    #bqu.create_report_tables('tag-engine-develop', 'reporting')
-    #bqu.truncate_report_tables('tag-engine-develop', 'reporting')
+    import google.auth
+    from google.auth import impersonated_credentials
+    SCOPES = ['openid', 'https://www.googleapis.com/auth/cloud-platform', 'https://www.googleapis.com/auth/userinfo.email']
     
-    table_id = 'sdw-data-gov-b1927e-dd69.tag_history_logs.data_sensitivity'
-    asset_name = 'sdw-conf-b1927e-bcc1/dataset/sales/table/control14_test1/column/postalCode'
-    tagged_values = [{'field_type': 'bool', 'field_id': 'sensitive_field', 'is_required': True, 'field_value': True}, {'is_required': False, 'field_id': 'sensitive_type', 'field_type': 'enum', 'field_value': 'Personal_Identifiable_Information'}] 
-    bqu.insert_history_row(table_id, asset_name, tagged_values)
+    source_credentials, _ = google.auth.default() 
+    
+    config = configparser.ConfigParser()
+    config.read("tagengine.ini")
+    
+    BIGQUERY_REGION = config['DEFAULT']['BIGQUERY_REGION']
+    target_service_account = config['DEFAULT']['TAG_CREATOR_SA']
+    
+    credentials = impersonated_credentials.Credentials(source_credentials=source_credentials,
+        target_principal=target_service_account,
+        target_scopes=SCOPES,
+        lifetime=1200)
+        
+    bqu = BigQueryUtils(credentials, BIGQUERY_REGION)
+    job_uuid = '0890ccc8895d11eeb380af7e3e47c857'
+    table_name = 'data_governance'
+    metadata = {"source": "Collibra", "workflow": "process_sensitive_data"}
+    bqu.write_job_metadata(job_uuid, table_name, metadata)
