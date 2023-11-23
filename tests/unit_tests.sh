@@ -120,6 +120,12 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
   -H "Authorization: Bearer $IAM_TOKEN" \
   -H "oauth_token: $OAUTH_TOKEN"
 
+# trigger job with metadata
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+  -d '{"config_type":"TAG_IMPORT","config_uuid":"0e674d78eddd11ed8d3d09299afaece0", "job_metadata": {"source": "Collibra", "workflow": "process_sensitive_data"}}' \
+  -H "Authorization: Bearer $IAM_TOKEN" \
+  -H "oauth_token: $OAUTH_TOKEN"
+
 curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"2755de6ceddd11ed9e0e3f1388bde9d6"}' \
 	-H "Authorization: Bearer $IAM_TOKEN" \
 	-H "oauth_token: $OAUTH_TOKEN"

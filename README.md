@@ -57,10 +57,13 @@ Alternative 2: you can choose to deploy Tag Engine v2 with [gcloud commands](htt
 	TAG_ENGINE_SA
 	TAG_CREATOR_SA
 	ENABLE_AUTH
- 	OAUTH_CLIENT_CREDENTIALS
+	OAUTH_CLIENT_CREDENTIALS
 	ENABLE_TAG_HISTORY
 	TAG_HISTORY_PROJECT
-	TAG_HISTORY_DATASET  
+	TAG_HISTORY_DATASET
+	ENABLE_JOB_METADATA
+	JOB_METADATA_PROJECT
+	JOB_METADATA_DATASET  
 	```
 
    A couple of notes: <br>
@@ -200,6 +203,18 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
 	}
 ```
 
+	If you enabled job metadata in `tagengine.ini`, you can also pass a job metadata object to the trigger_job call:
+	
+```
+	curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+	  -d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"c255f764d56711edb96eb170f969c0af","job_metadata": {"source": "Collibra", "workflow": "process_sensitive_data"}}' \
+	  -H "Authorization: Bearer $IAM_TOKEN" \
+	  -H "oauth_token: $OAUTH_TOKEN"
+```
+	
+	This has the effect of recording the job_metadata object in a BigQuery table organized by tag template. 
+
+
    e) View the job status:
 
 
@@ -237,24 +252,24 @@ curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"069a312e7f1811ee872
 ```
 <br>
 
-2. Authorize a service account to use $TAG_CREATOR_SA and to invoke the Tag Engine API Cloud Run service:
+2. Authorize a service account to use `$TAG_CREATOR_SA` and `tag-engine-api`:
 
 ```
-	export CLIENT_SA="tag-engine-client@<PROJECT>.iam.gserviceaccount.com"
+	export INVOKER_SA="tag-engine-invoker@<PROJECT>.iam.gserviceaccount.com"
 
 	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-	    --member=serviceAccount:$CLIENT_SA --role=roles/iam.serviceAccountUser 
+	    --member=serviceAccount:$INVOKER_SA --role=roles/iam.serviceAccountUser 
 
 	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-             --member=serviceAccount:$CLIENT_SA --role=roles/iam.serviceAccountTokenCreator 
+             --member=serviceAccount:$INVOKER_SA --role=roles/iam.serviceAccountTokenCreator 
 
 	gcloud run services add-iam-policy-binding tag-engine-api \
-	    --member=serviceAccount:$CLIENT_SA --role=roles/run.invoker \
+	    --member=serviceAccount:$INVOKER_SA --role=roles/run.invoker \
 	    --region=$TAG_ENGINE_REGION	
 ```
 <br>
 
-3. Generate an OAUTH token for your `CLIENT_SA`:
+3. Generate an OAUTH token for your `$INVOKER_SA`:
 
 ```
 	export GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/keyfile.json"
@@ -306,10 +321,21 @@ curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"069a312e7f1811ee872
    The output from this command should look similar to:
 
 ```
-{
-  "job_uuid": "9c13357ee46911ed96c5acde48001122"
-}
+	{
+  	  "job_uuid": "9c13357ee46911ed96c5acde48001122"
+	}
 ```
+	If you enabled job metadata in `tagengine.ini`, you can also pass a job metadata object to the trigger_job call:
+	
+```
+	curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+	  -d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"c255f764d56711edb96eb170f969c0af","job_metadata": {"source": "Collibra", "workflow": "process_sensitive_data"}}' \
+	  -H "Authorization: Bearer $IAM_TOKEN" \
+	  -H "oauth_token: $OAUTH_TOKEN"
+```
+	
+	This has the effect of recording the job_metadata object in a BigQuery table organized by tag template. 
+	  
 <br>
 
 7. View the job status:
