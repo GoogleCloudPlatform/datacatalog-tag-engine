@@ -309,7 +309,6 @@ Tag Engine is alive
 	python read_config.py
 	python purge_inactive_configs.py
 	```
-<br>
 
 3. Explore the sample workflows:
 
@@ -321,9 +320,8 @@ Tag Engine is alive
 
 	gcloud workflows run orchestrate-jobs --location=$TAG_ENGINE_REGION
 	``` 
-<br>
 
-4. Create your own Tag Engine configs with the UI and/or API. <br><br>
+4. Create your own Tag Engine configs with the UI and/or API. <br>
 
 
 5. Open new [issues](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/issues) if you encounter any bugs or would like to request a feature. 
