@@ -139,6 +139,7 @@ gcloud run services add-iam-policy-binding tag-engine-api
 
 If you are invoking the Tag Engine API with a service account, authorize your service account as follows:
 
+```
 export INVOKER_SERVICE_ACCOUNT="tag-engine-invoker@<PROJECT>.iam.gserviceaccount.com"
 
 gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
@@ -150,6 +151,7 @@ gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
 gcloud run services add-iam-policy-binding tag-engine-api \
 	--member=serviceAccount:$INVOKER_SERVICE_ACCOUNT --role=roles/run.invoker \
 	--region=$TAG_ENGINE_REGION	
+```
 
 <b>Very important: Tag Engine requires that these roles be directly attached to your invoker account(s).</b> 
 
@@ -162,7 +164,7 @@ If you are invoking Tag Engine with a user account, run `gcloud auth login` and 
 If you are invoking Tag Engine with a service account, set `GOOGLE_APPLICATION_CREDENTIALS`. 
 
 ```
-	export IAM_TOKEN=$(gcloud auth print-identity-token)
+export IAM_TOKEN=$(gcloud auth print-identity-token)
 ```
 
 4. Create your first Tag Engine config:
@@ -240,7 +242,7 @@ The output from this command should look like this:
 
 Open the Data Catalog UI and verify that your tag was successfully created. If your tag is not there or if you encounter an error with the previous commands, open the Cloud Run logs for tag-engine-api and investigate. 
 
-<br><br>
+<br>
 
 ### <a name="testb"></a> Part 3: Testing your Tag Engine UI Setup
 
