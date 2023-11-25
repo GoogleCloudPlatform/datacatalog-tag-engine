@@ -201,11 +201,11 @@ this permission or assign the `storage.legacyBucketReader` role:
 
    This command currently requires `gcloud alpha`. If you don't have it, you need to first install it before creating the database. 
 
-```
-gcloud components install alpha.  
+	```
+	gcloud components install alpha.  
 
-gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location=$TAG_ENGINE_REGION
-```
+	gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location=$TAG_ENGINE_REGION
+	```
 
    Note that Firestore is not available in every region. Consult [this list](https://cloud.google.com/firestore/docs/locations) to see where it's available and choose the nearest region to `TAG_ENGINE_REGION`. It's perfectly fine for the Firestore region to be different from the `TAG_ENGINE_REGION`. <br><br> 
 	

@@ -7,10 +7,10 @@ If you are new to Tag Engine, you may want to walk through [this](https://cloud.
 
 This README is organized into four parts:  <br>
 - Part 1: [Deploying Tag Engine v2](#deploy) <br>
-- Part 2: [Testing your Setup with a User Account](#testa)  <br>
-- Part 3: [Testing your Setup with a Service Account](#testb)  <br>
+- Part 2: [Testing your Tag Engine API Setup](#testa)  <br>
+- Part 3: [Testing your Tag Engine UI Setup](#testb)  <br>
 - Part 4: [Troubleshooting](#troubleshooting)  <br>
-- Part 5: [What To Do Next](#next)  <br> 
+- Part 5: [Next Steps](#next)  <br> 
 
 ### <a name="deploy"></a> Part 1: Deploying Tag Engine v2
 
@@ -108,7 +108,7 @@ Alternative 2: you can choose to deploy Tag Engine v2 with [gcloud commands](htt
     Add the email address of each user for which you would like to grant access to the Tag Engine UI. 
 
 <br><br>
-### <a name="testa"></a> Part 2: Testing your Tag Engine setup with a user account
+### <a name="testa"></a> Part 2: Testing your Tag Engine API setup
 
 1. Create the sample `data_governance` tag template:
 
@@ -119,114 +119,114 @@ python create_template.py $TAG_ENGINE_PROJECT $TAG_ENGINE_REGION data_governance
 ```
 <br>
 
-2. Authorize a user account to use `$TAG_CREATOR_SA` and to invoke the Tag Engine API Cloud Run service:
+2. Grant permissions to invoker account (user or service)
+
+If you are invoking the Tag Engine API with a user account, authorize your user account as follows:
 
 ```
-export USER_ACCOUNT="username@example.com"
+export INVOKER_USER_ACCOUNT="username@example.com"
 
 gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-    --member=user:$USER_ACCOUNT --role=roles/iam.serviceAccountUser
+    --member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountUser
 
 gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-    --member=user:$USER_ACCOUNT --role=roles/iam.serviceAccountTokenCreator 
+    --member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountTokenCreator 
 
 gcloud run services add-iam-policy-binding tag-engine-api 
-    --member=user:$USER_ACCOUNT --role=roles/run.invoker \
+    --member=user:$INVOKER_USER_ACCOUNT --role=roles/run.invoker \
     --region=$TAG_ENGINE_REGION	
 ```
+
+If you are invoking the Tag Engine API with a service account, authorize your service account as follows:
+
+export INVOKER_SERVICE_ACCOUNT="tag-engine-invoker@<PROJECT>.iam.gserviceaccount.com"
+
+gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
+	--member=serviceAccount:$INVOKER_SERVICE_ACCOUNT --role=roles/iam.serviceAccountUser 
+
+gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
+    --member=serviceAccount:$INVOKER_SERVICE_ACCOUNT --role=roles/iam.serviceAccountTokenCreator 
+
+gcloud run services add-iam-policy-binding tag-engine-api \
+	--member=serviceAccount:$INVOKER_SERVICE_ACCOUNT --role=roles/run.invoker \
+	--region=$TAG_ENGINE_REGION	
+
+<b>Very important: Tag Engine requires that these roles be directly attached to your invoker account(s).</b> 
+
 <br>
 
-3. Test your Tag Engine UI path:
-
-   - Open a browser window
-   - Navigate to `UI_SERVICE_URI` 
-   - You should be prompted to sign in with Google
-   - Once signed in, you will be redirected to the Tag Engine home page (i.e. `UI_SERVICE_URI`/home)
-   - Enter your template id, template project, and template region
-   - Enter your `TAG_CREATOR_SA` as the service account
-   - Click on `Search Tag Templates` to continue to the next step and create a tag configuration
-
-   If you encouter a 500 error, open the Cloud Run logs to troubleshoot. 
-<br><br>
+3. Generate an IAM token (aka Bearer token) for authenticating to Tag Engine: 
 
 
-4. Test your Tag Engine API path: 
-
-   a) Generate an OAUTH token for your `USER_ACCOUNT`:
+If you are invoking Tag Engine with a user account, run `gcloud auth login` and authenticate with your user account. 
+If you are invoking Tag Engine with a service account, set `GOOGLE_APPLICATION_CREDENTIALS`. 
 
 ```
-	gcloud auth application-default login
-	export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
-```
-
-   b) Generate an IAM token (aka Bearer token) for authenticating to the Tag Engine Cloud Run service:
-
-```
-	gcloud auth login
 	export IAM_TOKEN=$(gcloud auth print-identity-token)
 ```
 
-   c) Create a dynamic table config:
+4. Create your first Tag Engine config:
 
-   Before running the next command, open `tests/configs/dynamic_table/dynamic_table_ondemand.json` and update the project and dataset values in this file. 
+Tag Engine uses configurations (configs for short) to define tag requests. There are several types of configs, we will use the dynamic table config for this example. 
+
+Open `tests/configs/dynamic_table/dynamic_table_ondemand.json` and update the project and dataset values in this file.  
 
 ```
 export TAG_ENGINE_URL=$SERVICE_URL
 
 curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @tests/configs/dynamic_table/dynamic_table_ondemand.json \
-	-H "Authorization: Bearer $IAM_TOKEN" \
-	-H "oauth_token: $OAUTH_TOKEN"
+	 -H "Authorization: Bearer $IAM_TOKEN"
 ```
 
-   The output from this command should look similar to:
+Note: `$SERVICE_URL` should be equal to your Cloud Run URL for `tag-engine-api`. 
+
+The output from the previous command should look similar to:
 
 ```
 {"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"facb59187f1711eebe2b4f918967d564"}
 ```
 
-   d) Trigger the job:
+5. Run your first job:
 
-   Note: Before running the next command, please update the `config_uuid` with your value. 
+A Tag Engine job is an execution of a config. In this step, you execute the dynamic table config using the config_uuid from the previous step. 
+
+Note: Before running the next command, please update the `config_uuid` with your value. 
 
 ```
 curl -i -X POST $TAG_ENGINE_URL/trigger_job \
 	-d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"facb59187f1711eebe2b4f918967d564"}' \
-	-H "Authorization: Bearer $IAM_TOKEN" \
-	-H "oauth_token: $OAUTH_TOKEN"
+	-H "Authorization: Bearer $IAM_TOKEN"
 ```
 
-   The output from this command should look similar to:
+The output from the previous command should look similar to:
 
 ```
-	{
-	  "job_uuid": "069a312e7f1811ee87244f918967d564"
-	}
+{
+	"job_uuid": "069a312e7f1811ee87244f918967d564"
+}
 ```
 
-	If you enabled job metadata in `tagengine.ini`, you can also pass a job metadata object to the trigger_job call:
+If you enabled job metadata in `tagengine.ini`, you can optionally pass a job metadata object to the trigger_job call:
 	
 ```
-	curl -i -X POST $TAG_ENGINE_URL/trigger_job \
-	  -d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"c255f764d56711edb96eb170f969c0af","job_metadata": {"source": "Collibra", "workflow": "process_sensitive_data"}}' \
-	  -H "Authorization: Bearer $IAM_TOKEN" \
-	  -H "oauth_token: $OAUTH_TOKEN"
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+	-d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"c255f764d56711edb96eb170f969c0af","job_metadata": {"source": "Collibra", "workflow": "process_sensitive_data"}}' \
+	-H "Authorization: Bearer $IAM_TOKEN"
 ```
 	
-	This has the effect of recording the job_metadata object in a BigQuery table organized by tag template. 
+The job metadata parameter gets written into a BigQuery table that is associated with the job_uuid. 
 
 
-   e) View the job status:
+6. View your job status:
 
-
-   Note: Before running the next command, please update the `job_uuid` with your value. 
+Note: Before running the next command, please update the `job_uuid` with your value. 
 
 ```
 curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"069a312e7f1811ee87244f918967d564"}' \
-	-H "Authorization: Bearer $IAM_TOKEN" \
-	-H "oauth_token: $OAUTH_TOKEN"
+	-H "Authorization: Bearer $IAM_TOKEN"
 ```
 
-   The output from this command should look like this:
+The output from this command should look like this:
 
 ```
 	{
@@ -238,134 +238,27 @@ curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"069a312e7f1811ee872
 	}
 ```
 
-   Open the Data Catalog UI and verify that your tag was successfully created. If your tags are not there or if you encounter an error with the previous commands, open the Cloud Run logs and investigate. 
+Open the Data Catalog UI and verify that your tag was successfully created. If your tag is not there or if you encounter an error with the previous commands, open the Cloud Run logs for tag-engine-api and investigate. 
+
 <br><br>
 
-### <a name="testb"></a> Part 3: Testing your Tag Engine Setup with a Service Account
+### <a name="testb"></a> Part 3: Testing your Tag Engine UI Setup
 
-1. Create the sample `data_governance` tag template (you can skip this step if you went through the previous test procedure):
+1. Open a browser window
+2. Navigate to `UI_SERVICE_URI` 
+3. You should be prompted to sign in with Google
+4. Once signed in, you will be redirected to the Tag Engine home page (i.e. `UI_SERVICE_URI`/home)
+5. Enter your template id, template project, and template region
+6. Enter your `TAG_CREATOR_SA` as the service account
+7. Click on `Search Tag Templates` to continue to the next step 
+8. Create a tag configuration by selecting one of the options
 
-```
-	git clone https://github.com/GoogleCloudPlatform/datacatalog-templates.git 
-	cd datacatalog-templates
-	python create_template.py $TAG_ENGINE_PROJECT $TAG_ENGINE_REGION data_governance.yaml
-```
-<br>
+If you encouter a 500 error, open the Cloud Run logs for tag-engine-ui to troubleshoot. 
 
-2. Authorize a service account to use `$TAG_CREATOR_SA` and `tag-engine-api`:
-
-```
-	export INVOKER_SA="tag-engine-invoker@<PROJECT>.iam.gserviceaccount.com"
-
-	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-	    --member=serviceAccount:$INVOKER_SA --role=roles/iam.serviceAccountUser 
-
-	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-             --member=serviceAccount:$INVOKER_SA --role=roles/iam.serviceAccountTokenCreator 
-
-	gcloud run services add-iam-policy-binding tag-engine-api \
-	    --member=serviceAccount:$INVOKER_SA --role=roles/run.invoker \
-	    --region=$TAG_ENGINE_REGION	
-```
-<br>
-
-3. Generate an OAUTH token for your `$INVOKER_SA`:
-
-```
-	export GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/keyfile.json"
-	gcloud auth activate-service-account $CLIENT_SA --key-file $GOOGLE_APPLICATION_CREDENTIALS
-	export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
-```
-<br>
-
-4. Generate an IAM token (aka Bearer token) for authenticating to the Tag Engine Cloud Run service:
-
-```
-	export IAM_TOKEN=$(gcloud auth print-identity-token)
-```
-<br>
-
-5. Create a dynamic table config:
-
-   Before running the next command, update the project and dataset values in `tests/configs/dynamic_table/dynamic_table_ondemand.json`. 
-
-```
-	export TAG_ENGINE_URL=$SERVICE_URL
-
-	curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @tests/configs/dynamic_table/dynamic_table_ondemand.json \
-		-H "Authorization: Bearer $IAM_TOKEN" \
-		-H "oauth_token: $OAUTH_TOKEN"
-```
-
-   The output from this command should look similar to:
-
-```
-	{
-	  "config_type": "DYNAMIC_TAG_TABLE",
-	  "config_uuid": "416f9694e46911ed96c5acde48001122"
-	}
-```
-<br>
-
-6. Trigger the job:
-
-   Before running the next command, update the `config_uuid` with your value. 
-
-```
-	curl -i -X POST $TAG_ENGINE_URL/trigger_job \
-	  -d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"c255f764d56711edb96eb170f969c0af"}' \
-	  -H "Authorization: Bearer $IAM_TOKEN" \
-	  -H "oauth_token: $OAUTH_TOKEN"
-```
-
-   The output from this command should look similar to:
-
-```
-	{
-  	  "job_uuid": "9c13357ee46911ed96c5acde48001122"
-	}
-```
-	If you enabled job metadata in `tagengine.ini`, you can also pass a job metadata object to the trigger_job call:
-	
-```
-	curl -i -X POST $TAG_ENGINE_URL/trigger_job \
-	  -d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"c255f764d56711edb96eb170f969c0af","job_metadata": {"source": "Collibra", "workflow": "process_sensitive_data"}}' \
-	  -H "Authorization: Bearer $IAM_TOKEN" \
-	  -H "oauth_token: $OAUTH_TOKEN"
-```
-	
-	This has the effect of recording the job_metadata object in a BigQuery table organized by tag template. 
-	  
-<br>
-
-7. View the job status:
-
-   Before running the next command, update the `job_uuid` with your value. 
-
-	```
-	curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"9c13357ee46911ed96c5acde48001122"}' \
-		-H "Authorization: Bearer $IAM_TOKEN" \
-		-H "oauth_token: $OAUTH_TOKEN"
-	```
-
-   The output from this command should look like this:
-
-	```
-	{
-  	  "job_status": "SUCCESS",
-  	  "task_count": 1,
-	  "tasks_completed": 1,
-	  "tasks_failed": 0,
-	  "tasks_ran": 1
-	}
-	```
-
-   Open the Data Catalog UI and verify that your tag was successfully created. If not, open the Cloud Run logs and investigate the problem. 
-<br><br>
 
 ### <a name="troubleshooting"></a> Part 4: Troubleshooting
 
-If you encounter the error `The requested URL was not found on this server` after running the Terraform, the issue is that the Cloud Run API service didn't get built correctly. Try to rebuild and redeploy the Cloud Run API service with this command:
+There is a known issue with the Terraform. If you encounter the error `The requested URL was not found on this server` when you try to create a configuration from the API, the issue is that the container didn't build correctly. Try to rebuild and redeploy the Cloud Run API service with this command:
 
 ```
 cd datacatalog-tag-engine
@@ -381,7 +274,7 @@ gcloud beta run deploy tag-engine-api \
 
 Then, call the `ping` endpoint as follows:
 ```
-curl $TAG_ENGINE_URL/ping -H "Authorization: Bearer $IAM_TOKEN" -H "oauth_token: $OAUTH_TOKEN"
+curl $TAG_ENGINE_URL/ping -H "Authorization: Bearer $IAM_TOKEN"
 ```
 You should see the following response:
 ```
@@ -422,13 +315,10 @@ Tag Engine is alive
    The `apps/workflows/` contains a few sample workflows implemented in Cloud Workflow. The `trigger_job.yaml` and `orchestrate_jobs.yaml` show how to orchestrate some tagging activities. To run the workflows, enable the Cloud Workflows API (`workflows.googleapis.com`) and then follow these steps:
 
 	```
-	export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
-
 	gcloud workflows deploy orchestrate-jobs --location=$TAG_ENGINE_REGION \
 		--source=orchestrate_jobs.yaml --service-account=$CLOUD_RUN_SA
 
-	gcloud workflows run orchestrate-jobs --location=$TAG_ENGINE_REGION \
-		--data='{"oauth_token":"'"$OAUTH_TOKEN"'"}'
+	gcloud workflows run orchestrate-jobs --location=$TAG_ENGINE_REGION
 	``` 
 <br>
 

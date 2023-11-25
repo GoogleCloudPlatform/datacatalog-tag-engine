@@ -19,13 +19,7 @@ import datetime, time, configparser, os, base64
 import requests
 
 from google.api_core.client_info import ClientInfo
-
-import google.auth # service account credentials
-from google.auth import impersonated_credentials # service account credentials
-
 import google_auth_oauthlib.flow
-import google.oauth2.service_account
-import google.oauth2.credentials # user credentials
 from googleapiclient import discovery
 
 from google.cloud import firestore
@@ -33,6 +27,12 @@ from google.cloud import bigquery
 from google.cloud import tasks_v2
 from google.cloud import logging_v2
 from google.protobuf import timestamp_pb2
+
+from access import do_authentication
+from access import check_user_credentials_from_ui
+from access import credentials_to_dict
+from access import get_target_credentials
+from access import get_tag_invoker_account
 
 import DataCatalogController as controller
 import TagEngineStoreHandler as tesh
@@ -152,7 +152,6 @@ def configure_tag_history():
         
 configure_tag_history()
 
-
 ##################### CONFIGURE JOB METADATA ##################################
  
 def configure_job_metadata(): 
@@ -169,125 +168,6 @@ def configure_job_metadata():
             
 configure_job_metadata()
 
-
-##################### API and UI AUTH METHODS ##################################
-# API passes in an access_token while UI passes in the oauth credentials
-
-# used whenever TAG_CREATOR_SA credentials are needed 
-def get_target_credentials(target_service_account):
-    
-    print('*** enter get_target_credentials ***')
-    source_credentials, _ = google.auth.default() 
-
-    try:
-        target_credentials = impersonated_credentials.Credentials(source_credentials=source_credentials,
-            target_principal=target_service_account,
-            target_scopes=SCOPES,
-            lifetime=1200) # lifetime is in seconds -> 20 minutes should be enough time
-        success = True
-        
-    except Exception as e:
-        print('Error impersonating credentials: ', e)
-        success = False
-        
-    return target_credentials, success
-
-def check_user_credentials(access_token, credentials_dict, service_account):
-    
-    has_permission = False
-    
-    if access_token:
-        credentials = google.oauth2.credentials.Credentials(access_token)
-    
-    if credentials_dict:
-        credentials = dict_to_credentials(credentials_dict)
-                                                                                                            
-    service = discovery.build('iam', 'v1', credentials=credentials)
-
-    # get the GCP project which owns the service account
-    start_index = service_account.index('@') + 1 
-    end_index = service_account.index('.') 
-    service_account_project = service_account[start_index:end_index]
-    resource = 'projects/{}/serviceAccounts/{}'.format(service_account_project, service_account)
-    permissions = ["iam.serviceAccounts.actAs", "iam.serviceAccounts.get"]
-    body={"permissions": permissions}
-
-    request = service.projects().serviceAccounts().testIamPermissions(resource=resource, body=body)
-    response = request.execute()
-    
-    if 'permissions' in response:
-        #print('allowed permissions:', response['permissions'])
-        user_permissions = response['permissions']
-        if "iam.serviceAccounts.actAs" in user_permissions and "iam.serviceAccounts.get" in user_permissions:
-            has_permission = True
-          
-    return has_permission
-
-# get the service account intended to process the request 
-def get_requested_service_account(json): 
-    
-    if isinstance(json, dict) and 'service_account' in json:
-        service_account = json['service_account']
-    elif isinstance(json, dict) and 'config_uuid' in json and 'config_type' in json:
-        service_account = store.lookup_service_account(json['config_type'], json['config_uuid'])
-    elif isinstance(json, dict) and 'job_uuid' in json:
-        config_uuid, config_type = store.read_config_by_job(json['job_uuid'])
-        service_account = store.lookup_service_account(config_type, config_uuid)
-    else:
-        service_account = TAG_CREATOR_SA
-    
-    return service_account
-    
-def do_authentication(json, headers):
-    
-    print('** enter do_authentication **')
-    #print('json:', json) # only uncomment for debugging
-    #print('headers:', headers) # only uncomment for debugging
-    
-    service_account = get_requested_service_account(json)
-    
-    print('service_account:', service_account)
-    print('ENABLE_AUTH:', ENABLE_AUTH)
-    
-    if ENABLE_AUTH == False:
-        return True, None, service_account
-        
-    oauth_token = headers.get('oauth_token', None)
-
-    if oauth_token == None:
-        response = {
-            "status": "error",
-            "message": "Fatal error: oauth_token field missing from request header.",
-        }
-        return False, response, service_account
-        
-    has_permission  = check_user_credentials(oauth_token, None, service_account)   
-    print('user has permission:', has_permission)
-    
-    if has_permission == False:
-        response = {
-            "status": "error",
-            "message": "Fatal error: User does not have permission to use service account " + service_account,
-        }
-        return False, response, service_account
-       
-    return True, None, service_account
-
-# get the account (user or service) which invoked the job
-# this account is then passed to the tag history function to record the tag creation / update event
-def get_tag_invoker_account(raw_token):
-
-    token = raw_token.replace("Bearer ", "").replace("bearer ", "").replace(" ","")
-    if '.' in token:
-        token = token.split('.')[1]
-
-    padded_token = token + "="*divmod(len(token),4)[1]
-    raw_decode = base64.b64decode(padded_token) 
-    txt_decode = raw_decode.decode("utf-8")
-    token_obj = json.loads(txt_decode)
-    tag_invoker_account = token_obj['email']
-
-    return tag_invoker_account 
 
 ##################### UI METHODS #################
 
@@ -333,25 +213,6 @@ def oauth2callback():
     return redirect(url_for('home'))
     
     
-def credentials_to_dict(credentials):
-    return {'token': credentials.token,
-            'refresh_token': credentials.refresh_token,
-            'token_uri': credentials.token_uri,
-            'client_id': credentials.client_id,
-            'client_secret': credentials.client_secret,
-            'scopes': credentials.scopes,
-            'id_token': credentials.id_token}
-    
-            
-def dict_to_credentials(_dict):
-    
-    credentials = google.oauth2.credentials.Credentials(token=_dict['token'], refresh_token=_dict['refresh_token'], 
-                                                        token_uri=_dict['token_uri'], client_id=_dict['client_id'], 
-                                                        client_secret=_dict['client_secret'], scopes=_dict['scopes'],
-                                                        id_token=_dict['id_token'])    
-    return credentials
-
-
 @app.route("/logout")
 def logout():
     
@@ -615,7 +476,7 @@ def search_tag_template():
     
     # make sure user is authorized to use the service account
     if ENABLE_AUTH == True:
-        has_permission = check_user_credentials(None, session['credentials'], service_account)   
+        has_permission = check_user_credentials_from_ui(session['credentials'], service_account)   
         print('user has permission:', has_permission)
     
         if has_permission == False:
@@ -2032,23 +1893,23 @@ def process_export_config():
 
 ##################### INTERNAL METHODS #################
 
-def get_refresh_parameters(json):
+def get_refresh_parameters(json_request):
     
-    refresh_mode = json['refresh_mode']
+    refresh_mode = json_request['refresh_mode']
     refresh_frequency = ''
     refresh_unit = ''
     
     if refresh_mode == 'AUTO':
-        if 'refresh_frequency' in json:
-            refresh_frequency = json['refresh_frequency']
+        if 'refresh_frequency' in json_request:
+            refresh_frequency = json_request['refresh_frequency']
         else:
             print("config request must include a refresh_frequency when refresh_mode is set to AUTO. This is a required parameter.")
             resp = jsonify(success=False)
             return resp
     
     if refresh_mode == 'AUTO':
-        if 'refresh_unit' in json:
-            refresh_unit = json['refresh_unit']
+        if 'refresh_unit' in json_request:
+            refresh_unit = json_request['refresh_unit']
         else:
             print("config request must include a refresh_unit when refresh_mode is set to AUTO. This is a required parameter.")
             resp = jsonify(success=False)
@@ -2127,17 +1988,16 @@ Returns:
 def create_static_asset_config():
     
     print('*** enter create_static_asset_config ***')
-    #print('request: ', request)
     
-    json = request.get_json(force=True) 
-    print('json request: ' + str(json))
+    json_request = request.get_json(force=True) 
+    print('json request: ', json_request)
     
-    status, response, service_account = do_authentication(json, request.headers)
+    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
     
     if status == False:
         return jsonify(response), 400
         
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('static_asset_config', json)
+    valid_parameters, template_id, template_project, template_region = check_template_parameters('static_asset_config', json_request)
     
     if valid_parameters != True:
         response = {
@@ -2152,36 +2012,36 @@ def create_static_asset_config():
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
-    credentials, success = get_target_credentials(service_account)
+    credentials, success = get_target_credentials(tag_creator_sa)
     
     if success == False:
-        print('Error acquiring credentials from', service_account)
+        print('Error acquiring credentials from', tag_creator_sa)
     
     dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
-    fields = dcc.get_template(included_fields=json['fields'])
+    fields = dcc.get_template(included_fields=json_request['fields'])
     #print('fields:', fields)
     
-    if 'included_assets_uris' in json:
-        included_assets_uris = json['included_assets_uris']
+    if 'included_assets_uris' in json_request:
+        included_assets_uris = json_request['included_assets_uris']
     else:
         print("The create_static_asset_config request requires an included_assets_uris parameter.")
         resp = jsonify(success=False)
         return resp
     
-    if 'excluded_assets_uris' in json:
-        excluded_assets_uris = json['excluded_assets_uris']
+    if 'excluded_assets_uris' in json_request:
+        excluded_assets_uris = json_request['excluded_assets_uris']
     else:
         excluded_assets_uris = ''
     
-    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
+    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json_request)
     
-    if 'overwrite' in json:  
-        overwrite = json['overwrite']
+    if 'overwrite' in json_request:  
+        overwrite = json_request['overwrite']
     else:
         overwrite = True
     
     tag_history_option, _ = store.read_tag_history_settings()     
-    config_uuid = store.write_static_asset_config(service_account, fields, included_assets_uris, \
+    config_uuid = store.write_static_asset_config(tag_creator_sa, fields, included_assets_uris, \
                                                   excluded_assets_uris, template_uuid,\
                                                   refresh_mode, refresh_frequency, refresh_unit, \
                                                   tag_history_option, overwrite)
@@ -2205,15 +2065,16 @@ Returns:
 """
 @app.route("/create_dynamic_table_config", methods=['POST'])
 def create_dynamic_table_config():
-    json = request.get_json(force=True) 
-    #print('json: ' + str(json))
     
-    status, response, service_account = do_authentication(json, request.headers)
+    json_request = request.get_json(force=True) 
+    print('json request: ', json_request)
+    
+    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
     
     if status == False:
         return jsonify(response), 400
        
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('dynamic_table_config', json)
+    valid_parameters, template_id, template_project, template_region = check_template_parameters('dynamic_table_config', json_request)
     
     if valid_parameters != True:
         response = {
@@ -2228,33 +2089,33 @@ def create_dynamic_table_config():
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
-    credentials, success = get_target_credentials(service_account)
+    credentials, success = get_target_credentials(tag_creator_sa)
     
     if success == False:
-        print('Error acquiring credentials from', service_account)
+        print('Error acquiring credentials from', tag_creator_sa)
     
     dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
-    included_fields = json['fields']
+    included_fields = json_request['fields']
     
     fields = dcc.get_template(included_fields=included_fields)
     print('field:', fields)
     
-    if 'included_tables_uris' in json:
-        included_tables_uris = json['included_tables_uris']
+    if 'included_tables_uris' in json_request:
+        included_tables_uris = json_request['included_tables_uris']
     else:
         print("The create_dynamic_table_config request requires an included_tables_uris parameter.")
         resp = jsonify(success=False)
         return resp
     
-    if 'excluded_tables_uris' in json:
-        excluded_tables_uris = json['excluded_tables_uris']
+    if 'excluded_tables_uris' in json_request:
+        excluded_tables_uris = json_request['excluded_tables_uris']
     else:
         excluded_tables_uris = ''
     
-    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
+    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json_request)
     
     tag_history_option, _ = store.read_tag_history_settings()
-    config_uuid = store.write_dynamic_table_config(service_account, fields, included_tables_uris, excluded_tables_uris, \
+    config_uuid = store.write_dynamic_table_config(tag_creator_sa, fields, included_tables_uris, excluded_tables_uris, \
                                                    template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
                                                    tag_history_option)                                                      
 
@@ -2278,15 +2139,16 @@ Returns:
 """
 @app.route("/create_dynamic_column_config", methods=['POST'])
 def create_dynamic_column_config():
-    json = request.get_json(force=True) 
-    #print('json: ' + str(json))
     
-    status, response, service_account = do_authentication(json, request.headers)
+    json_request = request.get_json(force=True) 
+    print('json request: ', json_request)
+    
+    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
     
     if status == False:
         return jsonify(response), 400
        
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('dynamic_column_config', json)
+    valid_parameters, template_id, template_project, template_region = check_template_parameters('dynamic_column_config', json_request)
     
     if valid_parameters != True:
         response = {
@@ -2301,38 +2163,38 @@ def create_dynamic_column_config():
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
-    credentials, success = get_target_credentials(service_account)
+    credentials, success = get_target_credentials(tag_creator_sa)
     
     if success == False:
-        print('Error acquiring credentials from', service_account)
+        print('Error acquiring credentials from', tag_creator_sa)
     
     dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
-    included_fields = json['fields']
+    included_fields = json_request['fields']
     fields = dcc.get_template(included_fields=included_fields)
 
-    if 'included_columns_query' in json:
-        included_columns_query = json['included_columns_query']
+    if 'included_columns_query' in json_request:
+        included_columns_query = json_request['included_columns_query']
     else:
         print("The create_dynamic_columns_config request requires an included_columns_query parameter.")
         resp = jsonify(success=False)
         return resp
     
-    if 'included_tables_uris' in json:
-        included_tables_uris = json['included_tables_uris']
+    if 'included_tables_uris' in json_request:
+        included_tables_uris = json_request['included_tables_uris']
     else:
         print("The create_dynamic_table_config request requires an included_tables_uris parameter.")
         resp = jsonify(success=False)
         return resp
     
-    if 'excluded_tables_uris' in json:
-        excluded_tables_uris = json['excluded_tables_uris']
+    if 'excluded_tables_uris' in json_request:
+        excluded_tables_uris = json_request['excluded_tables_uris']
     else:
         excluded_tables_uris = ''
     
-    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
+    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json_request)
     
     tag_history_option, _ = store.read_tag_history_settings()
-    config_uuid = store.write_dynamic_column_config(service_account, fields, included_columns_query, included_tables_uris, \
+    config_uuid = store.write_dynamic_column_config(tag_creator_sa, fields, included_columns_query, included_tables_uris, \
                                                     excluded_tables_uris, template_uuid, refresh_mode, refresh_frequency, \
                                                     refresh_unit, tag_history_option)                                                      
 
@@ -2356,15 +2218,16 @@ Returns:
 """
 @app.route("/create_entry_config", methods=['POST'])
 def create_entry_config():
-    json = request.get_json(force=True) 
-    print('json: ' + str(json))
-       
-    status, response, service_account = do_authentication(json, request.headers)
+    
+    json_request = request.get_json(force=True) 
+    print('json request: ', json_request)
+    
+    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
     
     if status == False:
         return jsonify(response), 400
         
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('entry_config', json)
+    valid_parameters, template_id, template_project, template_region = check_template_parameters('entry_config', json_request)
     
     if valid_parameters != True:
         response = {
@@ -2379,31 +2242,31 @@ def create_entry_config():
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
-    credentials, success = get_target_credentials(service_account)
+    credentials, success = get_target_credentials(tag_creator_sa)
     
     if success == False:
-        print('Error acquiring credentials from', service_account)
+        print('Error acquiring credentials from', tag_creator_sa)
         
     dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
-    fields = dcc.get_template(included_fields=json['fields'])
+    fields = dcc.get_template(included_fields=json_request['fields'])
 
-    if 'included_assets_uris' in json:
-        included_assets_uris = json['included_assets_uris']
+    if 'included_assets_uris' in json_request:
+        included_assets_uris = json_request['included_assets_uris']
     else:
         print("The entry request requires an included_assets_uris parameter.")
         resp = jsonify(success=False)
         return resp
 
-    if 'excluded_assets_uris' in json:
-        excluded_assets_uris = json['excluded_assets_uris']
+    if 'excluded_assets_uris' in json_request:
+        excluded_assets_uris = json_request['excluded_assets_uris']
     else:
         excluded_assets_uris = ''
     
-    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
+    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json_request)
     
     tag_history_option, _ = store.read_tag_history_settings()
     
-    config_uuid = store.write_entry_config(service_account, fields, included_assets_uris, excluded_assets_uris,\
+    config_uuid = store.write_entry_config(tag_creator_sa, fields, included_assets_uris, excluded_assets_uris,\
                                             template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
                                             tag_history_option)                                                      
 
@@ -2427,15 +2290,16 @@ Returns:
 """
 @app.route("/create_glossary_asset_config", methods=['POST'])
 def create_glossary_asset_config():
-    json = request.get_json(force=True) 
-    print('json: ' + str(json))
     
-    status, response, service_account = do_authentication(json, request.headers)
+    json_request = request.get_json(force=True) 
+    print('json request: ', json_request)
+    
+    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
     
     if status == False:
         return jsonify(response), 400
        
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('glossary_asset_config', json)
+    valid_parameters, template_id, template_project, template_region = check_template_parameters('glossary_asset_config', json_request)
     
     if valid_parameters != True:
         response = {
@@ -2446,44 +2310,44 @@ def create_glossary_asset_config():
      
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
-    credentials, success = get_target_credentials(service_account)
+    credentials, success = get_target_credentials(tag_creator_sa)
     
     if success == False:
-        print('Error acquiring credentials from', service_account)
+        print('Error acquiring credentials from', tag_creator_sa)
         
     dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
-    fields = dcc.get_template(included_fields=json['fields'])
+    fields = dcc.get_template(included_fields=json_request['fields'])
     
     # validate mapping_table field
-    if 'mapping_table' in json:
-        mapping_table = json['mapping_table']
+    if 'mapping_table' in json_request:
+        mapping_table = json_request['mapping_table']
     else:
         print("glossary_asset_configs request doesn't include a mapping_table field. This is a required parameter.")
         resp = jsonify(success=False)
         return resp
     
-    if 'included_assets_uris' in json:
-        included_assets_uris = json['included_assets_uris']
+    if 'included_assets_uris' in json_request:
+        included_assets_uris = json_request['included_assets_uris']
     else:
         print("The glossary_asset_config request requires an included_assets_uris parameter.")
         resp = jsonify(success=False)
         return resp
     
-    if 'excluded_assets_uris' in json:
-        excluded_assets_uris = json['excluded_assets_uris']
+    if 'excluded_assets_uris' in json_request:
+        excluded_assets_uris = json_request['excluded_assets_uris']
     else:
         excluded_assets_uris = ''
     
-    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
+    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json_request)
     
-    if 'overwrite' in json:  
-        overwrite = json['overwrite']
+    if 'overwrite' in json_request:  
+        overwrite = json_request['overwrite']
     else:
         overwrite = True
      
     tag_history_option, _ = store.read_tag_history_settings()
         
-    config_uuid = store.write_glossary_asset_config(service_account, fields, mapping_table, included_assets_uris, \
+    config_uuid = store.write_glossary_asset_config(tag_creator_sa, fields, mapping_table, included_assets_uris, \
                                                     excluded_assets_uris, template_uuid, refresh_mode, refresh_frequency, \
                                                     refresh_unit, tag_history_option, overwrite)                                                      
     
@@ -2511,15 +2375,16 @@ Returns:
 """
 @app.route("/create_sensitive_column_config", methods=['POST'])
 def create_sensitive_column_config():
-    json = request.get_json(force=True) 
-    print('json: ' + str(json))
     
-    status, response, service_account = do_authentication(json, request.headers)
+    json_request = request.get_json(force=True) 
+    print('json request: ', json_request)
+    
+    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
     
     if status == False:
         return jsonify(response), 400
     
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('sensitive_column_config', json)
+    valid_parameters, template_id, template_project, template_region = check_template_parameters('sensitive_column_config', json_request)
     
     if valid_parameters != True:
         response = {
@@ -2534,76 +2399,76 @@ def create_sensitive_column_config():
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
-    credentials, success = get_target_credentials(service_account)
+    credentials, success = get_target_credentials(tag_creator_sa)
     
     if success == False:
-        print('Error acquiring credentials from', service_account)
+        print('Error acquiring credentials from', tag_creator_sa)
     
     dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
-    fields = dcc.get_template(included_fields=json['fields'])
+    fields = dcc.get_template(included_fields=json_request['fields'])
 
     # validate dlp_dataset parameter
-    if 'dlp_dataset' in json:
-        dlp_dataset = json['dlp_dataset']
+    if 'dlp_dataset' in json_request:
+        dlp_dataset = json_request['dlp_dataset']
     else:
         print("The sensitive_column_config request doesn't include a dlp_dataset field. This is a required parameter.")
         resp = jsonify(success=False)
         return resp
             
     # validate infotype_selection_table parameter
-    if 'infotype_selection_table' in json:
-        infotype_selection_table = json['infotype_selection_table']
+    if 'infotype_selection_table' in json_request:
+        infotype_selection_table = json_request['infotype_selection_table']
     else:
         print("The sensitive_column_config request doesn't include an infotype_selection_table field. This is a required parameter.")
         resp = jsonify(success=False)
         return resp
         
     # validate infotype_classification_table parameter
-    if 'infotype_classification_table' in json:
-        infotype_classification_table = json['infotype_classification_table']
+    if 'infotype_classification_table' in json_request:
+        infotype_classification_table = json_request['infotype_classification_table']
     else:
         print("The sensitive_column_config request doesn't include an infotype_classification_table field. This is a required parameter.")
         resp = jsonify(success=False)
         return resp
     
-    if 'included_tables_uris' in json:
-        included_tables_uris = json['included_tables_uris']
+    if 'included_tables_uris' in json_request:
+        included_tables_uris = json_request['included_tables_uris']
     else:
         print("The sensitive_column_tags request requires an included_tables_uris parameter.")
         resp = jsonify(success=False)
         return resp
     
-    if 'excluded_tables_uris' in json:
-        excluded_tables_uris = json['excluded_tables_uris']
+    if 'excluded_tables_uris' in json_request:
+        excluded_tables_uris = json_request['excluded_tables_uris']
     else:
         excluded_tables_uris = ''
     
     # validate create_policy_tags parameter
-    if 'create_policy_tags' in json:
-        create_policy_tags = json['create_policy_tags']
+    if 'create_policy_tags' in json_request:
+        create_policy_tags = json_request['create_policy_tags']
     else:
         print("The sensitive_column_tags request requires a create_policy_tags field.")
         resp = jsonify(success=False)
         return resp
         
     if create_policy_tags:
-        if 'taxonomy_id' in json:
-            taxonomy_id = json['taxonomy_id']
+        if 'taxonomy_id' in json_request:
+            taxonomy_id = json_request['taxonomy_id']
         else:
             print("The sensitive_column_tags request requires a taxonomy_id when the create_policy_tags field is true. ")
             resp = jsonify(success=False)
             return resp
         
-    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json)
+    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json_request)
             
     tag_history_option, _ = store.read_tag_history_settings()
   
-    if 'overwrite' in json:  
-        overwrite = json['overwrite']
+    if 'overwrite' in json_request:  
+        overwrite = json_request['overwrite']
     else:
         overwrite = True
         
-    config_uuid = store.write_sensitive_column_config(service_account, fields, dlp_dataset, infotype_selection_table,\
+    config_uuid = store.write_sensitive_column_config(tag_creator_sa, fields, dlp_dataset, infotype_selection_table,\
                                                       infotype_classification_table, included_tables_uris, \
                                                       excluded_tables_uris, create_policy_tags, \
                                                       taxonomy_id, template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
@@ -2626,58 +2491,59 @@ Returns:
 """
 @app.route("/create_restore_config", methods=['POST'])
 def create_restore_config():
-    json = request.get_json(force=True) 
-    print('json: ' + str(json))
     
-    status, response, service_account = do_authentication(json, request.headers)
+    json_request = request.get_json(force=True) 
+    print('json request: ', json_request)
+    
+    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
     
     if status == False:
         return jsonify(response), 400
     
-    if 'source_template_id' in json:
-        source_template_id = json['source_template_id']
+    if 'source_template_id' in json_request:
+        source_template_id = json_request['source_template_id']
     else:
         print("The restore_tags request requires a source_template_id parameter.")
         resp = jsonify(success=False)
         return resp
 
-    if 'source_template_project' in json:
-        source_template_project = json['source_template_project']
+    if 'source_template_project' in json_request:
+        source_template_project = json_request['source_template_project']
     else:
         print("The restore_tags request requires a source_template_project parameter.")
         resp = jsonify(success=False)
         return resp
     
-    if 'source_template_region' in json:
-        source_template_region = json['source_template_region']
+    if 'source_template_region' in json_request:
+        source_template_region = json_request['source_template_region']
     else:
         print("The restore_tags request requires a source_template_region parameter.")
         resp = jsonify(success=False)
         return resp
        
-    if 'target_template_id' in json:
-        target_template_id = json['target_template_id']
+    if 'target_template_id' in json_request:
+        target_template_id = json_request['target_template_id']
     else:
         print("The restore_tags request requires a target_template_id parameter.")
         resp = jsonify(success=False)
         return resp
 
-    if 'target_template_project' in json:
-        target_template_project = json['target_template_project']
+    if 'target_template_project' in json_request:
+        target_template_project = json_request['target_template_project']
     else:
         print("The restore_tags request requires a target_template_project parameter.")
         resp = jsonify(success=False)
         return resp
     
-    if 'target_template_region' in json:
-        target_template_region = json['target_template_region']
+    if 'target_template_region' in json_request:
+        target_template_region = json_request['target_template_region']
     else:
         print("The restore_tags request requires a target_template_region parameter.")
         resp = jsonify(success=False)
         return resp
 
-    if 'metadata_export_location' in json:
-        metadata_export_location = json['metadata_export_location']
+    if 'metadata_export_location' in json_request:
+        metadata_export_location = json_request['metadata_export_location']
     else:
         print("The restore_tags request requires the metadata_export_location parameter.")
         resp = jsonify(success=False)
@@ -2688,12 +2554,12 @@ def create_restore_config():
     
     tag_history_option, _ = store.read_tag_history_settings()
 
-    if 'overwrite' in json:  
-        overwrite = json['overwrite']
+    if 'overwrite' in json_request:  
+        overwrite = json_request['overwrite']
     else:
         overwrite = True
         
-    config_uuid = store.write_tag_restore_config(service_account, source_template_uuid, source_template_id, \
+    config_uuid = store.write_tag_restore_config(tag_creator_sa, source_template_uuid, source_template_id, \
                                                 source_template_project, source_template_region, \
                                                 target_template_uuid, target_template_id, \
                                                 target_template_project, target_template_region, \
@@ -2704,15 +2570,16 @@ def create_restore_config():
 
 @app.route("/create_import_config", methods=['POST'])
 def create_import_config():
-    json = request.get_json(force=True) 
-    print('json: ' + str(json))
     
-    status, response, service_account = do_authentication(json, request.headers)
+    json_request = request.get_json(force=True) 
+    print('json request: ', json_request)
+    
+    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
     
     if status == False:
         return jsonify(response), 400
        
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('import_config', json)
+    valid_parameters, template_id, template_project, template_region = check_template_parameters('import_config', json_request)
     
     if valid_parameters != True:
         response = {
@@ -2727,23 +2594,23 @@ def create_import_config():
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
 
-    if 'metadata_import_location' in json:
-        metadata_export_location = json['metadata_import_location']
+    if 'metadata_import_location' in json_request:
+        metadata_export_location = json_request['metadata_import_location']
     else:
         print("import config type requires the metadata_import_location parameter. Please add this parameter to the json object.")
         resp = jsonify(success=False)
         return resp
         
-    metadata_import_location = json['metadata_import_location']
+    metadata_import_location = json_request['metadata_import_location']
            
-    if 'overwrite' in json:  
-        overwrite = json['overwrite']
+    if 'overwrite' in json_request:  
+        overwrite = json_request['overwrite']
     else:
         overwrite = True
         
     tag_history_option, _ = store.read_tag_history_settings()
 
-    config_uuid = store.write_tag_import_config(service_account, template_uuid, template_id, template_project, template_region, \
+    config_uuid = store.write_tag_import_config(tag_creator_sa, template_uuid, template_id, template_project, template_region, \
                                                 metadata_import_location, tag_history_option, overwrite)                                                      
     
     return jsonify(config_uuid=config_uuid, config_type='TAG_IMPORT')
@@ -2751,21 +2618,22 @@ def create_import_config():
 
 @app.route("/create_export_config", methods=['POST'])
 def create_export_config():
-    json = request.get_json(force=True) 
-    print('json: ' + str(json))
     
-    status, response, service_account = do_authentication(json, request.headers)
+    json_request = request.get_json(force=True) 
+    print('json request: ', json_request)
     
+    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
+        
     if status == False:
         return jsonify(response), 400
        
-    if 'source_projects' in json:
-        source_projects = json['source_projects']
+    if 'source_projects' in json_request:
+        source_projects = json_request['source_projects']
     else:
         source_projects = ''
     
-    if 'source_folder' in json:
-        source_folder = json['source_folder']
+    if 'source_folder' in json_request:
+        source_folder = json_request['source_folder']
     else:
         source_folder = ''
     
@@ -2774,36 +2642,36 @@ def create_export_config():
         resp = jsonify(success=False)
         return resp
     
-    if 'source_region' in json:
-        source_region = json['source_region']
+    if 'source_region' in json_request:
+        source_region = json_request['source_region']
     else:
         print("The export config requires either a source_region parameter. Please add the parameter to the json object.")
         resp = jsonify(success=False)
         return resp
               
-    if 'target_project' in json:
-        target_project = json['target_project']
+    if 'target_project' in json_request:
+        target_project = json_request['target_project']
     else:
         print("The export config requires a target_project parameter. Please add the parameter to the json object.")
         resp = jsonify(success=False)
         return resp
 
-    if 'target_dataset' in json:
-        target_dataset = json['target_dataset']
+    if 'target_dataset' in json_request:
+        target_dataset = json_request['target_dataset']
     else:
         print("The export config requires a target_dataset parameter. Please add the parameter to the json object.")
         resp = jsonify(success=False)
         return resp
     
-    if 'target_region' in json:
-        target_region = json['target_region']
+    if 'target_region' in json_request:
+        target_region = json_request['target_region']
     else:
         print("The export config requires a target_region parameter. Please add the parameter to the json object.")
         resp = jsonify(success=False)
         return resp
       
-    if 'refresh_mode' in json:
-        refresh_mode = json['refresh_mode']
+    if 'refresh_mode' in json_request:
+        refresh_mode = json_request['refresh_mode']
     else:
         print("The export config requires a refresh_mode parameter. Please add the parameter to the json object.")
         resp = jsonify(success=False)
@@ -2811,15 +2679,15 @@ def create_export_config():
     
     if refresh_mode.upper() == 'AUTO':
         
-        if 'refresh_frequency' in json:
-            refresh_frequency = json['refresh_frequency']
+        if 'refresh_frequency' in json_request:
+            refresh_frequency = json_request['refresh_frequency']
         else:
             print("The export config requires a refresh_frequency parameter when refresh_mode = AUTO. Please add the parameter to the json object.")
             resp = jsonify(success=False)
             return resp
         
-        if 'refresh_unit' in json:
-            refresh_unit = json['refresh_unit']
+        if 'refresh_unit' in json_request:
+            refresh_unit = json_request['refresh_unit']
         else:
             print("The export config requires a refresh_unit parameter when refresh_mode = AUTO. Please add the parameter to the json object.")
             resp = jsonify(success=False)
@@ -2829,14 +2697,14 @@ def create_export_config():
         refresh_unit = None 
     
     
-    if 'write_option' in json:
-        write_option = json['write_option']
+    if 'write_option' in json_request:
+        write_option = json_request['write_option']
     else:
         print("The export config requires a write_option parameter. Please add the parameter to the json object.")
         resp = jsonify(success=False)
         return resp
         
-    config_uuid = store.write_tag_export_config(service_account, source_projects, source_folder, source_region, \
+    config_uuid = store.write_tag_export_config(tag_creator_sa, source_projects, source_folder, source_region, \
                                               target_project, target_dataset, target_region, write_option, \
                                               refresh_mode, refresh_frequency, refresh_unit)                                                      
     
@@ -2845,16 +2713,17 @@ def create_export_config():
 
 @app.route("/copy_tags", methods=['POST'])
 def copy_tags():
-    json = request.get_json(force=True) 
-    print('json: ' + str(json))
     
-    status, response, service_account = do_authentication(json, request.headers)
+    json_request = request.get_json(force=True) 
+    print('json request: ', json_request)
+    
+    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
     
     if status == False:
         return jsonify(response), 400
        
-    if 'source_project' in json:
-        source_project = json['source_project']
+    if 'source_project' in json_request:
+        source_project = json_request['source_project']
     else:
         response = {
                 "status": "error",
@@ -2862,8 +2731,8 @@ def copy_tags():
         }
         return jsonify(response), 400
     
-    if 'source_dataset' in json:
-        source_dataset = json['source_dataset']
+    if 'source_dataset' in json_request:
+        source_dataset = json_request['source_dataset']
     else:
         response = {
                 "status": "error",
@@ -2871,8 +2740,8 @@ def copy_tags():
         }
         return jsonify(response), 400
     
-    if 'source_table' in json:
-         source_table = json['source_table']
+    if 'source_table' in json_request:
+         source_table = json_request['source_table']
     else:
          response = {
              "status": "error",
@@ -2880,8 +2749,8 @@ def copy_tags():
      }
          return jsonify(response), 400
  
-    if 'target_project' in json:
-        target_project = json['target_project']
+    if 'target_project' in json_request:
+        target_project = json_request['target_project']
     else:
         response = {
                 "status": "error",
@@ -2889,8 +2758,8 @@ def copy_tags():
         }
         return jsonify(response), 400
     
-    if 'target_dataset' in json:
-        target_dataset = json['target_dataset']
+    if 'target_dataset' in json_request:
+        target_dataset = json_request['target_dataset']
     else:
         response = {
                 "status": "error",
@@ -2898,8 +2767,8 @@ def copy_tags():
         }
         return jsonify(response), 400
     
-    if 'target_table' in json:
-         target_table = json['target_table']
+    if 'target_table' in json_request:
+         target_table = json_request['target_table']
     else:
          response = {
              "status": "error",
@@ -2907,10 +2776,10 @@ def copy_tags():
      }
          return jsonify(response), 400
 
-    credentials, success = get_target_credentials(service_account)
+    credentials, success = get_target_credentials(tag_creator_sa)
     
     if success == False:
-        print('Error acquiring credentials from', service_account)
+        print('Error acquiring credentials from', tag_creator_sa)
     
     dcc = controller.DataCatalogController(credentials)
     success = dcc.copy_tags(source_project, source_dataset, source_table, target_project, target_dataset, target_table)                                                      
@@ -2926,15 +2795,15 @@ def copy_tags():
 @app.route("/update_tag_subset", methods=['POST'])
 def update_tag_subset():
     
-    json = request.get_json(force=True) 
-    print('json: ' + str(json))
+    json_request = request.get_json(force=True) 
+    print('json request: ', json_request)
     
-    status, response, service_account = do_authentication(json, request.headers)
+    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
     
     if status == False:
         return jsonify(response), 400
     
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('update_tag_subset', json)
+    valid_parameters, template_id, template_project, template_region = check_template_parameters('update_tag_subset', json_request)
     
     if valid_parameters != True:
         response = {
@@ -2943,8 +2812,8 @@ def update_tag_subset():
         }
         return jsonify(response), 400   
         
-    if 'entry_name' in json:
-        entry_name = json['entry_name']
+    if 'entry_name' in json_request:
+        entry_name = json_request['entry_name']
     else:
         response = {
                 "status": "error",
@@ -2952,8 +2821,8 @@ def update_tag_subset():
         }
         return jsonify(response), 400
     
-    if 'changed_fields' in json:
-         changed_fields = json['changed_fields']
+    if 'changed_fields' in json_request:
+         changed_fields = json_request['changed_fields']
     else:
          response = {
              "status": "error",
@@ -2961,10 +2830,10 @@ def update_tag_subset():
      }
          return jsonify(response), 400
 
-    credentials, success = get_target_credentials(service_account)
+    credentials, success = get_target_credentials(tag_creator_sa)
     
     if success == False:
-        print('Error acquiring credentials from', service_account)
+        print('Error acquiring credentials from', tag_creator_sa)
         
     dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     success = dcc.update_tag_subset(template_id, template_project, template_region, entry_name, changed_fields)
@@ -2989,20 +2858,22 @@ Returns:
 def trigger_job(): 
     
     print('enter trigger_job')
-    json = request.get_json(force=True)
-
-    status, response, tag_creator_account = do_authentication(json, request.headers)
-    print('status:', status, ', response:', response, ', tag_creator_account:', tag_creator_account)
+    
+    json_request = request.get_json(force=True) 
+    print('json request: ', json_request)
+    
+    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
+    print('status:', status, ', response:', response, ', tag_creator_sa:', tag_creator_sa)
     
     if status == False:
         return jsonify(response), 400
     
-    tag_invoker_account = get_tag_invoker_account(request.headers.get('Authorization'))
-    print('tag_invoker_account:', tag_invoker_account)
+    tag_invoker_sa = get_tag_invoker_account(request.headers.get('Authorization'))
+    print('tag_invoker_sa:', tag_invoker_sa)
     
-    if 'config_type' in json:
-        config_type = json['config_type']
-        is_valid = check_config_type(json['config_type'])
+    if 'config_type' in json_request:
+        config_type = json_request['config_type']
+        is_valid = check_config_type(json_request['config_type'])
     else:
         print("trigger_job request is missing the required parameter config_type. Please add this parameter to the json object.")
         resp = jsonify(success=False)
@@ -3013,10 +2884,10 @@ def trigger_job():
         resp = jsonify(success=False)
         return resp
     
-    if 'config_uuid' in json:
+    if 'config_uuid' in json_request:
         
-        config_uuid = json['config_uuid']
-        config_type = json['config_type']
+        config_uuid = json_request['config_uuid']
+        config_type = json_request['config_type']
         
         if isinstance(config_uuid, str):
             is_active = store.check_active_config(config_uuid, config_type)
@@ -3026,15 +2897,15 @@ def trigger_job():
                 resp = jsonify(success=False)
                 return resp
     
-    elif 'template_id' in json and 'template_project' in json and 'template_region' in json:
-         template_id = json['template_id']
-         template_project = json['template_project']
-         template_region = json['template_region']
+    elif 'template_id' in json_request and 'template_project' in json_request and 'template_region' in json_request:
+         template_id = json_request['template_id']
+         template_project = json_request['template_project']
+         template_region = json_request['template_region']
          
-         if 'included_tables_uris' in json:
-             included_uris = json['included_tables_uris']
-         elif 'included_assets_uris' in json:
-             included_uris = json['included_assets_uris'] 
+         if 'included_tables_uris' in json_request:
+             included_uris = json_request['included_tables_uris']
+         elif 'included_assets_uris' in json_request:
+             included_uris = json_request['included_assets_uris'] 
          else:
              print("trigger_job request is missing the required parameter included_tables_uris or included_assets_uris. Please add this parameter to the json object.")
              resp = jsonify(success=False)
@@ -3052,9 +2923,9 @@ def trigger_job():
         resp = jsonify(success=False)
         return resp
         
-    if 'job_metadata' in json:
+    if 'job_metadata' in json_request:
         
-        job_metadata = json['job_metadata']
+        job_metadata = json_request['job_metadata']
         
         if isinstance(job_metadata, dict) == False:
             print('Warning: job metadata cannot be recorded because', job_metadata, 'is not a json object') 
@@ -3062,18 +2933,18 @@ def trigger_job():
         else: 
             if ENABLE_JOB_METADATA == False:
                 print('Warning: Ignoring job metadata in request because ENABLE_JOB_METADATA = False in tagengine.ini')
-                job_uuid = jm.create_job(tag_creator_account, tag_invoker_account, config_uuid, json['config_type'])
+                job_uuid = jm.create_job(tag_creator_sa, tag_invoker_sa, config_uuid, json_request['config_type'])
             else:
-                job_uuid = jm.create_job(tag_creator_account, tag_invoker_account, config_uuid, config_type, job_metadata)
+                job_uuid = jm.create_job(tag_creator_sa, tag_invoker_sa, config_uuid, config_type, job_metadata)
                 template_id = store.lookup_tag_template(config_type, config_uuid)
                 
-                credentials, success = get_target_credentials(tag_creator_account)
+                credentials, success = get_target_credentials(tag_creator_sa)
                 bqu = bq.BigQueryUtils(credentials, BIGQUERY_REGION)
                 success = bqu.write_job_metadata(job_uuid, template_id, job_metadata)
                 print('Wrote job metadata to BigQuery for job', job_uuid, '. Success =', success)
                        
     else:    
-        job_uuid = jm.create_job(tag_creator_account, tag_invoker_account, config_uuid, config_type)
+        job_uuid = jm.create_job(tag_creator_sa, tag_invoker_sa, config_uuid, config_type)
     
     
     return jsonify(job_uuid=job_uuid)
@@ -3092,17 +2963,16 @@ Returns:
 @app.route("/get_job_status", methods=['POST'])
 def get_job_status(): 
     
-    json = request.get_json(force=True)
-    print('json:', json)
+    json_request = request.get_json(force=True) 
+    print('json request: ', json_request)
     
-    status, response, service_account = do_authentication(json, request.headers)
-    print('service_account:', service_account)
+    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
     
     if status == False:
         return jsonify(response), 400
     
-    if 'job_uuid' in json:
-        job_uuid = json['job_uuid']
+    if 'job_uuid' in json_request:
+        job_uuid = json_request['job_uuid']
     else:
         print("get_job_status request is missing the required parameter job_uuid. Please add this parameter to the json object.")
         resp = jsonify(success=False)
@@ -3123,7 +2993,7 @@ def get_job_status():
     
 
 """
-Method called by Cloud Scheduler to update all the tags set to auto refresh (regardless of the service account attached to the config)
+Method called by Cloud Scheduler to update all tags which are set to auto refresh (regardless of the service account attached to the config)
 Args:
     None
 Returns:
@@ -3135,7 +3005,10 @@ def scheduled_auto_updates():
     try:    
         print('*** enter scheduled_auto_updates ***')
         
-        status, response, service_account = do_authentication(json, request.headers)
+        json_request = request.get_json(force=True) 
+        print('json request: ', json_request)
+    
+        status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
         
         if status == False:
             return jsonify(response), 400
@@ -3152,8 +3025,8 @@ def scheduled_auto_updates():
             
             if isinstance(config_uuid, str): 
                 store.update_job_status(config_uuid, config_type, 'PENDING')
-                store.increment_version_next_run(service_account, config_uuid, config_type)
-                job_uuid = jm.create_job(service_account, config_uuid, config_type)
+                store.increment_version_next_run(tag_creator_sa, config_uuid, config_type)
+                job_uuid = jm.create_job(tag_creator_sa, config_uuid, config_type)
                 jobs.append(job_uuid)
 
         print('created jobs:', jobs)
@@ -3176,16 +3049,17 @@ Returns:
 """ 
 @app.route("/list_configs", methods=['POST'])
 def list_configs():
-    json = request.get_json(force=True) 
-    print('json: ' + str(json))
     
-    status, response, service_account = do_authentication(json, request.headers)
+    json_request = request.get_json(force=True) 
+    print('json request: ', json_request)
     
+    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
+        
     if status == False:
         return jsonify(response), 400
        
-    if 'config_type' in json:
-        config_type = json['config_type']
+    if 'config_type' in json_request:
+        config_type = json_request['config_type']
         
         if config_type == 'ALL':
             is_valid = True
@@ -3201,7 +3075,7 @@ def list_configs():
         resp = jsonify(success=False)
         return resp
                       
-    configs = store.read_configs(service_account, config_type) 
+    configs = store.read_configs(tag_creator_sa, config_type) 
     
     configs_trimmed = []
     
@@ -3223,16 +3097,17 @@ Returns:
 """ 
 @app.route("/get_config", methods=['POST'])
 def get_config():
-    json = request.get_json(force=True) 
-    print('json: ' + str(json))
     
-    status, response, service_account = do_authentication(json, request.headers)
+    json_request = request.get_json(force=True) 
+    print('json request: ', json_request)
     
+    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
+        
     if status == False:
         return jsonify(response), 400
        
-    if 'config_type' in json:
-        config_type = json['config_type']
+    if 'config_type' in json_request:
+        config_type = json_request['config_type']
         is_valid = check_config_type(config_type)
     else:
         print("read_config request is missing the required parameter config_type. Please add this parameter to the json object.")
@@ -3244,14 +3119,14 @@ def get_config():
         resp = jsonify(success=False)
         return resp
     
-    if 'config_uuid' in json:
-        config_uuid = json['config_uuid']
+    if 'config_uuid' in json_request:
+        config_uuid = json_request['config_uuid']
     else:
         print("read_config request is missing the required parameter config_uuid. Please add this parameter to the json object.")
         resp = jsonify(success=False)
         return resp
                      
-    config = store.read_config(service_account, config_uuid, config_type) 
+    config = store.read_config(tag_creator_sa, config_uuid, config_type) 
     
     return jsonify(configs=config)
 
@@ -3266,16 +3141,17 @@ Returns:
 """ 
 @app.route("/delete_config", methods=['POST'])
 def delete_config():
-    json = request.get_json(force=True) 
-    print('json: ' + str(json))
     
-    status, response, service_account = do_authentication(json, request.headers)
+    json_request = request.get_json(force=True) 
+    print('json request: ', json_request)
     
+    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
+     
     if status == False:
         return jsonify(response), 400
        
-    if 'config_type' in json:
-        config_type = json['config_type']
+    if 'config_type' in json_request:
+        config_type = json_request['config_type']
         is_valid = check_config_type(config_type)
     else:
         print("delete_config request is missing the required parameter config_type. Please add this parameter to the json object.")
@@ -3287,14 +3163,14 @@ def delete_config():
         resp = jsonify(success=False)
         return resp
     
-    if 'config_uuid' in json:
-        config_uuid = json['config_uuid']
+    if 'config_uuid' in json_request:
+        config_uuid = json_request['config_uuid']
     else:
         print("delete_config request is missing the required parameter config_uuid. Please add this parameter to the json object.")
         resp = jsonify(success=False)
         return resp
                      
-    status = store.delete_config(service_account, config_uuid, config_type) 
+    status = store.delete_config(tag_creator_sa, config_uuid, config_type) 
     
     return jsonify(status=status)
 
@@ -3309,16 +3185,17 @@ Returns:
 """ 
 @app.route("/purge_inactive_configs", methods=['POST'])
 def purge_inactive_configs():
-    json = request.get_json(force=True) 
-    print('json: ' + str(json))
     
-    status, response, service_account = do_authentication(json, request.headers)
+    json_request = request.get_json(force=True) 
+    print('json request: ', json_request)
     
+    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
+        
     if status == False:
         return jsonify(response), 400
        
-    if 'config_type' in json:
-        config_type = json['config_type']
+    if 'config_type' in json_request:
+        config_type = json_request['config_type']
         
         if config_type == 'ALL':
             is_valid = True
@@ -3334,7 +3211,7 @@ def purge_inactive_configs():
         resp = jsonify(success=False)
         return resp
                       
-    deleted_count = store.purge_inactive_configs(service_account, config_type) 
+    deleted_count = store.purge_inactive_configs(tag_creator_sa, config_type) 
     
     return jsonify(deleted_count=deleted_count)
 
@@ -3346,16 +3223,16 @@ def _split_work():
     
     print('*** enter _split_work ***')
     
-    json = request.get_json(force=True)
-    print('json: ', json)
+    json_request = request.get_json(force=True)
+    print('json_request: ', json_request)
     
-    job_uuid = json['job_uuid']
-    config_uuid = json['config_uuid']
-    config_type = json['config_type']
-    tag_creator_account = json['tag_creator_account']
-    tag_invoker_account = json['tag_invoker_account']
+    job_uuid = json_request['job_uuid']
+    config_uuid = json_request['config_uuid']
+    config_type = json_request['config_type']
+    tag_creator_sa = json_request['tag_creator_account']
+    tag_invoker_sa = json_request['tag_invoker_account']
 
-    config = store.read_config(tag_creator_account, config_uuid, config_type)
+    config = store.read_config(tag_creator_sa, config_uuid, config_type)
     
     print('config: ', config)
     
@@ -3364,10 +3241,10 @@ def _split_work():
        return resp 
     
     # get the credentials for the SA that is associated with this config
-    credentials, success = get_target_credentials(tag_creator_account)
+    credentials, success = get_target_credentials(tag_creator_sa)
     
     if success == False:
-        print('Error acquiring credentials from', tag_creator_account)
+        print('Error acquiring credentials from', tag_creator_sa)
         update_job_status(self, config_uuid, config_type, 'ERROR')
         resp = jsonify(success=False)
         return resp
@@ -3382,7 +3259,7 @@ def _split_work():
         
         jm.record_num_tasks(job_uuid, len(uris))
         jm.update_job_running(job_uuid) 
-        tm.create_config_uuid_tasks(tag_creator_account, tag_invoker_account, job_uuid, config_uuid, config_type, uris)
+        tm.create_config_uuid_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, config_uuid, config_type, uris)
     
     # static asset config and glossary asset config    
     if 'included_assets_uris' in config:
@@ -3392,7 +3269,7 @@ def _split_work():
         
         jm.record_num_tasks(job_uuid, len(uris))
         jm.update_job_running(job_uuid) 
-        tm.create_config_uuid_tasks(tag_creator_account, tag_invoker_account, job_uuid, config_uuid, config_type, uris)
+        tm.create_config_uuid_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, config_uuid, config_type, uris)
     
     # export tag config
     if config_type == 'TAG_EXPORT':
@@ -3417,7 +3294,7 @@ def _split_work():
         
         jm.record_num_tasks(job_uuid, len(uris))
         jm.update_job_running(job_uuid) 
-        tm.create_config_uuid_tasks(tag_creator_account, tag_invoker_account, job_uuid, config_uuid, config_type, uris)
+        tm.create_config_uuid_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, config_uuid, config_type, uris)
     
     # import or restore tag config
     if config_type == 'TAG_IMPORT' or config_type == 'TAG_RESTORE':
@@ -3469,7 +3346,7 @@ def _split_work():
         
         jm.record_num_tasks(job_uuid, len(extracted_tags))
         jm.update_job_running(job_uuid) 
-        tm.create_tag_extract_tasks(tag_creator_account, tag_invoker_account, job_uuid, config_uuid, config_type, extracted_tags)
+        tm.create_tag_extract_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, config_uuid, config_type, extracted_tags)
     
 
     # update the status of the config, no matter which config type is running
@@ -3486,38 +3363,38 @@ def _run_task():
     
     creation_status = constants.ERROR
     
-    json = request.get_json(force=True)
-    job_uuid = json['job_uuid']
-    config_uuid = json['config_uuid']
-    config_type = json['config_type']
-    shard_uuid = json['shard_uuid']
-    task_uuid = json['task_uuid']
-    tag_creator_account = json['tag_creator_account']
-    tag_invoker_account = json['tag_invoker_account']
+    json_request = request.get_json(force=True)
+    job_uuid = json_request['job_uuid']
+    config_uuid = json_request['config_uuid']
+    config_type = json_request['config_type']
+    shard_uuid = json_request['shard_uuid']
+    task_uuid = json_request['task_uuid']
+    tag_creator_sa = json_request['tag_creator_account']
+    tag_invoker_sa = json_request['tag_invoker_account']
     
-    if 'uri' in json:
-        uri = json['uri']
+    if 'uri' in json_request:
+        uri = json_request['uri']
     else:
         uri = None
         #print('uri: ', uri)
         
-    if 'tag_extract' in json:
-        tag_extract = json['tag_extract']
+    if 'tag_extract' in json_request:
+        tag_extract = json_request['tag_extract']
         #print('tag_extract: ', tag_extact)
     else:
         tag_extract = None
         
     
-    credentials, success = get_target_credentials(tag_creator_account)
+    credentials, success = get_target_credentials(tag_creator_sa)
     
     if success == False:
-        print('Error acquiring credentials from', tag_creator_account)
+        print('Error acquiring credentials from', tag_creator_sa)
         tm.update_task_status(shard_uuid, task_uuid, 'ERROR')   
     
     # retrieve the config 
     tm.update_task_status(shard_uuid, task_uuid, 'RUNNING')
     
-    config = store.read_config(tag_creator_account, config_uuid, config_type)
+    config = store.read_config(tag_creator_sa, config_uuid, config_type)
     print('config: ', config)
            
     if config_type == 'TAG_EXPORT':
@@ -3532,7 +3409,7 @@ def _run_task():
             }
             return jsonify(response), 400
         
-        dcc = controller.DataCatalogController(credentials, tag_creator_account, tag_invoker_account, \
+        dcc = controller.DataCatalogController(credentials, tag_creator_sa, tag_invoker_sa, \
                                                config['template_id'], config['template_project'], config['template_region'])
     
     elif config_type == 'TAG_RESTORE':
@@ -3550,7 +3427,7 @@ def _run_task():
             }
             return jsonify(response), 400
         
-        dcc = controller.DataCatalogController(credentials, tag_creator_account, tag_invoker_account, \
+        dcc = controller.DataCatalogController(credentials, tag_creator_sa, tag_invoker_sa, \
                                                 config['target_template_id'], config['target_template_project'], 
                                                 config['target_template_region'])
     else:
@@ -3562,7 +3439,7 @@ def _run_task():
             return jsonify(response), 400
             
         template_config = store.read_tag_template_config(config['template_uuid'])
-        dcc = controller.DataCatalogController(credentials, tag_creator_account, tag_invoker_account, \
+        dcc = controller.DataCatalogController(credentials, tag_creator_sa, tag_invoker_sa, \
                                                template_config['template_id'], template_config['template_project'], \
                                                template_config['template_region'])
             
@@ -3629,7 +3506,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 2.1.5\n"
+    return "Welcome to Tag Engine version 2.1.6\n"
     
 ####################### TEST METHOD ####################################  
     
