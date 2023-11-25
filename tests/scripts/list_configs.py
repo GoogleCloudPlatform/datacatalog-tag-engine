@@ -16,20 +16,13 @@ def get_id_token():
     auth_req = google.auth.transport.requests.Request()
     id_token = google.oauth2.id_token.fetch_id_token(auth_req, audience)
     return id_token
-
-
-def get_oauth_token():
-    credentials, _ = google.auth.default(scopes=CREDENTIAL_SCOPES)
-    credentials.refresh(google.auth.transport.requests.Request())
-    return credentials.token
   
-  
-def list_configs(id_token, oauth_token):
+def list_configs(id_token):
     endpoint = TAG_ENGINE_URL + '/list_configs'
 
     auth_req = google.auth.transport.requests.Request()
     id_token = google.oauth2.id_token.fetch_id_token(auth_req, audience=TAG_ENGINE_URL)
-    headers = {'Authorization': 'Bearer ' + id_token, 'oauth_token': oauth_token}
+    headers = {'Authorization': 'Bearer ' + id_token}
     
     payload = {"config_type":"ALL"}
     payload_json = json.dumps(payload)
@@ -39,5 +32,4 @@ def list_configs(id_token, oauth_token):
     
 if __name__ == '__main__':
     id_token = get_id_token()
-    oauth_token = get_oauth_token()
-    list_configs(id_token, oauth_token)
+    list_configs(id_token)

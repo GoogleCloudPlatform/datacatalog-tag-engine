@@ -193,25 +193,6 @@ curl -i -X POST $TAG_ENGINE_URL/purge_inactive_configs \
   -d '{"config_type":"ALL"}' \
   -H "Authorization: Bearer $IAM_TOKEN" 
 
-
-####### Testing with unauthorized account #######
-
-export IAM_TOKEN=$(gcloud auth print-identity-token)
-
-# authenticate with gmail account
-unset GOOGLE_APPLICATION_CREDENTIALS
-gcloud auth application-default login 
-export OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
-
-# create config
-curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @tests/configs/dynamic_table/dynamic_dataset_ondemand.json \
-	-H "Authorization: Bearer $IAM_TOKEN"
-
-# trigger job
-curl -i -X POST $TAG_ENGINE_URL/trigger_job \
-  -d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"c255f764d56711edb96eb170f969c0af"}' \
-  -H "Authorization: Bearer $IAM_TOKEN"
-
 ####### Testing with service account override #######
 
 export IAM_TOKEN=$(gcloud auth print-identity-token)

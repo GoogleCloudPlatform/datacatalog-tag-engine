@@ -21,19 +21,13 @@ def get_id_token():
     id_token = google.oauth2.id_token.fetch_id_token(auth_req, audience)
     return id_token
 
-
-def get_oauth_token():
-    credentials, _ = google.auth.default(scopes=CREDENTIAL_SCOPES)
-    credentials.refresh(google.auth.transport.requests.Request())
-    return credentials.token
   
-  
-def trigger_dynamic_table_job(id_token, oauth_token):
+def trigger_dynamic_table_job(id_token):
     endpoint = TAG_ENGINE_URL + '/trigger_job'
 
     auth_req = google.auth.transport.requests.Request()
     id_token = google.oauth2.id_token.fetch_id_token(auth_req, audience=TAG_ENGINE_URL)
-    headers = {'Authorization': 'Bearer ' + id_token, 'oauth_token': oauth_token}
+    headers = {'Authorization': 'Bearer ' + id_token}
     
     payload = {'template_id': 'data_governance', 'template_project': TEMPLATE_PROJECT, 'template_region': TEMPLATE_REGION, \
                 'config_type': 'DYNAMIC_TAG_TABLE', 'included_tables_uris': 'bigquery/project/tag-engine-run/dataset/GCP_Mockup/*'}
@@ -46,12 +40,12 @@ def trigger_dynamic_table_job(id_token, oauth_token):
     return response.json()
 
 
-def trigger_dynamic_column_job(id_token, oauth_token):
+def trigger_dynamic_column_job(id_token):
     endpoint = TAG_ENGINE_URL + '/trigger_job'
 
     auth_req = google.auth.transport.requests.Request()
     id_token = google.oauth2.id_token.fetch_id_token(auth_req, audience=TAG_ENGINE_URL)
-    headers = {'Authorization': 'Bearer ' + id_token, 'oauth_token': oauth_token}
+    headers = {'Authorization': 'Bearer ' + id_token}
     
     payload = {'template_id': 'data_governance', 'template_project': TEMPLATE_PROJECT, 'template_region': TEMPLATE_REGION, \
                 'config_type': 'DYNAMIC_TAG_COLUMN', 'included_tables_uris': 'bigquery/project/tag-engine-run/dataset/GCP_Mockup/*'}
@@ -64,12 +58,12 @@ def trigger_dynamic_column_job(id_token, oauth_token):
     return response.json()
     
 
-def trigger_sensitive_column_job(id_token, oauth_token):
+def trigger_sensitive_column_job(id_token):
     endpoint = TAG_ENGINE_URL + '/trigger_job'
 
     auth_req = google.auth.transport.requests.Request()
     id_token = google.oauth2.id_token.fetch_id_token(auth_req, audience=TAG_ENGINE_URL)
-    headers = {'Authorization': 'Bearer ' + id_token, 'oauth_token': oauth_token}
+    headers = {'Authorization': 'Bearer ' + id_token}
     
     payload = {'template_id': 'data_sensitivity', 'template_project': TEMPLATE_PROJECT, 'template_region': TEMPLATE_REGION, \
                 'config_type': 'SENSITIVE_TAG_COLUMN', 'included_tables_uris': 'bigquery/project/tag-engine-run/dataset/crm/*'}
@@ -82,10 +76,10 @@ def trigger_sensitive_column_job(id_token, oauth_token):
     return response.json()
 
 
-def poll_job(id_token, oauth_token, payload):
+def poll_job(id_token, payload):
     
     while True:
-        job_status = get_job_status(id_token, oauth_token, payload)
+        job_status = get_job_status(id_token, payload)
         if job_status['job_status'] != 'SUCCESS' and job_status['job_status'] != 'ERROR':
             print('sleeping for 10 seconds...')
             time.sleep(10)
@@ -96,12 +90,12 @@ def poll_job(id_token, oauth_token, payload):
     return response
 
 
-def get_job_status(id_token, oauth_token, payload):
+def get_job_status(id_token, payload):
     endpoint = TAG_ENGINE_URL + '/get_job_status'
 
     auth_req = google.auth.transport.requests.Request()
     id_token = google.oauth2.id_token.fetch_id_token(auth_req, audience=TAG_ENGINE_URL)
-    headers = {'Authorization': 'Bearer ' + id_token, 'oauth_token': oauth_token}
+    headers = {'Authorization': 'Bearer ' + id_token}
     
     payload_json = json.dumps(payload)   
     response = requests.post(endpoint, headers=headers, data=payload_json)
@@ -113,28 +107,26 @@ def get_job_status(id_token, oauth_token, payload):
     
 if __name__ == '__main__':
     id_token = get_id_token()
-    oauth_token = get_oauth_token()
-    
-    response = trigger_dynamic_table_job(id_token, oauth_token)
+    response = trigger_dynamic_table_job(id_token)
     
     if 'job_uuid' in response:
-        poll_job(id_token, oauth_token, response)
+        poll_job(id_token, response)
     else:
         print('Error: trigger_dynamic_table_job failed. Consult Cloud Run logs for details. ')
         sys.exit()
     
-    response = trigger_dynamic_column_job(id_token, oauth_token)
+    response = trigger_dynamic_column_job(id_token)
     
     if 'job_uuid' in response:
-        poll_job(id_token, oauth_token, response)
+        poll_job(id_token, response)
     else:
         print('Error: trigger_dynamic_column_job failed. Consult Cloud Run logs for details. ')
         sys.exit()
     
-    response = trigger_sensitive_column_job(id_token, oauth_token)
+    response = trigger_sensitive_column_job(id_token)
     
     if 'job_uuid' in response:
-        poll_job(id_token, oauth_token, response)
+        poll_job(id_token, response)
     else:
         print('Error: trigger_sensitive_column_job failed. Consult Cloud Run logs for details. ')
         sys.exit()
