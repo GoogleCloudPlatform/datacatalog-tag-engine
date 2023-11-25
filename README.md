@@ -93,19 +93,18 @@ Alternative 2: you can choose to deploy Tag Engine v2 with [gcloud commands](htt
 
 6. Set the authorized redirect URI and add authorized users:
 
-    Re-open [API Credentials](https://console.cloud.google.com/apis/credentials)<br>
+    - Re-open [API Credentials](https://console.cloud.google.com/apis/credentials)<br>
 
-    Under OAuth 2.0 Client IDs, edit the `tag-engine-oauth` entry which you created earlier. <br>
+    - Under OAuth 2.0 Client IDs, edit the `tag-engine-oauth` entry which you created earlier. <br>
 
-	Under Authorized redirect URIs, add the URI:
+	- Under Authorized redirect URIs, add the URI:
+      https://tag-engine-ui-xxxxxxxxxxxxx.a.run.app/oauth2callback
 	
-    https://tag-engine-ui-xxxxxxxxxxxxx.a.run.app/oauth2callback
-	
-	Replace xxxxxxxxxxxxx in the URI with the actual value from the Terraform. This URI will be referred to below as the `UI_SERVICE_URI`.
+	- Replace xxxxxxxxxxxxx in the URI with the actual value from the Terraform. This URI will be referred to below as the `UI_SERVICE_URI`.
 
-    Open the OAuth consent screen page and under the Test users section, click on add users.
+    - Open the OAuth consent screen page and under the Test users section, click on add users.
 
-    Add the email address of each user for which you would like to grant access to the Tag Engine UI. 
+    - Add the email address of each user for which you would like to grant access to the Tag Engine UI. 
 
 <br><br>
 ### <a name="testa"></a> Part 2: Testing your Tag Engine API setup
@@ -127,14 +126,14 @@ If you are invoking the Tag Engine API with a user account, authorize your user 
 export INVOKER_USER_ACCOUNT="username@example.com"
 
 gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-    --member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountUser
+	--member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountUser
 
 gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-    --member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountTokenCreator 
+	--member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountTokenCreator 
 
 gcloud run services add-iam-policy-binding tag-engine-api 
-    --member=user:$INVOKER_USER_ACCOUNT --role=roles/run.invoker \
-    --region=$TAG_ENGINE_REGION	
+	--member=user:$INVOKER_USER_ACCOUNT --role=roles/run.invoker \
+	--region=$TAG_ENGINE_REGION	
 ```
 
 If you are invoking the Tag Engine API with a service account, authorize your service account as follows:
@@ -146,7 +145,7 @@ gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
 	--member=serviceAccount:$INVOKER_SERVICE_ACCOUNT --role=roles/iam.serviceAccountUser 
 
 gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-    --member=serviceAccount:$INVOKER_SERVICE_ACCOUNT --role=roles/iam.serviceAccountTokenCreator 
+	--member=serviceAccount:$INVOKER_SERVICE_ACCOUNT --role=roles/iam.serviceAccountTokenCreator 
 
 gcloud run services add-iam-policy-binding tag-engine-api \
 	--member=serviceAccount:$INVOKER_SERVICE_ACCOUNT --role=roles/run.invoker \
