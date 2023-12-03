@@ -1,4 +1,4 @@
-# Copyright 2022 Google, LLC.
+# Copyright 2022-2023 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
 from google.cloud import storage
 import csv
 
+from common import log_error
+
 class CsvParser:
 
     @staticmethod
@@ -24,13 +26,22 @@ class CsvParser:
         extracted_tags = [] # stores the result set
 
         # download CSV file from GCS
-        bucket_name, filename = csv_file
+        bucket_name, file_path = csv_file
         bucket = gcs_client.get_bucket(bucket_name)
-        blob = bucket.get_blob(filename)
+        blob = bucket.get_blob(file_path)
+        
+        file_splits = file_path.split('/')
+        num_splits = len(file_splits)
+        filename = file_splits[num_splits-1]
         
         tmp_file = '/tmp/' + filename
-        blob.download_to_filename(filename=tmp_file)
         
+        try:
+            blob.download_to_filename(filename=tmp_file)
+        except Exception as e:
+            msg = 'Could not download CSV {}'.format(tmp_file)
+            log_error(msg, e)
+            
         with open(tmp_file, 'r') as f:
             
             reader = csv.reader(f)
@@ -50,5 +61,25 @@ class CsvParser:
                     extracted_tags.append(tag_extract)       
         
         return extracted_tags
+
+if __name__ == '__main__':
+    
+    import google.auth, configparser
+    from google.auth import impersonated_credentials
+    SCOPES = ['openid', 'https://www.googleapis.com/auth/cloud-platform', 'https://www.googleapis.com/auth/userinfo.email']
+    
+    config = configparser.ConfigParser()
+    config.read("tagengine.ini")
+    
+    source_credentials, _ = google.auth.default() 
+    target_service_account = config['DEFAULT']['TAG_CREATOR_SA']
+    
+    credentials = impersonated_credentials.Credentials(source_credentials=source_credentials,
+        target_principal=target_service_account,
+        target_scopes=SCOPES,
+        lifetime=1200)
+
+    csv_file = ("tag-import", "csv/sakila_column_tags.csv")
+    CsvParser.extract_tags(credentials, csv_file)
 
         

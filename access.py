@@ -16,9 +16,12 @@ import base64, json, configparser, requests
 
 import google.oauth2.service_account
 import google.oauth2.credentials # user credentials
+
+from oauth2client.client import GoogleCredentials
 from googleapiclient import discovery
 
 import TagEngineStoreHandler as tesh
+from common import log_info, log_error
 
 config = configparser.ConfigParser()
 config.read("tagengine.ini")
@@ -46,41 +49,37 @@ def get_requested_service_account(json):
     return service_account
 
 
-def get_default_oauth_token():
-  
-  import google.auth
-  import google.auth.transport.requests
-  
-  creds, project = google.auth.default(scopes=['https://www.googleapis.com/auth/cloud-platform'])
-  creds.refresh(google.auth.transport.requests.Request())
-  
-  return (creds.token)
-
-# Note: tag_invoker_account can be either a service account or a user account
 def check_user_credentials_from_api(tag_creator_sa, tag_invoker_account):
 
     has_permission = False
+
+    credentials = GoogleCredentials.get_application_default()
+    service = discovery.build('iam', 'v1', credentials=credentials)
     
     start_index = tag_creator_sa.index('@') + 1 
     end_index = tag_creator_sa.index('.') 
     project = tag_creator_sa[start_index:end_index]
 
-    sess = requests.Session()
-    sess.headers.update({"Authorization" : f"Bearer {get_default_oauth_token()}"})
+    resource = 'projects/{}/serviceAccounts/{}'.format(project, tag_creator_sa)
+    print('resource:', resource)  
 
-    url = f"https://iam.googleapis.com/v1/projects/{project}/serviceAccounts/{tag_creator_sa}:getIamPolicy"
+    try:
+        request = service.projects().serviceAccounts().getIamPolicy(resource=resource)
+        iam_policy = request.execute()
+        print('iam_policy:', iam_policy)
+        
+        if "bindings" not in iam_policy:
+            return has_permission
 
-    iam_policy=sess.post(url, data=None).json()
-    print('iam_policy:', iam_policy)
+        for binding in iam_policy.get('bindings'):
+            if binding.get('role') == 'roles/iam.serviceAccountUser':
+                if f"user:{tag_invoker_account}" in binding.get('members') or f"serviceAccount:{tag_invoker_account}" in binding.get('members'):
+                    has_permission = True
+        
+    except Exception as e:
+        msg = 'Error calling getIamPolicy on: {}'.format(resource)
+        log_error(msg, e)
 
-    if "bindings" not in iam_policy:
-        return None
-
-    for binding in iam_policy.get('bindings'):
-        if binding.get('role') == 'roles/iam.serviceAccountUser':
-            if f"user:{tag_invoker_account}" or f"serviceAccount:{tag_invoker_account}" in binding.get('members'):
-                has_permission = True
-            
     return has_permission
 
     

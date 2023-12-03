@@ -12,7 +12,7 @@
             "query_expression": "select 'CONTENT'"
         }
     ],
-    "included_tables_uris": "bigquery/project/warehouse-337221/dataset/cities_311",
+    "included_tables_uris": "bigquery/project/warehouse-337221/dataset/cities_311/*",
     "excluded_tables_uris": "",
     "refresh_mode": "ON_DEMAND",
     "tag_history": false,

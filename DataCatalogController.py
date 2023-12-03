@@ -34,6 +34,7 @@ import Resources as res
 import TagEngineStoreHandler as tesh
 import BigQueryUtils as bq
 import constants
+from common import log_error, log_info
 
 config = configparser.ConfigParser()
 config.read("tagengine.ini")
@@ -70,7 +71,8 @@ class DataCatalogController:
             tag_template = self.client.get_tag_template(name=self.template_path)
         
         except Exception as e:
-            print('Error retrieving tag template: ', e)
+            msg = 'Error retrieving tag template {}'.format(self.template_path)
+            log_error(msg, e)
             return fields
         
         for field_id, field_value in tag_template.fields.items():
@@ -238,7 +240,8 @@ class DataCatalogController:
                 entry = self.client.lookup_entry(request)
                 print('GCS entry:', entry.name)
             except Exception as e:
-                print('Unable to find the entry in the catalog. Entry ' + gcs_resource + ' does not exist.')
+                msg = 'Unable to find the entry in the catalog. Entry {} does not exist'.format(gcs_resource)
+                log_error(msg, e)
                 creation_status = constants.ERROR
                 return creation_status
                 
@@ -257,7 +260,8 @@ class DataCatalogController:
             print('tag exists: ', tag_exists)
         
         except Exception as e:
-            print('Error during check_if_exists: ', e)
+            msg = 'Error during check_if_exists {}'.format(entry.name)
+            log_error(msg, e, job_uuid)
             creation_status = constants.ERROR
             return creation_status
 
@@ -356,7 +360,8 @@ class DataCatalogController:
                 response = self.client.update_tag(tag=tag)
                 print('response: ', response)
             except Exception as e:
-                print('Error occurred during tag update: ' + str(e))
+                msg = 'Error occurred during tag update: {}'.format(tag)
+                log_error(msg, e, job_uuid)
                 creation_status = constants.ERROR
         else:
 
@@ -366,14 +371,15 @@ class DataCatalogController:
                 print('response: ', response)
                 
             except Exception as e:
-                print('Error occurred during tag create: ', e)
+                msg = 'Error occurred during tag create: {}'.format(tag)
+                log_error(msg, e, job_uuid)
                 creation_status = constants.ERROR
             
         if creation_status == constants.SUCCESS and tag_history:
             bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
             template_fields = self.get_template()
-            bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, self.template_id, template_fields, uri, None, fields)
-                                         
+            bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, job_uuid, self.template_id, template_fields, uri, None, fields)
+               
         return creation_status
 
 
@@ -483,8 +489,7 @@ class DataCatalogController:
                 # tag is empty due to errors, skip tag creation
                 return constants.ERROR
             
-            # we are ready to create or update the tag 
-                       
+            # ready to create or update the tag         
             if tag_exists == True:
                 #print('updating tag')
                 #print('tag request: ' + str(tag))
@@ -495,7 +500,8 @@ class DataCatalogController:
                     response = self.client.update_tag(tag=tag)
                     #print('response: ', response)
                 except Exception as e:
-                    print('Error occurred during tag update: ' + str(e))
+                    msg = 'Error occurred during tag update: {}'.format(tag)
+                    log_error(msg, e, job_uuid)
                     creation_status = constants.ERROR
             else:
 
@@ -505,13 +511,14 @@ class DataCatalogController:
                     #print('response: ', response)
                 
                 except Exception as e:
-                    print('Error occurred during tag create: ', e)
+                    msg = 'Error occurred during tag create: {}'.format(tag)
+                    log_error(msg, e, job_uuid)
                     creation_status = constants.ERROR
             
             if creation_status == constants.SUCCESS and tag_history:
                 bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
                 template_fields = self.get_template()
-                bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, self.template_id, template_fields, uri, column, fields)
+                bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, job_uuid, self.template_id, template_fields, uri, column, fields)
             
         # outer loop ends here                
                                  
@@ -550,7 +557,8 @@ class DataCatalogController:
             print('Info: entry already exists: ', entry.name)
             
         except Exception as e: 
-            print('Info: entry does not exist')   
+            msg = 'Entry does not exist {}'.format(entry_name)
+            log_error(msg, e, job_uuid)
          
             # populate the entry
             entry = datacatalog.Entry()
@@ -573,7 +581,8 @@ class DataCatalogController:
                 parquet.ParquetFile(tmp_file)
             except Exception as e:
                 # not a parquet file, ignore it
-                print('The file ' + filename + ' is not a parquet file, ignoring it.')
+                msg = 'Error: {} is not a parquet file, ignoring it'.format(filename)
+                log_error(msg, e, job_uuid)
                 creation_status = constants.ERROR
                 return creation_status   
         
@@ -692,7 +701,7 @@ class DataCatalogController:
             if tag_history:
                 bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
                 template_fields = self.get_template()
-                bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, self.template_id, template_fields, '/'.join(uri), None, fields)
+                bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, job_uuid, self.template_id, template_fields, '/'.join(uri), None, fields)
                                                 
         return creation_status
 
@@ -705,6 +714,8 @@ class DataCatalogController:
             response = self.client.get_entry_group(request=request)
             return True
         except Exception as e:
+            msg = 'Error entry goup does not exist {}'.format(entry_group_full_name)
+            log_error(msg, e)
             return False
     
     
@@ -753,7 +764,8 @@ class DataCatalogController:
                 entry = self.client.lookup_entry(request)
                 print('entry: ', entry.name)
             except Exception as e:
-                print('Unable to find entry in the catalog. Entry ' + gcs_resource + ' does not exist.')
+                msg = 'Unable to find entry in the catalog. Entry {} does not exist: {}'.format(gcs_resource, e)
+                log_error(msg, e, job_uuid)
                 creation_status = constants.ERROR
                 return creation_status
                 #print('entry found: ', entry)
@@ -773,17 +785,24 @@ class DataCatalogController:
             print('tag_exists: ', tag_exists)
         
         except Exception as e:
-            print('Error during check_if_exists: ', e)
+            msg = 'Error during check_if_exists: {}'.format(e)
+            log_error(msg, e, job_uuid)
             creation_status = constants.ERROR
             return creation_status
 
         if tag_exists and overwrite == False:
-            print('Info: tag already exists and overwrite set to False')
+            msg = 'Info: tag already exists and overwrite set to False'
+            error = {'job_uuid': job_uuid, 'msg': msg}
+            print(json.dumps(info))
+            
             creation_status = constants.SUCCESS
             return creation_status
          
         if entry.schema == None:
-            print('Error: entry ' + entry.name + ' does not have a schema in the catalog.')
+            msg = 'Error entry {} does not have a schema in the catalog'.format(entry.name)
+            error = {'job_uuid': job_uuid, 'msg': msg}
+            print(json.dumps(info))
+            
             creation_status = constants.ERROR
             return creation_status
         
@@ -833,41 +852,47 @@ class DataCatalogController:
                 print('tag update: ', tag)
                 response = self.client.update_tag(tag=tag)
             except Exception as e:
-                print('Error occurred during tag update:', e)
+                msg = 'Error occurred during tag update: {}'.format(e)
+                log_error(msg, e, job_uuid)
 
                 # sleep and retry the tag update
-                if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
-                    print('sleep for 3 minutes due to ' + str(e))
+                if '429' or '503' in str(e):
+                    msg = 'Info: sleep for 3 minutes due to {}'.format(e)
+                    info = {'job_uuid': job_uuid, 'msg': msg}
+                    print(json.dumps(info))
                     time.sleep(180)
                     
                     try:
                         response = self.client.update_tag(tag=tag)
                     except Exception as e:
-                        print('Error occurred during tag update after sleep:', e)
+                        msg = 'Error occurred during tag update after sleep {}'.format(tag)
+                        log_error(msg, e, job_uuid)
         else:
             try:
                 print('tag create: ', tag)
                 response = self.client.create_tag(parent=entry.name, tag=tag)
             except Exception as e:
-                print('Error occurred during tag create:', e)
+                msg = 'Error occurred during tag create: {}'.format(tag)
+                log_error(msg, e, job_uuid)
                 
                 # sleep and retry write
-                if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
-                    print('sleep for 3 minutes due to ' + str(e))
-                    time.sleep(180)
+                if '429' or '503' in str(e):
+                    msg = 'Info: sleep for 3 minutes due to {}'.format(e)
+                    log_info(msg, job_uuid)
                     
                     try:
                         response = self.client.create_tag(parent=entry.name, tag=tag)
                     except Exception as e:
-                        print('Error occurred during tag create after sleep:', e)
+                        msg = 'Error occurred during tag create after sleep: {}'.format(e)
+                        log_error(msg, e, job_uuid)
                     
         if tag_history:
             bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
             template_fields = self.get_template()
             if is_gcs:
-                bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, self.template_id, template_fields, '/'.join(uri), None, fields)
+                bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, job_uuid, self.template_id, template_fields, '/'.join(uri), None, fields)
             if is_bq:
-                bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, self.template_id, template_fields, uri, None, fields)
+                bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, job_uuid, self.template_id, template_fields, uri, None, fields)
                    
         return creation_status
       
@@ -877,15 +902,15 @@ class DataCatalogController:
                                       tag_history, overwrite=False):
         
         print('** enter apply_sensitive_column_config **')
-        print('fields: ', fields)
-        print('dlp_dataset: ', dlp_dataset)
-        print('infotype_selection_table: ', infotype_selection_table)
-        print('infotype_classification_table: ', infotype_classification_table)
-        print('uri: ', uri)
-        print('create_policy_tags: ', create_policy_tags)
-        print('taxonomy_id: ', taxonomy_id)
-        print('config_uuid: ', config_uuid)
-        print('template_uuid: ', template_uuid)
+        #print('fields: ', fields)
+        #print('dlp_dataset: ', dlp_dataset)
+        #print('infotype_selection_table: ', infotype_selection_table)
+        #print('infotype_classification_table: ', infotype_classification_table)
+        #print('uri: ', uri)
+        #print('create_policy_tags: ', create_policy_tags)
+        #print('taxonomy_id: ', taxonomy_id)
+        #print('config_uuid: ', config_uuid)
+        #print('template_uuid: ', template_uuid)
         
         if create_policy_tags:
 
@@ -896,7 +921,8 @@ class DataCatalogController:
             try:
                 page_result = self.ptm_client.list_policy_tags(request=request)
             except Exception as e:
-                print('Unable to retrieve the policy tag taxonomy for taxonomy_id ' + taxonomy_id + '. Error message: ', e)
+                msg = 'Unable to retrieve the policy tag taxonomy for taxonomy_id {}'.format(taxonomy_id)
+                log_error(msg, e, job_uuid)
                 creation_status = constants.ERROR
                 return creation_status    
 
@@ -904,9 +930,7 @@ class DataCatalogController:
 
             for response in page_result:
                 policy_tag_names.append((response.name, response.display_name))
-        
-            #print('policy_tag_names: ', policy_tag_names)
-            
+
             policy_tag_requests = [] # stores the list of fully qualified policy tag names and table column names, 
                                      # so that we can create the policy tags on the various sensitive fields
  
@@ -929,18 +953,16 @@ class DataCatalogController:
         try:
             entry = self.client.lookup_entry(request)
         except Exception as e:
-            print('Error looking up entry ' + bigquery_resource + ' in the catalog. Error message: ', e)
+            msg = 'Error looking up entry {} in the catalog: {}'.format(bigquery_resource, e)
+            log_error(msg, e, job_uuid)
             creation_status = constants.ERROR
             return creation_status
-             
+           
         dlp_dataset = dlp_dataset.replace('bigquery/project/', '').replace('/dataset/', '.').replace('/', '.')        
         infotype_selection_table = infotype_selection_table.replace('bigquery/project/', '').replace('/dataset/', '.').replace('/', '.')
         infotype_classification_table = infotype_classification_table.replace('bigquery/project/', '').replace('/dataset/', '.').replace('/', '.')
         dlp_table = dlp_dataset + '.' + uri.split('/')[4]
-        
-        #print('dlp_dataset: ', dlp_dataset)
-        #print('dlp_table: ', dlp_table)
-                
+               
         infotype_fields = []
         notable_infotypes = []
     
@@ -951,13 +973,12 @@ class DataCatalogController:
         dlp_sql += 'order by cl.record_location.field_id.name) '
         dlp_sql += 'group by field'
         
-        #print('dlp_sql: ', dlp_sql)
-
         try:
             dlp_rows = self.bq_client.query(dlp_sql).result()
         
         except Exception as e:
-            print('Error querying DLP findings table. Error message: ', e)
+            msg = 'Error querying DLP findings table: {}'.format(dlp_sql)
+            log_error(msg, e, job_uuid)
             creation_status = constants.ERROR
             return creation_status
 
@@ -999,7 +1020,8 @@ class DataCatalogController:
             try:
                 ni_rows = self.bq_client.query(is_sql).result()
             except Exception as e:
-                print('Error querying infotype selection table. Error message: ', e)
+                msg = 'Error querying infotype selection table: {}'.format(is_sql)
+                log_error(msg, e, job_uuid)
                 creation_status = constants.ERROR
                 return creation_status
         
@@ -1039,7 +1061,8 @@ class DataCatalogController:
         try:
             c_rows = self.bq_client.query(c_sql).result()
         except Exception as e:
-            print('Error querying infotype classification table. Error message: ', e)
+            msg = 'Error querying infotype classification table: {}'.format(c_sql)
+            log_error(msg, e, job_uuid)
             creation_status = constants.ERROR
             return creation_status
         
@@ -1083,7 +1106,8 @@ class DataCatalogController:
                 tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=infotype_field)
         
             except Exception as e:
-                print('Error during check_if_exists: ', e)
+                msg = 'Error during check_if_exists: {}'.format(entry.name)
+                log_error(msg, e, job_uuid)
                 creation_status = constants.ERROR
                 return creation_status   
             
@@ -1103,7 +1127,8 @@ class DataCatalogController:
                     #print('response: ', response)
                     
                 except Exception as e:
-                    print('Error occurred during tag update:', e)
+                    msg = 'Error occurred during tag update: {}'.format(tag)
+                    log_error(msg, e, job_uuid)
                            
                     # sleep and retry the tag update
                     if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
@@ -1113,27 +1138,32 @@ class DataCatalogController:
                         try:
                             response = self.client.update_tag(tag=tag)
                         except Exception as e:
-                            print('Error occurred during tag update after sleep:', e)
+                            msg = 'Error occurred during tag update after sleep: {}'.format(tag)
+                            log_error(msg, e, job_uuid)
             else:
                 try:
                     print('tag create request: ', tag)
                     response = self.client.create_tag(parent=entry.name, tag=tag)
 
                 except Exception as e:
-                    print('Error occurred during tag create:', e)
+                    msg = 'Error occurred during tag create: {}'.format(tag)
+                    log_error(msg, e, job_uuid)
                    
-                    # sleep and retry write
-                    if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
-                        print('sleep for 3 minutes due to ' + str(e))
+                    # sleep and retry write if we have a quota exceeded error
+                    if '429' or '503' in str(e):
+                        msg = 'sleep for 3 minutes due to {}'.format(e)
+                        log_info(msg, job_uuid)
                         time.sleep(180)
                     
                         try:
                             response = self.client.create_tag(parent=entry.name, tag=tag)
                         except Exception as e:
-                            print('Error occurred during tag create after sleep:', e)
+                            msg = 'Error occurred during tag create after sleep: {}'.format(tag)
+                            log_error(msg, e, job_uuid)    
                     else:
                         # could not create the tag, could be due to a column mismatch
-                        print('Error: could not create tag on', infotype_field)
+                        msg = 'Error could not create tag on: {}'.format(infotype_field)
+                        log_error(msg, e, job_uuid)
                         creation_status = constants.ERROR
                     
             if creation_status == constants.SUCCESS and create_policy_tags and classification_result != 'Public_Information':
@@ -1146,7 +1176,7 @@ class DataCatalogController:
             if creation_status == constants.SUCCESS and tag_history:
                 bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
                 template_fields = self.get_template()
-                bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, self.template_id, template_fields, uri, infotype_field, fields)
+                bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, job_uuid, self.template_id, template_fields, uri, infotype_field, fields)
         
                         
         # once we have created the regular tags, we can create/update the policy tags
@@ -1155,7 +1185,10 @@ class DataCatalogController:
             creation_status = self.apply_policy_tags(table_id, policy_tag_requests)
         
         if creation_status != constants.SUCCESS:
-            print('Error occurred when tagging ' + uri + '. See previous error for details.')    
+            msg = 'Error occurred when tagging {}'.format(uri) 
+            error = {'job_uuid': job_uuid, 'msg': msg}
+            print(json.dumps(error))
+               
            
         return creation_status
 
@@ -1190,7 +1223,8 @@ class DataCatalogController:
             table = self.bq_client.update_table(table, ["schema"])  
         
         except Exception as e:
-            print('Error occurred while updating the schema of', table_id, 'Error message:', e)
+            msg = 'Error occurred while updating the schema of {}'.format(table_id)
+            log_error(msg, e, job_uuid)
             success = False
         
         return success
@@ -1236,7 +1270,8 @@ class DataCatalogController:
         try:
             entry = self.client.lookup_entry(request)
         except Exception as e:
-            print('Error looking up entry ' + bigquery_resource + ' in the catalog. Error message: ', e)
+            msg = 'Error looking up entry {} in catalog'.format(bigquery_resource)
+            log_error(msg, e, job_uuid)
             export_status = constants.ERROR
             return export_status
 
@@ -1336,7 +1371,8 @@ class DataCatalogController:
         try:
             entry = self.client.lookup_entry(request)
         except Exception as e:
-            print("Error: could not find the entry for ", bigquery_resource, ". Error: ", e)
+            msg = "Error could not find the entry for {}".format(bigquery_resource)
+            log_error(msg, e, job_uuid)
             creation_status = constants.ERROR
             return creation_status
 
@@ -1351,12 +1387,15 @@ class DataCatalogController:
             tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column_name)
 
         except Exception as e:
-            print('Error during check_if_exists: ', e)
+            msg = 'Error during check_if_exists: {}'.format(entry_name)
+            log_error(msg, e, job_uuid)
             creation_status = constants.ERROR
             return creation_status
 
         if tag_exists and overwrite == False:
-            print('Tag already exists and overwrite flag is False')
+            msg = 'Info: Tag already exists and overwrite flag is False'
+            info = {'job_uuid': job_uuid, 'msg': msg}
+            print(json.dumps(info))
             creation_status = constants.SUCCESS
             return creation_status
         
@@ -1417,7 +1456,8 @@ class DataCatalogController:
                 entry = self.client.get_entry(name=entry_name)
                 
             except Exception as e:
-                print("Error: couldn't find the entry: ", e)
+                msg = "Error couldn't find the entry: {}".format(entry_name)
+                log_error(msg, e, job_uuid)
                 creation_status = constants.ERROR
                 return creation_status
             
@@ -1436,12 +1476,16 @@ class DataCatalogController:
                         tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column_name)
         
                     except Exception as e:
-                        print('Error during check_if_exists: ', e)
+                        msg = 'Error during check_if_exists:{}'.format(entry.name)
+                        log_error(msg, e, job_uuid)
                         creation_status = constants.ERROR
                         return creation_status
 
                     if tag_exists and overwrite == False:
-                        print('Tag already exists and overwrite flag is False')
+                        msg = 'Info: Tag already exists and overwrite flag is False'
+                        info = {'job_uuid': job_uuid, 'msg': msg}
+                        print(json.dumps(info))
+                        
                         creation_status = constants.SUCCESS
                         return creation_status
             
@@ -1460,12 +1504,16 @@ class DataCatalogController:
                     tag_exists, tag_id = self.check_if_exists(parent=entry.name, column='')
     
                 except Exception as e:
-                    print('Error during check_if_exists: ', e)
+                    msg = 'Error during check_if_exists:{}'.format(entry.name)
+                    log_error(msg, e, job_uuid)
                     creation_status = constants.ERROR
                     return creation_status
 
                 if tag_exists and overwrite == False:
-                    print('Tag already exists and overwrite flag is False')
+                    msg = 'Info: Tag already exists and overwrite flag is False'
+                    info = {'job_uuid': job_uuid, 'msg': msg}
+                    print(json.dumps(info))
+                    
                     creation_status = constants.SUCCESS
                     return creation_status
                 
@@ -1581,20 +1629,23 @@ class DataCatalogController:
             tag.name = tag_id
 
             try:
-                print('tag update: ', tag)
+                print('tag update:', tag)
                 response = self.client.update_tag(tag=tag)
             except Exception as e:
-                print('Error occurred during tag update:', e)
+                msg = 'Error occurred during tag update: {}'.format(tag)
+                log_error(msg, e, job_uuid)
                 
                 # sleep and retry the tag update
-                if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
-                    print('sleep for 3 minutes due to ' + str(e))
+                if '429' or '503' in str(e):
+                    msg = 'Info: sleep for 3 minutes due to {}'.format(e)
+                    log_info(msg, job_uuid)
                     time.sleep(180)
         
                     try:
                         response = self.client.update_tag(tag=tag)
                     except Exception as e:
-                        print('Error occurred during tag update after sleep:', e)
+                        msg = 'Error occurred during tag update after sleep: {}'.format(tag)
+                        log_error(msg, e, job_uuid)
                         creation_status = constants.ERROR
                         return creation_status
         else:
@@ -1602,17 +1653,20 @@ class DataCatalogController:
                 print('tag create: ', tag)
                 response = self.client.create_tag(parent=entry.name, tag=tag)
             except Exception as e:
-                print('Error occurred during tag create:', e)
+                msg = 'Error occurred during tag create: {}'.format(tag)
+                log_error(msg, e, job_uuid)
                     
                 # sleep and retry write
-                if 'Quota exceeded for quota metric' or '503 The service is currently unavailable' in str(e):
-                    print('sleep for 3 minutes due to ' + str(e))
+                if '429' or '503' in str(e):
+                    msg = 'Info: sleep for 3 minutes due to {}'.format(e)
+                    log_info(msg, job_uuid)
                     time.sleep(180)
         
                     try:
                         response = self.client.create_tag(parent=entry.name, tag=tag)
                     except Exception as e:
-                        print('Error occurred during tag create after sleep:', e)
+                        msg = 'Error occurred during tag create after sleep: {}'.format(tag)
+                        log_error(msg, e, job_uuid)
                         creation_status = constants.ERROR
                         return creation_status
         
@@ -1622,7 +1676,9 @@ class DataCatalogController:
             success = bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, job_uuid, self.template_id, template_fields, uri, column_name, fields)
             
             if success == False:
-                print('Error occurred while writing to tag history table.')
+                msg = 'Error occurred while writing to tag history table'
+                error = {'job_uuid': job_uuid, 'msg': msg}
+                print(json.dumps(error))
                 creation_status = constants.ERROR
        
         return creation_status
@@ -1798,7 +1854,8 @@ class DataCatalogController:
         
         except Exception as e:
             error_exists = True
-            print('Error occurred during run_query ' + query_str + ', Error: ' + str(e))
+            msg = 'Error occurred during run_query {}'.format(query_str)
+            log_error(msg, e, job_uuid)
             
         #print('field_values: ', field_values)
         
@@ -1882,7 +1939,8 @@ class DataCatalogController:
                 
         except Exception as e:
             error_exists = True
-            print("Error storing values ", field_values, " into field ", field_id)
+            msg = "Error storing values {} into field {}".format(field_values, field_id)
+            log_error(msg, e, job_uuid)
         
         return tag, error_exists
     
@@ -1900,7 +1958,9 @@ class DataCatalogController:
         
         if source_entry.bigquery_table_spec.table_source_type != types.TableSourceType.BIGQUERY_TABLE:
             success = False
-            print('Error:', source_table, 'is not a BQ table.')
+            msg = 'Error {} is not a BQ table'.format(source_table)
+            error = {'msg': msg}
+            print(json.dumps(error))
             return success
         
         # lookup the target entry
@@ -1912,9 +1972,10 @@ class DataCatalogController:
         
         if target_entry.bigquery_table_spec.table_source_type != types.TableSourceType.BIGQUERY_TABLE:
             success = False
-            print('Error:', target_table, 'is not a BQ table.')
+            msg = 'Error {} is not a BQ table'.format(target_table)
+            error = {'msg': msg}
+            print(json.dumps(error))
             return success
-        
         
         # look to see if the source table is tagged
         tag_list = self.client.list_tags(parent=source_entry.name, timeout=120)
@@ -1979,7 +2040,8 @@ class DataCatalogController:
                     response = self.client.update_tag(tag=target_tag)
                 except Exception as e:
                     success = False
-                    print('Error occurred during tag update: ', e)
+                    msg = 'Error occurred during tag update: {}'.format(target_tag)
+                    log_error(msg, e)
             
             else:
                 try:
@@ -1987,7 +2049,8 @@ class DataCatalogController:
                     response = self.client.create_tag(parent=target_entry.name, tag=target_tag)
                 except Exception as e:
                     success = False
-                    print('Error occurred during tag create: ', e)
+                    msg = 'Error occurred during tag create: {}'.format(target_tag)
+                    log_error(msg, e)
                         
         # copy policy tags            
         success = self.copy_policy_tags(source_project, source_dataset, source_table, target_project, target_dataset, target_table)    
@@ -2005,7 +2068,8 @@ class DataCatalogController:
             source_schema = self.bq_client.get_table(source_table_id).schema
         except Exception as e:
             success = False
-            print('Error occurred while retrieving the schema of ', source_table_id, '. Error message:', e)
+            msg = 'Error occurred while retrieving the schema of {}'.format(source_table_id)
+            log_error(msg, e)
             return success 
     
         policy_tag_list = []
@@ -2097,7 +2161,10 @@ class DataCatalogController:
                 target_tag, error_exists = self.populate_tag_field(target_tag, field_id, field_type, [field_value])
                 
                 if error_exists:
-                    print('Error while populating the tag field. Aborting tag update.')
+                    msg = 'Error while populating the tag field. Aborting tag update.'
+                    error = {'msg': msg}
+                    print(json.dumps(error))
+                    
                     success = False
                     return success
 
@@ -2107,7 +2174,8 @@ class DataCatalogController:
                 response = self.client.update_tag(tag=target_tag)
             except Exception as e:
                 success = False
-                print('Error occurred during tag update: ', e)
+                msg = 'Error occurred during tag update: {}'.format(tag)
+                log_error(msg, e)
  
         return success 
                         
@@ -2119,7 +2187,6 @@ if __name__ == '__main__':
     SCOPES = ['openid', 'https://www.googleapis.com/auth/cloud-platform', 'https://www.googleapis.com/auth/userinfo.email']
     
     source_credentials, _ = google.auth.default() 
-    
     target_service_account = config['DEFAULT']['TAG_CREATOR_SA']
     
     credentials = impersonated_credentials.Credentials(source_credentials=source_credentials,
@@ -2129,8 +2196,8 @@ if __name__ == '__main__':
     
     fields = [{'field_type': 'enum', 'field_id': 'data_domain', 'enum_values': ['ENG', 'PRODUCT', 'OPERATIONS', 'LOGISTICS', 'FINANCE', 'HR', 'LEGAL', 'MARKETING', 'SALES', 'CONSUMER', 'GOVERNMENT'], 'is_required': True, 'display_name': 'Data Domain', 'order': 10, 'query_expression': "select 'LOGISTICS'"}, {'field_type': 'enum', 'field_id': 'broad_data_category', 'enum_values': ['CONTENT', 'METADATA', 'CONFIGURATION'], 'is_required': True, 'display_name': 'Broad Data Category', 'order': 9, 'query_expression': "select 'CONTENT'"}]
     uri = 'warehouse-337221/datasets/cities_311'
-    config_uuid = 'facb59187f1711eebe2b4f918967d564'
+    config_uuid = 'd92d37428bd111ee81f6acde48001122'
     template_uuid = 'fa8aa3007f1711eebe2b4f918967d564'
-    
+    job_uuid = '123'
     dcu = DataCatalogController(credentials, None, None, None)
-    dcu.apply_dynamic_table_config(fields, uri, config_uuid, template_uuid, tag_history=False)
+    dcu.apply_dynamic_table_config(fields, uri, job_uuid, config_uuid, template_uuid, tag_history=False)

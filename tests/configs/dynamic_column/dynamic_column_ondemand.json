@@ -12,8 +12,7 @@
             "query_expression": "select 'CONTENT'"
         }
     ],
-    "included_columns_query": "with cols as (select 'Deviation', union all select 'PlanningMarketName') select * from cols",
-	"included_tables_uris": "bigquery/project/tag-engine-run/dataset/GCP_Mockup/*",
-    "excluded_tables_uris": "",
-    "refresh_unit": "ON_DEMAND" 
+    "included_columns_query": "select 'unique_key', 'created_date'",
+	"included_tables_uris": "bigquery/project/warehouse-337221/dataset/cities_311/*",
+    "refresh_mode": "ON_DEMAND" 
 }

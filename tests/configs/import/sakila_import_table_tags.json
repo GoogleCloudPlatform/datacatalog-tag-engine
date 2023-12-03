@@ -2,7 +2,6 @@
     "template_id": "data_governance",
     "template_project": "tag-engine-run",
     "template_region": "us-central1",
-    "metadata_import_location": "gs://csv-meta-tags/sakila_table_tags.csv",
-	"overwrite": true,
-	"service_account": "tag-creator2@tag-engine-run.iam.gserviceaccount.com"   
+    "metadata_import_location": "gs://tag-import/csv/sakila_table_tags.csv",
+	"overwrite": true  
 }

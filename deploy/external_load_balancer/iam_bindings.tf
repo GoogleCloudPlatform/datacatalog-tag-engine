@@ -176,6 +176,15 @@ resource "google_service_account_iam_binding" "serviceAccountUser_tag_creator_sa
   depends_on = [google_project_service.tag_engine_project]
 }
 
+resource "google_service_account_iam_binding" "serviceAccountViewer_tag_creator_sa" {
+  service_account_id = "projects/${var.tag_engine_project}/serviceAccounts/${var.tag_creator_sa}"
+  role = "roles/iam.serviceAccountViewer"
+  members = [
+    "serviceAccount:${var.tag_engine_sa}",
+  ]
+  depends_on = [google_project_service.tag_engine_project]
+}
+
 resource "google_service_account_iam_binding" "serviceAccountTokenCreator_tag_creator_sa" {
   service_account_id = "projects/${var.tag_engine_project}/serviceAccounts/${var.tag_creator_sa}"
   role = "roles/iam.serviceAccountTokenCreator"

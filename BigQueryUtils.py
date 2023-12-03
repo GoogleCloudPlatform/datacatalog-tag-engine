@@ -117,7 +117,7 @@ class BigQueryUtils:
             else:
                 print('Error creating tag_history dataset')
 
-        if tagged_column and tagged_column not in "":
+        if tagged_column and tagged_column != "" and "/column/" not in tagged_table:
             asset_name = ("{}/column/{}".format(tagged_table, tagged_column))
         else:
             asset_name = tagged_table

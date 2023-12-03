@@ -18,14 +18,12 @@ from flask_session import Session
 import datetime, time, configparser, os, base64
 import requests
 
-from google.api_core.client_info import ClientInfo
 import google_auth_oauthlib.flow
 from googleapiclient import discovery
 
 from google.cloud import firestore
 from google.cloud import bigquery
 from google.cloud import tasks_v2
-from google.cloud import logging_v2
 from google.protobuf import timestamp_pb2
 
 from access import do_authentication
@@ -33,6 +31,9 @@ from access import check_user_credentials_from_ui
 from access import credentials_to_dict
 from access import get_target_credentials
 from access import get_tag_invoker_account
+
+from common import log_error
+from common import get_log_entries
 
 import DataCatalogController as controller
 import TagEngineStoreHandler as tesh
@@ -221,40 +222,6 @@ def logout():
         
     return redirect(url_for('authorize'))
     
-
-def get_log_entries(service_account):
-    
-    formatted_entries = []
-    
-    credentials, success = get_target_credentials(service_account)
-    
-    if success == False:
-        print('Error acquiring credentials from', service_account)
-    
-    logging_client = logging_v2.Client(project=TAG_ENGINE_PROJECT, credentials=credentials, client_info=ClientInfo(user_agent=USER_AGENT))
-    query="resource.type: cloud_run_revision"
-    
-    try:
-        entries = list(logging_client.list_entries(filter_=query, order_by=logging_v2.DESCENDING, max_results=25))
-    
-        for entry in entries:
-            timestamp = entry.timestamp.isoformat()[0:19]
-        
-            if entry.payload == None:
-                continue
-            
-            if len(entry.payload) > 120:
-                payload = entry.payload[0:120]
-            else:
-                payload = entry.payload
-    
-            formatted_entries.append((timestamp, payload))
-    
-    except Exception as e:
-        print('Error occurred while retrieving log entries: ', e)
-    
-    return formatted_entries
-
 
 @app.route("/home")
 def home():
@@ -1205,8 +1172,8 @@ def process_static_asset_config():
                     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     config_uuid = store.write_static_asset_config(service_account, fields, included_assets_uris, excluded_assets_uris, \
-                                                  template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
-                                                  tag_history_option)
+                                                  template_uuid, template_id, template_project, template_region, \
+                                                  refresh_mode, refresh_frequency, refresh_unit, tag_history_option)
     
     # [START render_template]
     return render_template(
@@ -1295,8 +1262,8 @@ def process_dynamic_table_config():
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     config_uuid = store.write_dynamic_table_config(service_account, fields, included_tables_uris, excluded_tables_uris, \
-                                                   template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
-                                                   tag_history_option)
+                                                   template_uuid, template_id, template_project, template_region, \
+                                                   refresh_mode, refresh_frequency, refresh_unit, tag_history_option)
      
     # [END process_dynamic_table_config]
     # [START render_template]
@@ -1482,8 +1449,8 @@ def process_entry_config():
         
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     config_uuid = store.write_entry_config(service_account, fields, included_assets_uris, excluded_assets_uris, template_uuid,\
-                                            refresh_mode, refresh_frequency, refresh_unit, \
-                                            tag_history_option)
+                                           template_id, template_project, template_region, \
+                                           refresh_mode, refresh_frequency, refresh_unit, tag_history_option)
      
     # [END process_entry_config]
     # [START render_template]
@@ -1573,7 +1540,7 @@ def process_glossary_asset_config():
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
 
     config_uuid = store.write_glossary_asset_config(service_account, fields, mapping_table, included_assets_uris, \
-                                                    excluded_assets_uris, template_uuid,\
+                                                    excluded_assets_uris, template_uuid, template_id, template_project, template_region, \
                                                     refresh_mode, refresh_frequency, refresh_unit, \
                                                     tag_history_option, overwrite)
      
@@ -1679,8 +1646,8 @@ def process_sensitive_column_config():
 
     config_uuid = store.write_sensitive_column_config(service_account, fields, dlp_dataset, infotype_selection_table, \
                                                       infotype_classification_table, included_tables_uris, excluded_tables_uris, \
-                                                      create_policy_tags, taxonomy_id, template_uuid, \
-                                                      refresh_mode, refresh_frequency, refresh_unit, \
+                                                      create_policy_tags, taxonomy_id, template_uuid, template_id, template_project, \
+                                                      template_region, refresh_mode, refresh_frequency, refresh_unit, \
                                                       tag_history_option, overwrite)
      
     # [END process_sensitive_column_config]
@@ -2042,8 +2009,8 @@ def create_static_asset_config():
     
     tag_history_option, _ = store.read_tag_history_settings()     
     config_uuid = store.write_static_asset_config(tag_creator_sa, fields, included_assets_uris, \
-                                                  excluded_assets_uris, template_uuid,\
-                                                  refresh_mode, refresh_frequency, refresh_unit, \
+                                                  excluded_assets_uris, template_uuid, template_id, \
+                                                  template_project, template_region, refresh_mode, refresh_frequency, refresh_unit, \
                                                   tag_history_option, overwrite)
 
     return jsonify(config_uuid=config_uuid, config_type='STATIC_TAG_ASSET')
@@ -2116,7 +2083,8 @@ def create_dynamic_table_config():
     
     tag_history_option, _ = store.read_tag_history_settings()
     config_uuid = store.write_dynamic_table_config(tag_creator_sa, fields, included_tables_uris, excluded_tables_uris, \
-                                                   template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
+                                                   template_uuid, template_id, template_project, template_region, \
+                                                   refresh_mode, refresh_frequency, refresh_unit, \
                                                    tag_history_option)                                                      
 
 
@@ -2195,8 +2163,8 @@ def create_dynamic_column_config():
     
     tag_history_option, _ = store.read_tag_history_settings()
     config_uuid = store.write_dynamic_column_config(tag_creator_sa, fields, included_columns_query, included_tables_uris, \
-                                                    excluded_tables_uris, template_uuid, refresh_mode, refresh_frequency, \
-                                                    refresh_unit, tag_history_option)                                                      
+                                                    excluded_tables_uris, template_uuid, template_id, template_project, template_region, \
+                                                    refresh_mode, refresh_frequency, refresh_unit, tag_history_option)                                                      
 
 
     return jsonify(config_uuid=config_uuid, config_type='DYNAMIC_TAG_COLUMN')
@@ -2267,8 +2235,8 @@ def create_entry_config():
     tag_history_option, _ = store.read_tag_history_settings()
     
     config_uuid = store.write_entry_config(tag_creator_sa, fields, included_assets_uris, excluded_assets_uris,\
-                                            template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
-                                            tag_history_option)                                                      
+                                            template_uuid, template_id, template_project, template_region, \
+                                            refresh_mode, refresh_frequency, refresh_unit, tag_history_option)                                                      
 
     return jsonify(config_uuid=config_uuid, config_type='ENTRY_CREATE')
 
@@ -2348,8 +2316,8 @@ def create_glossary_asset_config():
     tag_history_option, _ = store.read_tag_history_settings()
         
     config_uuid = store.write_glossary_asset_config(tag_creator_sa, fields, mapping_table, included_assets_uris, \
-                                                    excluded_assets_uris, template_uuid, refresh_mode, refresh_frequency, \
-                                                    refresh_unit, tag_history_option, overwrite)                                                      
+                                                    excluded_assets_uris, template_uuid, template_id, template_project, template_region, \
+                                                    refresh_mode, refresh_frequency, refresh_unit, tag_history_option, overwrite)                                                      
     
     return jsonify(config_uuid=config_uuid, config_type='GLOSSARY_TAG_ASSET')
 
@@ -2471,7 +2439,8 @@ def create_sensitive_column_config():
     config_uuid = store.write_sensitive_column_config(tag_creator_sa, fields, dlp_dataset, infotype_selection_table,\
                                                       infotype_classification_table, included_tables_uris, \
                                                       excluded_tables_uris, create_policy_tags, \
-                                                      taxonomy_id, template_uuid, refresh_mode, refresh_frequency, refresh_unit, \
+                                                      taxonomy_id, template_uuid, template_id, template_project, template_region, \
+                                                      refresh_mode, refresh_frequency, refresh_unit, \
                                                       tag_history_option, overwrite)                                                      
     
     return jsonify(config_uuid=config_uuid, config_type='SENSITIVE_TAG_COLUMN')
@@ -2487,7 +2456,7 @@ Args:
     target_template_region: The source tag template's region
     metadata_export_location: The path to the export files on GCS (Cloud Storage)
 Returns:
-    config_uuid 
+    {config_type, config_uuid} 
 """
 @app.route("/create_restore_config", methods=['POST'])
 def create_restore_config():
@@ -2568,6 +2537,17 @@ def create_restore_config():
     return jsonify(config_uuid=config_uuid, config_type='TAG_RESTORE')
 
 
+"""
+Args:
+    template_id: The tag template id with which to create the tags
+    template_project: The tag template's project id 
+    template_region: The tag template's region 
+    metadata_import_location: The path to the import files on GCS
+    service_account: The email address of the Tag Creator SA (optional param)
+    overwrite: Whether to overwrite the existing tags, True or False, defaults to True (optional param)
+Returns:
+    {config_type, config_uuid} 
+"""
 @app.route("/create_import_config", methods=['POST'])
 def create_import_config():
     
@@ -2587,22 +2567,16 @@ def create_import_config():
                 "message": "Request JSON is missing some required tag template parameters",
         }
         return jsonify(response), 400
-    
-    #print('template_id: ', template_id)
-    #print('template_project: ', template_project)
-    #print('template_region: ', template_region)
-    
+
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
 
     if 'metadata_import_location' in json_request:
-        metadata_export_location = json_request['metadata_import_location']
+        metadata_import_location = json_request['metadata_import_location']
     else:
         print("import config type requires the metadata_import_location parameter. Please add this parameter to the json object.")
         resp = jsonify(success=False)
         return resp
-        
-    metadata_import_location = json_request['metadata_import_location']
-           
+              
     if 'overwrite' in json_request:  
         overwrite = json_request['overwrite']
     else:
@@ -3033,7 +3007,8 @@ def scheduled_auto_updates():
         resp = jsonify(success=True, job_ids=json.dumps(jobs))
     
     except Exception as e:
-        print('failed scheduled_auto_updates {}'.format(e))
+        msg = 'failed scheduled_auto_updates'
+        log_error(msg, e)
         resp = jsonify(success=False, message='failed scheduled_auto_updates ' + str(e))
     
     return resp
@@ -3305,13 +3280,18 @@ def _split_work():
                 csv_files = list(re.get_resources(config.get('metadata_import_location'), None))
                 print('csv_files: ', csv_files)
             except Exception as e:
-                print('Error: unable to read CSV from', config.get('metadata_import_location'), e)
+                msg = 'Error: unable to read CSV from {}'.format(config.get('metadata_import_location'))
+                log_error(msg, e, job_uuid)
+                
                 store.update_job_status(config_uuid, config_type, 'ERROR')
                 resp = jsonify(success=False)
                 return resp
             
             if len(csv_files) == 0:
-                print('Error: unable to read CSV from', config.get('metadata_import_location'), e) 
+                msg = 'Error: unable to read CSV from {}: {}'.format(config.get('metadata_import_location'), e)
+                error = {'job_uuid': job_uuid, 'msg': msg}
+                print(json.dumps(error))
+                
                 store.update_job_status(config_uuid, config_type, 'ERROR')
                 resp = jsonify(success=False)
                 return resp

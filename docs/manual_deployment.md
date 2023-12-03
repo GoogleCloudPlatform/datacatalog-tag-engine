@@ -181,7 +181,11 @@ gcloud iam roles create PolicyTagReader \
 		--member=serviceAccount:$TAG_ENGINE_SA --role=roles/iam.serviceAccountUser
 
 	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-	    --member=serviceAccount:$TAG_ENGINE_SA --role=roles/iam.serviceAccountTokenCreator 
+	    --member=serviceAccount:$TAG_ENGINE_SA --role=roles/iam.serviceAccountViewer
+
+	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
+	    --member=serviceAccount:$TAG_ENGINE_SA --role=roles/iam.serviceAccountTokenCreator
+			 
 	```
 
 
