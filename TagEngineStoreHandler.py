@@ -30,10 +30,14 @@ class TagEngineStoreHandler:
     
     def __init__(self):
         
-        self.db = firestore.Client(client_info=ClientInfo(user_agent=USER_AGENT))
         
         config = configparser.ConfigParser()
         config.read("tagengine.ini")
+        self.db_name = config['DEFAULT']['DB_NAME'].strip()
+        if self.db_name is not None:
+            self.db = firestore.Client(database=self.db_name,client_info=ClientInfo(user_agent=USER_AGENT))
+        else:
+            self.db = firestore.Client(client_info=ClientInfo(user_agent=USER_AGENT))
         
     def read_default_settings(self, user_email):
         

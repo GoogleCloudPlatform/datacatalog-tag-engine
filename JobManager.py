@@ -33,15 +33,19 @@ class JobManager:
                 tag_engine_project,
                 queue_region,
                 queue_name, 
-                task_handler_uri):
+                task_handler_uri, db_name=None):
 
         self.cloud_run_sa = cloud_run_sa
         self.tag_engine_project = tag_engine_project
         self.queue_region = queue_region
         self.queue_name = queue_name
         self.task_handler_uri = task_handler_uri
+        self.db_name = db_name
         
-        self.db = firestore.Client()
+        if self.db_name is not None:
+            self.db = firestore.Client(database=self.db_name)
+        else:
+            self.db = firestore.Client()
 
 
 ##################### API METHODS #################
@@ -63,7 +67,7 @@ class JobManager:
     
     def update_job_running(self, job_uuid):     
 
-        #print('*** update_job_running ***')
+        print('*** update_job_running ***')
         
         job_ref = self.db.collection('jobs').document(job_uuid)
         job_ref.update({'job_status': 'RUNNING'})
@@ -73,7 +77,7 @@ class JobManager:
     
     def record_num_tasks(self, job_uuid, num_tasks):
         
-        #print('*** enter record_num_tasks ***')
+        print('*** enter record_num_tasks ***')
         
         job_ref = self.db.collection('jobs').document(job_uuid)
         job_ref.update({'task_count': num_tasks})
@@ -206,7 +210,7 @@ class JobManager:
         
     def _get_task_count(job_uuid):
         
-        #print('*** enter _get_task_count ***')
+        print('*** enter _get_task_count ***')
         
         job = self.db.collection('jobs').document(job_uuid).get()
 
@@ -264,8 +268,9 @@ if __name__ == '__main__':
     project = config['DEFAULT']['PROJECT']
     region = config['DEFAULT']['REGION']
     queue_name = config['DEFAULT']['INJECTOR_QUEUE']
+    db_name = config['DEFAULT']['DB_NAME']
     task_handler_uri = '/_split_work'
-    jm = JobManager(project, region, queue_name, task_handler_uri)
+    jm = JobManager(project, region, queue_name, task_handler_uri, db_name)
     
     config_uuid = '1f1b4720839c11eca541e1ad551502cb'
     jm.create_async_job(config_uuid)

@@ -32,15 +32,19 @@ class TaskManager:
                 tag_engine_project,
                 queue_region,
                 queue_name, 
-                task_handler_uri):
+                task_handler_uri, db_name=None):
 
         self.cloud_run_sa = cloud_run_sa
         self.tag_engine_project = tag_engine_project
         self.queue_region = queue_region
         self.queue_name = queue_name
         self.task_handler_uri = task_handler_uri
+        self.db_name = db_name
 
-        self.db = firestore.Client()
+        if self.db_name is not None:
+            self.db = firestore.Client(database=self.db_name)
+        else:
+            self.db = firestore.Client()
         self.tasks_per_shard = 1000
 
 ##################### API METHODS #################

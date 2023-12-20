@@ -33,7 +33,7 @@ def create_indexes(project):
             coll_name = index['collection']
             fields = index['fields']
 
-            parent = 'projects/{}/databases/(default)/collectionGroups/{}'.format(project, coll_name)
+            parent = 'projects/{}/databases/tagengine/collectionGroups/{}'.format(project, coll_name)
             
             field_list = [] 
     

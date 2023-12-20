@@ -66,8 +66,10 @@ RUN_TASK_HANDLER = os.environ['SERVICE_URL'] + '/_run_task'
 INJECTOR_QUEUE = config['DEFAULT']['INJECTOR_QUEUE'].strip()
 WORK_QUEUE = config['DEFAULT']['WORK_QUEUE'].strip()
 
-jm = jobm.JobManager(TAG_ENGINE_SA, TAG_ENGINE_PROJECT, TAG_ENGINE_REGION, INJECTOR_QUEUE, SPLIT_WORK_HANDLER)                   
-tm = taskm.TaskManager(TAG_ENGINE_SA, TAG_ENGINE_PROJECT, TAG_ENGINE_REGION, WORK_QUEUE, RUN_TASK_HANDLER)
+DB_NAME = config['DEFAULT']['DB_NAME'].strip()
+
+jm = jobm.JobManager(TAG_ENGINE_SA, TAG_ENGINE_PROJECT, TAG_ENGINE_REGION, INJECTOR_QUEUE, SPLIT_WORK_HANDLER, DB_NAME)
+tm = taskm.TaskManager(TAG_ENGINE_SA, TAG_ENGINE_PROJECT, TAG_ENGINE_REGION, WORK_QUEUE, RUN_TASK_HANDLER, DB_NAME)
 
 SCOPES = ['openid', 'https://www.googleapis.com/auth/cloud-platform', 'https://www.googleapis.com/auth/userinfo.email']
  
