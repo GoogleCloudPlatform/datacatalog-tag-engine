@@ -33,7 +33,8 @@ class JobManager:
                 tag_engine_project,
                 queue_region,
                 queue_name, 
-                task_handler_uri, db_name=None):
+                task_handler_uri,
+                db_name=None):
 
         self.cloud_run_sa = cloud_run_sa
         self.tag_engine_project = tag_engine_project
@@ -67,7 +68,7 @@ class JobManager:
     
     def update_job_running(self, job_uuid):     
 
-        print('*** update_job_running ***')
+        #print('*** update_job_running ***')
         
         job_ref = self.db.collection('jobs').document(job_uuid)
         job_ref.update({'job_status': 'RUNNING'})
@@ -77,7 +78,7 @@ class JobManager:
     
     def record_num_tasks(self, job_uuid, num_tasks):
         
-        print('*** enter record_num_tasks ***')
+        #print('*** enter record_num_tasks ***')
         
         job_ref = self.db.collection('jobs').document(job_uuid)
         job_ref.update({'task_count': num_tasks})
@@ -268,7 +269,7 @@ if __name__ == '__main__':
     project = config['DEFAULT']['PROJECT']
     region = config['DEFAULT']['REGION']
     queue_name = config['DEFAULT']['INJECTOR_QUEUE']
-    db_name = config['DEFAULT']['DB_NAME']
+    db_name = config['DEFAULT'].get('DB_NAME', None)
     task_handler_uri = '/_split_work'
     jm = JobManager(project, region, queue_name, task_handler_uri, db_name)
     

@@ -21,7 +21,7 @@ firestore_client = FirestoreAdminClient()
 
 YAML_FILE = 'firestore.yaml'
 
-def create_indexes(project):
+def create_indexes(project, db_name):
     
     responses = []
     
@@ -33,7 +33,7 @@ def create_indexes(project):
             coll_name = index['collection']
             fields = index['fields']
 
-            parent = 'projects/{}/databases/tagengine/collectionGroups/{}'.format(project, coll_name)
+            parent = 'projects/{}/databases/{}/collectionGroups/{}'.format(project, db_name, coll_name)
             
             field_list = [] 
     
@@ -75,7 +75,11 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser(description="Create Firestore indexes needed by Tag Engine")
     parser.add_argument('tag_engine_project', help='Tag Engine project')
+    parser.add_argument('firestore_db_name', nargs='?', default=None)
     args = parser.parse_args()
-     
-    print('Using project ' + args.tag_engine_project)
-    create_indexes(args.tag_engine_project)
+
+    db_name = '(default)'
+    if args.firestore_db_name is not None:
+        db_name = args.firestore_db_name
+    print('Using project: {}, db: {}'.format(args.tag_engine_project, db_name))
+    create_indexes(args.tag_engine_project, db_name)

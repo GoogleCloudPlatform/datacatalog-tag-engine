@@ -32,7 +32,8 @@ class TaskManager:
                 tag_engine_project,
                 queue_region,
                 queue_name, 
-                task_handler_uri, db_name=None):
+                task_handler_uri,
+                db_name=None):
 
         self.cloud_run_sa = cloud_run_sa
         self.tag_engine_project = tag_engine_project

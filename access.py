@@ -33,8 +33,7 @@ SCOPES = ['openid', 'https://www.googleapis.com/auth/cloud-platform', 'https://w
     
 # get the service account intended to process request 
 def get_requested_service_account(json):
-    print("*** get_requested_service_account ***")
-    print(json)
+    #print("*** get_requested_service_account ***")
     store = tesh.TagEngineStoreHandler()
     
     if isinstance(json, dict) and 'service_account' in json:
