@@ -208,10 +208,10 @@ class JobManager:
         
         return resp
       
+
+    def _get_task_count(self, job_uuid):
         
-    def _get_task_count(job_uuid):
-        
-        print('*** enter _get_task_count ***')
+        #print('*** enter _get_task_count ***')
         
         job = self.db.collection('jobs').document(job_uuid).get()
 
