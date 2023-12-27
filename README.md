@@ -261,7 +261,7 @@ There is a known issue with the Terraform. If you encounter the error `The reque
 
 ```
 cd datacatalog-tag-engine
-gcloud beta run deploy tag-engine-api \
+gcloud run deploy tag-engine-api \
  	--source . \
  	--platform managed \
  	--region $TAG_ENGINE_REGION \
