@@ -66,7 +66,7 @@ def check_user_credentials_from_api(tag_creator_sa, tag_invoker_account):
     try:
         request = service.projects().serviceAccounts().getIamPolicy(resource=resource)
         iam_policy = request.execute()
-        print('iam_policy:', iam_policy)
+        #print('iam_policy:', iam_policy)
         
         if "bindings" not in iam_policy:
             return has_permission

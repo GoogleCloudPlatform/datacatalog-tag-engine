@@ -310,13 +310,8 @@ class BigQueryUtils:
 
             if field['field_type'] == 'richtext':
                 col_type = 'STRING' 
-
-            if field['is_required'] == True:
-                mode = "REQUIRED"
-            else:
-                mode = "NULLABLE"
-                
-            schema.append(bigquery.SchemaField(col_name, col_type, mode=mode))
+ 
+            schema.append(bigquery.SchemaField(col_name, col_type, mode='NULLABLE')) # mode is always set to NULLABLE to be able to represent deleted tags
         
         table_id = dataset_id.table(table_name)
         table = bigquery.Table(table_id, schema=schema)
@@ -349,6 +344,9 @@ class BigQueryUtils:
             if 'field_value' not in tagged_value:
                 continue
             
+            if tagged_value['field_value'] == '':
+                continue
+            
             if isinstance(tagged_value['field_value'], decimal.Decimal):
                 row[tagged_value['field_id']] = float(tagged_value['field_value'])
             elif isinstance(tagged_value['field_value'], datetime.datetime) or isinstance(tagged_value['field_value'], datetime.date):
@@ -357,7 +355,7 @@ class BigQueryUtils:
                 row[tagged_value['field_id']]= json.dumps(tagged_value['field_value'], default=str)
                 row[tagged_value['field_id']]= tagged_value['field_value']
     
-        #print('insert row: ' + str(row))
+        print('insert row: ' + str(row))
         row_to_insert = [row,]
 
         try:

@@ -3284,15 +3284,17 @@ def _split_work():
                 log_error(msg, e, job_uuid)
                 
                 store.update_job_status(config_uuid, config_type, 'ERROR')
+                jm.set_job_status(job_uuid, 'ERROR')
                 resp = jsonify(success=False)
                 return resp
             
             if len(csv_files) == 0:
-                msg = 'Error: unable to read CSV from {}: {}'.format(config.get('metadata_import_location'), e)
+                msg = 'Error: unable to read CSV from {}'.format(config.get('metadata_import_location'))
                 error = {'job_uuid': job_uuid, 'msg': msg}
                 print(json.dumps(error))
                 
                 store.update_job_status(config_uuid, config_type, 'ERROR')
+                jm.set_job_status(job_uuid, 'ERROR')
                 resp = jsonify(success=False)
                 return resp
             
@@ -3304,6 +3306,7 @@ def _split_work():
             if len(extracted_tags) == 0:
                 print('Error: unable to extract tags from CSV. Please verify the format of the CSV.') 
                 store.update_job_status(config_uuid, config_type, 'ERROR')
+                jm.set_job_status(job_uuid, 'ERROR')
                 resp = jsonify(success=False)
                 return resp
     
@@ -3331,7 +3334,7 @@ def _split_work():
 
     # update the status of the config, no matter which config type is running
     store.update_job_status(config_uuid, config_type, 'RUNNING')
-    
+    jm.set_job_status(job_uuid, 'RUNNING')
     resp = jsonify(success=True)
     return resp
     
@@ -3470,13 +3473,16 @@ def _run_task():
     if pct_complete == 100:
         if tasks_failed > 0:
             store.update_job_status(config_uuid, config_type, 'ERROR')
+            jm.set_job_status(job_uuid, 'ERROR')
             store.update_scheduling_status(config_uuid, config_type, 'READY')
             resp = jsonify(success=True)
         else:
             store.update_job_status(config_uuid, config_type, 'SUCCESS')
+            jm.set_job_status(job_uuid, 'SUCCESS')
             resp = jsonify(success=False)
     else:
         store.update_job_status(config_uuid, config_type, 'RUNNING: {}% complete'.format(pct_complete))
+        jm.set_job_status(job_uuid, 'RUNNING: {}% complete'.format(pct_complete))
         resp = jsonify(success=True)
     
     return resp
@@ -3486,7 +3492,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 2.1.7\n"
+    return "Welcome to Tag Engine version 2.1.8\n"
     
 ####################### TEST METHOD ####################################  
     

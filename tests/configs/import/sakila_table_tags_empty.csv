@@ -1,0 +1,15 @@
+project,dataset,table,data_domain,broad_data_category,environment,data_origin,data_creation,data_ownership,data_asset_owner,data_confidentiality,data_retention,data_asset_documentation
+tag-engine-run,sakila_dw,actor,,,,,,,,,,
+tag-engine-run,sakila_dw,address,,,,,,,,,,
+tag-engine-run,sakila_dw,category,,,,,,,,,,
+tag-engine-run,sakila_dw,city,,,,,,,,,,
+tag-engine-run,sakila_dw,customer,,,,,,,,,,
+tag-engine-run,sakila_dw,film,,,,,,,,,,
+tag-engine-run,sakila_dw,film_category,MARKETING,CONTENT,DEV,OPEN_DATA,2023-12-26,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+tag-engine-run,sakila_dw,film_text,MARKETING,CONTENT,DEV,OPEN_DATA, 2023-12-26,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+tag-engine-run,sakila_dw,inventory,MARKETING,CONTENT,DEV,OPEN_DATA, 2023-12-26,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+tag-engine-run,sakila_dw,language,MARKETING,CONTENT,DEV,OPEN_DATA, 2023-12-26,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+tag-engine-run,sakila_dw,payment,OPERATIONS,CONTENT,DEV,OPEN_DATA, 2023-12-26,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+tag-engine-run,sakila_dw,rental,OPERATIONS,CONTENT,DEV,OPEN_DATA, 2023-12-26,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+tag-engine-run,sakila_dw,staff,OPERATIONS,CONTENT,DEV,OPEN_DATA, 2023-12-26,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+tag-engine-run,sakila_dw,store,OPERATIONS,CONTENT,DEV,OPEN_DATA, 2023-12-26,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
