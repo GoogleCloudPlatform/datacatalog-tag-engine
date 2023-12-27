@@ -1,10 +1,6 @@
 deploy/.terraform*
-deploy/with_load_balancer/.terraform*
-deploy/with_load_balancer/terraform.tfstate*
-deploy/with_load_balancer/variables.tfvars
-deploy/without_load_balancer/.terraform*
-deploy/without_load_balancer/terraform.tfstate*
-deploy/without_load_balancer/variables.tfvars
+deploy/terraform.tfstate*
+deploy/variables.tfvars
 client_secret.json
 bkp/*
 notes/*

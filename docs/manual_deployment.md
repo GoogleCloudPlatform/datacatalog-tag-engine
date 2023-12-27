@@ -227,7 +227,7 @@ this permission or assign the `storage.legacyBucketReader` role:
 
    ```
 	pip install google-cloud-firestore
-	cd deploy/external_load_balancer
+	cd deploy
 	python create_indexes.py $TAG_ENGINE_PROJECT
 	cd ..
    ```
