@@ -1,0 +1,2 @@
+project,dataset,table,data_domain,broad_data_category,environment,data_origin,data_creation,data_ownership,data_asset_owner,data_confidentiality,data_retention,data_asset_documentation
+tag-engine-run,sakila_dw,film_category,,,,,,,,,,

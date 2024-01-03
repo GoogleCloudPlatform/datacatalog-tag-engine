@@ -1,9 +1,9 @@
 ## Tag Engine 2.0
-This is the main branch for Tag Engine. Tag Engine 2.0 is hosted on Cloud Run instead of App Engine and is [VPC-SC compatible](https://cloud.google.com/vpc-service-controls/docs/supported-products). It supports user authentication and role based access control. This means that customers who have multiple teams using BigQuery and Cloud Storage can authorize each team to tag only their data assets. 
+This is the main branch for Tag Engine. Tag Engine 2.0 is a flavor of Tag Engine that is hosted on Cloud Run instead of App Engine and is [VPC-SC compatible](https://cloud.google.com/vpc-service-controls/docs/supported-products). It supports user authentication and role based access control. Customers who have multiple teams using BigQuery and Cloud Storage can authorize each team to tag only their data assets. 
 
-Tag Engine is an open-source extension to Google Cloud's Data Catalog which is now part of the Dataplex suite. Tag Engine automates the tagging of BigQuery tables and views as well as data lake files in Cloud Storage. You create tag configurations that specify how to populate the various fields of a tag template through SQL expressions or static values. Tag Engine runs the configurations either on demand or on a schedule to create or update the tags.
+Tag Engine is an open-source extension to Google Cloud's Data Catalog which is now part of the Dataplex product suite. Tag Engine automates the tagging of BigQuery tables and views as well as data lake files in Cloud Storage. You create tag configurations that specify how to populate the various fields of a tag template through SQL expressions or static values. Tag Engine runs the configurations either on demand or on a schedule to create, update or delete the tags.
 
-If you are new to Tag Engine, you may want to walk through [this](https://cloud.google.com/architecture/tag-engine-and-data-catalog) basic tutorial. While this tutorial was written with Tag Engine 1.0 in mind, but it will give you a sense of how Tag Engine configurations works. 
+If you are new to Tag Engine, you may want to walk through a basic [tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog). Please keep in mind that the tutorial was written with Tag Engine 1.0 in mind, so some of the details have changed in v2. 
 
 This README file contains deployment steps, testing procedures, and code samples. It is organized into five sections:  <br>
 - Part 1: [Deploying Tag Engine v2](#deploy) <br>
@@ -284,12 +284,12 @@ Tag Engine is alive
 
 1. Explore additional API methods and run them through curl commands:
 
-   Open `tests/unit_test.sh` and go through the different methods for interracting with Tag Engine, including `configure_tag_history`, `create_static_asset_config`, `create_dynamic_column_config`, etc. <br><br>
+   Open `examples/unit_test.sh` and go through the different methods for interracting with Tag Engine, including `configure_tag_history`, `create_static_asset_config`, `create_dynamic_column_config`, etc. <br><br>
 
 
-2. Explore the sample test scripts:
+2. Explore the script samples:
 
-   There are multiple test scripts in Python in the `tests/scripts` folder. These are intended to help you get started with the Tag Engine API. 
+   There are multiple test scripts in Python in the `examples/scripts` folder. These are intended to help you get started with the Tag Engine API. 
 
    Before running the scripts, open each file and update the `TAG_ENGINE_URL` variable on line 11 with your own Cloud Run service URL. You'll also need to update the project and dataset values which may be in the script itself or in the referenced json config file. 
 
@@ -308,18 +308,21 @@ Tag Engine is alive
 	python purge_inactive_configs.py
 	```
 
-3. Explore the sample workflows:
+3. Explore sample workflows:
 
-   The `apps/workflows/` contains a few sample workflows implemented in Cloud Workflow. The `trigger_job.yaml` and `orchestrate_jobs.yaml` show how to orchestrate some tagging activities. To run the workflows, enable the Cloud Workflows API (`workflows.googleapis.com`) and then follow these steps:
+   The `extensions/orchestration/` folder contains some sample workflows implemented in Cloud Workflow. The `trigger_tag_export.yaml` and `trigger_tag_export_import.yaml` show how to orchestrate Tag Engine jobs. To run the workflows, enable the Cloud Workflows API (`workflows.googleapis.com`) and then follow these steps:
 
 	```
 	gcloud workflows deploy orchestrate-jobs --location=$TAG_ENGINE_REGION \
-		--source=orchestrate_jobs.yaml --service-account=$CLOUD_RUN_SA
+		--source=trigger_export_import.yaml --service-account=$CLOUD_RUN_SA
 
-	gcloud workflows run orchestrate-jobs --location=$TAG_ENGINE_REGION
-	``` 
+	gcloud workflows run trigger_export_import --location=$TAG_ENGINE_REGION
+	```
+	 
+	In addition to the Cloud Workflow examples, there are two examples for Airflow in the same folder, `dynamic_tag_update.py` and `pii_classification_dag.py`.  
 
-4. Create your own Tag Engine configs with the UI and/or API. <br>
+
+4. Create your own Tag Engine configs with the API and/or UI. <br>
 
 
-5. Open new [issues](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/issues) if you encounter any bugs or would like to request a feature. 
+5. Open new [issues](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/issues) if you encounter bugs or would like to request a new feature in Tag Engine. 

@@ -1,0 +1,7 @@
+{
+    "template_id": "data_sensitivity",
+    "template_project": "tag-engine-run",
+    "template_region": "us-central1",
+    "metadata_import_location": "gs://tag-import/csv/sakila_column_tags_empty.csv",
+	"overwrite": true  
+}

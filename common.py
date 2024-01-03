@@ -23,7 +23,7 @@ TAG_ENGINE_PROJECT = config['DEFAULT']['TAG_ENGINE_PROJECT']
 USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v2'
 
 
-def log_error(msg, error, job_uuid=None):
+def log_error(msg, error='', job_uuid=None):
     error = {'msg': msg, 'error': str(error), 'job_uuid': job_uuid}
     print(json.dumps(error)) 
 

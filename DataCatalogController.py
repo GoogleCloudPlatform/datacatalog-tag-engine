@@ -152,9 +152,9 @@ class DataCatalogController:
         return sorted(fields, key=itemgetter('order'), reverse=True)
     
         
-    def check_if_exists(self, parent, column=None):
+    def check_if_tag_exists(self, parent, column=None):
         
-        print('enter check_if_exists')
+        print('enter check_if_tag_exists')
         
         tag_exists = False
         tag_id = ""
@@ -232,11 +232,11 @@ class DataCatalogController:
             print('entry: ', entry.name)
         
         try:    
-            tag_exists, tag_id = self.check_if_exists(parent=entry.name)
+            tag_exists, tag_id = self.check_if_tag_exists(parent=entry.name)
             print('tag exists: ', tag_exists)
         
         except Exception as e:
-            msg = 'Error during check_if_exists {}'.format(entry.name)
+            msg = 'Error during check_if_tag_exists {}'.format(entry.name)
             log_error(msg, e, job_uuid)
             op_status = constants.ERROR
             return op_status
@@ -267,7 +267,7 @@ class DataCatalogController:
         request.linked_resource=bigquery_resource
         entry = self.client.lookup_entry(request)
 
-        tag_exists, tag_id = self.check_if_exists(parent=entry.name)
+        tag_exists, tag_id = self.check_if_tag_exists(parent=entry.name)
         print("tag_exists: " + str(tag_exists))
         
         # create new tag
@@ -381,7 +381,7 @@ class DataCatalogController:
                 continue
             
             # check to see if a tag has already been created on this column
-            tag_exists, tag_id = self.check_if_exists(entry.name, column)
+            tag_exists, tag_id = self.check_if_tag_exists(entry.name, column)
             print("tag_exists: ", tag_exists)
         
             # initialize the new column-level tag
@@ -703,11 +703,11 @@ class DataCatalogController:
             print('entry: ', entry.name)
         
         try:    
-            tag_exists, tag_id = self.check_if_exists(parent=entry.name)
+            tag_exists, tag_id = self.check_if_tag_exists(parent=entry.name)
             print('tag_exists: ', tag_exists)
         
         except Exception as e:
-            msg = 'Error during check_if_exists: {}'.format(e)
+            msg = 'Error during check_if_tag_exists: {}'.format(e)
             log_error(msg, e, job_uuid)
             op_status = constants.ERROR
             return op_status
@@ -981,10 +981,10 @@ class DataCatalogController:
             
             # check if a tag already exists on this column
             try:    
-                tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=infotype_field)
+                tag_exists, tag_id = self.check_if_tag_exists(parent=entry.name, column=infotype_field)
         
             except Exception as e:
-                msg = 'Error during check_if_exists: {}'.format(entry.name)
+                msg = 'Error during check_if_tag_exists: {}'.format(entry.name)
                 log_error(msg, e, job_uuid)
                 op_status = constants.ERROR
                 return op_status   
@@ -1215,17 +1215,30 @@ class DataCatalogController:
             return op_status
 
         if 'column' in tag_dict:
-            column_name = tag_dict['column']
+            column_name = tag_dict['column'].lower() # column is stored in lower case in the catalog
+            
+            # check if column exists in the catalog
+            column_exists = False
+            for catalog_column in entry.schema.columns:
+                if catalog_column.column == column_name:
+                    column_exists = True
+            
+            if column_exists == False:
+                msg = "Error could not find column {} in {}".format(column_name, bigquery_resource)
+                log_error(msg, None, job_uuid)
+                op_status = constants.ERROR
+                return op_status
+            
             uri = entry.linked_resource.replace('//bigquery.googleapis.com/projects/', '') + '/column/' + column_name
         else:
             column_name = None
             uri = entry.linked_resource.replace('//bigquery.googleapis.com/projects/', '')
             
         try:    
-            tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column_name)
+            tag_exists, tag_id = self.check_if_tag_exists(parent=entry.name, column=column_name)
 
         except Exception as e:
-            msg = 'Error during check_if_exists: {}'.format(entry_name)
+            msg = 'Error during check_if_tag_exists: {}'.format(entry_name)
             log_error(msg, e, job_uuid)
             op_status = constants.ERROR
             return op_status
@@ -1263,7 +1276,7 @@ class DataCatalogController:
             
         
         op_status = self.create_update_delete_tag(tag_fields, tag_exists, tag_id, job_uuid, config_uuid, 'IMPORT_TAG', tag_history, \
-                                                         entry, uri, column_name)
+                                                  entry, uri, column_name)
                                 
         return op_status
     
@@ -1311,10 +1324,10 @@ class DataCatalogController:
                     fields = column_tags[0]['fields']
                                      
                     try:    
-                        tag_exists, tag_id = self.check_if_exists(parent=entry.name, column=column_name)
+                        tag_exists, tag_id = self.check_if_tag_exists(parent=entry.name, column=column_name)
         
                     except Exception as e:
-                        msg = 'Error during check_if_exists:{}'.format(entry.name)
+                        msg = 'Error during check_if_tag_exists:{}'.format(entry.name)
                         log_error(msg, e, job_uuid)
                         op_status = constants.ERROR
                         return op_status
@@ -1339,10 +1352,10 @@ class DataCatalogController:
                 #print('fields: ', fields)  
                 
                 try:    
-                    tag_exists, tag_id = self.check_if_exists(parent=entry.name, column='')
+                    tag_exists, tag_id = self.check_if_tag_exists(parent=entry.name, column='')
     
                 except Exception as e:
-                    msg = 'Error during check_if_exists:{}'.format(entry.name)
+                    msg = 'Error during check_if_tag_exists:{}'.format(entry.name)
                     log_error(msg, e, job_uuid)
                     op_status = constants.ERROR
                     return op_status
@@ -1912,7 +1925,7 @@ class DataCatalogController:
                     target_tag, error_exists = self.populate_tag_field(target_tag, field_id, field_type, [field_value])
             
             # create the target tag            
-            tag_exists, tag_id = self.check_if_exists(parent=target_entry.name, column=source_tag.column)
+            tag_exists, tag_id = self.check_if_tag_exists(parent=target_entry.name, column=source_tag.column)
 		
             if tag_exists == True:
                 target_tag.name = tag_id
