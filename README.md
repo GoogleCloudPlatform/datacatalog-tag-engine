@@ -281,6 +281,8 @@ You should see the following response:
 Tag Engine is alive
 ```
 
+<br>
+
 ### <a name="next"></a> Part 5: Next Steps
 
 1. Explore additional API methods and run them through curl commands:
