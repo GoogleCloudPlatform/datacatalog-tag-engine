@@ -254,6 +254,7 @@ Open the Data Catalog UI and verify that your tag was successfully created. If y
 
 If you encouter a 500 error, open the Cloud Run logs for tag-engine-ui to troubleshoot. 
 
+<br>
 
 ### <a name="troubleshooting"></a> Part 4: Troubleshooting
 
