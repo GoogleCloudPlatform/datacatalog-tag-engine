@@ -168,12 +168,12 @@ export IAM_TOKEN=$(gcloud auth print-identity-token)
 
 Tag Engine uses configurations (configs for short) to define tag requests. There are several types of configs, we will use the dynamic table config for this example. 
 
-Open `tests/configs/dynamic_table/dynamic_table_ondemand.json` and update the project and dataset values in this file.  
+Open `examples/configs/dynamic_table/dynamic_table_ondemand.json` and update the project and dataset values in this file.  
 
 ```
 export TAG_ENGINE_URL=$SERVICE_URL
 
-curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @tests/configs/dynamic_table/dynamic_table_ondemand.json \
+curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @examples/configs/dynamic_table/dynamic_table_ondemand.json \
 	 -H "Authorization: Bearer $IAM_TOKEN"
 ```
 
