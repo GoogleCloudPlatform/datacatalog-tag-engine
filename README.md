@@ -315,7 +315,7 @@ Tag Engine is alive
 	python purge_inactive_configs.py
 	```
 
-<br><br>
+<br>
 
 3. Explore sample workflows:
 
@@ -327,12 +327,12 @@ Tag Engine is alive
 
 	gcloud workflows run trigger_export_import --location=$TAG_ENGINE_REGION
 	```
-	 
 	In addition to the Cloud Workflow examples, there are two examples for Airflow in the same folder, `dynamic_tag_update.py` and `pii_classification_dag.py`.  
 
+<br>
 
 4. Create your own Tag Engine configs with the API and/or UI. <br>
 
 <br>
 
-5. Open new [issues](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/issues) if you encounter bugs or would like to request a new feature in Tag Engine. 
+5. Open new [issues](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/issues) if you encounter bugs or would like to request a new feature or extension. 
