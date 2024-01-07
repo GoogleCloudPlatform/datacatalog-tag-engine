@@ -16,11 +16,11 @@ This README file contains deployment steps, testing procedures, and code samples
 
 Tag Engine 2.0 comes with two Cloud Run services. One service is for the API (`tag-engine-api`) and the other is for the UI (`tag-engine-ui`). 
 
-Both services use access tokens for authorization. The API service expects the client to pass in an access token when calling the API functions whereas the UI service uses OAuth to authorize the client from the frontend. Note that a client secret file is required for the OAuth flow.  
+Both services use access tokens for authorization. The API service expects the client to pass in an access token when calling the API functions (`gcloud auth print-identity-token`) whereas the UI service uses OAuth to authorize the client from the front-end. Note that a client secret file is required for the OAuth flow.  
 
 Follow the steps below to deploy Tag Engine with Terraform. 
 
-Alternatively you may choose to deploy Tag Engine with [gcloud commands](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/cloud-run/docs/manual_deployment.md) instead of running the Terraform.
+Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/cloud-run/docs/manual_deployment.md) instead of running the Terraform.
 
 <br>
 1. Create (or designate) two service accounts: <br><br>
