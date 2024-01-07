@@ -163,6 +163,7 @@ If you are invoking Tag Engine with a service account, set `GOOGLE_APPLICATION_C
 ```
 export IAM_TOKEN=$(gcloud auth print-identity-token)
 ```
+<br>
 
 4. Create your first Tag Engine config:
 
@@ -184,6 +185,7 @@ The output from the previous command should look similar to:
 ```
 {"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"facb59187f1711eebe2b4f918967d564"}
 ```
+<br>
 
 5. Run your first job:
 
@@ -215,6 +217,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
 	
 The job metadata parameter gets written into a BigQuery table that is associated with the job_uuid. 
 
+<br>
 
 6. View your job status:
 
