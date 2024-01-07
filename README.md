@@ -1,5 +1,5 @@
 ## Tag Engine
-This branch contains Tag Engine 1.0, a flavor of Tag Engine that is hosted on App Engine. <b>Beginning in early 2023, this version is in maintenance mode.</b> Several new features are supported only in Tag Engine 2.0. Please see the cloud-run branch of this repo for more details. 
+This branch contains Tag Engine 1.0, a flavor of Tag Engine that is hosted on App Engine. <b>Beginning in early 2023, this version is in maintenance mode.</b> Several new features are supported only in Tag Engine 2.0. Please see the `cloud-run` branch of this repo for more details. 
 
 Tag Engine is an open-source extension to Google Cloud's Data Catalog. Tag Engine automates the tagging of BigQuery tables and views as well as data lake files in Cloud Storage. You create a configuration, which contains SQL expressions that define how to populate the fields in the tags. Tag Engine runs the configuration either on demand or on a pre-defined schedule. 
 
