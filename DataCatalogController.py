@@ -190,7 +190,14 @@ class DataCatalogController:
     
     def apply_static_asset_config(self, fields, uri, job_uuid, config_uuid, template_uuid, tag_history, overwrite=False):
         
-        print('*** apply_static_asset_config ***')
+        print('*** enter apply_static_asset_config ***')
+        print('fields:', fields)
+        print('uri:', uri)
+        print('job_uuid:', job_uuid)
+        print('config_uuid:', config_uuid)
+        print('template_uuid:', template_uuid)
+        print('tag_history:', tag_history)
+        print('overwrite:', overwrite)
         
         # uri is either a BQ table/view path or GCS file path
         store = tesh.TagEngineStoreHandler()        
@@ -242,7 +249,8 @@ class DataCatalogController:
             return op_status
 
         if tag_exists and overwrite == False:
-            #print('Tag already exists and overwrite set to False')
+            msg = 'Tag already exists and overwrite is False'
+            log_info(msg)
             op_status = constants.SUCCESS
             return op_status
         
@@ -1854,8 +1862,8 @@ class DataCatalogController:
         if source_entry.bigquery_table_spec.table_source_type != types.TableSourceType.BIGQUERY_TABLE:
             success = False
             msg = 'Error {} is not a BQ table'.format(source_table)
-            error = {'msg': msg}
-            print(json.dumps(error))
+            log_info(msg, None)
+            print(json.dumps(msg))
             return success
         
         # lookup the target entry
@@ -1868,7 +1876,7 @@ class DataCatalogController:
         if target_entry.bigquery_table_spec.table_source_type != types.TableSourceType.BIGQUERY_TABLE:
             success = False
             msg = 'Error {} is not a BQ table'.format(target_table)
-            error = {'msg': msg}
+            log_info(msg, None)
             print(json.dumps(error))
             return success
         

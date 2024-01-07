@@ -130,11 +130,9 @@ def get_tag_invoker_account(raw_token):
 # used when TAG_CREATOR_SA credentials are needed
 def get_target_credentials(target_service_account):
     
-    print('*** enter get_target_credentials, target_service_account =', target_service_account)
-    
     from google.auth import impersonated_credentials # service account credentials
-    source_credentials, _ = google.auth.default() 
-
+    source_credentials, _ = google.auth.default()
+     
     try:
         target_credentials = impersonated_credentials.Credentials(source_credentials=source_credentials,
             target_principal=target_service_account,
