@@ -290,8 +290,9 @@ Tag Engine is alive
 
 1. Explore additional API methods and run them through curl commands:
 
-   Open `examples/unit_test.sh` and go through the different methods for interracting with Tag Engine, including `configure_tag_history`, `create_static_asset_config`, `create_dynamic_column_config`, etc. <br><br>
+   Open `examples/unit_test.sh` and go through the different methods for interracting with Tag Engine, including `configure_tag_history`, `create_static_asset_config`, `create_dynamic_column_config`, etc. <br>
 
+<br>
 
 2. Explore the script samples:
 
@@ -314,6 +315,8 @@ Tag Engine is alive
 	python purge_inactive_configs.py
 	```
 
+<br><br>
+
 3. Explore sample workflows:
 
    The `extensions/orchestration/` folder contains some sample workflows implemented in Cloud Workflow. The `trigger_tag_export.yaml` and `trigger_tag_export_import.yaml` show how to orchestrate Tag Engine jobs. To run the workflows, enable the Cloud Workflows API (`workflows.googleapis.com`) and then follow these steps:
@@ -330,5 +333,6 @@ Tag Engine is alive
 
 4. Create your own Tag Engine configs with the API and/or UI. <br>
 
+<br>
 
 5. Open new [issues](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/issues) if you encounter bugs or would like to request a new feature in Tag Engine. 
