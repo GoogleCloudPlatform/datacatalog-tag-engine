@@ -1,0 +1,5 @@
+project,dataset,table,column,sensitive_field,sensitive_type
+tag-engine-run,sakila_dw,actor,first_name,,
+tag-engine-run,sakila_dw,actor,last_name,,
+tag-engine-run,sakila_dw,address,address,,
+tag-engine-run,sakila_dw,address,street,,

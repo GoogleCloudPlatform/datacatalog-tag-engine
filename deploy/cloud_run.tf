@@ -6,7 +6,6 @@ resource "google_artifact_registry_repository" "image_registry" {
   depends_on = [google_project_service.tag_engine_project]
 }
 
-
 # ************************************************************ #
 # Create the Cloud Run API service
 # ************************************************************ #
@@ -22,8 +21,8 @@ resource "null_resource" "build_api_image" {
   provisioner "local-exec" {
     when    = create
     command = <<EOF
-gcloud builds submit ../.. --git-source-dir=. \
---config=../../cloudbuild.yaml \
+gcloud builds submit .. --git-source-dir=. \
+--config=../cloudbuild.yaml \
 --project ${var.tag_engine_project} \
 --region ${var.tag_engine_region} \
 --machine-type=e2-highcpu-8 \
@@ -46,7 +45,7 @@ resource "google_cloud_run_v2_service" "api_service" {
   location   = var.tag_engine_region
   name       = "tag-engine-api"
   project    = var.tag_engine_project
-  ingress    = "INGRESS_TRAFFIC_INTERNAL_ONLY"
+  ingress    = "INGRESS_TRAFFIC_INTERNAL_ONLY" 
   
   template {
     service_account = var.tag_engine_sa
@@ -78,14 +77,6 @@ output "api_service_uri" {
 # Create the Cloud Run UI service
 # ************************************************************ #
 
-resource "google_vpc_access_connector" "connector" {
-  name          = "vpc-con"
-  project       = var.tag_engine_project
-  region 	    = var.tag_engine_region
-  ip_cidr_range = "10.8.0.0/28"
-  network       = "default"
-}
-
 resource "null_resource" "build_ui_image" {
   
   triggers = {
@@ -97,8 +88,8 @@ resource "null_resource" "build_ui_image" {
   provisioner "local-exec" {
     when    = create
     command = <<EOF
-gcloud builds submit ../.. --git-source-dir=. \
---config=../../cloudbuild.yaml \
+gcloud builds submit .. --git-source-dir=. \
+--config=../cloudbuild.yaml \
 --project ${var.tag_engine_project} \
 --region ${var.tag_engine_region} \
 --machine-type=e2-highcpu-8 \
@@ -122,7 +113,7 @@ resource "google_cloud_run_v2_service" "ui_service" {
   location   = var.tag_engine_region
   name       = "tag-engine-ui"
   project    = var.tag_engine_project
-  ingress    = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+  ingress    = "INGRESS_TRAFFIC_ALL"  
   
   template {
     service_account = var.tag_engine_sa
@@ -141,12 +132,7 @@ resource "google_cloud_run_v2_service" "ui_service" {
 		    }
 	        cpu_idle = true
 	    }
-    }
-	 
-	vpc_access {
-	    connector = google_vpc_access_connector.connector.id
-	    egress = "PRIVATE_RANGES_ONLY"
-	}
+     }
   }
   depends_on = [google_project_service.tag_engine_project, null_resource.build_ui_image]
 }
@@ -156,21 +142,21 @@ output "ui_service_uri" {
 }
 
 
-data "google_iam_policy" "noauth" {
+data "google_iam_policy" "auth" {
   binding {
     role = "roles/run.invoker"
     members = [
-      "allUsers",
+      "allUsers",  
     ]
   }
 }
 
-resource "google_cloud_run_service_iam_policy" "noauth" {
+resource "google_cloud_run_service_iam_policy" "auth" {
   location    = google_cloud_run_v2_service.ui_service.location
   project     = google_cloud_run_v2_service.ui_service.project
   service     = google_cloud_run_v2_service.ui_service.name
 
-  policy_data = data.google_iam_policy.noauth.policy_data
+  policy_data = data.google_iam_policy.auth.policy_data
 }
 
 # ************************************************************ #

@@ -1,11 +1,11 @@
 ## Tag Engine 2.0
-This branch contains the Tag Engine 2.0 application, a recent release of Tag Engine v2 that is hosted on Cloud Run (instead of App Engine) and is [VPC-SC compatible](https://cloud.google.com/vpc-service-controls/docs/supported-products). Tag Engine 2.0 supports user authorization and the ability for multiple teams using BigQuery to tag only the data catalog entries which they have permission to use. 
+This is the main branch for Tag Engine. Tag Engine 2.0 is a flavor of Tag Engine that is hosted on Cloud Run instead of App Engine and is [VPC-SC compatible](https://cloud.google.com/vpc-service-controls/docs/supported-products). It supports user authentication and role based access control. Customers who have multiple teams using BigQuery and Cloud Storage can authorize each team to tag only their data assets. 
 
-Tag Engine is an open-source extension to Google Cloud's Data Catalog which is now part of the Dataplex suite. Tag Engine automates the tagging of BigQuery tables and views as well as data lake files in Cloud Storage. You create a configuration, for example, one that contains SQL expressions that define how to populate the fields in the tags. Tag Engine runs the configuration either on demand or on a schedule.
+Tag Engine is an open-source extension to Google Cloud's Data Catalog which is now part of the Dataplex product suite. Tag Engine automates the tagging of BigQuery tables and views as well as data lake files in Cloud Storage. You create tag configurations that specify how to populate the various fields of a tag template through SQL expressions or static values. Tag Engine runs the configurations either on demand or on a schedule to create, update or delete the tags.
 
-If you are new to Tag Engine, you may want to walk through [this](https://cloud.google.com/architecture/tag-engine-and-data-catalog) basic tutorial. Note that the tutorial was written with Tag Engine v1 in mind, but it will still give you a sense of how Tag Engine configurations works. We plan to publish a revised tutorial for Tag Engine v2 and will link it from here when ready. In the meantime, this README contains the deployment steps, the testing procedures, and references to multiple code samples to help you get started. 
+If you are new to Tag Engine, you may want to walk through a basic [tutorial](https://cloud.google.com/architecture/tag-engine-and-data-catalog). Please keep in mind that the tutorial was written with Tag Engine 1.0 in mind, and many of the API calls and UI elements have changed in 2.0. 
 
-This README is organized into four parts:  <br>
+This README file contains deployment steps, testing procedures, and code samples. It is organized into five sections:  <br>
 - Part 1: [Deploying Tag Engine v2](#deploy) <br>
 - Part 2: [Testing your Tag Engine API Setup](#testa)  <br>
 - Part 3: [Testing your Tag Engine UI Setup](#testb)  <br>
@@ -14,15 +14,13 @@ This README is organized into four parts:  <br>
 
 ### <a name="deploy"></a> Part 1: Deploying Tag Engine v2
 
-Tag Engine v2 comes with two Cloud Run services. One service is for the API (`tag-engine-api`) and the other is for the UI (`tag-engine-ui`). 
+Tag Engine 2.0 comes with two Cloud Run services. One service is for the API (`tag-engine-api`) and the other is for the UI (`tag-engine-ui`). 
 
-Both services use access tokens for authorization. The API service expects the client to pass in an access token when calling the API functions whereas the UI service uses OAuth to authorize the client from the frontend. Note that a client secret file is required for the OAuth flow.  
+Both services use access tokens for authorization. The API service expects the client to pass in an access token when calling the API functions (`gcloud auth print-identity-token`) whereas the UI service uses OAuth to authorize the client from the front-end. Note that a client secret file is required for the OAuth flow.  
 
-Follow the 6 steps below to deploy Tag Engine v2 with Terraform and without a load balancer. 
+Follow the steps below to deploy Tag Engine with Terraform. 
 
-Alternative 1: you can deploy Tag Engine v2 behind an [external load balancer](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/cloud-run/docs/external_load_balancer.md). 
-
-Alternative 2: you can choose to deploy Tag Engine v2 with [gcloud commands](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/cloud-run/docs/manual_deployment.md) instead of running the Terraform.
+Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/cloud-run/docs/manual_deployment.md) instead of running the Terraform.
 
 <br>
 1. Create (or designate) two service accounts: <br><br>
@@ -77,14 +75,14 @@ Alternative 2: you can choose to deploy Tag Engine v2 with [gcloud commands](htt
 
 4. Set the Terraform variables:
 
-   Open `deploy/without_load_balancer/variables.tf` and change the default value of each variable.<br>
+   Open `deploy/variables.tf` and change the default value of each variable.<br>
    Save the file.<br><br> 
 
 
 5. Run the Terraform scripts:
 
 	```
-	cd deploy/without_load_balancer
+	cd deploy
 	terraform init
 	terraform plan
 	terraform apply
@@ -167,17 +165,18 @@ If you are invoking Tag Engine with a service account, set `GOOGLE_APPLICATION_C
 ```
 export IAM_TOKEN=$(gcloud auth print-identity-token)
 ```
+<br>
 
 4. Create your first Tag Engine config:
 
 Tag Engine uses configurations (configs for short) to define tag requests. There are several types of configs, we will use the dynamic table config for this example. 
 
-Open `tests/configs/dynamic_table/dynamic_table_ondemand.json` and update the project and dataset values in this file.  
+Open `examples/configs/dynamic_table/dynamic_table_ondemand.json` and update the project and dataset values in this file.  
 
 ```
 export TAG_ENGINE_URL=$SERVICE_URL
 
-curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @tests/configs/dynamic_table/dynamic_table_ondemand.json \
+curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @examples/configs/dynamic_table/dynamic_table_ondemand.json \
 	 -H "Authorization: Bearer $IAM_TOKEN"
 ```
 
@@ -188,6 +187,7 @@ The output from the previous command should look similar to:
 ```
 {"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"facb59187f1711eebe2b4f918967d564"}
 ```
+<br>
 
 5. Run your first job:
 
@@ -219,6 +219,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
 	
 The job metadata parameter gets written into a BigQuery table that is associated with the job_uuid. 
 
+<br>
 
 6. View your job status:
 
@@ -258,6 +259,7 @@ Open the Data Catalog UI and verify that your tag was successfully created. If y
 
 If you encouter a 500 error, open the Cloud Run logs for tag-engine-ui to troubleshoot. 
 
+<br>
 
 ### <a name="troubleshooting"></a> Part 4: Troubleshooting
 
@@ -265,7 +267,7 @@ There is a known issue with the Terraform. If you encounter the error `The reque
 
 ```
 cd datacatalog-tag-engine
-gcloud beta run deploy tag-engine-api \
+gcloud run deploy tag-engine-api \
  	--source . \
  	--platform managed \
  	--region $TAG_ENGINE_REGION \
@@ -284,16 +286,19 @@ You should see the following response:
 Tag Engine is alive
 ```
 
+<br>
+
 ### <a name="next"></a> Part 5: Next Steps
 
 1. Explore additional API methods and run them through curl commands:
 
-   Open `tests/unit_test.sh` and go through the different methods for interracting with Tag Engine, including `configure_tag_history`, `create_static_asset_config`, `create_dynamic_column_config`, etc. <br><br>
+   Open `examples/unit_test.sh` and go through the different methods for interracting with Tag Engine, including `configure_tag_history`, `create_static_asset_config`, `create_dynamic_column_config`, etc. <br>
 
+<br>
 
-2. Explore the sample test scripts:
+2. Explore the script samples:
 
-   There are multiple test scripts in Python in the `tests/scripts` folder. These are intended to help you get started with the Tag Engine API. 
+   There are multiple test scripts in Python in the `examples/scripts` folder. These are intended to help you get started with the Tag Engine API. 
 
    Before running the scripts, open each file and update the `TAG_ENGINE_URL` variable on line 11 with your own Cloud Run service URL. You'll also need to update the project and dataset values which may be in the script itself or in the referenced json config file. 
 
@@ -312,18 +317,24 @@ Tag Engine is alive
 	python purge_inactive_configs.py
 	```
 
-3. Explore the sample workflows:
+<br>
 
-   The `apps/workflows/` contains a few sample workflows implemented in Cloud Workflow. The `trigger_job.yaml` and `orchestrate_jobs.yaml` show how to orchestrate some tagging activities. To run the workflows, enable the Cloud Workflows API (`workflows.googleapis.com`) and then follow these steps:
+3. Explore sample workflows:
+
+   The `extensions/orchestration/` folder contains some sample workflows implemented in Cloud Workflow. The `trigger_tag_export.yaml` and `trigger_tag_export_import.yaml` show how to orchestrate Tag Engine jobs. To run the workflows, enable the Cloud Workflows API (`workflows.googleapis.com`) and then follow these steps:
 
 	```
 	gcloud workflows deploy orchestrate-jobs --location=$TAG_ENGINE_REGION \
-		--source=orchestrate_jobs.yaml --service-account=$CLOUD_RUN_SA
+		--source=trigger_export_import.yaml --service-account=$CLOUD_RUN_SA
 
-	gcloud workflows run orchestrate-jobs --location=$TAG_ENGINE_REGION
-	``` 
+	gcloud workflows run trigger_export_import --location=$TAG_ENGINE_REGION
+	```
+	In addition to the Cloud Workflow examples, there are two examples for Airflow in the same folder, `dynamic_tag_update.py` and `pii_classification_dag.py`.  
 
-4. Create your own Tag Engine configs with the UI and/or API. <br>
+<br>
 
+4. Create your own Tag Engine configs with the API and/or UI. <br>
 
-5. Open new [issues](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/issues) if you encounter any bugs or would like to request a feature. 
+<br>
+
+5. Open new [issues](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/issues) if you encounter bugs or would like to request a new feature or extension. 

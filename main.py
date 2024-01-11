@@ -26,6 +26,9 @@ from google.cloud import bigquery
 from google.cloud import tasks_v2
 from google.protobuf import timestamp_pb2
 
+from google.api_core.client_info import ClientInfo
+from google.cloud import logging_v2
+
 from access import do_authentication
 from access import check_user_credentials_from_ui
 from access import credentials_to_dict
@@ -33,7 +36,6 @@ from access import get_target_credentials
 from access import get_tag_invoker_account
 
 from common import log_error
-from common import get_log_entries
 
 import DataCatalogController as controller
 import TagEngineStoreHandler as tesh
@@ -171,6 +173,41 @@ def configure_job_metadata():
             
 configure_job_metadata()
 
+
+##################### COMMON METHOD USED BY UI #################
+
+def get_log_entries(service_account):
+    
+    formatted_entries = []
+    
+    credentials, success = get_target_credentials(service_account)
+    
+    if success == False:
+        print('Error acquiring credentials from', service_account)
+    
+    logging_client = logging_v2.Client(project=TAG_ENGINE_PROJECT, credentials=credentials, client_info=ClientInfo(user_agent=USER_AGENT))
+    query="resource.type: cloud_run_revision"
+    
+    try:
+        entries = list(logging_client.list_entries(filter_=query, order_by=logging_v2.DESCENDING, max_results=25))
+    
+        for entry in entries:
+            timestamp = entry.timestamp.isoformat()[0:19]
+        
+            if entry.payload == None:
+                continue
+            
+            if len(entry.payload) > 120:
+                payload = entry.payload[0:120]
+            else:
+                payload = entry.payload
+    
+            formatted_entries.append((timestamp, payload))
+    
+    except Exception as e:
+        print('Error occurred while retrieving log entries: ', e)
+    
+    return formatted_entries
 
 ##################### UI METHODS #################
 
@@ -707,7 +744,7 @@ def process_created_config_action():
     action = request.form['action']
     
     if action == "Trigger Job":
-        job_uuid = jm.create_job(service_account, config_uuid, config_type)
+        job_uuid = jm.create_job(tag_creator_account=service_account, tag_invoker_account=session['user_email'], config_uuid=config_uuid, config_type=config_type)
         job = jm.get_job_status(job_uuid)
         
         entries = get_log_entries(service_account)
@@ -884,7 +921,7 @@ def choose_config_action():
             service_account=service_account)
 
     if action == "Trigger Job":
-        job_uuid = jm.create_job(service_account, config_uuid, config_type)
+        job_uuid = jm.create_job(tag_creator_account=service_account, tag_invoker_account=session['user_email'], config_uuid=config_uuid, config_type=config_type)
         job = jm.get_job_status(job_uuid)
         entries = get_log_entries(service_account)
 
@@ -1018,7 +1055,7 @@ def choose_job_history_action():
     action = request.form['action']
 
     if action == "Trigger Job":
-        job_uuid = jm.create_job(service_account, config_uuid, config_type)
+        job_uuid = jm.create_job(tag_creator_account=service_account, tag_invoker_account=session['user_email'], config_uuid=config_uuid, config_type=config_type)
         job = jm.get_job_status(job_uuid)
         
         entries = get_log_entries(service_account)
@@ -1173,9 +1210,11 @@ def process_static_asset_config():
         tag_history_display = "OFF"
                     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
+    
+    # TO DO: decide how best to let users specify the overwrite field from the UI 
     config_uuid = store.write_static_asset_config(service_account, fields, included_assets_uris, excluded_assets_uris, \
                                                   template_uuid, template_id, template_project, template_region, \
-                                                  refresh_mode, refresh_frequency, refresh_unit, tag_history_option)
+                                                  refresh_mode, refresh_frequency, refresh_unit, tag_history_option, overwrite=True)
     
     # [START render_template]
     return render_template(
@@ -3286,15 +3325,17 @@ def _split_work():
                 log_error(msg, e, job_uuid)
                 
                 store.update_job_status(config_uuid, config_type, 'ERROR')
+                jm.set_job_status(job_uuid, 'ERROR')
                 resp = jsonify(success=False)
                 return resp
             
             if len(csv_files) == 0:
-                msg = 'Error: unable to read CSV from {}: {}'.format(config.get('metadata_import_location'), e)
+                msg = 'Error: unable to read CSV from {}'.format(config.get('metadata_import_location'))
                 error = {'job_uuid': job_uuid, 'msg': msg}
                 print(json.dumps(error))
                 
                 store.update_job_status(config_uuid, config_type, 'ERROR')
+                jm.set_job_status(job_uuid, 'ERROR')
                 resp = jsonify(success=False)
                 return resp
             
@@ -3306,6 +3347,7 @@ def _split_work():
             if len(extracted_tags) == 0:
                 print('Error: unable to extract tags from CSV. Please verify the format of the CSV.') 
                 store.update_job_status(config_uuid, config_type, 'ERROR')
+                jm.set_job_status(job_uuid, 'ERROR')
                 resp = jsonify(success=False)
                 return resp
     
@@ -3333,7 +3375,7 @@ def _split_work():
 
     # update the status of the config, no matter which config type is running
     store.update_job_status(config_uuid, config_type, 'RUNNING')
-    
+    jm.set_job_status(job_uuid, 'RUNNING')
     resp = jsonify(success=True)
     return resp
     
@@ -3472,13 +3514,16 @@ def _run_task():
     if pct_complete == 100:
         if tasks_failed > 0:
             store.update_job_status(config_uuid, config_type, 'ERROR')
+            jm.set_job_status(job_uuid, 'ERROR')
             store.update_scheduling_status(config_uuid, config_type, 'READY')
             resp = jsonify(success=True)
         else:
             store.update_job_status(config_uuid, config_type, 'SUCCESS')
+            jm.set_job_status(job_uuid, 'SUCCESS')
             resp = jsonify(success=False)
     else:
         store.update_job_status(config_uuid, config_type, 'RUNNING: {}% complete'.format(pct_complete))
+        jm.set_job_status(job_uuid, 'RUNNING: {}% complete'.format(pct_complete))
         resp = jsonify(success=True)
     
     return resp
@@ -3488,7 +3533,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 2.1.7\n"
+    return "Welcome to Tag Engine version 2.1.9\n"
     
 ####################### TEST METHOD ####################################  
     

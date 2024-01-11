@@ -15,6 +15,7 @@
 import uuid, datetime, json, configparser
 import constants
 from google.cloud import firestore
+from google.cloud.firestore_v1.base_query import FieldFilter
 from google.cloud import tasks_v2
 
 
@@ -153,7 +154,14 @@ class JobManager:
         if job.exists:
             job_dict = job.to_dict()
             return job_dict
-                
+
+
+    def set_job_status(self, job_uuid, status):
+        
+        self.db.collection('jobs').document(job_uuid).update({
+            'job_status': status
+        })
+            
 
 ################ INTERNAL PROCESSING METHODS #################
 
@@ -199,12 +207,12 @@ class JobManager:
             }
         }
         
-        print('task create:', task)
+        #print('task create:', task)
         
         client = tasks_v2.CloudTasksClient()
         parent = client.queue_path(self.tag_engine_project, self.queue_region, self.queue_name)
         resp = client.create_task(parent=parent, task=task)
-        print('task resp: ', resp)
+        #print('task resp: ', resp)
         
         return resp
       
@@ -224,7 +232,7 @@ class JobManager:
         
         tasks_success = 0
         
-        shards = self.db.collection('shards').where('job_uuid', '==', job_uuid).stream()
+        shards = self.db.collection('shards').where(filter=FieldFilter('job_uuid', '==', job_uuid)).stream()
         
         for shard in shards:
             tasks_success += shard.to_dict().get('tasks_success', 0) 
@@ -236,7 +244,7 @@ class JobManager:
        
        tasks_failed = 0
        
-       shards = self.db.collection('shards').where('job_uuid', '==', job_uuid).stream()
+       shards = self.db.collection('shards').where(filter=FieldFilter('job_uuid', '==', job_uuid)).stream()
        
        for shard in shards:
            tasks_failed += shard.to_dict().get('tasks_failed', 0) 

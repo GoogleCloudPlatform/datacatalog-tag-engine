@@ -1,44 +1,21 @@
 main:
     steps:
-      - get_oauth_token:
-          call: get_oauth_token
-          result: oauth_token
       - import_job:
           call: trigger_job_flow
           args:
-            oauth_token: ${oauth_token[0]}
             config_type: "TAG_IMPORT"
             config_uuid: "0e674d78eddd11ed8d3d09299afaece0"
           result: import_job_status
       - export_job:
           call: trigger_job_flow
           args:
-            oauth_token: ${oauth_token[0]}
             config_type: "TAG_EXPORT"
             config_uuid: "ffe5e8bae07411ed8776acde48001122"
           result: export_job_status
       - return_message:
           return: "done"
-get_oauth_token:
-    steps:
-     - create_build:
-         call: googleapis.cloudbuild.v1.projects.builds.create
-         args:
-           projectId: "tag-engine-run"
-           parent: "projects/tag-engine-run/locations/global"
-           body:
-             serviceAccount: "projects/tag-engine-run/serviceAccounts/tag-client@tag-engine-run.iam.gserviceaccount.com"
-             options:
-               logging: CLOUD_LOGGING_ONLY
-             steps:
-             - name: gcr.io/google.com/cloudsdktool/cloud-sdk
-               entrypoint: /bin/bash
-               args: ["-c", "gcloud auth application-default print-access-token > $$BUILDER_OUTPUT/output"]
-         result: gcloud_result
-     - return_gcloud_result:
-         return: ${text.split(text.decode(base64.decode(gcloud_result.metadata.build.results.buildStepOutputs[0])), "\n")}
 trigger_job_flow:
-    params: [oauth_token, config_type, config_uuid]
+    params: [config_type, config_uuid]
     steps:
      - job_completion_init:
          assign:
@@ -47,8 +24,6 @@ trigger_job_flow:
          call: http.post
          args:
            url: https://tag-engine-eshsagj3ta-uc.a.run.app/trigger_job
-           headers:
-             oauth_token: ${oauth_token}
            auth:
              type: OIDC
            body:
@@ -63,8 +38,6 @@ trigger_job_flow:
          call: http.post
          args:
            url: https://tag-engine-eshsagj3ta-uc.a.run.app/get_job_status
-           headers:
-             oauth_token: ${oauth_token}
            auth:
              type: OIDC
            body:

@@ -55,8 +55,7 @@ class CsvParser:
                     
                     for j, val in enumerate(row):
                         
-                        if val != '':
-                            tag_extract[header[j]] = val.rstrip()
+                        tag_extract[header[j]] = val.rstrip()
                     
                     extracted_tags.append(tag_extract)       
         
@@ -81,5 +80,3 @@ if __name__ == '__main__':
 
     csv_file = ("tag-import", "csv/sakila_column_tags.csv")
     CsvParser.extract_tags(credentials, csv_file)
-
-        

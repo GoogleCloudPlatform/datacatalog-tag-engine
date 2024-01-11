@@ -49,6 +49,7 @@ class BigQueryUtils:
         else:
             return False
     
+    
     # API method used by tag export function
     def truncate_report_tables(self, project, dataset):
         
@@ -60,6 +61,7 @@ class BigQueryUtils:
             return True
         else:
             return False
+    
     
     # API method used by tag export function to insert records
     def insert_exported_records(self, target_table_id, records):    
@@ -102,6 +104,7 @@ class BigQueryUtils:
                      success = False
         
         return success
+      
         
     # API method used by tag history function
     def copy_tag(self, tag_creator_account, tag_invoker_account, job_uuid, table_name, table_fields, tagged_table, tagged_column, tagged_values):
@@ -251,6 +254,7 @@ class BigQueryUtils:
         except Exception as e:
             print('Error occurred during report_table_truncate ', e)
                   
+    
     # used by tag history function
     def history_table_exists(self, table_name):
         
@@ -276,6 +280,7 @@ class BigQueryUtils:
             print("Tag history table {} not found.".format(table_name))
         
         return exists, table_id, settings
+    
     
     # used by tag history function
     def create_history_table(self, dataset_id, table_name, fields):
@@ -310,13 +315,8 @@ class BigQueryUtils:
 
             if field['field_type'] == 'richtext':
                 col_type = 'STRING' 
-
-            if field['is_required'] == True:
-                mode = "REQUIRED"
-            else:
-                mode = "NULLABLE"
-                
-            schema.append(bigquery.SchemaField(col_name, col_type, mode=mode))
+ 
+            schema.append(bigquery.SchemaField(col_name, col_type, mode='NULLABLE')) # mode is always set to NULLABLE to be able to represent deleted tags
         
         table_id = dataset_id.table(table_name)
         table = bigquery.Table(table_id, schema=schema)
@@ -327,6 +327,7 @@ class BigQueryUtils:
         table_id = ("{}.{}.{}".format(table.project, table.dataset_id, table.table_id))
         
         return table_id
+    
     
     # writes tag history record
     def insert_history_row(self, tag_creator_account, tag_invoker_account, job_uuid, table_id, asset_name, tagged_values):
@@ -349,6 +350,9 @@ class BigQueryUtils:
             if 'field_value' not in tagged_value:
                 continue
             
+            if tagged_value['field_value'] == '':
+                continue
+            
             if isinstance(tagged_value['field_value'], decimal.Decimal):
                 row[tagged_value['field_id']] = float(tagged_value['field_value'])
             elif isinstance(tagged_value['field_value'], datetime.datetime) or isinstance(tagged_value['field_value'], datetime.date):
@@ -357,7 +361,7 @@ class BigQueryUtils:
                 row[tagged_value['field_id']]= json.dumps(tagged_value['field_value'], default=str)
                 row[tagged_value['field_id']]= tagged_value['field_value']
     
-        #print('insert row: ' + str(row))
+        print('insert row: ' + str(row))
         row_to_insert = [row,]
 
         try:
@@ -380,6 +384,7 @@ class BigQueryUtils:
                     success = False
         
         return success 
+
 
     # used by job metadata function
     def job_metadata_table_exists(self, table_name):
@@ -407,6 +412,7 @@ class BigQueryUtils:
         
         return exists, table_id, settings
 
+
     # used by job metadata function
     def create_job_metadata_table(self, dataset_id, table_name):
         
@@ -423,6 +429,7 @@ class BigQueryUtils:
         table_id = ("{}.{}.{}".format(table.project, table.dataset_id, table.table_id))
         
         return table_id
+   
         
     # write job metadata record  
     def insert_job_metadata_row(self, table_id, job_uuid, metadata):

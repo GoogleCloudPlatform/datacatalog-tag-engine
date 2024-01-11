@@ -227,7 +227,7 @@ this permission or assign the `storage.legacyBucketReader` role:
 
    ```
 	pip install google-cloud-firestore
-	cd deploy/external_load_balancer
+	cd deploy
 	python create_indexes.py $TAG_ENGINE_PROJECT
 	cd ..
    ```
@@ -239,10 +239,8 @@ this permission or assign the `storage.legacyBucketReader` role:
 
    There is one service in Cloud Run for the API (tag-engine-api) and another service in Cloud Run for the UI (tag-engine-ui). They are both built from the same code base. 
 
-   The next two commands require `gcloud beta`. You can install `gcloud beta` by running `gcloud components install beta`.  
-
    ```
-	gcloud beta run deploy tag-engine-api \
+	gcloud run deploy tag-engine-api \
 		--source . \
 		--platform managed \
 		--region $TAG_ENGINE_REGION \
@@ -255,7 +253,7 @@ this permission or assign the `storage.legacyBucketReader` role:
    To deploy the UI service without IAP: 
    
    ```
-	gcloud beta run deploy tag-engine-ui \
+	gcloud run deploy tag-engine-ui \
 		--source . \
 		--platform managed \
 		--region $TAG_ENGINE_REGION \
@@ -264,29 +262,8 @@ this permission or assign the `storage.legacyBucketReader` role:
 		--memory=1024Mi \
 		--service-account=$TAG_ENGINE_SA
    ``` 
-   
-   To deploy the UI service behind IAP: 
-   
-   Note: This option requires an external load balancer and VPC access connector. 
-   
-   Create a VPC access connector before running the next command. This connector is used to send requests to your VPC network from Cloud Run using internal DNS and internal IP addresses as opposed to going through the public internet. To create a connector, consult [this page](https://cloud.google.com/vpc/docs/configure-serverless-vpc-access#gcloud).  
-
-  ```
-	gcloud beta run deploy tag-engine-ui \
-		--source . \
-		--platform managed \
-		--region $TAG_ENGINE_REGION \
-		--allow-unauthenticated \
-		--ingress=internal-and-cloud-load-balancing \
-		--port=8080 \
-		--min-instances=0 \
-		--max-instances=5 \
-		--memory=1024Mi,
-		--service-account=$TAG_ENGINE_SA \
-		--vpc-connector=projects/$TAG_ENGINE_PROJECT/locations/$TAG_ENGINE_REGION/connectors/$VPC_CONNECTOR \
-		--vpc-egress=private-ranges-only
-   ```
-<br> 
+ 
+ <br> 
 
 
 12. Set the `SERVICE_URL` environment variable:
@@ -307,26 +284,6 @@ this permission or assign the `storage.legacyBucketReader` role:
 
 <br> 
 
-
-13. [Optional] Put an HTTP External Load Balancer in front of the UI Cloud Run service:
-
-   If you are not deploying the Tag Engine UI, skip this step. 
-   
-   The benefit of fronting the UI with a load balancer is to be able to secure access with IAP (Note: IAP is in addition to OAuth). 
-   
-   You cannot attach IAP directly to a Cloud Run service, you need to go through a load balancer.  
-
-   - Create an external application load balancer that accepts incoming HTTPS requests
-   - Attach the frontend of the load balancer to your custom domain for Tag Engine
-   - Create a [serverless network endpoint group](https://cloud.google.com/load-balancing/docs/negs/serverless-neg-concepts) (or NEG) that references the Tag Engine UI Cloud Run service (tag-engine-ui)
-   - Attach the backend of the load balancer to the NEG 
-
-   Once the external load balancer is up, use its IP address to create an `A record` in Cloud DNS. 
-
-   Open IAP and confirm that it is connected to your load balancer's backend. 
-   Inside IAP, grant the `IAP-secured Web App User` role to the user identities who are allowed to access the Tag Engine UI. 
-
-<br> 
 
 This completes the manual setup of Tag Engine. Please consult [Part 2](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#testa) and [Part 3](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#testb) of [README.md](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/README.md) for testing instructions. 
 
