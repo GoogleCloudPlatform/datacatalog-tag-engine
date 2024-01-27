@@ -14,4 +14,4 @@ tag-engine-run,sakila_dw,language,MARKETING,CONTENT,DEV,OPEN_DATA, 2023-11-10,TH
 tag-engine-run,sakila_dw,payment,OPERATIONS,CONTENT,DEV,OPEN_DATA, 2023-11-10,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
 tag-engine-run,sakila_dw,rental,OPERATIONS,CONTENT,DEV,OPEN_DATA, 2023-11-10,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
 tag-engine-run,sakila_dw,staff,OPERATIONS,CONTENT,DEV,OPEN_DATA, 2023-11-10,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
-tag-engine-run,sakila_dw,store,OPERATIONS,CONTENT,DEV,OPEN_DATA, 2023-11-10,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+tag-engine-run,sakila_dw,store,,,,,,,,,,
