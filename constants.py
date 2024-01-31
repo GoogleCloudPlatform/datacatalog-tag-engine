@@ -1,4 +1,4 @@
-# Copyright 2020-2022 Google, LLC.
+# Copyright 2020-2024 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,15 +14,15 @@
 
 SUCCESS = 0
 ERROR = -1
+TABLE = 'TABLE'
+FILESET = 'FILESET'
 TAG_CREATED = 'TAG_CREATED'
 TAG_UPDATED = 'TAG_UPDATED'
 BQ_DATASET_TAG = 1
 BQ_TABLE_TAG = 2
 BQ_COLUMN_TAG = 3
 BQ_RES = 'BQ'
-GCS_RES = 'GCS' # future, not yet implemented
+GCS_RES = 'GCS' 
 PUBSUB_RES = 'PUBSUB' # future, not yet implemented
-TAGS_CONFLICT = -1
-TAGS_AGREE = 0
 STATIC_TAG = 1
 DYNAMIC_TAG = 2

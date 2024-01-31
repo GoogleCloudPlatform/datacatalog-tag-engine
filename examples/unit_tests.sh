@@ -24,7 +24,7 @@ cd datacatalog-tag-engine/
 ####### static tags #######
 
 # create config 
-curl -X POST $TAG_ENGINE_URL/create_static_asset_config -d @tests/configs/static_asset/static_asset_auto_bq.json \
+curl -X POST $TAG_ENGINE_URL/create_static_asset_config -d @examples/configs/static_asset/static_asset_auto_bq.json \
 	-H "Authorization: Bearer $IAM_TOKEN"
 
 # trigger job
@@ -35,7 +35,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
 ####### dynamic tags #######
 
 # create config
-curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @tests/configs/dynamic_table/dynamic_table_ondemand.json \
+curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @examples/configs/dynamic_table/dynamic_table_ondemand.json \
 	-H "Authorization: Bearer $IAM_TOKEN"
 
 # trigger job
@@ -44,7 +44,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
   -H "Authorization: Bearer $IAM_TOKEN"
 
 # create config
-curl -X POST $TAG_ENGINE_URL/create_dynamic_column_config -d @tests/configs/dynamic_column/dynamic_column_ondemand.json \
+curl -X POST $TAG_ENGINE_URL/create_dynamic_column_config -d @examples/configs/dynamic_column/dynamic_column_ondemand.json \
   -H "Authorization: Bearer $IAM_TOKEN"
 
 # trigger job
@@ -56,7 +56,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
 
 # create config 
 curl -X POST $TAG_ENGINE_URL/create_sensitive_column_config \
-	-d @tests/configs/sensitive_column/sensitive_column_auto.json \
+	-d @examples/configs/sensitive_column/sensitive_column_auto.json \
 	-H "Authorization: Bearer $IAM_TOKEN"
 
 # trigger job
@@ -67,7 +67,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
 ####### glossary tags #######
 
 # create config 
-curl -X POST $TAG_ENGINE_URL/create_glossary_asset_config -d @tests/configs/glossary_asset/glossary_asset_ondemand_bq.json \
+curl -X POST $TAG_ENGINE_URL/create_glossary_asset_config -d @examples/configs/glossary_asset/glossary_asset_ondemand_bq.json \
 	-H "Authorization: Bearer $IAM_TOKEN"
 
 # trigger job
@@ -78,7 +78,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
 ####### Export tags to BQ #######
 
 # create config
-curl -X POST $TAG_ENGINE_URL/create_export_config -d @tests/configs/export/export_by_project.json \
+curl -X POST $TAG_ENGINE_URL/create_export_config -d @examples/configs/export/export_by_project.json \
 	-H "Authorization: Bearer $IAM_TOKEN"
 
 # trigger job
@@ -90,10 +90,10 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
 curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"f106ae4aef4911edb86ee96cdaa8e7ae"}' \
 	-H "Authorization: Bearer $IAM_TOKEN"
 
-####### Import tags from CSV #######
+####### Table and column import tags from CSV #######
 
 # create the import table config
-curl -X POST $TAG_ENGINE_URL/create_import_config -d @tests/configs/import/sakila_import_table_tags.json \
+curl -X POST $TAG_ENGINE_URL/create_import_config -d @examples/configs/import/sakila_table_tags.json \
 	-H "Authorization: Bearer $IAM_TOKEN"
 
 # trigger job
@@ -110,7 +110,7 @@ curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"2755de6ceddd11ed9e0
 	-H "Authorization: Bearer $IAM_TOKEN"
 
 # create the import column config
-curl -X POST $TAG_ENGINE_URL/create_import_config -d @tests/configs/import/sakila_import_column_tags.json \
+curl -X POST $TAG_ENGINE_URL/create_import_config -d @examples/configs/import/sakila_column_tags.json \
 	-H "Authorization: Bearer $IAM_TOKEN"
 
 # trigger job
@@ -120,6 +120,26 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
 
 curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"4abb1a0ceddd11edb0341b486213f8b6"}' \
 	-H "Authorization: Bearer $IAM_TOKEN"
+
+####### Fileset import tags from CSV #######
+
+# create the fileset import config
+curl -X POST $TAG_ENGINE_URL/create_import_config -d @examples/configs/import/sakila_fileset_config.json \
+	-H "Authorization: Bearer $IAM_TOKEN"
+
+# trigger job
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+  -d '{"config_type":"TAG_IMPORT","config_uuid":"0e674d78eddd11ed8d3d09299afaece0"}' \
+  -H "Authorization: Bearer $IAM_TOKEN"
+
+# create the fileset column import config
+curl -X POST $TAG_ENGINE_URL/create_import_config -d @examples/configs/import/sakila_fileset_column_config.json \
+	-H "Authorization: Bearer $IAM_TOKEN"
+
+# trigger job
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+  -d '{"config_type":"TAG_IMPORT","config_uuid":"0e674d78eddd11ed8d3d09299afaece0"}' \
+  -H "Authorization: Bearer $IAM_TOKEN"
 
 ####### Restore tags from metadata export #######
 
@@ -133,7 +153,7 @@ curl --request POST 'https://datacatalog.googleapis.com/v1/projects/tag-engine-r
 	--compressed
 
 # create the config
-curl -X POST $TAG_ENGINE_URL/create_restore_config -d @tests/configs/restore/restore_table_tags.json \
+curl -X POST $TAG_ENGINE_URL/create_restore_config -d @examples/configs/restore/restore_table_tags.json \
 	-H "Authorization: Bearer $IAM_TOKEN"
 
 # trigger job
@@ -142,7 +162,7 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
   -H "Authorization: Bearer $IAM_TOKEN"
 
 # create the config
-curl -X POST $TAG_ENGINE_URL/create_restore_config -d @tests/configs/restore/restore_column_tags.json \
+curl -X POST $TAG_ENGINE_URL/create_restore_config -d @examples/configs/restore/restore_column_tags.json \
 	-H "Authorization: Bearer $IAM_TOKEN"
 
 # trigger job 
@@ -199,7 +219,7 @@ export IAM_TOKEN=$(gcloud auth print-identity-token)
 export GOOGLE_APPLICATION_CREDENTIALS="private_key.json"
 
 # create config
-curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @tests/configs/dynamic_table/dynamic_dataset_non_default_service_account.json \
+curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @examples/configs/dynamic_table/dynamic_dataset_non_default_service_account.json \
 	-H "Authorization: Bearer $IAM_TOKEN" 
 
 # trigger job

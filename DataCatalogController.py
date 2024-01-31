@@ -38,7 +38,13 @@ from common import log_error, log_info
 
 config = configparser.ConfigParser()
 config.read("tagengine.ini")
+
 BIGQUERY_REGION = config['DEFAULT']['BIGQUERY_REGION']
+
+# this variable is needed for tagging filesets
+if 'CLOUD_STORAGE_REGION' in config['DEFAULT']:
+    CLOUD_STORAGE_REGION = config['DEFAULT']['CLOUD_STORAGE_REGION']
+
 USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v2'
 
 class DataCatalogController:
@@ -158,9 +164,6 @@ class DataCatalogController:
         
         tag_exists = False
         tag_id = ""
-        
-        if column != None and column != "" and len(column) > 1:
-            column = column.lower() # column is stored in lower case in the tag object
         
         tag_list = self.client.list_tags(parent=parent, timeout=120)
         
@@ -1204,26 +1207,44 @@ class DataCatalogController:
         print('overwrite:', overwrite)
              
         op_status = constants.SUCCESS
+        entry_type = constants.TABLE
         
         project = tag_dict['project']
-        dataset = tag_dict['dataset']
-        table = tag_dict['table']
+        
+        if 'dataset' in tag_dict:
+            dataset = tag_dict['dataset']
+        
+        if 'table' in tag_dict:
+            table = tag_dict['table']
+        
+        if 'entry_group' in tag_dict:
+            entry_group = tag_dict['entry_group']
+            entry_type = constants.FILESET
+        
+        if 'fileset' in tag_dict:
+            fileset = tag_dict['fileset']
 
-        bigquery_resource = '//bigquery.googleapis.com/projects/' + project + '/datasets/' + dataset + '/tables/' + table
-
-        request = datacatalog.LookupEntryRequest()
-        request.linked_resource=bigquery_resource
+        if entry_type == constants.TABLE:
+            resource = '//bigquery.googleapis.com/projects/{}/datasets/{}/tables/{}'.format(project, dataset, table)
+            request = datacatalog.LookupEntryRequest()
+            request.linked_resource=resource
+        
+        # TO DO: figure out how to provide the entry group region    
+        if entry_type == constants.FILESET:
+            resource = '//datacatalog.googleapis.com/projects/{}/locations/{}/entryGroups/{}/entries/{}'.format(project, CLOUD_STORAGE_REGION, entry_group, fileset)
+            request = datacatalog.LookupEntryRequest()
+            request.linked_resource=resource
         
         try:
             entry = self.client.lookup_entry(request)
         except Exception as e:
-            msg = "Error could not find the entry for {}".format(bigquery_resource)
+            msg = "Error could not find {} entry for {}".format(entry_type, resource)
             log_error(msg, e, job_uuid)
             op_status = constants.ERROR
             return op_status
 
         if 'column' in tag_dict:
-            column_name = tag_dict['column'].lower() # column is stored in lower case in the catalog
+            column_name = tag_dict['column'] 
             
             # check if column exists in the catalog
             column_exists = False
@@ -1232,7 +1253,7 @@ class DataCatalogController:
                     column_exists = True
             
             if column_exists == False:
-                msg = "Error could not find column {} in {}".format(column_name, bigquery_resource)
+                msg = "Error could not find column {} in {}".format(column_name, resource)
                 log_error(msg, None, job_uuid)
                 op_status = constants.ERROR
                 return op_status
@@ -1263,7 +1284,8 @@ class DataCatalogController:
         
         for field_name in tag_dict:
            
-            if field_name == 'project' or field_name == 'dataset' or field_name == 'table' or field_name == 'column':
+            if field_name == 'project' or field_name == 'dataset' or field_name == 'table' or \
+                field_name == 'column' or field_name == 'entry_group' or field_name == 'fileset':
                 continue
         
             field_type = None
@@ -2097,13 +2119,15 @@ if __name__ == '__main__':
         target_scopes=SCOPES,
         lifetime=1200)
     
-    job_uuid = '25b697a2a4d711ee9ee142004e494300'
-    config_uuid = 'e8ad7050a4d211eeb4af42004e494300'
-    tag_dict = {'project': 'tag-engine-run', 'dataset': 'sakila_dw', 'table': 'film_category', 'data_domain': '', 'broad_data_category': '', 'environment': '', 'data_origin': '', 'data_creation': '', 'data_ownership': '', 'data_asset_owner': '', 'data_confidentiality': '', 'data_retention': '', 'data_asset_documentation': ''}   
+    #job_uuid = '25b697a2a4d711ee9ee142004e494300'
+    #config_uuid = 'e8ad7050a4d211eeb4af42004e494300'
+    #tag_dict = {'project': 'tag-engine-run', 'dataset': 'sakila_dw', 'table': 'film_category', 'data_domain': '', 'broad_data_category': '', 'environment': '', 'data_origin': '', 'data_creation': '', 'data_ownership': '', 'data_asset_owner': '', 'data_confidentiality': '', 'data_retention': '', 'data_asset_documentation': ''}   
     #tag_dict = {'project': 'tag-engine-run', 'dataset': 'sakila_dw', 'table': 'film_category', 'data_domain': 'MARKETING', 'broad_data_category': 'CONTENT', 'environment': 'DEV', 'data_origin': 'OPEN_DATA', 'data_creation': '2023-12-27', 'data_ownership': 'THIRD_PARTY_OPS', 'data_asset_owner': 'Emily Doe', 'data_confidentiality': 'PUBLIC', 'data_retention': '2_YEARS', 'data_asset_documentation': 'https://dev.mysql.com/doc/sakila/en/sakila-structure.html'}   
 
     tag_history = True
     tag_overwrite = True
     
     dcu = DataCatalogController(credentials, 'tag-creator@tag-engine-run.iam.gserviceaccount.com', 'scohen@gcp.solutions', 'data_governance', 'tag-engine-run', 'us-central1')
-    dcu.apply_import_config(job_uuid, config_uuid, tag_dict, tag_history, tag_overwrite)
+    template = dcu.get_template()
+    print('template:', template)
+    #dcu.apply_import_config(job_uuid, config_uuid, tag_dict, tag_history, tag_overwrite)
