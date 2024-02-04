@@ -1228,8 +1228,7 @@ class DataCatalogController:
             resource = '//bigquery.googleapis.com/projects/{}/datasets/{}/tables/{}'.format(project, dataset, table)
             request = datacatalog.LookupEntryRequest()
             request.linked_resource=resource
-        
-        # TO DO: figure out how to provide the entry group region    
+         
         if entry_type == constants.FILESET:
             resource = '//datacatalog.googleapis.com/projects/{}/locations/{}/entryGroups/{}/entries/{}'.format(project, CLOUD_STORAGE_REGION, entry_group, fileset)
             request = datacatalog.LookupEntryRequest()
@@ -1249,8 +1248,28 @@ class DataCatalogController:
             # check if column exists in the catalog
             column_exists = False
             for catalog_column in entry.schema.columns:
-                if catalog_column.column == column_name:
-                    column_exists = True
+                #print('column:', catalog_column.column)
+                #print('subcolumns:', catalog_column.subcolumns)
+                
+                is_nested_column = False
+                
+                # figure out if column is nested
+                if len(column_name.split('.')) > 1:
+                    is_nested_column = True
+                    parent_column = column_name.split('.')[0]
+                    nested_column = column_name.split('.')[1]
+                
+                if is_nested_column == True:
+                    if catalog_column.column == parent_column:
+                        for subcolumn in catalog_column.subcolumns:
+                            if nested_column == subcolumn.column:
+                                column_exists = True
+                                break 
+                
+                else:
+                    if catalog_column.column == column_name:
+                        column_exists = True
+                        break
             
             if column_exists == False:
                 msg = "Error could not find column {} in {}".format(column_name, resource)
@@ -2113,21 +2132,19 @@ if __name__ == '__main__':
     
     source_credentials, _ = google.auth.default() 
     target_service_account = config['DEFAULT']['TAG_CREATOR_SA']
+    tag_engine_project = config['DEFAULT']['TAG_ENGINE_PROJECT']
+    tag_engine_region = config['DEFAULT']['TAG_ENGINE_REGION']
     
     credentials = impersonated_credentials.Credentials(source_credentials=source_credentials,
         target_principal=target_service_account,
         target_scopes=SCOPES,
         lifetime=1200)
     
-    #job_uuid = '25b697a2a4d711ee9ee142004e494300'
-    #config_uuid = 'e8ad7050a4d211eeb4af42004e494300'
-    #tag_dict = {'project': 'tag-engine-run', 'dataset': 'sakila_dw', 'table': 'film_category', 'data_domain': '', 'broad_data_category': '', 'environment': '', 'data_origin': '', 'data_creation': '', 'data_ownership': '', 'data_asset_owner': '', 'data_confidentiality': '', 'data_retention': '', 'data_asset_documentation': ''}   
-    #tag_dict = {'project': 'tag-engine-run', 'dataset': 'sakila_dw', 'table': 'film_category', 'data_domain': 'MARKETING', 'broad_data_category': 'CONTENT', 'environment': 'DEV', 'data_origin': 'OPEN_DATA', 'data_creation': '2023-12-27', 'data_ownership': 'THIRD_PARTY_OPS', 'data_asset_owner': 'Emily Doe', 'data_confidentiality': 'PUBLIC', 'data_retention': '2_YEARS', 'data_asset_documentation': 'https://dev.mysql.com/doc/sakila/en/sakila-structure.html'}   
-
+    job_uuid = '165b7c22c3af11ee926b42004e494300'
+    config_uuid = 'c762ba36c3ae11ee87b542004e494300'
+    tag_dict = {'project': 'tag-engine-run', 'entry_group': 'sakila_eg', 'fileset': 'address', 'column': 'phone', 'sensitive_field': 'TRUE', 'sensitive_type': 'Personal_Identifiable_Information'}
     tag_history = True
     tag_overwrite = True
     
-    dcu = DataCatalogController(credentials, 'tag-creator@tag-engine-run.iam.gserviceaccount.com', 'scohen@gcp.solutions', 'data_governance', 'tag-engine-run', 'us-central1')
-    template = dcu.get_template()
-    print('template:', template)
-    #dcu.apply_import_config(job_uuid, config_uuid, tag_dict, tag_history, tag_overwrite)
+    dcu = DataCatalogController(credentials, target_service_account, 'scohen@gcp.solutions', 'data_sensitivity', tag_engine_project, tag_engine_region)
+    dcu.apply_import_config(job_uuid, config_uuid, tag_dict, tag_history, tag_overwrite)

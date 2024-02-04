@@ -1,6 +1,6 @@
 project,entry_group,fileset,data_domain,broad_data_category,environment,data_origin,data_creation,data_ownership,data_asset_owner,data_confidentiality,data_retention,data_asset_documentation
-tag-engine-run,sakila_eg,actor,LOGISTICS,CONTENT,DEV,OPEN_DATA, 2023-11-10,THIRD_PARTY_OPS,John Smith,PUBLIC,90_DAYS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
-tag-engine-run,sakila_eg,address,LOGISTICS,CONTENT,DEV,OPEN_DATA, 2023-11-10,THIRD_PARTY_OPS,John Smith,PUBLIC,90_DAYS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
-tag-engine-run,sakila_eg,city,LOGISTICS,CONTENT,DEV,OPEN_DATA, 2023-11-10,THIRD_PARTY_OPS,John Smith,PUBLIC,90_DAYS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
-tag-engine-run,sakila_eg,customer,LOGISTICS,CONTENT,DEV,OPEN_DATA, 2023-11-10,THIRD_PARTY_OPS,John Smith,PUBLIC,90_DAYS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
-tag-engine-run,sakila_eg,staff,OPERATIONS,CONTENT,DEV,OPEN_DATA, 2023-11-10,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+tag-engine-run,sakila_eg,actor,LOGISTICS,CONTENT,DEV,OPEN_DATA,2023-11-10,THIRD_PARTY_OPS,John Smith,PUBLIC,90_DAYS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+tag-engine-run,sakila_eg,address,LOGISTICS,CONTENT,DEV,OPEN_DATA,2023-11-10,THIRD_PARTY_OPS,John Smith,PUBLIC,90_DAYS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+tag-engine-run,sakila_eg,city,LOGISTICS,CONTENT,DEV,OPEN_DATA,2023-11-10,THIRD_PARTY_OPS,John Smith,PUBLIC,90_DAYS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+tag-engine-run,sakila_eg,customer,LOGISTICS,CONTENT,DEV,OPEN_DATA,2023-11-10,THIRD_PARTY_OPS,John Smith,PUBLIC,90_DAYS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
+tag-engine-run,sakila_eg,staff,OPERATIONS,CONTENT,DEV,OPEN_DATA,2023-11-10,THIRD_PARTY_OPS,Emily Doe,PUBLIC,2_YEARS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html
