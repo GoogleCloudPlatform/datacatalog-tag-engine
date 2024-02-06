@@ -121,7 +121,7 @@ class TaskManager:
                 task_id_raw = job_uuid + ''.join(str(extract_val)) + str(datetime.datetime.utcnow())
                 task_id = hashlib.md5(task_id_raw.encode()).hexdigest()
                 
-                print('task_id: ', task_id)
+                #print('task_id: ', task_id)
 
                 task_uuid = self._record_tag_extract_task(job_uuid, shard_uuid, task_id, config_uuid, config_type, extract_val)
                 self._create_tag_extract_task(tag_creator_account, tag_invoker_account, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, extract_val)
@@ -254,10 +254,11 @@ class TaskManager:
                 'oidc_token': {'service_account_email': self.cloud_run_sa, 'audience': self.task_handler_uri}
             }
         }
-        print('task: ', task)
+        print('task request:', task)
 
         try:
             task = client.create_task(parent=parent, task=task)
+            #print('task response:', task)
         
         except Exception as e:
             print('Error: could not create task for uri', self.task_handler_uri, '. Error: ', e)
@@ -290,9 +291,12 @@ class TaskManager:
                 'oidc_token': {'service_account_email': self.cloud_run_sa, 'audience': self.task_handler_uri}
             }
         }
+        
+        print('task request:', task)
 
         try:
             task = client.create_task(parent=parent, task=task)
+            print('task response:', task)
         
         except Exception as e:
             print('Error: could not create task for uri', self.task_handler_uri, '. Error: ', e)

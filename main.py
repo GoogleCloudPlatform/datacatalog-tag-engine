@@ -224,7 +224,7 @@ def authorize():
     authorization_url, state = flow.authorization_url(access_type='offline', include_granted_scopes="true",)
     
     session['state'] = state
-    print('state:', state)
+    #print('state:', state)
 
     return redirect(authorization_url)
 
@@ -2089,9 +2089,9 @@ def create_dynamic_table_config():
         }
         return jsonify(response), 400
      
-    #print('template_id: ' + template_id)
-    #print('template_project: ' + template_project)
-    #print('template_region: ' + template_region)
+    print('template_id: ' + template_id)
+    print('template_project: ' + template_project)
+    print('template_region: ' + template_region)
     
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
@@ -2104,7 +2104,7 @@ def create_dynamic_table_config():
     included_fields = json_request['fields']
     
     fields = dcc.get_template(included_fields=included_fields)
-    print('field:', fields)
+    print('template fields:', fields)
     
     if 'included_tables_uris' in json_request:
         included_tables_uris = json_request['included_tables_uris']
@@ -3531,7 +3531,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 2.2.1\n"
+    return "Welcome to Tag Engine version 2.2.2\n"
     
 ####################### TEST METHOD ####################################  
     

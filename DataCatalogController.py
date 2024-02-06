@@ -70,11 +70,14 @@ class DataCatalogController:
     
     def get_template(self, included_fields=None):
         
+        print('enter get_template')
+
         fields = []
         
         try:
             
             tag_template = self.client.get_tag_template(name=self.template_path)
+            print('tag_template:', tag_template)
         
         except Exception as e:
             msg = 'Error retrieving tag template {}'.format(self.template_path)
@@ -2147,4 +2150,5 @@ if __name__ == '__main__':
     tag_overwrite = True
     
     dcu = DataCatalogController(credentials, target_service_account, 'scohen@gcp.solutions', 'data_sensitivity', tag_engine_project, tag_engine_region)
-    dcu.apply_import_config(job_uuid, config_uuid, tag_dict, tag_history, tag_overwrite)
+    dcu.get_template()
+    #dcu.apply_import_config(job_uuid, config_uuid, tag_dict, tag_history, tag_overwrite)

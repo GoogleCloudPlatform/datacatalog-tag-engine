@@ -1169,6 +1169,7 @@ class TagEngineStoreHandler:
     def read_config(self, service_account, config_uuid, config_type, reformat=False):
                 
         config_result = {}
+        
         coll_name = self.lookup_config_collection(config_type)
         
         config_ref = self.db.collection(coll_name).document(config_uuid)

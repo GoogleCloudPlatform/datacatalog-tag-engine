@@ -51,6 +51,8 @@ def get_requested_service_account(json):
 
 def check_user_credentials_from_api(tag_creator_sa, tag_invoker_account):
 
+    print('enter check_user_credentials_from_api')
+
     has_permission = False
 
     credentials = GoogleCredentials.get_application_default()
@@ -61,13 +63,11 @@ def check_user_credentials_from_api(tag_creator_sa, tag_invoker_account):
     project = tag_creator_sa[start_index:end_index]
 
     resource = 'projects/{}/serviceAccounts/{}'.format(project, tag_creator_sa)
-    print('resource:', resource)  
-
+ 
     try:
         request = service.projects().serviceAccounts().getIamPolicy(resource=resource)
         iam_policy = request.execute()
-        #print('iam_policy:', iam_policy)
-        
+                
         if "bindings" not in iam_policy:
             return has_permission
 
