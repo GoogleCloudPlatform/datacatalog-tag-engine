@@ -2104,7 +2104,7 @@ def create_dynamic_table_config():
     included_fields = json_request['fields']
     
     fields = dcc.get_template(included_fields=included_fields)
-    print('template fields:', fields)
+    print('returned template fields:', fields)
     
     if 'included_tables_uris' in json_request:
         included_tables_uris = json_request['included_tables_uris']
