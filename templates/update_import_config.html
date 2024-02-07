@@ -3,7 +3,12 @@
   <head>
     <title>Tag Engine for Data Catalog</title>
     <link rel="stylesheet" type="text/css" href="/static/style.css">
-  </head>  
+  </head>
+  {% if settings == 1 %}
+  <table><tr><td>
+  &nbsp;<span style="color:green;">Settings Saved!</span>
+   </td></tr></table><p>
+  {% endif %}  
     <body>
 	   <div class="pagetitle">
 	   <h1>Update Config</h1>
@@ -24,20 +29,20 @@
    	<table> 
    	<tr>
        <td>&nbsp;<span style="color:red;">*</span>&nbsp;Tag template id:&nbsp;</td>
-	   <td>
-       	  <input type="text" name="template_id" value="{{ config['template_id'] }}" style="width: 150px;padding: 3px;"/>			 
+	   <td style="width: 150px;padding: 3px;">
+       	  {{ config['template_id'] }} 		 
        </td>
        </tr>
    	<tr>
        <td>&nbsp;<span style="color:red;">*</span>&nbsp;Tag template project:&nbsp;</td>
-	   <td>
-       	  <input type="text" name="template_project" value="{{ config['template_project'] }}" style="width: 150px;padding: 3px;"/>			 
+	   <td style="width: 150px;padding: 3px;">
+       	  {{ config['template_project'] }}			 
        </td>
        </tr>
    	<tr>
        <td>&nbsp;<span style="color:red;">*</span>&nbsp;Tag template region:&nbsp;</td>
-	   <td>
-       	  <input type="text" name="template_region" value="{{ config['template_region'] }}" style="width: 150px;padding: 3px;"/>			 
+	   <td style="width: 150px;padding: 3px;">
+       	  {{ config['template_region'] }}			 
        </td>
        </tr>
        </table>
@@ -75,9 +80,13 @@
 		        <tr>
 			   <td><input type="submit" value="Save Config" name="action">
 			       <input type="submit" value="Cancel Changes" name="action">
+   	        	   <input type="submit" value="View Config List" name="action">
 			   </td>
 		        </tr>
 			   </table>
+			   <input type="hidden" name="template_id" value="{{ config['template_id'] }}">
+			   <input type="hidden" name="template_project" value="{{ config['template_project'] }}">
+			   <input type="hidden" name="template_region" value="{{ config['template_region'] }}">
 			   <input type="hidden" name="service_account" value="{{ service_account }}">
 			   <input type="hidden" name="config_uuid" value="{{ config['config_uuid'] }}">	   
          </form>

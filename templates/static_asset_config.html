@@ -69,17 +69,16 @@
 			   <h3>BigQuery or Google Cloud Storage Assets</h3>
 		 	   
 			   <h5>
-			   Specify comma-separated list of URIs for resources to include in and exclude from your static tag. Wildcards are allowed in the table name. <br><br>
-					  Supported URIs for BigQuery resources: <br>
+			   Specify comma-separated list of URIs for BigQuery table entries to include in and exclude from your static asset config. Wildcards are allowed in the table name. <br><br>
+					  Supported URIs for BigQuery table entries: <br>
 					   bigquery/project/[PROJECT]/dataset/[DATASET]/* <br>
 				       bigquery/project/[PROJECT]/dataset/[DATASET]/[TABLE] <br>
 				
 				
- 			   Specify a comma-separated list of URIs for file paths to include in and exclude from your entry config. Wildcards are allowed in the path name. <br><br>
- 					  Supported URIs for GCS files: <br>
- 					    gs://[BUCKET]/[FOLDER]/* <br>
- 				        gs://[BUCKET]/[FOLDER]/*.parquet <br>
- 					    gs://[BUCKET]/[FOLDER]/[FOLDER]/* <br>
+ 			   Specify a comma-separated list of URIs for GCS fileset entries to include in and exclude from your static asset config. Wildcards are allowed in the path name. <br><br>
+ 					  Supported URIs for fileset entries: <br>
+ 				        entrygroup/[ENTRYGROUP]/entry/[ENTRY]<br>
+ 					    entrygroup/[ENTRYGROUP]/*<br>
  				        </h5>
  		
 				    <table>

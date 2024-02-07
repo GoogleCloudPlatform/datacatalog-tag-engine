@@ -962,7 +962,7 @@ class TagEngineStoreHandler:
     def write_tag_import_config(self, service_account, template_uuid, template_id, template_project, template_region, \
                                 metadata_import_location, tag_history, overwrite=True):
                                     
-        print('** write_tag_import_csv_config **')
+        print('** write_tag_import_config **')
         
         # check if this config already exists
         coll_ref = self.db.collection('import_configs')
@@ -1003,6 +1003,24 @@ class TagEngineStoreHandler:
         
         return config_uuid
 
+    
+    def update_tag_import_config(self, config_uuid, metadata_import_location):
+                                    
+        print('** update_tag_import_config **')
+        success = True
+        
+        config_ref = self.db.collection("import_configs").document(config_uuid)
+        
+        try:
+            config_ref.update({"metadata_import_location": metadata_import_location})
+        
+        except Exception as e:
+            msg = 'Error updating config {}'.format(config_uuid)
+            log_error(msg, e) 
+            success = False
+        
+        return success
+    
     
     def write_tag_export_config(self, service_account, source_projects, source_folder, source_region, \
                                 target_project, target_dataset, target_region, write_option, \
@@ -1155,12 +1173,15 @@ class TagEngineStoreHandler:
                                     
             for doc in docs:
                 config = doc.to_dict()
+                print('read config from FS:', config)
                 
                 if 'job_status' not in config or 'PENDING' in config['job_status'] or 'RUNNING' in config['job_status']:
                     pending_running_configs.append(config)
                 else:
                     active_configs.append(config)
                         
+        
+        
         combined_configs = pending_running_configs + active_configs
         
         return combined_configs
@@ -1168,10 +1189,13 @@ class TagEngineStoreHandler:
     
     def read_config(self, service_account, config_uuid, config_type, reformat=False):
                 
+        print('enter read_config: {}, {}, {}'.format(service_account, config_uuid, config_type))
+        
         config_result = {}
         
         coll_name = self.lookup_config_collection(config_type)
-        
+        print('coll_name:', coll_name)
+            
         config_ref = self.db.collection(coll_name).document(config_uuid)
         doc = config_ref.get()
         

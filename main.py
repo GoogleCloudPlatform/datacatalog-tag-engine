@@ -953,7 +953,7 @@ def choose_config_action():
     
     dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template_fields = dcc.get_template()
-    print('template_fields:', template_fields)
+    #print('template_fields:', template_fields)
     
     if config_type == "STATIC_TAG_ASSET":
         return render_template(
@@ -1784,18 +1784,24 @@ def process_restore_config():
         tag_history=tag_history_display)
     # [END render_template]
 
-
+# there are two actions that result in this route, when creating new configs and when updating existing ones
+# when updating existing configs, you need to make changes to the current one (as opposed to creating a new one)
 @app.route('/process_import_config', methods=['POST'])
 def process_import_config():
     
     template_id = request.form['template_id']
     template_project = request.form['template_project']
     template_region = request.form['template_region']
+    
     service_account = request.form['service_account']
     metadata_import_location = request.form['metadata_import_location']
-    
     action = request.form['action']
     
+    if 'config_uuid' in request.form:
+        config_uuid = request.form['config_uuid']
+    else:
+        config_uuid = None
+      
     credentials, success = get_target_credentials(service_account)
     
     if success == False:
@@ -1805,7 +1811,6 @@ def process_import_config():
     template = dcc.get_template()
     
     if action == "Cancel Changes":
-        
         return render_template(
             'tag_template.html',
             template_id=template_id,
@@ -1813,7 +1818,20 @@ def process_import_config():
             template_region=template_region, 
             service_account=service_account, 
             fields=template)
+    
+    if action == "View Config List":
+        configs = store.read_configs(service_account, 'ALL', template_id, template_project, template_region)
+        print('configs: ', configs)
+    
+        return render_template(
+            'view_configs.html',
+            template_id=template_id,
+            template_project=template_project,
+            template_region=template_region,
+            service_account=service_account,
+            configs=configs)
         
+    # action is Save Changes (either to a new config or existing one)
     tag_history_option, _ = store.read_tag_history_settings()
     
     if tag_history_option == True:
@@ -1821,25 +1839,38 @@ def process_import_config():
     else:
         tag_history_display = "OFF"          
         
-    template_uuid = store.write_tag_template(template_id, template_project, template_region)
-          
-    config_uuid = store.write_tag_import_config(service_account, template_uuid, template_id, template_project, template_region, \
-                                                metadata_import_location, tag_history_option)                                                      
+    # update existing config
+    if config_uuid != None:
+        print('here')
+        store.update_tag_import_config(config_uuid, metadata_import_location)
+        config = store.read_config(service_account, config_uuid, 'TAG_IMPORT')
+    
+        return render_template(
+            'update_import_config.html',
+            template_id=template_id,
+            template_project=template_project,
+            template_region=template_region,
+            service_account=service_account,
+            config=config,
+            settings=1)
+    
+    # write new config    
+    else:    
+        template_uuid = store.write_tag_template(template_id, template_project, template_region)
+        config_uuid = store.write_tag_import_config(service_account, template_uuid, template_id, template_project, template_region, \
+                                                    metadata_import_location, tag_history_option)                                                      
 
-    # [END process_import_config]
-    # [START render_template]
-    return render_template(
-        'created_import_config.html',
-        config_uuid=config_uuid,
-        config_type='IMPORT_TAG',
-        template_id=template_id,
-        template_project=template_project,
-        template_region=template_region,
-        service_account=service_account,
-        metadata_import_location=metadata_import_location,
-        tag_history=tag_history_display)
-    # [END render_template]
-
+        return render_template(
+            'created_import_config.html',
+            config_uuid=config_uuid,
+            config_type='TAG_IMPORT',
+            template_id=template_id,
+            template_project=template_project,
+            template_region=template_region,
+            service_account=service_account,
+            metadata_import_location=metadata_import_location,
+            tag_history=tag_history_display)
+    
 
 @app.route('/process_export_config', methods=['POST'])
 def process_export_config():
@@ -3246,8 +3277,7 @@ def _split_work():
     tag_creator_sa = json_request['tag_creator_account']
     tag_invoker_sa = json_request['tag_invoker_account']
 
-    config = store.read_config(tag_creator_sa, config_uuid, config_type)
-    
+    config = store.read_config(tag_creator_sa, config_uuid, config_type)    
     print('config: ', config)
     
     if config == {}:
