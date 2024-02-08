@@ -246,16 +246,23 @@ Open the Data Catalog UI and verify that your tag was successfully created. If y
 
 ### <a name="testb"></a> Part 3: Testing your Tag Engine UI Setup
 
-1. Open a browser window
-2. Navigate to `UI_SERVICE_URI` 
-3. You should be prompted to sign in with Google
-4. Once signed in, you will be redirected to the Tag Engine home page (i.e. `UI_SERVICE_URI`/home)
-5. Enter your template id, template project, and template region
-6. Enter your `TAG_CREATOR_SA` as the service account
-7. Click on `Search Tag Templates` to continue to the next step 
-8. Create a tag configuration by selecting one of the options
+1. Grant permissions to your invoker user account(s):
 
-If you encouter a 500 error, open the Cloud Run logs for tag-engine-ui to troubleshoot. 
+export INVOKER_USER_ACCOUNT="username@example.com"
+
+gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
+	--member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountUser
+
+2. Open a browser window
+3. Navigate to `UI_SERVICE_URI` 
+4. You should be prompted to sign in with Google
+5. Once signed in, you will be redirected to the Tag Engine home page (i.e. `UI_SERVICE_URI`/home)
+6. Enter your template id, template project, and template region
+7. Enter your `TAG_CREATOR_SA` as the service account
+8. Click on `Search Tag Templates` to continue to the next step 
+9. Create a tag configuration by selecting one of the options from this page. 
+
+If you encouter a 500 error, open the Cloud Run logs for `tag-engine-ui` to troubleshoot. 
 
 <br>
 
