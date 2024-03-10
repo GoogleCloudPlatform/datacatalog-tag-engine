@@ -125,7 +125,7 @@ class BigQueryUtils:
         else:
             asset_name = tagged_table
             
-        asset_name = asset_name.replace("datasets", "dataset").replace("tables", "table")
+        asset_name = asset_name.replace("/datasets/", "/dataset/").replace("/tables/", "/table/")
         print('asset_name: ', asset_name)
                 
         success = self.insert_history_row(tag_creator_account, tag_invoker_account, job_uuid, table_id, asset_name, tagged_values)  

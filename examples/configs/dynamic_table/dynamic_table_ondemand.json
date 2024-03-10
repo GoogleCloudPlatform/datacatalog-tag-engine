@@ -15,6 +15,5 @@
     "included_tables_uris": "bigquery/project/warehouse-337221/dataset/cities_311/*",
     "excluded_tables_uris": "",
     "refresh_mode": "ON_DEMAND",
-    "tag_history": false,
-    "tag_stream": false  
+    "tag_history": false
 }

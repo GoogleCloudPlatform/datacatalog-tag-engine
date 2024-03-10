@@ -1,5 +1,5 @@
 ## Tag Engine 2.0
-This is the main branch for Tag Engine. Tag Engine 2.0 is a flavor of Tag Engine that is hosted on Cloud Run instead of App Engine and is [VPC-SC compatible](https://cloud.google.com/vpc-service-controls/docs/supported-products). It supports user authentication and role based access control. Customers who have multiple teams using BigQuery and Cloud Storage can authorize each team to tag only their data assets. 
+This is the main branch for Tag Engine. Tag Engine 2.0 is a flavor of Tag Engine that is hosted on Cloud Run instead of App Engine and is [VPC-SC compatible](https://cloud.google.com/vpc-service-controls/docs/supported-products). It supports user authentication and role based access control. Customers who have multiple teams using BigQuery and Cloud Storage can authorize each team to tag only their data assets using separate Tag Creator service accounts. 
 
 Tag Engine is an open-source extension to Google Cloud's Data Catalog which is now part of the Dataplex product suite. Tag Engine automates the tagging of BigQuery tables and views as well as data lake files in Cloud Storage. You create tag configurations that specify how to populate the various fields of a tag template through SQL expressions or static values. Tag Engine runs the configurations either on demand or on a schedule to create, update or delete the tags.
 
@@ -25,12 +25,10 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 <br>
 1. Create (or designate) two service accounts: <br><br>
 
-   - A service account that runs the Tag Engine Cloud Run service, referred to as `TAG_ENGINE_SA`. 
-   - A service account that performs the tagging in Data Catalog, and sourcing the contents of those tags from BigQuery, referred to as `TAG_CREATOR_SA`. <br>
+   - A service account that runs the Tag Engine Cloud Run services (both API and UI). This account is referred to as `TAG_ENGINE_SA`. 
+   - A service account that sources the metadata from BigQuery or Cloud Storage, and then performs the tagging in Data Catalog. This account is referred to as `TAG_CREATOR_SA`. <br>
 
-   Why do we need two service accounts? The key benefit of decoupling them is to allow individual teams to have their own Tag Creator SAs. For API access, teams can then link 
-   invoker SAs to Tag Creator SAs so that a single Tag Engine instance can be shared by multiple teams. Similarly, for UI access, teams can link user accounts to Tag Creator SAs 
-   so that a single Tag Engine instance can be shared by multiple teams. <br><br>
+   Why do we need two different service accounts? The key benefit of decoupling them is to allow individual teams to have their own Tag Creator SA. The Tag Engine SA has permissions to read specific data assets in BigQuery and Cloud Storage. For example, you can have one Tag Engine SA for the Marketing team and another one for the Logistics team. The Tag Engine admin then links each invoker account (either service or user) to a specific Tag Creator SA. Invoker accounts are accounts who call either the Tag Engine API or UI. What this allows you to do is run a single instance of Tag Engine that is shared across multiple teams, each with their own data assets. <br><br>
 
 2. Create an OAuth client:
 

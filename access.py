@@ -86,24 +86,37 @@ def check_user_credentials_from_api(tag_creator_sa, tag_invoker_account):
 def do_authentication(headers, json_request, ENABLE_AUTH):
     
     print('** enter do_authentication **')
+    status = True
+    response = None
     
     tag_invoker_account = get_tag_invoker_account(headers.get('Authorization'))
     tag_creator_sa = get_requested_service_account(json_request)
     
+    if tag_creator_sa == None:
+        status = False
+        response = {
+            "status": "error",
+            "message": "Fatal error: Tag Creator service account not found. Make sure that your config UUID exists."
+        }
+        return status, response, tag_creator_sa
+    
     if ENABLE_AUTH == False:
-        return True, None, tag_creator_sa
+        status = True
+        response = None
+        return status, response, tag_creator_sa
               
     has_permission = check_user_credentials_from_api(tag_creator_sa, tag_invoker_account)   
     print('user has permission:', has_permission)
     
     if has_permission == False:
+        status = False
         response = {
             "status": "error",
             "message": "Fatal error: User " + tag_invoker_account + " is missing roles/iam.serviceAccountUser on " + tag_creator_sa,
         }
-        return False, response, tag_creator_sa
+        return status, response, tag_creator_sa
        
-    return True, None, tag_creator_sa
+    return status, response, tag_creator_sa
 
 
 # get the account (user or service) which invoked the job

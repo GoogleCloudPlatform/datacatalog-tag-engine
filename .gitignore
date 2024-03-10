@@ -4,6 +4,10 @@ deploy/variables.tfvars
 client_secret.json
 bkp/*
 notes/*
+te_client_secret.json
+temp_configs/*
+flask_session/*
+set_env.sh
 .DS_Store
 .idea
 .envrc

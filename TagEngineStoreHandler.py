@@ -964,25 +964,21 @@ class TagEngineStoreHandler:
                                     
         print('** write_tag_import_config **')
         
-        # check if this config already exists
+        # check to see if this config already exists and if so, return it
         coll_ref = self.db.collection('import_configs')
         query = coll_ref.where(filter=FieldFilter('template_uuid', '==', template_uuid))
         query = query.where(filter=FieldFilter('metadata_import_location', '==', metadata_import_location))
         query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
-       
+        query = query.where(filter=FieldFilter('service_account', '==', service_account))
+        
         matches = query.get()
        
-        for match in matches:
-            if match.exists:
-                config_uuid_match = match.id
-                print('config already exists. Found config_uuid: ' + str(config_uuid_match))
-                
-                # update status to INACTIVE 
-                coll_ref.document(config_uuid_match).update({
-                    'config_status' : "INACTIVE"
-                })
-                print('Updated status to INACTIVE.')
+        for matched_config in matches:
+            if matched_config.exists:
+                print('config already exists. Returning existing config_uuid:', matched_config.id)
+                return matched_config.id
        
+        # create a new config because we did not find a matching one
         config_uuid = uuid.uuid1().hex
         doc_ref = coll_ref.document(config_uuid)
         

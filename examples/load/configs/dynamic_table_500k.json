@@ -51,6 +51,5 @@
     "included_tables_uris": "bigquery/project/warehouse-337221/dataset/cities_311_500k/*",
     "excluded_tables_uris": "",
     "refresh_mode": "ON_DEMAND",
-    "tag_history": true,
-    "tag_stream": true  
+    "tag_history": true
 }
