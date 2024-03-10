@@ -28,7 +28,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
    - A service account that runs the Tag Engine Cloud Run services (both API and UI). This account is referred to as `TAG_ENGINE_SA`. 
    - A service account that sources the metadata from BigQuery or Cloud Storage, and then performs the tagging in Data Catalog. This account is referred to as `TAG_CREATOR_SA`. <br>
 
-   Why do we need two different service accounts? The key benefit of decoupling them is to allow individual teams to have their own Tag Creator SA. The Tag Engine SA has permissions to read specific data assets in BigQuery and Cloud Storage. For example, you can have one Tag Engine SA for the Marketing team and another one for the Logistics team. The Tag Engine admin then links each invoker account (either service or user) to a specific Tag Creator SA. Invoker accounts are accounts who call either the Tag Engine API or UI. What this allows you to do is run a single instance of Tag Engine that is shared across multiple teams, each with their own data assets. <br><br>
+   Why do we need two different service accounts? The key benefit of decoupling them is to allow individual teams to have their own Tag Creator SA. This account has permissions to read specific data assets in BigQuery and Cloud Storage. For example, the Finance team can have a different Tag Creator SA from the Finance team if they own different data assets. The Tag Engine admin then links each invoker account (either service or user) to a specific Tag Creator SA. Invoker accounts call Tag Engine through either the API or UI. This allows the Tag Engine admin to run and maintain a single instance of Tag Engine, as opposed to one instance per team. <br><br>
 
 2. Create an OAuth client:
 
