@@ -1,4 +1,4 @@
-# Copyright 2020-2023 Google, LLC.
+# Copyright 2020-2024 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ from google.cloud import bigquery
 from google.cloud import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 import DataCatalogController as controller
+from common import log_error
 import ConfigType as ct
 import constants
 
@@ -1190,7 +1191,7 @@ class TagEngineStoreHandler:
         config_result = {}
         
         coll_name = self.lookup_config_collection(config_type)
-        print('coll_name:', coll_name)
+        #print('coll_name:', coll_name)
             
         config_ref = self.db.collection(coll_name).document(config_uuid)
         doc = config_ref.get()
@@ -1203,6 +1204,9 @@ class TagEngineStoreHandler:
             
             if reformat and config_type == 'TAG_EXPORT':
                 config_result = self.format_source_projects(config_result)
+        else:
+            msg = 'Error: UUID', config_uuid, 'does not exist for type', config_type
+            log_error(msg, None, None)
             
         return config_result
         
@@ -1259,18 +1263,29 @@ class TagEngineStoreHandler:
     def delete_config(self, service_account, config_uuid, config_type):
         
         coll_name = self.lookup_config_collection(config_type)
-        
         config_ref = self.db.collection(coll_name).document(config_uuid)
-        config = config_ref.get().to_dict()
+        doc = config_ref.get()
         
-        if config['service_account'] != service_account:
-            return False
-        
-        try:
-            self.db.collection(coll_name).document(config_uuid).delete()
-        
-        except Expection as e:
-            print('Error occurred during delete_config: ', e)
+        if doc.exists:
+            config = doc.to_dict()
+            
+            if config['service_account'] != service_account:
+                msg = "Error: service account provided does not match the one that's attached to the config"
+                log_error(msg, None, None)
+                return False
+            
+            try:
+                self.db.collection(coll_name).document(config_uuid).delete()
+            
+            except Expection as e:
+                msg = "Error occurred while trying to delete the document"
+                log_error(msg, e)
+                return False
+            
+        else:
+            # config doesn't exist
+            msg = "Error: config UUID " + config_uuid + " does not exist"
+            log_error(msg, None, None)
             return False
         
         return True

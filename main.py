@@ -1,4 +1,4 @@
-# Copyright 2020-2023 Google, LLC.
+# Copyright 2020-2024 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -3146,33 +3146,55 @@ def get_config():
     json_request = request.get_json(force=True) 
     print('json request: ', json_request)
     
-    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
+    status, resp, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
         
     if status == False:
-        return jsonify(response), 400
+        return jsonify(resp), 400
        
     if 'config_type' in json_request:
         config_type = json_request['config_type']
         is_valid = check_config_type(config_type)
     else:
-        print("read_config request is missing the required parameter config_type. Please add this parameter to the json object.")
-        resp = jsonify(success=False)
-        return resp
+        print("get_config request is missing the required parameter config_type. Please add this parameter to the json object.")
+        
+        resp = {
+            "status": "error",
+            "message": "json request is missing the required parameter config_type. Please add this parameter to the json object."
+        }
+        return jsonify(resp), 400
+        
         
     if is_valid == False:
         print("Invalid config_type parameter. Please choose a config_type from this list: " + get_available_config_types() + " or use ALL.")
-        resp = jsonify(success=False)
-        return resp
+        
+        resp = {
+            "status": "error",
+            "message": "Invalid config_type parameter. Please choose a config_type from this list: " + get_available_config_types() + " or use ALL."
+        }
+        return jsonify(resp), 400
     
     if 'config_uuid' in json_request:
         config_uuid = json_request['config_uuid']
     else:
-        print("read_config request is missing the required parameter config_uuid. Please add this parameter to the json object.")
-        resp = jsonify(success=False)
-        return resp
+        print("get_config request is missing the required parameter config_uuid. Please add this parameter to the json object.")
+        
+        resp = {
+            "status": "error",
+            "message": "json request is missing the required parameter config_uuid. Please add this parameter to the json object"
+        }
+        return jsonify(resp), 400
                      
-    config = store.read_config(tag_creator_sa, config_uuid, config_type) 
+    config = store.read_config(tag_creator_sa, config_uuid, config_type)
     
+    if config == {}:
+        print("get_config request contains invalid config_uuid, config_type combination:", config_uuid, "not found in collection", config_type)
+        
+        resp = {
+            "status": "error",
+            "message": "json request contains invalid config_uuid, config_type combination: " + config_uuid + " not found in collection " + config_type
+        }
+        return jsonify(resp), 400
+        
     return jsonify(configs=config)
 
 """
@@ -3200,22 +3222,39 @@ def delete_config():
         is_valid = check_config_type(config_type)
     else:
         print("delete_config request is missing the required parameter config_type. Please add this parameter to the json object.")
-        resp = jsonify(success=False)
-        return resp
+        resp = {
+            "status": "error",
+            "message": "json request is missing the required parameter config_type. Please add this parameter to the json object."
+        }
+        return jsonify(resp), 400
         
     if is_valid == False:
         print("Invalid config_type parameter. Please choose a config_type from this list: " + get_available_config_types() + " or use ALL.")
-        resp = jsonify(success=False)
-        return resp
+        resp = {
+            "status": "error",
+            "message": "json request contains invalid config_type parameter. Please choose a config_type from this list: " + get_available_config_types() + " or use ALL."
+        }
+        return jsonify(resp), 400
     
     if 'config_uuid' in json_request:
         config_uuid = json_request['config_uuid']
     else:
         print("delete_config request is missing the required parameter config_uuid. Please add this parameter to the json object.")
-        resp = jsonify(success=False)
-        return resp
+        resp = {
+            "status": "error",
+            "message": "json request missing the required parameter config_uuid. Please add this parameter to the json object."
+        }
+        return jsonify(resp), 400
                      
-    status = store.delete_config(tag_creator_sa, config_uuid, config_type) 
+    status = store.delete_config(tag_creator_sa, config_uuid, config_type)
+    
+    if status == False:
+        print("delete_config request contains a config_uuid and config_type combination which do not exist.")
+        resp = {
+            "status": "error",
+            "message": "json request contains a config_uuid and config_type combination which do not exist."
+        }
+        return jsonify(resp), 400
     
     return jsonify(status=status)
 
@@ -3561,7 +3600,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 2.2.4\n"
+    return "Welcome to Tag Engine version 2.2.5\n"
     
 ####################### TEST METHOD ####################################  
     

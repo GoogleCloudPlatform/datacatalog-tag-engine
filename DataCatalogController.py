@@ -1,4 +1,4 @@
-# Copyright 2020-2023 Google, LLC.
+# Copyright 2020-2024 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -1209,7 +1209,19 @@ class DataCatalogController:
         op_status = constants.SUCCESS
         entry_type = constants.TABLE
         
-        project = tag_dict['project']
+        if 'project' in tag_dict:
+            project = tag_dict['project']
+        else:
+            msg = "Error: project info missing from CSV. Received {}".format(tag_dict)
+            log_error(msg, None, job_uuid)
+            op_status = constants.ERROR
+            return op_status
+        
+        if ('dataset', 'table') not in tag_dict and ('entry_group', 'fileset') not in tag_dict:
+            msg = "Error: could not find either dataset and table or entry_group and fileset in CSV. Received {}".format(tag_dict)
+            log_error(msg, None, job_uuid)
+            op_status = constants.ERROR
+            return op_status
         
         if 'dataset' in tag_dict:
             dataset = tag_dict['dataset']
