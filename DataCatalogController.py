@@ -1217,12 +1217,13 @@ class DataCatalogController:
             op_status = constants.ERROR
             return op_status
         
-        if ('dataset', 'table') not in tag_dict and ('entry_group', 'fileset') not in tag_dict:
-            msg = "Error: could not find either dataset and table or entry_group and fileset in CSV. Received {}".format(tag_dict)
-            log_error(msg, None, job_uuid)
-            op_status = constants.ERROR
-            return op_status
-        
+        if ('dataset' not in tag_dict or 'table' not in tag_dict):
+            if ('entry_group' not in tag_dict or 'fileset' not in tag_dict):
+                msg = "Error: could not find required fields in CSV. Expecting either dataset and table or entry_group and fileset in CSV. Received {}".format(tag_dict)
+                log_error(msg, None, job_uuid)
+                op_status = constants.ERROR
+                return op_status
+            
         if 'dataset' in tag_dict:
             dataset = tag_dict['dataset']
         
