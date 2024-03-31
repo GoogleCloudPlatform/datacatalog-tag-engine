@@ -16,7 +16,7 @@ import uuid, hashlib, datetime, json, configparser, math
 import constants
 from google.cloud import firestore
 from google.cloud import tasks_v2
-
+from google.protobuf import duration_pb2
 
 class TaskManager:
     """Class for creating and managing work requests in the form of cloud tasks 
@@ -42,6 +42,7 @@ class TaskManager:
 
         self.db = firestore.Client()
         self.tasks_per_shard = 1000
+        self.task_deadline = duration_pb2.Duration().FromSeconds(1800) # set the deadline per task to be 30 minutes (which is the max supported duration)
 
 ##################### API METHODS #################
         
@@ -246,6 +247,7 @@ class TaskManager:
                 
         task = {
             'name': parent + '/tasks/' + task_id,
+            'dispatch_deadline': self.task_deadline,
             'http_request': {  
                 'http_method': 'POST',
                 'url': self.task_handler_uri,
@@ -283,6 +285,7 @@ class TaskManager:
         
         task = {
             'name': parent + '/tasks/' + task_id,
+            'dispatch_deadline': self.task_deadline,
             'http_request': {  
                 'http_method': 'POST',
                 'url': self.task_handler_uri,

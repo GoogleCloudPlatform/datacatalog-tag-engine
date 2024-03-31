@@ -150,7 +150,7 @@ def get_target_credentials(target_service_account):
         target_credentials = impersonated_credentials.Credentials(source_credentials=source_credentials,
             target_principal=target_service_account,
             target_scopes=SCOPES,
-            lifetime=1200) # lifetime is in seconds -> 20 minutes should be enough time
+            lifetime=3600) # lifetime is in seconds -> 60 minutes per request
         success = True
         
     except Exception as e:

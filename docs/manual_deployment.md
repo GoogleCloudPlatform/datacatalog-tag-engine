@@ -246,7 +246,8 @@ this permission or assign the `storage.legacyBucketReader` role:
 		--region $TAG_ENGINE_REGION \
 		--no-allow-unauthenticated \
 		--ingress=all \
-		--memory=1024Mi \
+		--memory=4G \
+		--timeout=60m \
 		--service-account=$TAG_ENGINE_SA
    ```
 
@@ -259,7 +260,8 @@ this permission or assign the `storage.legacyBucketReader` role:
 		--region $TAG_ENGINE_REGION \
 		--allow-unauthenticated \
 		--ingress=all \
-		--memory=1024Mi \
+		--memory=4G \
+		--timeout=60m \
 		--service-account=$TAG_ENGINE_SA
    ``` 
  

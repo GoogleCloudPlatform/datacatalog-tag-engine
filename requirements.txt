@@ -1,12 +1,12 @@
 gunicorn
 Flask==2.3.2
 Flask-Session
-google-cloud-datacatalog==3.16.0
-google-cloud-bigquery
+google-cloud-datacatalog==3.19.0
+google-cloud-bigquery==3.19.0
 google-cloud-core
-google-cloud-firestore==2.12.0
+google-cloud-firestore==2.15.0
 google-cloud-storage
-google-cloud-tasks==2.13.1
+google-cloud-tasks==2.16.3
 google-cloud-pubsub
 google-cloud-resource-manager
 google-cloud-logging

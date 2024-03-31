@@ -60,7 +60,7 @@ resource "google_cloud_run_v2_service" "api_service" {
 	  
 	    resources {
 	        limits = {
-	           memory = "1024Mi"
+	           memory = "4G"
 		    }
 	        cpu_idle = true
 	    }
@@ -128,7 +128,7 @@ resource "google_cloud_run_v2_service" "ui_service" {
 	  
 	    resources {
 	        limits = {
-	           memory = "1024Mi"
+	           memory = "4G"
 		    }
 	        cpu_idle = true
 	    }

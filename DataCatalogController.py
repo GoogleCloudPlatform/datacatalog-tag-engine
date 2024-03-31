@@ -74,7 +74,6 @@ class DataCatalogController:
         
         try:
             tag_template = self.client.get_tag_template(name=self.template_path)
-            print('response from get_tag_template:', tag_template)
         
         except Exception as e:
             msg = 'Error retrieving tag template {}'.format(self.template_path)
@@ -296,14 +295,14 @@ class DataCatalogController:
             print('returned query_str: ' + query_str)
             
             # note: field_values is of type list
-            field_values, error_exists = self.run_query(query_str, field_type, batch_mode, store)
+            field_values, error_exists = self.run_query(query_str, field_type, batch_mode)
             print('field_values: ', field_values)
             print('error_exists: ', error_exists)
     
             if error_exists or field_values == []:
                 continue
             
-            tag, error_exists = self.populate_tag_field(tag, field_id, field_type, field_values, store)
+            tag, error_exists = self.populate_tag_field(tag, field_id, field_type, field_values, job_uuid)
     
             if error_exists:
                 continue
@@ -349,12 +348,14 @@ class DataCatalogController:
     def apply_dynamic_column_config(self, fields, columns_query, uri, job_uuid, config_uuid, template_uuid, tag_history, batch_mode=False):
         
         print('*** apply_dynamic_column_config ***')
+
+        tag_work_queue = [] # collection of Tag objects that will be passed to the API to be created or updated 
         
         store = tesh.TagEngineStoreHandler()
         op_status = constants.SUCCESS
         error_exists = False
         
-        columns = [] # columns to be tagged
+        columns = [] # columns in the table which need to be tagged
         columns_query = self.parse_query_expression(uri, columns_query)
         #print('columns_query:', columns_query)
         rows = self.bq_client.query(columns_query).result()
@@ -362,7 +363,7 @@ class DataCatalogController:
         num_rows = 0
         for row in rows:
             num_rows += 1
-            columns.append(row[0]) # DC stores all schema columns in lower case
+            columns.append(row[0]) 
         
         if num_rows == 0:
             # no columns to tag
@@ -383,7 +384,7 @@ class DataCatalogController:
         for column_schema in entry.schema.columns:
             schema_columns.append(column_schema.column)
             
-        #print('schema_columns:', schema_columns)
+        column_fields_list = [] # list<dictionaries> where dict = {column, fields}
 
         for column in columns:
             
@@ -391,79 +392,86 @@ class DataCatalogController:
             if column not in schema_columns:
                 continue
             
-            # check to see if a tag has already been created on this column
-            tag_exists, tag_id = self.check_if_tag_exists(entry.name, column)
-            print("tag_exists: ", tag_exists)
-        
-            # initialize the new column-level tag
+            # initialize new column-level tag
             tag = datacatalog.Tag()
             tag.template = self.template_path
             tag.column = column
             
             verified_field_count = 0
+            query_strings = []
             
             for field in fields:
-                field_id = field['field_id']
-                field_type = field['field_type']
                 query_expression = field['query_expression']
-
                 query_str = self.parse_query_expression(uri, query_expression, column)
-                #print('returned query_str: ' + query_str)
+                query_strings.append(query_str)
+
+            # combine query expressions 
+            combined_query = self.combine_queries(query_strings)
             
-                # note: field_values is of type list
-                field_values, error_exists = self.run_query(query_str, field_type, batch_mode, store)
-                #print('field_values: ', field_values)
-                #print('error_exists: ', error_exists)
-    
-                if error_exists or field_values == []:
-                    continue
-            
-                tag, error_exists = self.populate_tag_field(tag, field_id, field_type, field_values, store)
-    
-                if error_exists:
-                    continue
-                                    
-                verified_field_count = verified_field_count + 1
-                #print('verified_field_count: ' + str(verified_field_count))    
-            
-                # store the value back in the dict, so that it can be accessed by the exporter
-                #print('field_value: ' + str(field_value))
-                if field_type == 'richtext':
-                    formatted_value = ', '.join(str(v) for v in field_values)
-                else:
-                    formatted_value = field_values[0]
-                
-                field['field_value'] = formatted_value
-            
-            # inner loop ends here
+            # run combined query, adding the results to the field_values for each field
+            # Note: field_values is of type list
+            fields, error_exists = self.run_combined_query(combined_query, column, fields)
 
             if error_exists:
-                # error was encountered while running SQL expression
-                # proceed with tag creation / update, but return error to user
                 op_status = constants.ERROR
+                continue
             
-            if verified_field_count == 0:
-                # tag is empty due to errors, skip tag creation
+            # populate tag fields
+            tag, error_exists = self.populate_tag_fields(tag, fields, job_uuid)
+    
+            if error_exists:
                 op_status = constants.ERROR
-                return op_status
+                continue
+                                                         
+            column_fields_list.append({"column": column, "fields": fields})
+            tag_work_queue.append(tag)
+
+        # outer loop ends here
+        if len(tag_work_queue) == 0:
+            op_status = constants.ERROR
+            return op_status
             
-            # ready to create or update the tag         
-            if tag_exists == True:
-                tag.name = tag_id
-                op_status = self.do_create_update_delete_action(job_uuid, 'update', tag)
+        # ready to create or update all the tags in the work queue         
+        rec_request = datacatalog.ReconcileTagsRequest(
+            parent=entry.name,
+            tag_template=self.template_path,
+            tags=tag_work_queue
+        )
+
+        try:
+            operation = self.client.reconcile_tags(request=rec_request)
+            print("Waiting for operation to complete...")
+            resp = operation.result()
+            #print("resp:", resp)
+        except Exception as e:
+            msg = 'Error during reconcile_tags on entry {}'.format(entry.name)
+            log_error(msg, e, job_uuid)
+            op_status = constants.ERROR
+            return op_status
+                        
+        if tag_history and op_status != constants.ERROR:
+            bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
+            success = bqu.copy_tags(self.tag_creator_account, self.tag_invoker_account, job_uuid, self.template_id, self.get_template(), uri, column_fields_list)
+            print('Tag history completed successfully:', success) 
+            
+            if success:
+                op_status = constants.SUCCESS
             else:
-                op_status = self.do_create_update_delete_action(job_uuid, 'create', tag, entry)
-                
-            if op_status == constants.SUCCESS and tag_history:
-                bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
-                template_fields = self.get_template()
-                bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, job_uuid, self.template_id, template_fields, uri, column, fields)
-            
-        # outer loop ends here                
-                                 
+                op_status = constants.ERROR
+                                              
         return op_status
 
-
+    
+    def combine_queries(self, query_strings):
+        
+        large_query = "select "
+        
+        for query in query_strings:
+             large_query += "({}), ".format(query)
+        
+        return large_query[0:-2]  
+        
+    
     def apply_entry_config(self, fields, uri, job_uuid, config_uuid, template_uuid, tag_history):
         
         print('** apply_entry_config **')
@@ -1673,9 +1681,9 @@ class DataCatalogController:
   
     def parse_query_expression(self, uri, query_expression, column=None):
         
-        print("*** enter parse_query_expression ***")
-        print("uri: " + uri)
-        print("query_expression: " + query_expression)
+        #print("*** enter parse_query_expression ***")
+        #print("uri: " + uri)
+        #print("query_expression: " + query_expression)
         
         query_str = None
         
@@ -1765,9 +1773,7 @@ class DataCatalogController:
         return query_str
     
     
-    def run_query(self, query_str, field_type, batch_mode, store):
-        
-        #print('*** enter run_query ***')
+    def run_query(self, query_str, field_type, batch_mode):
         
         field_values = []
         error_exists = False
@@ -1781,17 +1787,13 @@ class DataCatalogController:
                     priority=bigquery.QueryPriority.BATCH
                 )
                 
-                query_job = self.bq_client.query(query_str, job_config=batch_config)
+                query_job = self.bq_client.query_and_wait(query_str, job_config=batch_config)
                 job = self.bq_client.get_job(query_job.job_id, location=query_job.location)
-            
-                while job.state == 'RUNNING':
-                    time.sleep(2)
-            
                 rows = job.result()
             
             else:
                 print('query_str:', query_str)
-                rows = self.bq_client.query(query_str).result()
+                rows = self.bq_client.query_and_wait(query_str).result()
             
             # if query expression is well-formed, there should only be a single row returned with a single field_value
             # However, user may mistakenly run a query that returns a list of rows. In that case, grab only the top row.  
@@ -1819,24 +1821,62 @@ class DataCatalogController:
         return field_values, error_exists
         
 
-    def populate_tag_field(self, tag, field_id, field_type, field_values, store=None):
+    def run_combined_query(self, combined_query, column, fields):
         
-        print('enter populate_tag_field; field_id:', field_id)
+        error_exists = False
+            
+        try:
+            rows = self.bq_client.query_and_wait(combined_query)
+            row_count = 0
+
+            for row in rows:
+                for i, field in enumerate(fields):
+                    field['field_value'] = row[i]
+            
+                row_count += 1    
+        
+            if row_count == 0:
+                error_exists = True
+                print('sql query returned empty set:', combined_query)
+        
+        except Exception as e:
+            error_exists = True
+            msg = 'Error occurred during run_query {}'.format(combined_query)
+            log_error(msg, e, job_uuid)
+            
+        return fields, error_exists
+
+
+    def populate_tag_fields(self, tag, fields, job_uuid=None):
+        
+        for field in fields:
+            tag, error_exists = self.populate_tag_field(tag, field['field_id'], field['field_type'], field['field_value'], job_uuid)
+        
+        return tag, error_exists
+        
+        
+    def populate_tag_field(self, tag, field_id, field_type, field_values, job_uuid=None):
         
         error_exists = False
         
-        if field_values[0] == None:
-            print('Cannot store null value in field', field_id)
+        # handle richtext types
+        if type(field_values) == list:
+            field_value = field_values[0]
+        else:
+            field_value = field_values
+        
+        if field_values == None:
+            print('Cannot store null value in tag field', field_id)
             return tag, error_exists
         
         try:             
             if field_type == "bool":
                 bool_field = datacatalog.TagField()
-                bool_field.bool_value = bool(field_values[0])
+                bool_field.bool_value = bool(field_value)
                 tag.fields[field_id] = bool_field
             if field_type == "string":
                 string_field = datacatalog.TagField()
-                string_field.string_value = str(field_values[0])
+                string_field.string_value = str(field_value)
                 tag.fields[field_id] = string_field
             if field_type == "richtext":
                 richtext_field = datacatalog.TagField()
@@ -1845,24 +1885,26 @@ class DataCatalogController:
                 tag.fields[field_id] = richtext_field
             if field_type == "double":
                 float_field = datacatalog.TagField()
-                float_field.double_value = float(field_values[0])
+                float_field.double_value = float(field_value)
                 tag.fields[field_id] = float_field
             if field_type == "enum":
                 enum_field = datacatalog.TagField()
-                enum_field.enum_value.display_name = field_values[0]
+                enum_field.enum_value.display_name = field_value
                 tag.fields[field_id] = enum_field
             if field_type == "datetime" or field_type == "timestamp":
                 # expected format for datetime values in DC: 2020-12-02T16:34:14Z
                 # however, field_value can be a date value e.g. "2022-05-08", a datetime value e.g. "2022-05-08 15:00:00"
                 # or timestamp value e.g. datetime.datetime(2022, 9, 14, 18, 24, 31, 615000, tzinfo=datetime.timezone.utc)
-                field_value = field_values[0]
+                field_value = field_value
                 #print('field_value:', field_value)
                 #print('field_value type:', type(field_value))
                 
-                # we have a datetime or timestamp 
+                # we have a datetime value
+                # example: 2024-03-30 18:29:48.621617+00:00 
                 if type(field_value) == datetime:
-                    timestamp = pytz.utc.localize(field_value)
-                # we have a date
+                    timestamp = Timestamp()
+                    timestamp.FromDatetime(field_value)
+                # we have a date value
                 elif type(field_value) == date:
                     dt = datetime.combine(field_value, datetime.min.time())
                     timestamp = pytz.utc.localize(dt)
@@ -1872,8 +1914,8 @@ class DataCatalogController:
                     d = date(int(field_value[0:4]), int(field_value[5:7]), int(field_value[8:10]))
                     dt = datetime.combine(d, dtime(00, 00)) # when no time is supplied, default to 12:00:00 AM UTC
                     timestamp = utc.localize(dt)
+                # we have a timestamp with this format: '2022-12-05 15:05:26'
                 elif len(str(field_value)) == 19:
-                    # input format: '2022-12-05 15:05:26'
                     year = int(field_value[0:4])
                     month = int(field_value[5:7])
                     day = int(field_value[8:10])
@@ -1889,7 +1931,7 @@ class DataCatalogController:
                     timestamp = Timestamp()
                     timestamp.FromJsonString(field_value[0])
                 
-                print('timestamp:', timestamp)
+                #print('timestamp:', timestamp)
                 datetime_field = datacatalog.TagField()
                 datetime_field.timestamp_value = timestamp
                 tag.fields[field_id] = datetime_field
@@ -1984,7 +2026,7 @@ class DataCatalogController:
                         field_type = 'richtext'
                         field_value = tagged_field.richtext_value
                         
-                    target_tag, error_exists = self.populate_tag_field(target_tag, field_id, field_type, [field_value])
+                    target_tag, error_exists = self.populate_tag_field(target_tag, field_id, field_type, [field_value], None)
             
             # create the target tag            
             tag_exists, tag_id = self.check_if_tag_exists(parent=target_entry.name, column=source_tag.column)
@@ -2115,7 +2157,7 @@ class DataCatalogController:
                         field_value = changed_field['field_value']
                         break
                 
-                target_tag, error_exists = self.populate_tag_field(target_tag, field_id, field_type, [field_value])
+                target_tag, error_exists = self.populate_tag_field(target_tag, field_id, field_type, [field_value], None)
                 
                 if error_exists:
                     msg = 'Error while populating the tag field. Aborting tag update.'

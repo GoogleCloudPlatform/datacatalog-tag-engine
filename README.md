@@ -276,7 +276,8 @@ gcloud run deploy tag-engine-api \
  	--region $TAG_ENGINE_REGION \
  	--no-allow-unauthenticated \
  	--ingress=all \
- 	--memory=1024Mi \
+ 	--memory=4G \
+	--timeout=60m \
  	--service-account=$TAG_ENGINE_SA
 ```
 

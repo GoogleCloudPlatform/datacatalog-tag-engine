@@ -3541,6 +3541,7 @@ def _run_task():
     if config_type == 'DYNAMIC_TAG_COLUMN':
         creation_status = dcc.apply_dynamic_column_config(config['fields'], config['included_columns_query'], uri, job_uuid, config_uuid, \
                                                           config['template_uuid'], config['tag_history'])
+        
     if config_type == 'STATIC_TAG_ASSET':
         creation_status = dcc.apply_static_asset_config(config['fields'], uri, job_uuid, config_uuid, \
                                                         config['template_uuid'], config['tag_history'], \
@@ -3600,7 +3601,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 2.2.5\n"
+    return "Welcome to Tag Engine version 2.2.6\n"
     
 ####################### TEST METHOD ####################################  
     
