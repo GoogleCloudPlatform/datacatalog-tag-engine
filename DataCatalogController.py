@@ -1793,7 +1793,7 @@ class DataCatalogController:
             
             else:
                 print('query_str:', query_str)
-                rows = self.bq_client.query_and_wait(query_str).result()
+                rows = self.bq_client.query_and_wait(query_str)
             
             # if query expression is well-formed, there should only be a single row returned with a single field_value
             # However, user may mistakenly run a query that returns a list of rows. In that case, grab only the top row.  
