@@ -2984,7 +2984,7 @@ def trigger_job():
                 
                 credentials, success = get_target_credentials(tag_creator_sa)
                 bqu = bq.BigQueryUtils(credentials, BIGQUERY_REGION)
-                success = bqu.write_job_metadata(job_uuid, template_id, job_metadata)
+                success = bqu.write_job_metadata(job_uuid, template_id, job_metadata, tag_creator_sa, tag_invoker_sa)
                 print('Wrote job metadata to BigQuery for job', job_uuid, '. Success =', success)
                        
     else:    
@@ -3601,7 +3601,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 2.2.6\n"
+    return "Welcome to Tag Engine version 2.2.7\n"
     
 ####################### TEST METHOD ####################################  
     

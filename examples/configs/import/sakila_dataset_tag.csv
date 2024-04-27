@@ -1,0 +1,2 @@
+project,dataset,data_domain,broad_data_category,environment,data_origin,data_creation,data_ownership,data_asset_owner,data_confidentiality,data_retention,data_asset_documentation
+tag-engine-run,sakila_dw,LOGISTICS,CONTENT,DEV,OPEN_DATA, 2024-04-27,THIRD_PARTY_OPS,John Smith,PUBLIC,30_DAYS,https://dev.mysql.com/doc/sakila/en/sakila-structure.html

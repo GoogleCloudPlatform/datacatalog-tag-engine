@@ -1215,7 +1215,6 @@ class DataCatalogController:
         print('overwrite:', overwrite)
              
         op_status = constants.SUCCESS
-        entry_type = constants.TABLE
         
         if 'project' in tag_dict:
             project = tag_dict['project']
@@ -1225,26 +1224,38 @@ class DataCatalogController:
             op_status = constants.ERROR
             return op_status
         
-        if ('dataset' not in tag_dict or 'table' not in tag_dict):
+        if ('dataset' not in tag_dict):
             if ('entry_group' not in tag_dict or 'fileset' not in tag_dict):
-                msg = "Error: could not find required fields in CSV. Expecting either dataset and table or entry_group and fileset in CSV. Received {}".format(tag_dict)
+                msg = "Error: could not find required fields in CSV. Expecting either dataset or entry_group in CSV. Received {}".format(tag_dict)
                 log_error(msg, None, job_uuid)
                 op_status = constants.ERROR
                 return op_status
             
         if 'dataset' in tag_dict:
             dataset = tag_dict['dataset']
+            entry_type = constants.DATASET
         
         if 'table' in tag_dict:
             table = tag_dict['table']
+            entry_type = constants.TABLE
         
         if 'entry_group' in tag_dict:
             entry_group = tag_dict['entry_group']
             entry_type = constants.FILESET
         
-        if 'fileset' in tag_dict:
-            fileset = tag_dict['fileset']
-
+            if 'fileset' in tag_dict:
+                fileset = tag_dict['fileset']
+            else:
+                msg = "Error: could not find required fields in CSV. Expecting entry_group and fileset in CSV. Received {}".format(tag_dict)
+                log_error(msg, None, job_uuid)
+                op_status = constants.ERROR
+                return op_status
+                    
+        if entry_type == constants.DATASET:
+            resource = '//bigquery.googleapis.com/projects/{}/datasets/{}'.format(project, dataset)
+            request = datacatalog.LookupEntryRequest()
+            request.linked_resource=resource
+            
         if entry_type == constants.TABLE:
             resource = '//bigquery.googleapis.com/projects/{}/datasets/{}/tables/{}'.format(project, dataset, table)
             request = datacatalog.LookupEntryRequest()
@@ -2195,13 +2206,11 @@ if __name__ == '__main__':
         target_scopes=SCOPES,
         lifetime=1200)
     
-    job_uuid = '165b7c22c3af11ee926b42004e494300'
-    config_uuid = 'c762ba36c3ae11ee87b542004e494300'
-    tag_dict = {'project': 'tag-engine-run', 'entry_group': 'sakila_eg', 'fileset': 'address', 'column': 'phone', 'sensitive_field': 'TRUE', 'sensitive_type': 'Personal_Identifiable_Information'}
+    job_uuid = '3291b93804d211ef9d2549bd5e1feaa2'
+    config_uuid = '21f5a94004d211efbd14b17ef297bfd2'
+    tag_dict = {'project': 'tag-engine-run', 'dataset': 'sakila_dw', 'data_domain': 'LOGISTICS', 'broad_data_category': 'CONTENT', 'environment': 'DEV', 'data_origin': 'OPEN_DATA', 'data_creation': ' 2024-04-27', 'data_ownership': 'THIRD_PARTY_OPS', 'data_asset_owner': 'John Smith', 'data_confidentiality': 'PUBLIC', 'data_retention': '30_DAYS', 'data_asset_documentation': 'https://dev.mysql.com/doc/sakila/en/sakila-structure.html'}
     tag_history = True
     tag_overwrite = True
     
-    dcu = DataCatalogController(credentials, target_service_account, 'scohen@gcp.solutions', 'mdm_cre', tag_engine_project, tag_engine_region)
-    template = dcu.get_template()
-    print('resulting template:', template)
-    #dcu.apply_import_config(job_uuid, config_uuid, tag_dict, tag_history, tag_overwrite)
+    dcu = DataCatalogController(credentials, target_service_account, 'scohen@gcp.solutions', 'data_governance', tag_engine_project, tag_engine_region)
+    dcu.apply_import_config(job_uuid, config_uuid, tag_dict, tag_history, tag_overwrite)

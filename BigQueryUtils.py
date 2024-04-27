@@ -193,7 +193,7 @@ class BigQueryUtils:
         
     
     # API method used by job metadata function
-    def write_job_metadata(self, job_uuid, table_name, metadata):
+    def write_job_metadata(self, job_uuid, table_name, metadata, tag_creator_sa, tag_invoker_sa):
         
         exists, table_id, settings = self.job_metadata_table_exists(table_name)
         
@@ -206,7 +206,7 @@ class BigQueryUtils:
             else:
                 print('Error creating tag_history dataset')
                 
-        success = self.insert_job_metadata_row(table_id, job_uuid, metadata)  
+        success = self.insert_job_metadata_row(table_id, job_uuid, metadata, tag_creator_sa, tag_invoker_sa)  
         
         return success
     
@@ -508,8 +508,11 @@ class BigQueryUtils:
     def create_job_metadata_table(self, dataset_id, table_name):
         
         schema = [bigquery.SchemaField('event_time', 'TIMESTAMP', mode='REQUIRED'),
-                  bigquery.SchemaField('job_uuid', 'STRING', mode='REQUIRED'), 
-                  bigquery.SchemaField('metadata', 'JSON', mode='REQUIRED')]
+                  bigquery.SchemaField('job_uuid', 'STRING', mode='REQUIRED'),
+                  bigquery.SchemaField('metadata', 'JSON', mode='REQUIRED'),
+                  bigquery.SchemaField('tag_creator_sa', 'STRING', mode='REQUIRED'),
+                  bigquery.SchemaField('tag_invoker_sa', 'STRING', mode='REQUIRED'),
+                  ]
         
         table_id = dataset_id.table(table_name)
         table = bigquery.Table(table_id, schema=schema)
@@ -523,7 +526,7 @@ class BigQueryUtils:
    
         
     # write job metadata record  
-    def insert_job_metadata_row(self, table_id, job_uuid, metadata):
+    def insert_job_metadata_row(self, table_id, job_uuid, metadata, tag_creator_sa, tag_invoker_sa):
         
         print('enter insert_job_metadata_row')
         #print('job_uuid:', job_uuid)
@@ -531,7 +534,7 @@ class BigQueryUtils:
         success = True
         
         row = {'event_time': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f') + ' UTC', 
-               'job_uuid': job_uuid, 'metadata': json.dumps(metadata)}
+               'job_uuid': job_uuid, 'metadata': json.dumps(metadata), 'tag_creator_sa': tag_creator_sa, 'tag_invoker_sa': tag_invoker_sa}
             
         #print('row:', row)
         row_to_insert = [row,]
@@ -545,14 +548,14 @@ class BigQueryUtils:
         except Exception as e:
             print('Error while writing to job metadata table:', e)
             if '404' in str(e):
-                # table isn't quite ready to be written to
+                # table isn't quite ready to be written into
                 print('Job metadata table not ready to be written to. Sleeping for 5 seconds.')
                 time.sleep(5)
                 try:
                     status = self.client.insert_rows_json(table_id, row_to_insert) 
                     print('Retrying insert row into job metadata table. Return status: ', status) 
                 except Exception as e:
-                    print('Error occurred while writing to job metadata table: {}'.format(e))
+                    print('Error occurred while writing into job metadata table: {}'.format(e))
                     success = False
         
         return success 
