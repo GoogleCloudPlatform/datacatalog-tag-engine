@@ -1034,8 +1034,7 @@ class DataCatalogController:
 
     
     def apply_policy_tags(self, table_id, policy_tag_requests):
-        
-        success = True
+        op_status = constants.SUCCESS
         table = self.bq_client.get_table(table_id) 
         schema = table.schema
 
@@ -1065,9 +1064,9 @@ class DataCatalogController:
         except Exception as e:
             msg = 'Error occurred while updating the schema of {}'.format(table_id)
             log_error(msg, e, job_uuid)
-            success = False
+            op_status = constants.ERROR
         
-        return success
+        return op_status
         
             
     def apply_export_config(self, config_uuid, target_project, target_dataset, target_region, uri):
