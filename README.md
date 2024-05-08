@@ -244,10 +244,10 @@ Open the Data Catalog UI and verify that your tag was successfully created. If y
 
 1. Grant permissions to your invoker user account(s):
 
-export INVOKER_USER_ACCOUNT="username@example.com"
+`export INVOKER_USER_ACCOUNT="username@example.com"`
 
-gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-	--member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountUser
+`gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
+	--member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountUser`
 
 2. Open a browser window
 3. Navigate to `UI_SERVICE_URI` 
