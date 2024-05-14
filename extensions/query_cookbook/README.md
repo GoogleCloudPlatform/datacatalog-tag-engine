@@ -1,6 +1,6 @@
 ## Query Cookbook Workflow
 
-This folder contains a workflow that computes access patterns for data assets in BigQuery and produces metadata tags in Data Catalog with the results. The workflow calls the `ML.GENERATE_TEXT` function in BigQuery, which uses the Vertex AI text-bison large language model (LLM) for inferences. More details on `ML.GENERATE_TEXT` are available in the [product documentation](https://cloud.google.com/bigquery/docs/generate-text). 
+This folder contains a workflow that computes access patterns for data assets in BigQuery and produces metadata tags in Data Catalog with the results. The workflow calls the `ML.GENERATE_TEXT` function in BigQuery, which uses a Vertex AI large language model for inferences. More details on `ML.GENERATE_TEXT` are available in the [product documentation](https://cloud.google.com/bigquery/docs/generate-text). 
 
 For each table or view in BigQuery, the Query Cookbook workflow computes a metadata tag with these fields: 
 1) `top_users`: Most active users who have queried this data asset  
@@ -10,7 +10,7 @@ For each table or view in BigQuery, the Query Cookbook workflow computes a metad
 5) `top_groupbys`: Most common group by clauses on this data asset
 6) `top_functions`: Most common functions run on this data asset
 
-The workflow extracts the query logs from the [INFORMATION_SCHEMA.JOBS](https://cloud.google.com/bigquery/docs/information-schema-jobs) view and summarizes their contents by calling Vertex AI's [text-bison](https://cloud.google.com/vertex-ai/docs/generative-ai/model-reference/text) LLM. This logic is wrapped into a cloud function, which is called by a BigQuery remote function.  
+The workflow extracts the query logs from the [INFORMATION_SCHEMA.JOBS](https://cloud.google.com/bigquery/docs/information-schema-jobs) view and summarizes their contents by calling [Gemini Pro](https://cloud.google.com/vertex-ai/docs/generative-ai/model-reference/text) through Vertex AI. This logic is wrapped into a cloud function, which is wrapped by a BigQuery remote function.  
 
 
 ### Dependencies
@@ -90,11 +90,11 @@ For more details on creating cloud resource connections, refer to the [product d
 #### Step 4: Create the ML model
 
 ```
-CREATE SCHEMA llm OPTIONS (location = 'us-central1');
+CREATE SCHEMA ai_models OPTIONS (location = 'us-central1');
 
-CREATE OR REPLACE MODEL llm.model_v1
+CREATE OR REPLACE MODEL ai_models.gemini_model
     REMOTE WITH CONNECTION `PROJECT.REGION.remote_connection`
-    OPTIONS (REMOTE_SERVICE_TYPE = 'CLOUD_AI_LARGE_LANGUAGE_MODEL_V1');
+    OPTIONS (ENDPOINT = 'gemini-pro');
 ```
 
 #### Step 5: Copy the prompts to Google Cloud Storage
