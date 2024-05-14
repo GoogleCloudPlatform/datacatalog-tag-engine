@@ -114,7 +114,7 @@ def extract_sql(operation, prompt, bq, project, region, dataset, table, excluded
     
     sql = "SELECT * "
     sql += "FROM ML.GENERATE_TEXT("
-    sql += "MODEL llm.model_v1, "
+    sql += "MODEL ai_models.gemini_model, "
     sql += "("
     sql += "SELECT CONCAT('" + prompt + "', query) AS prompt " 
     sql += "FROM `" + project + "`.`region-" + region + "`.INFORMATION_SCHEMA.JOBS_BY_PROJECT "
