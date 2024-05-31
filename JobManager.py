@@ -49,9 +49,6 @@ class JobManager:
 
     def create_job(self, tag_creator_account, tag_invoker_account, config_uuid, config_type, metadata=None):
         
-        print('*** enter create_job ***')
-        print('config_uuid: ', config_uuid, ', config_type: ', config_type)
-        
         job_uuid = self._create_job_record(config_uuid, config_type)
         
         if metadata != None:
@@ -74,8 +71,6 @@ class JobManager:
     
     def record_num_tasks(self, job_uuid, num_tasks):
         
-        #print('*** enter record_num_tasks ***')
-        
         job_ref = self.db.collection('jobs').document(job_uuid)
         job_ref.update({'task_count': num_tasks})
         
@@ -84,8 +79,6 @@ class JobManager:
 
     def calculate_job_completion(self, job_uuid):
         
-        print('*** enter calculate_job_completion ***')
-
         tasks_success = self._get_tasks_success(job_uuid)
         tasks_failed = self._get_tasks_failed(job_uuid)
               
@@ -186,8 +179,6 @@ class JobManager:
 
     
     def _create_job_task(self, tag_creator_account, tag_invoker_account, job_uuid, config_uuid, config_type):
-        
-        print('*** enter _create_cloud_task ***')
                 
         payload = {'job_uuid': job_uuid, 'config_uuid': config_uuid, 'config_type': config_type, \
                    'tag_creator_account': tag_creator_account, 'tag_invoker_account': tag_invoker_account}
@@ -213,8 +204,6 @@ class JobManager:
       
         
     def _get_task_count(job_uuid):
-        
-        #print('*** enter _get_task_count ***')
         
         job = self.db.collection('jobs').document(job_uuid).get()
 

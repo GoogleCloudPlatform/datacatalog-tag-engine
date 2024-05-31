@@ -14,9 +14,12 @@
 import json
 
 def log_error(msg, error='', job_uuid=None):
-    error = {'msg': msg, 'error': str(error), 'job_uuid': job_uuid}
+    error = {'msg': msg, 'python_error': str(error), 'job_uuid': job_uuid}
     print(json.dumps(error)) 
 
+def log_error_tag_dict(msg, error='', job_uuid=None, tag_dict=None):
+    error = {'msg': msg, 'python_error': str(error), 'job_uuid': job_uuid, 'tag_dict': tag_dict}
+    print(json.dumps(error)) 
 
 def log_info(msg, job_uuid=None):
     info = {'msg': msg, 'job_uuid': job_uuid}

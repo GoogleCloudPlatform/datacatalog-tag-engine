@@ -48,8 +48,6 @@ class TaskManager:
         
     def create_config_uuid_tasks(self, tag_creator_account, tag_invoker_account, job_uuid, config_uuid, config_type, uris):
         
-        print('*** enter create_config_uuid_tasks ***')
-        
         # create shards of 1000 tasks
         if len(uris) > self.tasks_per_shard:
             shards = math.ceil(len(uris) / self.tasks_per_shard)
@@ -93,9 +91,6 @@ class TaskManager:
 
     
     def create_tag_extract_tasks(self, tag_creator_account, tag_invoker_account, job_uuid, config_uuid, config_type, tag_extract_list):
-        
-        print('*** enter create_tag_extract_tasks ***')
-        #print('len(tag_extract_list): ', len(tag_extract_list))
         
         # create shards of 5000 records
         if len(tag_extract_list) > self.tasks_per_shard:
@@ -234,8 +229,6 @@ class TaskManager:
     def _create_config_uuid_task(self, tag_creator_account, tag_invoker_account, job_uuid, shard_uuid, task_uuid, task_id, \
                                  config_uuid, config_type, uri):
         
-        print('*** enter _create_config_uuid_task ***')
- 
         success = True
         
         payload = {'job_uuid': job_uuid, 'shard_uuid': shard_uuid, 'task_uuid': task_uuid, 'config_uuid': config_uuid, \
@@ -272,8 +265,6 @@ class TaskManager:
         
     def _create_tag_extract_task(self, tag_creator_account, tag_invoker_account, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, extract):
         
-        print('*** enter _create_tag_extract_task ***')
- 
         success = True
     
         payload = {'job_uuid': job_uuid, 'shard_uuid': shard_uuid, 'task_uuid': task_uuid, 'config_uuid': config_uuid, \

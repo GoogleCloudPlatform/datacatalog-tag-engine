@@ -1985,8 +1985,6 @@ def check_template_parameters(request_name, json_request):
       
 def check_config_type(requested_ct):
     
-    print('*** enter check_config_type ***')
-    
     for available_ct in (ct.ConfigType):
         if available_ct.name == requested_ct:
             return True
@@ -1996,7 +1994,6 @@ def check_config_type(requested_ct):
 
 def get_available_config_types():
     
-    print('*** enter get_available_config_types ***')
     config_types = ''
     
     for config_type in (ct.ConfigType):
@@ -2023,8 +2020,6 @@ Returns:
 """
 @app.route("/create_static_asset_config", methods=['POST'])
 def create_static_asset_config():
-    
-    print('*** enter create_static_asset_config ***')
     
     json_request = request.get_json(force=True) 
     print('json request: ', json_request)
@@ -3047,8 +3042,6 @@ Returns:
 def scheduled_auto_updates():
     
     try:    
-        print('*** enter scheduled_auto_updates ***')
-        
         json_request = request.get_json(force=True) 
         print('json request: ', json_request)
     
@@ -3305,8 +3298,6 @@ def purge_inactive_configs():
 @app.route("/_split_work", methods=['POST'])
 def _split_work():
     
-    print('*** enter _split_work ***')
-    
     json_request = request.get_json(force=True)
     print('json_request: ', json_request)
     
@@ -3449,8 +3440,6 @@ def _split_work():
 
 @app.route("/_run_task", methods=['POST'])
 def _run_task():
-    
-    print('*** enter _run_task ***')
     
     creation_status = constants.ERROR
     

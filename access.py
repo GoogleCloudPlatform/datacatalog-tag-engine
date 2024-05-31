@@ -85,7 +85,6 @@ def check_user_credentials_from_api(tag_creator_sa, tag_invoker_account):
     
 def do_authentication(headers, json_request, ENABLE_AUTH):
     
-    print('** enter do_authentication **')
     status = True
     response = None
     

@@ -356,8 +356,6 @@ class TagEngineStoreHandler:
                                   template_id, template_project, template_region, refresh_mode, refresh_frequency, refresh_unit, \
                                   tag_history, overwrite=False):
         
-        print('*** enter write_static_asset_config ***')
-        
         # hash the included_assets_uris string
         included_assets_uris_hash = hashlib.md5(included_assets_uris.encode()).hexdigest()
         
@@ -641,8 +639,6 @@ class TagEngineStoreHandler:
                             template_id, template_project, template_region, refresh_mode, refresh_frequency, \
                             refresh_unit, tag_history):
         
-        print('** enter write_entry_config **')
-        
         included_assets_uris_hash = hashlib.md5(included_assets_uris.encode()).hexdigest()
         
         # check to see if this config already exists
@@ -725,8 +721,6 @@ class TagEngineStoreHandler:
     def write_glossary_asset_config(self, service_account, fields, mapping_table, included_assets_uris, excluded_assets_uris, \
                                     template_uuid, refresh_mode, refresh_frequency, refresh_unit, tag_history, \
                                     overwrite=False):
-        
-        print('** enter write_glossary_asset_config **')
         
         included_assets_uris_hash = hashlib.md5(included_assets_uris.encode()).hexdigest()
         
@@ -815,8 +809,6 @@ class TagEngineStoreHandler:
                                         included_tables_uris, excluded_tables_uris, create_policy_tags, taxonomy_id, template_uuid, \
                                         template_id, template_project, template_region, refresh_mode, refresh_frequency, refresh_unit, \
                                         tag_history, overwrite=False):
-        
-        print('** enter write_sensitive_column_config **')
         
         included_tables_uris_hash = hashlib.md5(included_tables_uris.encode()).hexdigest()
         

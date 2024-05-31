@@ -34,7 +34,7 @@ import Resources as res
 import TagEngineStoreHandler as tesh
 import BigQueryUtils as bq
 import constants
-from common import log_error, log_info
+from common import log_error, log_error_tag_dict, log_info
 
 config = configparser.ConfigParser()
 config.read("tagengine.ini")
@@ -191,15 +191,6 @@ class DataCatalogController:
     
     
     def apply_static_asset_config(self, fields, uri, job_uuid, config_uuid, template_uuid, tag_history, overwrite=False):
-        
-        print('*** enter apply_static_asset_config ***')
-        print('fields:', fields)
-        print('uri:', uri)
-        print('job_uuid:', job_uuid)
-        print('config_uuid:', config_uuid)
-        print('template_uuid:', template_uuid)
-        print('tag_history:', tag_history)
-        print('overwrite:', overwrite)
         
         # uri is either a BQ table/view path or GCS file path
         store = tesh.TagEngineStoreHandler()        
@@ -682,8 +673,6 @@ class DataCatalogController:
 
     def apply_glossary_asset_config(self, fields, mapping_table, uri, job_uuid, config_uuid, template_uuid, tag_history, overwrite=False):
         
-        print('** enter apply_glossary_asset_config **')
- 
         # uri is either a BQ table/view path or GCS file path
         store = tesh.TagEngineStoreHandler()        
         op_status = constants.SUCCESS
@@ -807,8 +796,6 @@ class DataCatalogController:
                                       uri, create_policy_tags, taxonomy_id, job_uuid, config_uuid, template_uuid, \
                                       tag_history, overwrite=False):
         
-        print('** enter apply_sensitive_column_config **')
-
         if create_policy_tags:
 
             request = datacatalog.ListPolicyTagsRequest(
@@ -1085,13 +1072,6 @@ class DataCatalogController:
             
     def apply_export_config(self, config_uuid, target_project, target_dataset, target_region, uri):
         
-        print('** enter apply_export_config **')
-        print('config_uuid:', config_uuid)
-        print('target_project:', target_project)
-        print('target_dataset:', target_dataset)
-        print('target_region:', target_region)
-        print('uri:', uri)
-        
         column_tag_records = []
         table_tag_records = []
         dataset_tag_records = []
@@ -1206,28 +1186,21 @@ class DataCatalogController:
         
             
     def apply_import_config(self, job_uuid, config_uuid, tag_dict, tag_history, overwrite=False):
-        
-        print('** enter apply_import_config **')
-        print('job_uuid:', job_uuid)
-        print('config_uuid:', config_uuid)
-        print('tag_dict:', tag_dict)
-        print('tag_history:', tag_history)
-        print('overwrite:', overwrite)
-             
+    
         op_status = constants.SUCCESS
         
         if 'project' in tag_dict:
             project = tag_dict['project']
         else:
-            msg = "Error: project info missing from CSV. Received {}".format(tag_dict)
-            log_error(msg, None, job_uuid)
+            msg = "Error: project info missing from CSV"
+            log_error_tag_dict(msg, None, job_uuid, tag_dict)
             op_status = constants.ERROR
             return op_status
         
         if ('dataset' not in tag_dict):
             if ('entry_group' not in tag_dict or 'fileset' not in tag_dict):
-                msg = "Error: could not find required fields in CSV. Expecting either dataset or entry_group in CSV. Received {}".format(tag_dict)
-                log_error(msg, None, job_uuid)
+                msg = "Error: could not find required fields in CSV. Expecting either dataset or entry_group in CSV"
+                log_error_tag_dict(msg, None, job_uuid, tag_dict)
                 op_status = constants.ERROR
                 return op_status
             
@@ -1246,8 +1219,8 @@ class DataCatalogController:
             if 'fileset' in tag_dict:
                 fileset = tag_dict['fileset']
             else:
-                msg = "Error: could not find required fields in CSV. Expecting entry_group and fileset in CSV. Received {}".format(tag_dict)
-                log_error(msg, None, job_uuid)
+                msg = "Error: could not find required fields in CSV. Expecting entry_group and fileset in CSV"
+                log_error_tag_dict(msg, None, job_uuid, tag_dict)
                 op_status = constants.ERROR
                 return op_status
                     
@@ -1270,7 +1243,7 @@ class DataCatalogController:
             entry = self.client.lookup_entry(request)
         except Exception as e:
             msg = "Error could not find {} entry for {}".format(entry_type, resource)
-            log_error(msg, e, job_uuid)
+            log_error_tag_dict(msg, None, job_uuid, tag_dict)
             op_status = constants.ERROR
             return op_status
 
@@ -1305,7 +1278,7 @@ class DataCatalogController:
             
             if column_exists == False:
                 msg = "Error could not find column {} in {}".format(column_name, resource)
-                log_error(msg, None, job_uuid)
+                log_error_tag_dict(msg, None, job_uuid, tag_dict)
                 op_status = constants.ERROR
                 return op_status
             
@@ -1319,14 +1292,13 @@ class DataCatalogController:
 
         except Exception as e:
             msg = 'Error during check_if_tag_exists: {}'.format(entry_name)
-            log_error(msg, e, job_uuid)
+            log_error_tag_dict(msg, None, job_uuid, tag_dict)
             op_status = constants.ERROR
             return op_status
 
         if tag_exists and overwrite == False:
             msg = 'Info: Tag already exists and overwrite flag is False'
-            info = {'job_uuid': job_uuid, 'msg': msg}
-            print(json.dumps(info))
+            log_info(msg, job_uuid)
             op_status = constants.SUCCESS
             return op_status
         
@@ -1363,11 +1335,7 @@ class DataCatalogController:
     
 
     def apply_restore_config(self, job_uuid, config_uuid, tag_extract, tag_history, overwrite=False):
-        
-        print('** enter apply_restore_config **')
-        print('config_uuid:', config_uuid)
-        print('tag_extract: ', tag_extract)
-              
+             
         op_status = constants.SUCCESS
         
         for json_obj in tag_extract:
@@ -1458,18 +1426,6 @@ class DataCatalogController:
         
     # used by multiple apply methods
     def create_update_delete_tag(self, fields, tag_exists, tag_id, job_uuid, config_uuid, config_type, tag_history, entry, uri, column_name=''):
-        
-        print('create_update_delete_tag')
-        print('fields:', fields)
-        print('tag_exists:', tag_exists)
-        print('tag_id:', tag_id)
-        print('job_uuid:', job_uuid)
-        print('config_uuid:', config_uuid)
-        print('config_type:', config_type)
-        print('tag_history:', tag_history)
-        print('entry:', entry)
-        print('uri:', uri)
-        print('column_name:', column_name)
         
         op_status = constants.SUCCESS
         valid_field = False
@@ -1567,7 +1523,6 @@ class DataCatalogController:
             
                     utc = pytz.timezone('UTC')
                     timestamp = utc.localize(dt)
-                    print('timestamp: ', timestamp)    
                 
                     datetime_field = datacatalog.TagField()
                     datetime_field.timestamp_value = timestamp
@@ -1577,21 +1532,18 @@ class DataCatalogController:
     
         # exported file from DataCatalog can have invalid tags, skip tag creation if that's the case 
         if valid_field == False:
+            msg = f"Invalid field {field}"
+            log_error(msg, error='', job_uuid=job_uuid)
             op_status = constants.ERROR
             return op_status
         
         if column_name != '':
-            tag.column = column_name
-            #print('tag.column == ' + column)   
+            tag.column = column_name 
     
         if tag_exists == True:
             tag.name = tag_id
             
             # delete tag if every field in it is empty
-            print('num_fields:', num_fields)
-            print('num_empty_values:', num_empty_values)
-            print('tag_id:', tag_id)
-            
             if num_fields == num_empty_values:
                 op_status = self.do_create_update_delete_action(job_uuid, 'delete', tag)
             else:
@@ -1606,8 +1558,7 @@ class DataCatalogController:
             
             if success == False:
                 msg = 'Error occurred while writing to tag history table'
-                error = {'job_uuid': job_uuid, 'msg': msg}
-                print(json.dumps(error))
+                log_error(msg, error='', job_uuid=job_uuid)
                 op_status = constants.ERROR
        
         return op_status
@@ -1691,10 +1642,6 @@ class DataCatalogController:
 
   
     def parse_query_expression(self, uri, query_expression, column=None):
-        
-        #print("*** enter parse_query_expression ***")
-        #print("uri: " + uri)
-        #print("query_expression: " + query_expression)
         
         query_str = None
         
