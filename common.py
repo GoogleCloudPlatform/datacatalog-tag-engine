@@ -24,6 +24,10 @@ def log_error_tag_dict(msg, error='', job_uuid=None, tag_dict=None):
 def log_info(msg, job_uuid=None):
     info = {'msg': msg, 'job_uuid': job_uuid}
     print(json.dumps(info))
+    
+def log_info_tag_dict(msg, job_uuid=None, tag_dict=None):
+    info = {'msg': msg, 'job_uuid': job_uuid, 'tag_dict': tag_dict}
+    print(json.dumps(info))
  
     
 

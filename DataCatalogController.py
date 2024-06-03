@@ -34,7 +34,7 @@ import Resources as res
 import TagEngineStoreHandler as tesh
 import BigQueryUtils as bq
 import constants
-from common import log_error, log_error_tag_dict, log_info
+from common import log_error, log_error_tag_dict, log_info, log_info_tag_dict
 
 config = configparser.ConfigParser()
 config.read("tagengine.ini")
@@ -1243,7 +1243,7 @@ class DataCatalogController:
             entry = self.client.lookup_entry(request)
         except Exception as e:
             msg = "Error could not find {} entry for {}".format(entry_type, resource)
-            log_error_tag_dict(msg, None, job_uuid, tag_dict)
+            log_error_tag_dict(msg, e, job_uuid, tag_dict)
             op_status = constants.ERROR
             return op_status
 
@@ -1292,13 +1292,13 @@ class DataCatalogController:
 
         except Exception as e:
             msg = 'Error during check_if_tag_exists: {}'.format(entry_name)
-            log_error_tag_dict(msg, None, job_uuid, tag_dict)
+            log_error_tag_dict(msg, e, job_uuid, tag_dict)
             op_status = constants.ERROR
             return op_status
 
         if tag_exists and overwrite == False:
             msg = 'Info: Tag already exists and overwrite flag is False'
-            log_info(msg, job_uuid)
+            log_info_tag_dict(msg, job_uuid, tag_dict)
             op_status = constants.SUCCESS
             return op_status
         
