@@ -3590,7 +3590,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 2.2.7\n"
+    return "Welcome to Tag Engine version 2.2.8\n"
     
 ####################### TEST METHOD ####################################  
     
