@@ -141,4 +141,4 @@ SELECT `tag-engine-run`.remote_function.policy_tag_function('tag-engine-run', 'u
 
 Also, try calling it on a column without a policy tag. 
 
-Once you have tested it, please refer to `config.json` to see how to call it from a Tag Engine configuration. 
+Once you have tested it, please refer to `tag_engine_config.json` to see how to call it from a Tag Engine configuration. 
