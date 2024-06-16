@@ -1,0 +1,16 @@
+{
+    "template_id": "pii_template",
+    "template_project": "tag-engine-run",
+    "template_region": "us-central1",
+    "fields": [
+        {
+            "field_id": "policy_tag",
+            "query_expression": "select `tag-engine-run`.remote_functions.policy_tag_reader('$project', 'us-central1', '$dataset', '$table', '$column');"
+		}    
+			],
+    "included_columns_query": "select column_name from crm.INFORMATION_SCHEMA.COLUMNS",
+	"included_tables_uris": "bigquery/project/tag-engine-run/dataset/crm/*",
+    "excluded_tables_uris": "",
+    "refresh_mode": "ON_DEMAND",
+    "tag_history": true 
+}
