@@ -31,7 +31,6 @@ from google.cloud import bigquery
 from google.cloud import storage
 
 import Resources as res
-import TagEngineStoreHandler as tesh
 import BigQueryUtils as bq
 import constants
 from common import log_error, log_error_tag_dict, log_info, log_info_tag_dict
@@ -192,8 +191,7 @@ class DataCatalogController:
     
     def apply_static_asset_config(self, fields, uri, job_uuid, config_uuid, template_uuid, tag_history, overwrite=False):
         
-        # uri is either a BQ table/view path or GCS file path
-        store = tesh.TagEngineStoreHandler()        
+        # uri is either a BQ table/view path or GCS file path       
         op_status = constants.SUCCESS
         column = ''
         
@@ -256,7 +254,6 @@ class DataCatalogController:
         
         print('*** apply_dynamic_table_config ***')
 
-        store = tesh.TagEngineStoreHandler()
         op_status = constants.SUCCESS
         error_exists = False
         
@@ -342,7 +339,6 @@ class DataCatalogController:
 
         tag_work_queue = [] # collection of Tag objects that will be passed to the API to be created or updated 
         
-        store = tesh.TagEngineStoreHandler()
         op_status = constants.SUCCESS
         error_exists = False
         
@@ -467,9 +463,7 @@ class DataCatalogController:
         
         print('** apply_entry_config **')
         
-        op_status = constants.SUCCESS
-        store = tesh.TagEngineStoreHandler()
-        
+        op_status = constants.SUCCESS        
         bucket_name, filename = uri
         bucket = self.gcs_client.get_bucket(bucket_name)
         blob = bucket.get_blob(filename)
@@ -673,8 +667,7 @@ class DataCatalogController:
 
     def apply_glossary_asset_config(self, fields, mapping_table, uri, job_uuid, config_uuid, template_uuid, tag_history, overwrite=False):
         
-        # uri is either a BQ table/view path or GCS file path
-        store = tesh.TagEngineStoreHandler()        
+        # uri is either a BQ table/view path or GCS file path    
         op_status = constants.SUCCESS
         
         is_gcs = False
@@ -818,8 +811,7 @@ class DataCatalogController:
             policy_tag_requests = [] # stores the list of fully qualified policy tag names and table column names, 
                                      # so that we can create the policy tags on the various sensitive fields
  
-        # uri is a BQ table path 
-        store = tesh.TagEngineStoreHandler()        
+        # uri is a BQ table path       
         op_status = constants.SUCCESS
         column = ''
         
@@ -1433,7 +1425,6 @@ class DataCatalogController:
         num_fields = len(fields)
         num_empty_values = 0
         
-        store = tesh.TagEngineStoreHandler() 
         tag = datacatalog.Tag()
         tag.template = self.template_path
 
@@ -1549,7 +1540,9 @@ class DataCatalogController:
             else:
                 op_status = self.do_create_update_delete_action(job_uuid, 'update', tag)
         else:
-            op_status = self.do_create_update_delete_action(job_uuid, 'create', tag, entry)
+            # create the table only if it has at least one non-empty fields
+            if num_fields != num_empty_values:
+                op_status = self.do_create_update_delete_action(job_uuid, 'create', tag, entry)
         
         if tag_history:
             bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
@@ -2145,9 +2138,9 @@ if __name__ == '__main__':
     
     source_credentials, _ = google.auth.default() 
     target_service_account = config['DEFAULT']['TAG_CREATOR_SA']
-    tag_engine_project = config['DEFAULT']['TAG_ENGINE_PROJECT']
-    tag_engine_region = config['DEFAULT']['TAG_ENGINE_REGION']
-    
+    template_project = 'tag-engine-run'
+    template_region = 'us-central1' 
+     
     credentials = impersonated_credentials.Credentials(source_credentials=source_credentials,
         target_principal=target_service_account,
         target_scopes=SCOPES,
@@ -2159,5 +2152,5 @@ if __name__ == '__main__':
     tag_history = True
     tag_overwrite = True
     
-    dcu = DataCatalogController(credentials, target_service_account, 'scohen@gcp.solutions', 'data_governance', tag_engine_project, tag_engine_region)
+    dcu = DataCatalogController(credentials, target_service_account, 'scohen@gcp.solutions', 'data_governance', template_project, template_region)
     dcu.apply_import_config(job_uuid, config_uuid, tag_dict, tag_history, tag_overwrite)

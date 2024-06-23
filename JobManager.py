@@ -17,32 +17,36 @@ import constants
 from google.cloud import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 from google.cloud import tasks_v2
+from google.api_core.client_info import ClientInfo
 
+USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v2'
 
 class JobManager:
     """Class for managing jobs for async task create and update requests
     
     cloud_run_sa = Cloud Run service account
-    project = Cloud Run project id (e.g. tag-engine-project)
-    region = Cloud Run region (e.g. us-central1)
-    queue_name = Cloud Task queue (e.g. tag-engine-queue)
+    queue_project = Project where the queue is based (e.g. tag-engine-project)
+    queue_region = Region where the queue is based (e.g. us-central1)
+    queue_name = Name of the queue (e.g. tag-engine-queue)
     task_handler_uri = task handler uri in the Flask app hosted by Cloud Run 
     
     """
     def __init__(self,
                 cloud_run_sa,
-                tag_engine_project,
+                queue_project,
                 queue_region,
                 queue_name, 
-                task_handler_uri):
+                task_handler_uri, 
+                db_project,
+                db_name):
 
         self.cloud_run_sa = cloud_run_sa
-        self.tag_engine_project = tag_engine_project
+        self.queue_project = queue_project
         self.queue_region = queue_region
         self.queue_name = queue_name
         self.task_handler_uri = task_handler_uri
         
-        self.db = firestore.Client()
+        self.db = firestore.Client(project=db_project, database=db_name, client_info=ClientInfo(user_agent=USER_AGENT))
 
 
 ##################### API METHODS #################
@@ -196,7 +200,7 @@ class JobManager:
         #print('task create:', task)
         
         client = tasks_v2.CloudTasksClient()
-        parent = client.queue_path(self.tag_engine_project, self.queue_region, self.queue_name)
+        parent = client.queue_path(self.queue_project, self.queue_region, self.queue_name)
         resp = client.create_task(parent=parent, task=task)
         #print('task resp: ', resp)
         
@@ -258,11 +262,13 @@ if __name__ == '__main__':
     config = configparser.ConfigParser()
     config.read("tagengine.ini")
     
-    project = config['DEFAULT']['PROJECT']
-    region = config['DEFAULT']['REGION']
+    queue_project = config['DEFAULT']['QUEUE_PROJECT']
+    queue_region = config['DEFAULT']['QUEUE_REGION']
     queue_name = config['DEFAULT']['INJECTOR_QUEUE']
     task_handler_uri = '/_split_work'
-    jm = JobManager(project, region, queue_name, task_handler_uri)
+    db_project = config['DEFAULT']['FIRESTORE_PROJECT']
+    db_name = config['DEFAULT']['FIRESTORE_DB']
+    jm = JobManager(queue_project, queue_region, queue_name, task_handler_uri, db_project, db_name)
     
     config_uuid = '1f1b4720839c11eca541e1ad551502cb'
     jm.create_async_job(config_uuid)

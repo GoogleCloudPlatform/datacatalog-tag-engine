@@ -25,31 +25,31 @@ resource "google_project_iam_custom_role" "policy_tag_reader" {
 # ************************************************** #
 
 resource "google_project_iam_binding" "enqueuer" {
-  project = var.tag_engine_project
+  project = var.queue_project
   role    = "roles/cloudtasks.enqueuer"
   members = ["serviceAccount:${var.tag_engine_sa}"]
-  depends_on = [google_project_service.tag_engine_project]
+  depends_on = [google_project_service.queue_project]
 }
 
 resource "google_project_iam_binding" "taskRunner" {
-  project = var.tag_engine_project
+  project = var.queue_project
   role    = "roles/cloudtasks.taskRunner"
   members = ["serviceAccount:${var.tag_engine_sa}"]
-  depends_on = [google_project_service.tag_engine_project]
+  depends_on = [google_project_service.queue_project]
 }
 	 
 resource "google_project_iam_binding" "user" {
-  project = var.tag_engine_project
+  project = var.firestore_project
   role    = "roles/datastore.user"
   members = ["serviceAccount:${var.tag_engine_sa}"]
-  depends_on = [google_project_service.tag_engine_project]
+  depends_on = [google_project_service.firestore_project]
 }
 
 resource "google_project_iam_binding" "indexAdmin" {
-  project = var.tag_engine_project
+  project = var.firestore_project
   role    = "roles/datastore.indexAdmin"
   members = ["serviceAccount:${var.tag_engine_sa}"]
-  depends_on = [google_project_service.tag_engine_project]
+  depends_on = [google_project_service.firestore_project]
 }
 
 resource "google_project_iam_binding" "invoker" {

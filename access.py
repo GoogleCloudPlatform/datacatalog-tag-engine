@@ -25,8 +25,8 @@ from common import log_info, log_error
 
 config = configparser.ConfigParser()
 config.read("tagengine.ini")
-TAG_CREATOR_SA = config['DEFAULT']['TAG_CREATOR_SA'].strip()
 
+TAG_CREATOR_SA = config['DEFAULT']['TAG_CREATOR_SA'].strip()
 SCOPES = ['openid', 'https://www.googleapis.com/auth/cloud-platform', 'https://www.googleapis.com/auth/userinfo.email']
 
 ##################### Methods used by API only #################
