@@ -1317,6 +1317,10 @@ class DataCatalogController:
                 op_status = constants.ERROR
                 return op_status
     
+            # this check allows for tags with empty enums to get created, otherwise the empty enum gets flagged because DC thinks that you are storing an empty string as the enum value
+            if field_type == 'enum' and field_value == '':
+                continue
+                
             field = {'field_id': field_name, 'field_type': field_type, 'field_value': field_value}    
             tag_fields.append(field)
             
@@ -1544,7 +1548,8 @@ class DataCatalogController:
             if num_fields != num_empty_values:
                 op_status = self.do_create_update_delete_action(job_uuid, 'create', tag, entry)
         
-        if tag_history:
+        # only write to tag history if the operation was successful
+        if tag_history and op_status == constants.SUCCESS:
             bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
             template_fields = self.get_template()
             success = bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, job_uuid, self.template_id, template_fields, uri, column_name, fields)
@@ -1574,7 +1579,7 @@ class DataCatalogController:
                response = self.client.create_tag(parent=entry.name, tag=tag)
                                         
        except Exception as e:
-           msg = 'Error occurred during tag {}: {}'.format(action, tag)
+           msg = f'Error occurred during tag {action}: {tag}'
            log_error(msg, e, job_uuid)
          
            # if it's a quota issue, sleep and retry the operation 
@@ -1594,7 +1599,7 @@ class DataCatalogController:
                        response = self.client.create_tag(parent=entry.name, tag=tag)
              
                except Exception as e:
-                   msg = 'Error occurred during tag {} after sleep: {}'.format(action, tag)
+                   msg = f'Error occurred during tag {action} after sleep: {tag}'
                    log_error(msg, e, job_uuid)
                    op_status = constants.ERROR
                    return op_status
