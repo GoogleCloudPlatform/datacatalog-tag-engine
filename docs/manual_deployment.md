@@ -8,11 +8,18 @@ This procedure deploys the Tag Engine v2 components by hand. The steps are carri
    - A service account that performs the tagging in Data Catalog, and sourcing the contents of those tags from BigQuery, referred to below as `TAG_CREATOR_SA`. <br><br>
 
 
-2. Define 6 environment variables which will be used throughout the deployment:
+2. Define the environment variables to be used throughout the deployment:
 
 	```
 	export TAG_ENGINE_PROJECT="<PROJECT>"  # GCP project id for running the Tag Engine service
 	export TAG_ENGINE_REGION="<REGION>"    # GCP region for running Tag Engine service, e.g. us-central1
+
+	export FIRESTORE_PROJECT="<PROJECT>"   # GCP project id for running Firestore
+	export FIRESTORE_REGION="<REGION>"     # GCP region for the Firestore database e.g. us-central1
+	export FIRESTORE_DATABASE="(default)"  # Name of the firestore database
+
+	export QUEUE_PROJECT="<PROJECT>"       # GCP project id for creating the task queues
+	export QUEUE_REGION="<REGION>"         # GCP region for creating the task queues
 
 	export BIGQUERY_PROJECT="<PROJECT>"    # GCP project used by BigQuery data assets, can be equal to TAG_ENGINE_PROJECT. This variable is only used for setting IAM permissions in steps 10 and 11 
 	export BIGQUERY_REGION="<REGION>"      # GCP region in which data assets in BigQuery are stored, e.g. us-central1
@@ -37,13 +44,18 @@ If multiple teams want to share an instance of Tag Engine and they own different
    - Download the OAuth client secret and save the json file to the root of your local Tag Engine repository as `te_client_secret.json`.  <br><br> 
 
 
-4. Open `tagengine.ini` and set the following variables in this file. The first five should be equal to the environment variables you previously set in step 2:
+4. Open `tagengine.ini` and set the following variables in this file. 
 
 	```
 	TAG_ENGINE_PROJECT
-	TAG_ENGINE_REGION  
+	TAG_ENGINE_REGION
+	FIRESTORE_PROJECT
+	FIRESTORE_REGION
+	FIRESTORE_DATABASE
+	QUEUE_PROJECT
+	QUEUE_REGION  
 	BIGQUERY_REGION
-	CLOUD_RUN_ACCOUNT
+	TAG_ENGINE_ACCOUNT
 	TAG_CREATOR_ACCOUNT
 	OAUTH_CLIENT_CREDENTIALS
 	ENABLE_AUTH
@@ -63,66 +75,93 @@ If multiple teams want to share an instance of Tag Engine and they own different
    - The `tagengine.ini` file also has two additional variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. These determine the names of the cloud tasks queues. You do not need to change them. The queues are created in step 6 of this setup.  <br><br> 
 
 
-5. Enable the required Google Cloud APIs in your project:
+5. Enable the required Google Cloud APIs in your TAG_ENGINE_PROJECT:
 
 	`gcloud config set project $TAG_ENGINE_PROJECT`
 
 	```
 	gcloud services enable iam.googleapis.com
 	gcloud services enable cloudresourcemanager.googleapis.com
-	gcloud services enable firestore.googleapis.com
-	gcloud services enable cloudtasks.googleapis.com
 	gcloud services enable datacatalog.googleapis.com
 	gcloud services enable artifactregistry.googleapis.com
 	gcloud services enable cloudbuild.googleapis.com
 	```
 <br> 
 
-6. Create two cloud task queues, the first one is used to queue the entire job while the second is used to queue individual work items. If the first task fails, a second one will get created due to `max-attempts=2`:
+6. Enable the required APIs in QUEUE_PROJECT and create two cloud task queues. The first queue is used to queue the entire job while the second is used to queue individual work items. If a task fails, a second one will get created due to `max-attempts=2`:
 
 	```
+	gcloud config set project $QUEUE_PROJECT
+	
+	gcloud services enable cloudtasks.googleapis.com
+	
 	gcloud tasks queues create tag-engine-injector-queue \
-		--location=$TAG_ENGINE_REGION --max-attempts=2 --max-concurrent-dispatches=100
+		--location=$QUEUE_REGION --max-attempts=2 --max-concurrent-dispatches=100
 
 	gcloud tasks queues create tag-engine-work-queue \
-		--location=$TAG_ENGINE_REGION --max-attempts=2 --max-concurrent-dispatches=100
+		--location=$QUEUE_REGION --max-attempts=2 --max-concurrent-dispatches=100
 	```
 <br>
 
-7. Create two custom IAM roles which are required by `SENSITIVE_COLUMN_CONFIG`, a configuration type that creates policy tags on sensitive columns:
-
-```
-gcloud iam roles create BigQuerySchemaUpdate \
-	 --project $BIGQUERY_PROJECT \
-	 --title BigQuerySchemaUpdate \
-	 --description "Update table schema with policy tags" \
-	 --permissions bigquery.tables.setCategory
-```
-```
-gcloud iam roles create PolicyTagReader \
-	--project $TAG_ENGINE_PROJECT \
-	--title PolicyTagReader \
-	--description "Read Policy Tag Taxonomy" \
-	--permissions datacatalog.taxonomies.get,datacatalog.taxonomies.list
-```
-<br> 
-	
-8. Grant the required IAM roles and policy bindings for the accounts `TAG_ENGINE_SA` and `TAG_CREATOR_SA`:
+7. Enable the required APIs in FIRESTORE_PROJECT, create the Firestore database, and create the Firestore indexes. 
 
 	```
-	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+	gcloud config set project $FIRESTORE_PROJECT
+	
+	gcloud services enable firestore.googleapis.com
+	
+	gcloud firestore databases create --database=$FIRESTORE_DATABASE --project=$FIRESTORE_PROJECT --location=$FIRESTORE_REGION
+	
+	```
+	
+	If you're not able to create the Firestore database in your preferred region, consult [the available](https://cloud.google.com/firestore/docs/locations) regions and choose the nearest region to what you set `TAG_ENGINE_REGION`. <br><br> 
+	
+	```
+	pip install google-cloud-firestore
+	cd deploy
+	python create_indexes.py $TAG_ENGINE_PROJECT
+	cd ..
+	```
+
+    Creating the indexes takes ~10 minutes. As the indexes get created, you will see them show up in the Firestore console. There should be about 36 indexes in total. <br><br>
+
+	
+<br>
+
+8. Create two custom IAM roles which are required by `SENSITIVE_COLUMN_CONFIG`. If you are not planning to use this configuration type, you can skip this step. This configuration type creates policy tags on sensitive columns:
+
+	```
+	gcloud iam roles create BigQuerySchemaUpdate \
+	 	--project $BIGQUERY_PROJECT \
+	 	--title BigQuerySchemaUpdate \
+	 	--description "Update table schema with policy tags" \
+	 	--permissions bigquery.tables.setCategory
+
+	gcloud iam roles create PolicyTagReader \
+		--project $TAG_ENGINE_PROJECT \
+		--title PolicyTagReader \
+		--description "Read Policy Tag Taxonomy" \
+		--permissions datacatalog.taxonomies.get,datacatalog.taxonomies.list
+	```
+<br> 
+	
+	
+9. Grant the required IAM roles and policy bindings for the accounts `TAG_ENGINE_SA` and `TAG_CREATOR_SA`:
+
+	```
+	gcloud projects add-iam-policy-binding $QUEUE_PROJECT \
 		--member=serviceAccount:$TAG_ENGINE_SA \
 		--role=roles/cloudtasks.enqueuer
 	
-	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+	gcloud projects add-iam-policy-binding $QUEUE_PROJECT \
 		--member=serviceAccount:$TAG_ENGINE_SA \
 		--role=roles/cloudtasks.taskRunner
 	
-	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+	gcloud projects add-iam-policy-binding $FIRESTORE_PROJECT \
 		--member=serviceAccount:$TAG_ENGINE_SA \
 		--role=roles/datastore.user
 
-	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+	gcloud projects add-iam-policy-binding $FIRESTORE_PROJECT \
 		--member=serviceAccount:$TAG_ENGINE_SA \
 		--role=roles/datastore.indexAdmin  
 	
@@ -189,57 +228,23 @@ gcloud iam roles create PolicyTagReader \
 	```
 
 
-Note: If you plan to create tags from CSV files, you also need to ensure that `TAG_CREATOR_SA` has the 
-`storage.buckets.get` permission on the GCS bucket where the CSV files are stored. To do that, you can create a custom role with 
-this permission or assign the `storage.legacyBucketReader` role:
+	Note: If you plan to create tags from CSV files, you also need to ensure that `TAG_CREATOR_SA` has the 
+	`storage.buckets.get` permission on the GCS bucket where the CSV files are stored. To do that, you can create a custom role with 
+	this permission or assign the `storage.legacyBucketReader` role:
 
-```
+	```
 	gcloud storage buckets add-iam-policy-binding gs://<BUCKET> \
 		--member=serviceAccount:$TAG_CREATOR_SA' \
 		--role=roles/storage.legacyBucketReader
-```
+	```
 <br> 
-
 	
-9. Create the Firestore database, used to store the tag configurations: 
 
-   This command currently requires `gcloud alpha`. If you don't have it, you need to first install it before creating the database. 
+10. Build and deploy the Cloud Run services:
+
+	There is one service in Cloud Run for the API (tag-engine-api) and another service in Cloud Run for the UI (tag-engine-ui). They are both built from the same code base. You can build either one or both, depending on your needs. 
 
 	```
-	gcloud components install alpha.  
-
-	gcloud alpha firestore databases create --project=$TAG_ENGINE_PROJECT --location=$TAG_ENGINE_REGION
-	```
-
-   Note that Firestore is not available in every region. Consult [this list](https://cloud.google.com/firestore/docs/locations) to see where it's available and choose the nearest region to `TAG_ENGINE_REGION`. It's perfectly fine for the Firestore region to be different from the `TAG_ENGINE_REGION`. <br><br> 
-	
-	
-10. Firestore requires several composite indexes to service read requests:
-
-   First, you must download a private key for your `$TAG_ENGINE_SA`:
-
-   ```
-	gcloud iam service-accounts keys create private_key.json --iam-account=$TAG_ENGINE_SA
-	export GOOGLE_APPLICATION_CREDENTIALS="private_key.json"
-   ```
-
-   Second, create the composite indexes which are needed for serving multiple read requests:
-
-   ```
-	pip install google-cloud-firestore
-	cd deploy
-	python create_indexes.py $TAG_ENGINE_PROJECT
-	cd ..
-   ```
-
-   Note: the above script is expected to run for 10-12 minutes. As the indexes get created, you will see them show up in the Firestore console. There should be about 36 indexes. <br><br> 
-	
-
-11. Build and deploy the Cloud Run services:
-
-   There is one service in Cloud Run for the API (tag-engine-api) and another service in Cloud Run for the UI (tag-engine-ui). They are both built from the same code base. 
-
-   ```
 	gcloud run deploy tag-engine-api \
 		--source . \
 		--platform managed \
@@ -249,11 +254,8 @@ this permission or assign the `storage.legacyBucketReader` role:
 		--memory=4G \
 		--timeout=60m \
 		--service-account=$TAG_ENGINE_SA
-   ```
 
-   To deploy the UI service without IAP: 
-   
-   ```
+
 	gcloud run deploy tag-engine-ui \
 		--source . \
 		--platform managed \
@@ -263,30 +265,30 @@ this permission or assign the `storage.legacyBucketReader` role:
 		--memory=4G \
 		--timeout=60m \
 		--service-account=$TAG_ENGINE_SA
-   ``` 
+	``` 
  
  <br> 
 
 
-12. Set the `SERVICE_URL` environment variable:
+11. Set the `SERVICE_URL` environment variable:
 
-   If you are deploying the API, run:
+	If you are deploying the API, run:
 
-   ```
+	```
 	export API_SERVICE_URL=`gcloud run services describe tag-engine-api --format="value(status.url)"`
 	gcloud run services update tag-engine-api --set-env-vars SERVICE_URL=$API_SERVICE_URL
-   ```
+	```
 
-   If you are deploying the UI, run:
-   
-   ```
+	If you are deploying the UI, run:
+
+	```
 	export UI_SERVICE_URL=`gcloud run services describe tag-engine-ui --format="value(status.url)"`
 	gcloud run services update tag-engine-ui --set-env-vars SERVICE_URL=$UI_SERVICE_URL
-   ```
+	```
 
 <br> 
 
 
-This completes the manual setup of Tag Engine. Please consult [Part 2](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#testa) and [Part 3](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#testb) of [README.md](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/README.md) for testing instructions. 
+This completes the manual setup for Tag Engine. Please consult [Part 2](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#testa) and [Part 3](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#testb) for next steps. 
 
 <br><br>

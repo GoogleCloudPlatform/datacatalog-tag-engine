@@ -17,6 +17,9 @@ import constants
 from google.cloud import firestore
 from google.cloud import tasks_v2
 from google.protobuf import duration_pb2
+from google.api_core.client_info import ClientInfo
+
+USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v2'
 
 class TaskManager:
     """Class for creating and managing work requests in the form of cloud tasks 
@@ -29,20 +32,22 @@ class TaskManager:
     """
     def __init__(self,
                 cloud_run_sa,
-                tag_engine_project,
+                queue_project,
                 queue_region,
                 queue_name, 
-                task_handler_uri):
+                task_handler_uri,
+                db_project,
+                db_name):
 
         self.cloud_run_sa = cloud_run_sa
-        self.tag_engine_project = tag_engine_project
+        self.queue_project = queue_project
         self.queue_region = queue_region
         self.queue_name = queue_name
         self.task_handler_uri = task_handler_uri
-
-        self.db = firestore.Client()
+        
+        self.db = firestore.Client(project=db_project, database=db_name, client_info=ClientInfo(user_agent=USER_AGENT))
         self.tasks_per_shard = 1000
-        self.task_deadline = duration_pb2.Duration().FromSeconds(1800) # set the deadline per task to be 30 minutes (which is the max supported duration)
+        self.task_deadline = duration_pb2.Duration().FromSeconds(1800) # 30 minutes per task (max supported duration)
 
 ##################### API METHODS #################
         
@@ -236,7 +241,7 @@ class TaskManager:
                    'tag_invoker_account': tag_invoker_account}
         
         client = tasks_v2.CloudTasksClient()
-        parent = client.queue_path(self.tag_engine_project, self.queue_region, self.queue_name)
+        parent = client.queue_path(self.queue_project, self.queue_region, self.queue_name)
                 
         task = {
             'name': parent + '/tasks/' + task_id,
@@ -272,7 +277,7 @@ class TaskManager:
                    'tag_invoker_account': tag_invoker_account}
         
         client = tasks_v2.CloudTasksClient()
-        parent = client.queue_path(self.tag_engine_project, self.queue_region, self.queue_name)
+        parent = client.queue_path(self.queue_project, self.queue_region, self.queue_name)
         
         task = {
             'name': parent + '/tasks/' + task_id,

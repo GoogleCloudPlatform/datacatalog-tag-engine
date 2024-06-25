@@ -4,8 +4,8 @@
 
 resource "google_cloud_tasks_queue" "injector_queue" {
   name = var.injector_queue
-  location = var.tag_engine_region
-  project = var.tag_engine_project
+  location = var.queue_region
+  project = var.queue_project
 
   rate_limits {
       max_concurrent_dispatches = 100
@@ -25,8 +25,8 @@ resource "google_cloud_tasks_queue" "injector_queue" {
 
 resource "google_cloud_tasks_queue" "work_queue" {
   name = var.work_queue
-  location = var.tag_engine_region
-  project = var.tag_engine_project
+  location = var.queue_region
+  project = var.queue_project
   
   rate_limits {
       max_concurrent_dispatches = 100

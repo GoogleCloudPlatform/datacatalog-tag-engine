@@ -21,11 +21,6 @@ import requests
 import google_auth_oauthlib.flow
 from googleapiclient import discovery
 
-from google.cloud import firestore
-from google.cloud import bigquery
-from google.cloud import tasks_v2
-from google.protobuf import timestamp_pb2
-
 from google.api_core.client_info import ClientInfo
 from google.cloud import logging_v2
 
@@ -54,9 +49,26 @@ config.read("tagengine.ini")
 
 ##################### INIT GLOBAL VARIABLES ##################################
     
-TAG_ENGINE_PROJECT = config['DEFAULT']['TAG_ENGINE_PROJECT'].strip()
-TAG_ENGINE_REGION = config['DEFAULT']['TAG_ENGINE_REGION'].strip()
+if 'FIRESTORE_PROJECT' in config['DEFAULT']:
+    FIRESTORE_PROJECT = config['DEFAULT']['FIRESTORE_PROJECT'].strip()
+else:
+    FIRESTORE_PROJECT = config['DEFAULT']['TAG_ENGINE_PROJECT'].strip()
     
+if 'FIRESTORE_DB' in config['DEFAULT']:
+    FIRESTORE_DB = config['DEFAULT']['FIRESTORE_DB'].strip()
+else:
+    FIRESTORE_DB = '(default)'
+    
+if 'QUEUE_PROJECT' in config['DEFAULT']:
+    QUEUE_PROJECT = config['DEFAULT']['QUEUE_PROJECT'].strip()
+else:
+    QUEUE_PROJECT = config['DEFAULT']['TAG_ENGINE_PROJECT'].strip()
+    
+if 'QUEUE_REGION' in config['DEFAULT']:
+    QUEUE_REGION = config['DEFAULT']['QUEUE_REGION'].strip()
+else:
+    QUEUE_REGION = config['DEFAULT']['TAG_ENGINE_REGION'].strip()
+   
 TAG_ENGINE_SA = config['DEFAULT']['TAG_ENGINE_SA'].strip()
 TAG_CREATOR_SA = config['DEFAULT']['TAG_CREATOR_SA'].strip()
 
@@ -68,8 +80,8 @@ RUN_TASK_HANDLER = os.environ['SERVICE_URL'] + '/_run_task'
 INJECTOR_QUEUE = config['DEFAULT']['INJECTOR_QUEUE'].strip()
 WORK_QUEUE = config['DEFAULT']['WORK_QUEUE'].strip()
 
-jm = jobm.JobManager(TAG_ENGINE_SA, TAG_ENGINE_PROJECT, TAG_ENGINE_REGION, INJECTOR_QUEUE, SPLIT_WORK_HANDLER)                   
-tm = taskm.TaskManager(TAG_ENGINE_SA, TAG_ENGINE_PROJECT, TAG_ENGINE_REGION, WORK_QUEUE, RUN_TASK_HANDLER)
+jm = jobm.JobManager(TAG_ENGINE_SA, QUEUE_PROJECT, QUEUE_REGION, INJECTOR_QUEUE, SPLIT_WORK_HANDLER, FIRESTORE_PROJECT, FIRESTORE_DB)                   
+tm = taskm.TaskManager(TAG_ENGINE_SA, QUEUE_PROJECT, QUEUE_REGION, WORK_QUEUE, RUN_TASK_HANDLER, FIRESTORE_PROJECT, FIRESTORE_DB)
 
 SCOPES = ['openid', 'https://www.googleapis.com/auth/cloud-platform', 'https://www.googleapis.com/auth/userinfo.email']
  
@@ -3590,7 +3602,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 2.2.8\n"
+    return "Welcome to Tag Engine version 2.2.9\n"
     
 ####################### TEST METHOD ####################################  
     

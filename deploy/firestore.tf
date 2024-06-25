@@ -1,16 +1,14 @@
 # ************************************************************ #
 # Create the firestore database
-# Note: no need to create the default database, it gets 
-# created automatically when the API is enabled. 
 # ************************************************************ #
 
 resource "google_firestore_database" "create" {
-  project     = var.tag_engine_project
-  name        = "(default)"
+  project     = var.firestore_project
+  name        = var.firestore_database
   location_id = var.firestore_region
   type        = "FIRESTORE_NATIVE"
 
-  depends_on = [google_project_service.tag_engine_project]
+  depends_on = [google_project_service.firestore_project]
 }
 
 

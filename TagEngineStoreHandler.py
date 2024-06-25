@@ -31,10 +31,21 @@ class TagEngineStoreHandler:
     
     def __init__(self):
         
-        self.db = firestore.Client(client_info=ClientInfo(user_agent=USER_AGENT))
-        
         config = configparser.ConfigParser()
         config.read("tagengine.ini")
+        
+        if 'FIRESTORE_PROJECT' in config['DEFAULT']:
+            FIRESTORE_PROJECT = config['DEFAULT']['FIRESTORE_PROJECT'].strip()
+        else:
+            FIRESTORE_PROJECT = config['DEFAULT']['TAG_ENGINE_PROJECT'].strip()
+    
+        if 'FIRESTORE_DB' in config['DEFAULT']:
+            FIRESTORE_DB = config['DEFAULT']['FIRESTORE_DB'].strip()
+        else:
+            FIRESTORE_DB = '(default)'
+        
+        self.db = firestore.Client(project=FIRESTORE_PROJECT, database=FIRESTORE_DB, client_info=ClientInfo(user_agent=USER_AGENT))
+        
         
     def read_default_settings(self, user_email):
         

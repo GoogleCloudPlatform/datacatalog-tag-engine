@@ -51,6 +51,7 @@ def main(project, region, dataset, table, column):
                 get_request = datacatalog.GetPolicyTagRequest(name=policy_tag)
                 resp = ptm_client.get_policy_tag(request=get_request)
                 policy_tag = resp.display_name
+                break
         else:
             policy_tag = None
             
