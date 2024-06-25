@@ -119,7 +119,7 @@ If multiple teams want to share an instance of Tag Engine and they own different
 	```
 	pip install google-cloud-firestore
 	cd deploy
-	python create_indexes.py $TAG_ENGINE_PROJECT
+	python create_indexes.py $FIRESTORE_PROJECT
 	cd ..
 	```
 

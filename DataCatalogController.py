@@ -180,7 +180,8 @@ class DataCatalogController:
                     tag_id = tag_instance.name
                     break
             else:
-                if column == tagged_column and tagged_template_id == self.template_id and tagged_template_project == self.template_project and \
+                # looking for a column-level tag
+                if column.lower() == tagged_column and tagged_template_id == self.template_id and tagged_template_project == self.template_project and \
                     tagged_template_location == self.template_region:
                     tag_exists = True
                     tag_id = tag_instance.name
@@ -1283,7 +1284,7 @@ class DataCatalogController:
             tag_exists, tag_id = self.check_if_tag_exists(parent=entry.name, column=column_name)
 
         except Exception as e:
-            msg = 'Error during check_if_tag_exists: {}'.format(entry_name)
+            msg = 'Error during check_if_tag_exists: {}'.format(entry.name)
             log_error_tag_dict(msg, e, job_uuid, tag_dict)
             op_status = constants.ERROR
             return op_status
@@ -1496,7 +1497,6 @@ class DataCatalogController:
             if field_type == 'DATETIME' or field_type == 'TIMESTAMP': 
                 
                 # field_value may be empty or date value e.g. "2022-05-08" or datetime value e.g. "2022-05-08 15:00:00"
-                
                 if field_value == '':
                     timestamp = ''
                 
