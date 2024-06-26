@@ -415,7 +415,7 @@ class TagEngineStoreHandler:
                 'refresh_frequency': delta,
                 'refresh_unit': refresh_unit,
                 'tag_history': tag_history,
-                'scheduling_status': 'ACTIVE',
+                'scheduling_status': 'READY',
                 'next_run': next_run,
                 'version': 1,
                 'overwrite': overwrite,
@@ -503,7 +503,7 @@ class TagEngineStoreHandler:
                 'refresh_frequency': delta,
                 'refresh_unit': refresh_unit,
                 'tag_history': tag_history,
-                'scheduling_status': 'ACTIVE',
+                'scheduling_status': 'READY',
                 'next_run': next_run,
                 'version': 1,
                 'service_account': service_account
@@ -587,7 +587,7 @@ class TagEngineStoreHandler:
                 'refresh_frequency': delta,
                 'refresh_unit': refresh_unit,
                 'tag_history': tag_history,
-                'scheduling_status': 'ACTIVE',
+                'scheduling_status': 'READY',
                 'next_run': next_run,
                 'version': 1,
                 'service_account': service_account
@@ -697,7 +697,7 @@ class TagEngineStoreHandler:
                 'refresh_frequency': delta,
                 'refresh_unit': refresh_unit,
                 'tag_history': tag_history,
-                'scheduling_status': 'ACTIVE',
+                'scheduling_status': 'READY',
                 'next_run': next_run,
                 'version': 1,
                 'service_account': service_account
@@ -781,7 +781,7 @@ class TagEngineStoreHandler:
                 'refresh_frequency': delta,
                 'refresh_unit': refresh_unit,
                 'tag_history': tag_history,
-                'scheduling_status': 'ACTIVE',
+                'scheduling_status': 'READY',
                 'next_run': next_run,
                 'version': 1,
                 'overwrite': overwrite,
@@ -873,7 +873,7 @@ class TagEngineStoreHandler:
                 'refresh_frequency': delta,
                 'refresh_unit': refresh_unit,
                 'tag_history': tag_history,
-                'scheduling_status': 'ACTIVE',
+                'scheduling_status': 'READY',
                 'next_run': next_run,
                 'version': 1,
                 'overwrite': overwrite,
@@ -1357,10 +1357,10 @@ class TagEngineStoreHandler:
 
         for coll_name in self.get_config_collections():
             config_ref = self.db.collection(coll_name)
-            config_ref = config_ref.where("refresh_mode", "==", "AUTO")
-            config_ref = config_ref.where("scheduling_status", "==", "READY")
-            config_ref = config_ref.where("config_status", "==", "ACTIVE")
-            config_ref = config_ref.where("next_run", "<=", datetime.utcnow())
+            config_ref = config_ref.where(filter=FieldFilter("refresh_mode", "==", "AUTO"))
+            config_ref = config_ref.where(filter=FieldFilter("config_status", "==", "ACTIVE"))
+            config_ref = config_ref.where(filter=FieldFilter("scheduling_status", "==", "READY"))
+            config_ref = config_ref.where(filter=FieldFilter("next_run", "<=", datetime.utcnow()))
         
             config_stream = list(config_ref.stream())
         

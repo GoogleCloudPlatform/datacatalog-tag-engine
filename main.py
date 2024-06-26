@@ -3054,10 +3054,11 @@ Returns:
 def scheduled_auto_updates():
     
     try:    
-        json_request = request.get_json(force=True) 
-        print('json request: ', json_request)
-    
-        status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
+        #json_request = request.get_json(force=True) 
+        #print('json request: ', json_request)
+        
+        tag_invoker_sa = get_tag_invoker_account(request.headers.get('Authorization'))
+        status, response, tag_creator_sa = do_authentication(request.headers, None, ENABLE_AUTH)
         
         if status == False:
             return jsonify(response), 400
@@ -3075,7 +3076,7 @@ def scheduled_auto_updates():
             if isinstance(config_uuid, str): 
                 store.update_job_status(config_uuid, config_type, 'PENDING')
                 store.increment_version_next_run(tag_creator_sa, config_uuid, config_type)
-                job_uuid = jm.create_job(tag_creator_sa, config_uuid, config_type)
+                job_uuid = jm.create_job(tag_creator_sa, tag_invoker_sa, config_uuid, config_type)
                 jobs.append(job_uuid)
 
         print('created jobs:', jobs)

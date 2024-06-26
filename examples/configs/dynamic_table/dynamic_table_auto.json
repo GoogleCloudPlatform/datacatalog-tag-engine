@@ -51,6 +51,6 @@
     "included_tables_uris": "bigquery/project/tag-engine-run/dataset/cities_311/*",
     "excluded_tables_uris": "",
     "refresh_mode": "AUTO",
-    "refresh_frequency": 24,
-    "refresh_unit": "hours"  
+    "refresh_frequency": 5,
+    "refresh_unit": "minutes"  
 }

@@ -284,7 +284,7 @@ class DataCatalogController:
             print('returned query_str: ' + query_str)
             
             # note: field_values is of type list
-            field_values, error_exists = self.run_query(query_str, field_type, batch_mode)
+            field_values, error_exists = self.run_query(query_str, field_type, batch_mode, job_uuid)
             print('field_values: ', field_values)
             print('error_exists: ', error_exists)
     
@@ -398,7 +398,7 @@ class DataCatalogController:
             
             # run combined query, adding the results to the field_values for each field
             # Note: field_values is of type list
-            fields, error_exists = self.run_combined_query(combined_query, column, fields)
+            fields, error_exists = self.run_combined_query(combined_query, column, fields, job_uuid)
 
             if error_exists:
                 op_status = constants.ERROR
@@ -1729,7 +1729,7 @@ class DataCatalogController:
         return query_str
     
     
-    def run_query(self, query_str, field_type, batch_mode):
+    def run_query(self, query_str, field_type, batch_mode, job_uuid):
         
         field_values = []
         error_exists = False
@@ -1777,7 +1777,7 @@ class DataCatalogController:
         return field_values, error_exists
         
 
-    def run_combined_query(self, combined_query, column, fields):
+    def run_combined_query(self, combined_query, column, fields, job_uuid):
         
         error_exists = False
             
@@ -1797,7 +1797,7 @@ class DataCatalogController:
         
         except Exception as e:
             error_exists = True
-            msg = 'Error occurred during run_query {}'.format(combined_query)
+            msg = 'Error occurred during run_combined_query {}'.format(combined_query)
             log_error(msg, e, job_uuid)
             
         return fields, error_exists
