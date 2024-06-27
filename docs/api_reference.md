@@ -14,7 +14,7 @@ This page lists the API methods for Tag Engine.
 * `export_tags`: exports tags from Data Catalog to BigQuery
 * `restore_tags`: restores tags from a Data Catalog metadata export file
 * `get_job_status`: gets the status of a job
-* `ondemand_updates`: updates the tags associated with a configuration that is set to on-demand refresh
+* `scheduled_auto_updates`: updates all the tags whose configurations set to refresh_mode = 'AUTO'
 
 
 #### static_asset_tags
@@ -102,10 +102,15 @@ gets the status of a Tag Engine job.
 POST [TAG_ENGINE_URL]/get_job_status -d '{"job_uuid":"47aa9460fbac11ecb1a0190a014149c1"}'
 ``` 
 
-#### ondemand_updates
+#### scheduled_auto_updates
 
-updates the tags associated with a configuration whose `refresh_mode` field is set to 'ON_DEMAND'. 
+updates the tags associated with a configuration whose `refresh_mode` field == 'AUTO', `config_status` == 'ACTIVE', and `scheduling_status` == 'READY'. 
 
 ```
-POST [TAG_ENGINE_URL]/ondemand_updates -d datacatalog-tag-engine/examples/dynamic_table_configs/dynamic_table_update_ondemand.json
-``` 
+POST [TAG_ENGINE_URL]/scheduled_auto_updates
+```
+Example:
+```
+$ curl -X POST $TAG_ENGINE_URL/scheduled_auto_updates -H "Authorization: Bearer $IAM_TOKEN"
+{"job_ids":"[\"20380bf6340d11ef8ea942004e494300\"]","success":true}
+```
