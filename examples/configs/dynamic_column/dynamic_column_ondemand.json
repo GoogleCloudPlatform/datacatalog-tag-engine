@@ -12,7 +12,7 @@
             "query_expression": "select 'CONTENT'"
         }
     ],
-    "included_columns_query": "select 'unique_key', 'created_date'",
-	"included_tables_uris": "bigquery/project/warehouse-337221/dataset/cities_311/*",
+    "included_columns_query": "select 'unique_key', 'created_date', 'incident.city', 'incident.county'",
+    "included_tables_uris": "bigquery/project/tag-engine-run/dataset/cities_311/austin_311_service_requests",
     "refresh_mode": "ON_DEMAND" 
 }

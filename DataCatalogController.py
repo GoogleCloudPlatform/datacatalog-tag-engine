@@ -333,7 +333,37 @@ class DataCatalogController:
                
         return op_status
 
-
+    
+    def column_exists_in_table(self, target_column, entry_columns):
+        
+        column_exists = False
+        
+        for catalog_column in entry_columns:
+            #print('column:', catalog_column.column)
+            #print('subcolumns:', catalog_column.subcolumns)
+            
+            is_nested_column = False
+            
+            # figure out if column is nested
+            if len(target_column.split('.')) > 1:
+                is_nested_column = True
+                parent_column = target_column.split('.')[0]
+                nested_column = target_column.split('.')[1]
+            
+            if is_nested_column == True:
+                if catalog_column.column == parent_column:
+                    for subcolumn in catalog_column.subcolumns:
+                        if nested_column == subcolumn.column:
+                            column_exists = True
+                            break 
+            else:
+                if catalog_column.column == target_column:
+                    column_exists = True
+                    break
+                    
+        return column_exists
+            
+    
     def apply_dynamic_column_config(self, fields, columns_query, uri, job_uuid, config_uuid, template_uuid, tag_history, batch_mode=False):
         
         print('*** apply_dynamic_column_config ***')
@@ -343,22 +373,27 @@ class DataCatalogController:
         op_status = constants.SUCCESS
         error_exists = False
         
-        columns = [] # columns in the table which need to be tagged
+        target_columns = [] # columns in the table which need to be tagged
         columns_query = self.parse_query_expression(uri, columns_query)
         #print('columns_query:', columns_query)
+        
         rows = self.bq_client.query(columns_query).result()
-        
-        num_rows = 0
-        for row in rows:
-            num_rows += 1
-            columns.append(row[0]) 
-        
-        if num_rows == 0:
+
+        num_columns = 0
+        for row in rows:    
+            for column in row:
+                #print('column:', column)
+                target_columns.append(column)
+                num_columns += 1
+                 
+        if num_columns == 0:
             # no columns to tag
-            op_status = constants.SUCCESS
+            msg = f"Error could not find columns to tag. Please check column_query parameter in your config. Current value: {column_query}"
+            log_error(msg, None, job_uuid)
+            op_status = constants.ERROR
             return op_status
                 
-        #print('columns to be tagged:', columns)
+        #print('columns to be tagged:', target_columns)
                     
         bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
         #print('bigquery_resource: ', bigquery_resource)
@@ -366,31 +401,33 @@ class DataCatalogController:
         request = datacatalog.LookupEntryRequest()
         request.linked_resource=bigquery_resource
         entry = self.client.lookup_entry(request)
-        
-        schema_columns = [] # columns in the entry's schema
-                
-        for column_schema in entry.schema.columns:
-            schema_columns.append(column_schema.column)
-            
+                    
         column_fields_list = [] # list<dictionaries> where dict = {column, fields}
 
-        for column in columns:
+        for target_column in target_columns:
             
-            # skip columns not found in the entry's schema
-            if column not in schema_columns:
-                continue
+            #print('target_column:', target_column)
             
-            # initialize new column-level tag
+            # fail quickly if a column is not found in the entry's schema
+            column_exists = self.column_exists_in_table(target_column, entry.schema.columns)
+            
+            if column_exists != True:
+                msg = f"Error could not find column {target_column} in {resource}"
+                log_error(msg, None, job_uuid)
+                op_status = constants.ERROR
+                return op_status
+
+            # initialize the new column-level tag
             tag = datacatalog.Tag()
             tag.template = self.template_path
-            tag.column = column
+            tag.column = target_column
             
             verified_field_count = 0
             query_strings = []
             
             for field in fields:
                 query_expression = field['query_expression']
-                query_str = self.parse_query_expression(uri, query_expression, column)
+                query_str = self.parse_query_expression(uri, query_expression, target_column)
                 query_strings.append(query_str)
 
             # combine query expressions 
@@ -398,7 +435,7 @@ class DataCatalogController:
             
             # run combined query, adding the results to the field_values for each field
             # Note: field_values is of type list
-            fields, error_exists = self.run_combined_query(combined_query, column, fields, job_uuid)
+            fields, error_exists = self.run_combined_query(combined_query, target_column, fields, job_uuid)
 
             if error_exists:
                 op_status = constants.ERROR
@@ -411,7 +448,7 @@ class DataCatalogController:
                 op_status = constants.ERROR
                 continue
                                                          
-            column_fields_list.append({"column": column, "fields": fields})
+            column_fields_list.append({"column": target_column, "fields": fields})
             tag_work_queue.append(tag)
 
         # outer loop ends here
@@ -419,13 +456,15 @@ class DataCatalogController:
             op_status = constants.ERROR
             return op_status
             
-        # ready to create or update all the tags in the work queue         
+        # ready to create or update all the tags in work queue         
         rec_request = datacatalog.ReconcileTagsRequest(
             parent=entry.name,
             tag_template=self.template_path,
             tags=tag_work_queue
         )
 
+        #print('rec_request:', rec_request)
+        
         try:
             operation = self.client.reconcile_tags(request=rec_request)
             print("Waiting for operation to complete...")
@@ -1241,56 +1280,32 @@ class DataCatalogController:
             return op_status
 
         if 'column' in tag_dict:
-            column_name = tag_dict['column'] 
+            target_column = tag_dict['column'] 
             
-            # check if column exists in the catalog
-            column_exists = False
-            for catalog_column in entry.schema.columns:
-                #print('column:', catalog_column.column)
-                #print('subcolumns:', catalog_column.subcolumns)
-                
-                is_nested_column = False
-                
-                # figure out if column is nested
-                if len(column_name.split('.')) > 1:
-                    is_nested_column = True
-                    parent_column = column_name.split('.')[0]
-                    nested_column = column_name.split('.')[1]
-                
-                if is_nested_column == True:
-                    if catalog_column.column == parent_column:
-                        for subcolumn in catalog_column.subcolumns:
-                            if nested_column == subcolumn.column:
-                                column_exists = True
-                                break 
-                
-                else:
-                    if catalog_column.column == column_name:
-                        column_exists = True
-                        break
+            column_exists = self.column_exists_in_table(target_column, entry.schema.columns)
             
             if column_exists == False:
-                msg = "Error could not find column {} in {}".format(column_name, resource)
+                msg = f"Error could not find column {target_column} in {resource}"
                 log_error_tag_dict(msg, None, job_uuid, tag_dict)
                 op_status = constants.ERROR
                 return op_status
             
-            uri = entry.linked_resource.replace('//bigquery.googleapis.com/projects/', '') + '/column/' + column_name
+            uri = entry.linked_resource.replace('//bigquery.googleapis.com/projects/', '') + '/column/' + target_column
         else:
-            column_name = None
+            target_column = None
             uri = entry.linked_resource.replace('//bigquery.googleapis.com/projects/', '')
             
         try:    
-            tag_exists, tag_id = self.check_if_tag_exists(parent=entry.name, column=column_name)
+            tag_exists, tag_id = self.check_if_tag_exists(parent=entry.name, column=target_column)
 
         except Exception as e:
-            msg = 'Error during check_if_tag_exists: {}'.format(entry.name)
+            msg = f"Error during check_if_tag_exists: {entry.name}"
             log_error_tag_dict(msg, e, job_uuid, tag_dict)
             op_status = constants.ERROR
             return op_status
 
         if tag_exists and overwrite == False:
-            msg = 'Info: Tag already exists and overwrite flag is False'
+            msg = "Info: Tag already exists and overwrite flag is False"
             log_info_tag_dict(msg, job_uuid, tag_dict)
             op_status = constants.SUCCESS
             return op_status
@@ -1326,7 +1341,7 @@ class DataCatalogController:
             
         
         op_status = self.create_update_delete_tag(tag_fields, tag_exists, tag_id, job_uuid, config_uuid, 'IMPORT_TAG', tag_history, \
-                                                  entry, uri, column_name)
+                                                  entry, uri, target_column)
                                 
         return op_status
     
@@ -2143,19 +2158,24 @@ if __name__ == '__main__':
     
     source_credentials, _ = google.auth.default() 
     target_service_account = config['DEFAULT']['TAG_CREATOR_SA']
-    template_project = 'tag-engine-run'
-    template_region = 'us-central1' 
      
     credentials = impersonated_credentials.Credentials(source_credentials=source_credentials,
         target_principal=target_service_account,
         target_scopes=SCOPES,
         lifetime=1200)
+        
+    template_id = 'data_governance'
+    template_project = 'tag-engine-run'
+    template_region = 'us-central1' 
     
+    fields = [{'field_type': 'enum', 'field_id': 'data_domain', 'enum_values': ['ENG', 'PRODUCT', 'OPERATIONS', 'LOGISTICS', 'FINANCE', 'HR', 'LEGAL', 'MARKETING', 'SALES', 'CONSUMER', 'GOVERNMENT'], 'is_required': True, 'display_name': 'Data Domain', 'order': 10, 'query_expression': "select 'LOGISTICS'"}, {'field_type': 'enum', 'field_id': 'broad_data_category', 'enum_values': ['CONTENT', 'METADATA', 'CONFIGURATION'], 'is_required': True, 'display_name': 'Broad Data Category', 'order': 9, 'query_expression': "select 'CONTENT'"}]
+    columns_query = "select 'unique_key', 'created_date', 'incident.city', 'incident.county'"
+    uri = 'tag-engine-run/datasets/cities_311/tables/austin_311_service_requests'
     job_uuid = '3291b93804d211ef9d2549bd5e1feaa2'
-    config_uuid = '21f5a94004d211efbd14b17ef297bfd2'
-    tag_dict = {'project': 'tag-engine-run', 'dataset': 'sakila_dw', 'data_domain': 'LOGISTICS', 'broad_data_category': 'CONTENT', 'environment': 'DEV', 'data_origin': 'OPEN_DATA', 'data_creation': ' 2024-04-27', 'data_ownership': 'THIRD_PARTY_OPS', 'data_asset_owner': 'John Smith', 'data_confidentiality': 'PUBLIC', 'data_retention': '30_DAYS', 'data_asset_documentation': 'https://dev.mysql.com/doc/sakila/en/sakila-structure.html'}
-    tag_history = True
-    tag_overwrite = True
+    config_uuid = '6fb997443e0311ef9f5242004e494300'
+    template_uuid = 'fa8aa3007f1711eebe2b4f918967d564'
+    tag_history = False
     
-    dcu = DataCatalogController(credentials, target_service_account, 'scohen@gcp.solutions', 'data_governance', template_project, template_region)
-    dcu.apply_import_config(job_uuid, config_uuid, tag_dict, tag_history, tag_overwrite)
+    dcu = DataCatalogController(credentials, target_service_account, 'scohen@gcp.solutions', template_id, template_project, template_region)
+    dcu.apply_dynamic_column_config(fields, columns_query, uri, job_uuid, config_uuid, template_uuid, tag_history, batch_mode=False)
+    

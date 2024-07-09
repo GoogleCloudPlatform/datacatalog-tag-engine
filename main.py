@@ -3054,9 +3054,7 @@ Returns:
 def scheduled_auto_updates():
     
     try:    
-        #json_request = request.get_json(force=True) 
-        #print('json request: ', json_request)
-        
+
         tag_invoker_sa = get_tag_invoker_account(request.headers.get('Authorization'))
         status, response, tag_creator_sa = do_authentication(request.headers, None, ENABLE_AUTH)
         
@@ -3603,7 +3601,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 2.2.9\n"
+    return "Welcome to Tag Engine version 2.3.0\n"
     
 ####################### TEST METHOD ####################################  
     
