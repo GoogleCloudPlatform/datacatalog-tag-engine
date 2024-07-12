@@ -1,6 +1,6 @@
 [DEFAULT]
 TAG_ENGINE_SA = tag-engine@solution-workspace.iam.gserviceaccount.com
-TAG_CREATOR_SA = tag-creator@dgtoolkit.iam.gserviceaccount.com 
+TAG_CREATOR_SA = tag-creator@dgtoolkit.iam.gserviceaccount.com
 TAG_ENGINE_PROJECT = solution-workspace
 TAG_ENGINE_REGION = us-central1
 FIRESTORE_PROJECT = dgtoolkit
