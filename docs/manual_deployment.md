@@ -149,6 +149,8 @@ If multiple teams want to share an instance of Tag Engine and they own different
 9. Grant the required IAM roles and policy bindings for the accounts `TAG_ENGINE_SA` and `TAG_CREATOR_SA`:
 
 	```
+	gcloud config set project $TAG_ENGINE_PROJECT
+ 
 	gcloud projects add-iam-policy-binding $QUEUE_PROJECT \
 		--member=serviceAccount:$TAG_ENGINE_SA \
 		--role=roles/cloudtasks.enqueuer
@@ -171,6 +173,8 @@ If multiple teams want to share an instance of Tag Engine and they own different
 	```
 
 	```
+ 	gcloud config set project $TAG_ENGINE_PROJECT
+ 
 	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
 		--member=serviceAccount:$TAG_CREATOR_SA \
 		--role=roles/datacatalog.tagEditor
