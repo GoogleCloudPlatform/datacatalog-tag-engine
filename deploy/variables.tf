@@ -1,61 +1,13 @@
 variable "tag_engine_required_apis" {
 	type = list
 	description = "list of required GCP services"
-	default = ["cloudresourcemanager.googleapis.com", "iam.googleapis.com", "cloudresourcemanager.googleapis.com", "cloudbuild.googleapis.com", "artifactregistry.googleapis.com", "datacatalog.googleapis.com", "run.googleapis.com"] 
+	default = ["cloudresourcemanager.googleapis.com", "iam.googleapis.com", "cloudbuild.googleapis.com", "artifactregistry.googleapis.com", "datacatalog.googleapis.com", "run.googleapis.com", "cloudtasks.googleapis.com"] 
 }
 
 variable "firestore_required_apis" {
 	type = list
 	description = "list of required GCP services"
 	default = ["cloudresourcemanager.googleapis.com", "iam.googleapis.com", "firestore.googleapis.com"] 
-}
-
-variable "queue_required_apis" {
-	type = list
-	description = "list of required GCP services"
-	default = ["cloudresourcemanager.googleapis.com", "iam.googleapis.com", "cloudtasks.googleapis.com"] 
-}
-
-variable "tag_engine_project" {
-    type = string
-	description = "project id in which to create the cloud run services, typically the data governance project. Make sure that it matches the same variable that you put in tagengine.ini."
-	default = "tag-engine-run"
-}
-
-variable "tag_engine_region" {
-    type = string
-	description = "region in which to create the cloud run services. Make sure that it matches the same variable that you put in tagengine.ini."
-	default = "us-central1"
-}
-
-variable "firestore_project" {
-    type = string
-	description = "project id in which to create your firestore database. Make sure that it matches the same variable that you put in tagengine.ini."
-	default = "tag-engine-run"
-}
-
-variable "firestore_region" {
-    type = string
-	description = "region where to deploy your firestore database as it may not be available in your chosen tag engine region. See https://cloud.google.com/firestore/docs/locations. Make sure that it matches the same variable that you put in tagengine.ini."
-	default = "us-east1"
-}
-
-variable "firestore_database" {
-    type = string
-	description = "name of your firestore database. Make sure that it matches the same variable that you put in tagengine.ini."
-	default = "(default)"
-}
-
-variable "bigquery_project" {
-     type = string
-	 description = "project id in which your bigquery data assets reside"
-	 default = "tag-engine-develop"
-}
-
-variable "bigquery_region" {
-     type = string
-	 description = "region in which your bigquery data assets reside"
-	 default = "us-central1"
 }
 
 variable "tag_engine_sa" {
@@ -70,15 +22,63 @@ variable "tag_creator_sa" {
 	 default = "tag-creator@tag-engine-develop.iam.gserviceaccount.com"
 }
 
-variable "queue_project" {
-     type = string
-	 description = "project in which to create the task queues. Make sure that it matches the same variable in tagengine.ini"
-	 default = "tag-engine-run"
+variable "tag_engine_project" {
+    type = string
+	description = "project id in which to create the cloud run services and cloud tasks, typically the data governance project. Make sure that it matches the same variable that you put in tagengine.ini."
+	default = "tag-engine-run"
 }
 
-variable "queue_region" {
+variable "tag_engine_region" {
+    type = string
+	description = "region in which to create the cloud run services and cloud tasks. Make sure that it matches the same variable that you put in tagengine.ini."
+	default = "us-central1"
+}
+
+variable "firestore_project" {
+    type = string
+	description = "project id in which to create your firestore database. Make sure that it matches the same variable that you put in tagengine.ini."
+	default = "tag-engine-run"
+}
+
+variable "firestore_region" {
+    type = string
+	description = "region where to deploy your firestore database as it may not be available in your chosen tag engine region. See https://cloud.google.com/firestore/docs/locations. Make sure that it matches the same variable that you put in tagengine.ini."
+	default = "us-central1"
+}
+
+variable "firestore_database" {
+    type = string
+	description = "name of your firestore database. Make sure that it matches the same variable that you put in tagengine.ini."
+	default = "(default)"
+}
+
+variable "data_catalog_project" {
+    type = string
+	description = "project id in which you have created your tag templates." 
+	default = "tag-engine-run"
+}
+
+variable "data_catalog_region" {
+    type = string
+	description = "region in which you have created your tag templates." 
+	default = "us-central1"
+}
+
+variable "firestore_region" {
+    type = string
+	description = "region where to deploy your firestore database as it may not be available in your chosen tag engine region. See https://cloud.google.com/firestore/docs/locations. Make sure that it matches the same variable that you put in tagengine.ini."
+	default = "us-east1"
+}
+
+variable "bigquery_project" {
      type = string
-	 description = "region in which to create the task queues. Make sure that it matches the same variable in tagengine.ini"
+	 description = "project id in which your bigquery data assets reside"
+	 default = "tag-engine-develop"
+}
+
+variable "bigquery_region" {
+     type = string
+	 description = "region in which your bigquery data assets reside"
 	 default = "us-central1"
 }
 

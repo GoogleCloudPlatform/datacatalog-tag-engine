@@ -25,17 +25,17 @@ resource "google_project_iam_custom_role" "policy_tag_reader" {
 # ************************************************** #
 
 resource "google_project_iam_binding" "enqueuer" {
-  project = var.queue_project
+  project = var.tag_engine_project
   role    = "roles/cloudtasks.enqueuer"
   members = ["serviceAccount:${var.tag_engine_sa}"]
-  depends_on = [google_project_service.queue_project]
+  depends_on = [google_project_service.tag_engine_project]
 }
 
 resource "google_project_iam_binding" "taskRunner" {
-  project = var.queue_project
+  project = var.tag_engine_project
   role    = "roles/cloudtasks.taskRunner"
   members = ["serviceAccount:${var.tag_engine_sa}"]
-  depends_on = [google_project_service.queue_project]
+  depends_on = [google_project_service.tag_engine_project]
 }
 	 
 resource "google_project_iam_binding" "user" {
@@ -106,17 +106,17 @@ resource "google_project_iam_binding" "tagTemplateViewer" {
 }
 
 resource "google_project_iam_binding" "viewer" {
-  project = var.tag_engine_project
+  project = var.data_catalog_project
   role    = "roles/datacatalog.viewer"
   members = ["serviceAccount:${var.tag_creator_sa}"]
   depends_on = [google_project_service.tag_engine_project]
 }
 
 resource "google_project_iam_binding" "dataEditor" {
-  project = var.tag_engine_project
+  project = var.bigquery_project
   role    = "roles/bigquery.dataEditor"
   members = ["serviceAccount:${var.tag_creator_sa}"]
-  depends_on = [google_project_service.tag_engine_project]
+  depends_on = [google_project_service.bigquery_project]
 }
 
 resource "google_project_iam_binding" "jobUser" {
@@ -127,10 +127,10 @@ resource "google_project_iam_binding" "jobUser" {
 }
 	
 resource "google_project_iam_binding" "metadataViewer" {
-  project = var.tag_engine_project
+  project = var.bigquery_project
   role    = "roles/bigquery.metadataViewer"
   members = ["serviceAccount:${var.tag_creator_sa}"]
-  depends_on = [google_project_service.tag_engine_project]
+  depends_on = [google_project_service.bigquery_project]
 }
 
 resource "google_project_iam_binding" "loggingViewer" {
@@ -148,7 +148,7 @@ resource "google_project_iam_binding" "BigQuerySchemaUpdate" {
 }
 
 resource "google_project_iam_binding" "PolicyTagReader" {
-  project = var.tag_engine_project
+  project = var.data_catalog_project
   role    = "projects/${var.tag_engine_project}/roles/PolicyTagReader"
   members = ["serviceAccount:${var.tag_creator_sa}"]
   depends_on = [google_project_iam_custom_role.policy_tag_reader]
@@ -208,5 +208,5 @@ module "storage_bucket-iam-bindings" {
       "serviceAccount:${var.tag_creator_sa}",
     ]
   }
-  depends_on = [google_project_service.tag_engine_project]
+  depends_on = [google_project_service.data_catalog_project]
 }

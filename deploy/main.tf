@@ -24,7 +24,15 @@ resource "google_project_service" "firestore_project" {
   disable_dependent_services = true
 }
 
-resource "google_project_service" "queue_project" {
+resource "google_project_service" "bigquery_project" {
+  count   = length(var.required_apis)
+  project = var.firestore_project
+  service = var.firestore_required_apis[count.index]
+
+  disable_dependent_services = true
+}
+
+resource "google_project_service" "data_catalog_project" {
   count   = length(var.required_apis)
   project = var.queue_project
   service = var.queue_required_apis[count.index]
