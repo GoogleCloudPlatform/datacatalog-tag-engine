@@ -114,7 +114,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	python create_template.py $DATA_CATALOG_PROJECT $DATA_CATALOG_REGION data_governance.yaml 
 	```
 
-	The previous command creates the `data_governance` tag template in the $DATA_CATALOG_PROJECT and $DATA_CATALOG_REGION. 
+	The previous command creates the `data_governance` tag template in the `$DATA_CATALOG_PROJECT` and `$DATA_CATALOG_REGION`. 
 <br>
 
 2. Grant permissions to invoker account (user or service)
