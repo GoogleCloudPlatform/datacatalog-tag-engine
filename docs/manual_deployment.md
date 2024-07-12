@@ -30,9 +30,9 @@ This procedure deploys the Tag Engine v2 components by hand. The steps are carri
 	export TAG_CREATOR_SA="<ID>@<DATA_CATALOG_PROJECT>.iam.gserviceaccount.com"   # email of your Tag creator service account for creating the metadata tags
 	```
 
-<b>The key benefit of decoupling TAG_ENGINE_SA from TAG_CREATOR_SA is to limit the scope of what a client is allowed to tag.</b> More specifically, when a client submits a request to Tag Engine, Tag Engine checks to see if they are authorized to use TAG_CREATOR_SA before processing their request. Note that a Tag Engine client can either be a user identity or a service account.  
+<b>The key benefit of decoupling `TAG_ENGINE_SA` from `TAG_CREATOR_SA` is to limit the scope of what a client is allowed to tag.</b> More specifically, when a client submits a request to Tag Engine, Tag Engine checks to see if they are authorized to use TAG_CREATOR_SA before processing their request. Note that a Tag Engine client can either be a user identity or a service account.  
 
-If multiple teams want to share a single instance of Tag Engine and they own different assets in BigQuery, they can each have their own TAG_CREATOR_SA to prevent one team from tagging another team's assets. TAG_CREATOR_SA is set in the `tagengine.ini` file (next step) with the default account for the entire Tag Engine instance. Tag Engine clients can override the default TAG_CREATOR_SA when creating tag configurations by specifying a service_account attribute in the json request (as shown [here](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/tests/configs/dynamic_table/dynamic_dataset_non_default_service_account.json)).  <br><br>   
+If multiple teams want to share a single instance of Tag Engine and they own different assets in BigQuery, they can each have their own `TAG_CREATOR_SA` to prevent one team from tagging another team's assets. `TAG_CREATOR_SA` is set in the `tagengine.ini` file (next step) with the default account for the entire Tag Engine instance. Tag Engine clients can override the default `TAG_CREATOR_SA` when creating tag configurations by specifying a service_account attribute in the json request (as shown [here](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/tests/configs/dynamic_table/dynamic_dataset_non_default_service_account.json)).  <br><br>   
 
 
 3. Create an OAuth client ID for your Tag Engine web application: 
@@ -103,7 +103,7 @@ If multiple teams want to share a single instance of Tag Engine and they own dif
     	```
 <br> 
 
-6. Enable the required APIs in QUEUE_PROJECT and create two cloud task queues. The first queue is used to queue the entire job while the second is used to queue individual work items. If a task fails, a second one will get created due to `max-attempts=2`:
+6. Enable the required APIs in `$QUEUE_PROJECT` and create two cloud task queues. The first queue is used to queue the entire job while the second is used to queue individual work items. If a task fails, a second one will get created due to `max-attempts=2`:
 
 	```
  	gcloud config set project $QUEUE_PROJECT
@@ -141,7 +141,6 @@ If multiple teams want to share a single instance of Tag Engine and they own dif
 
 	```
 	gcloud config set project $BIGQUERY_PROJECT
- 
  	gcloud iam roles create BigQuerySchemaUpdate \
 	 	--project $BIGQUERY_PROJECT \
 	 	--title BigQuerySchemaUpdate \
@@ -149,7 +148,6 @@ If multiple teams want to share a single instance of Tag Engine and they own dif
 	 	--permissions bigquery.tables.setCategory
 
 	gcloud config set project $DATA_CATALOG_PROJECT
- 
  	gcloud iam roles create PolicyTagReader \
 		--project $DATA_CATALOG_PROJECT \
 		--title PolicyTagReader \
@@ -159,7 +157,7 @@ If multiple teams want to share a single instance of Tag Engine and they own dif
 <br> 
 	
 	
-9. Grant the required IAM roles to the service accounts `TAG_ENGINE_SA` and `TAG_CREATOR_SA`:
+9. Grant the required IAM roles to the service accounts `$TAG_ENGINE_SA` and `$TAG_CREATOR_SA`:
 
 	```
 	gcloud projects add-iam-policy-binding $QUEUE_PROJECT \
@@ -224,7 +222,7 @@ If multiple teams want to share a single instance of Tag Engine and they own dif
 		--role=projects/$BIGQUERY_PROJECT/roles/BigQuerySchemaUpdate	   
 	```
 
-10. Grant the necessary IAM roles to TAG_ENGINE_SA:
+10. Grant the necessary IAM roles to `$TAG_ENGINE_SA`:
 
 	```
 	gcloud iam service-accounts add-iam-policy-binding $TAG_ENGINE_SA \
@@ -242,7 +240,7 @@ If multiple teams want to share a single instance of Tag Engine and they own dif
 
 11.  Optional step needed only for creating tags from CSV files:
 
-	Note: If you plan to create tags from CSV files, you also need to ensure that TAG_CREATOR_SA has the 
+	Note: If you plan to create tags from CSV files, you also need to ensure that `$TAG_CREATOR_SA` has the 
 	`storage.buckets.get` permission on the GCS bucket where the CSV files are stored. To do that, you can create a custom role with 
 	this permission or assign the `storage.legacyBucketReader` role:
 
@@ -256,7 +254,7 @@ If multiple teams want to share a single instance of Tag Engine and they own dif
 
 12. Build and deploy the Cloud Run services:
 
-	There is one Cloud Run service for the API (tag-engine-api) and another for the UI (tag-engine-ui). They are both built from the same code base. 	You can build either one or the other, depending on your needs. 
+	There is one Cloud Run service for the API (`tag-engine-api`) and another for the UI (`tag-engine-ui`). They are both built from the same code base. 	You can build either one or the other, depending on your needs. 
 
 	```
 	gcloud run deploy tag-engine-api \
@@ -286,14 +284,14 @@ If multiple teams want to share a single instance of Tag Engine and they own dif
 
 11. Set the `SERVICE_URL` environment variable:
 
-	If you are deploying the API, you also need to set the environment variable SERVICE_URL on tag-engine-api:
+	If you are deploying the API, you also need to set the environment variable SERVICE_URL on `tag-engine-api`:
 
 	```
 	export API_SERVICE_URL=`gcloud run services describe tag-engine-api --format="value(status.url)"`
 	gcloud run services update tag-engine-api --set-env-vars SERVICE_URL=$API_SERVICE_URL
 	```
 
-	If you are deploying the UI, you also need to set the environment variable SERVICE_URL on tag-engine-ui:
+	If you are deploying the UI, you also need to set the environment variable SERVICE_URL on `tag-engine-ui`:
 
 	```
 	export UI_SERVICE_URL=`gcloud run services describe tag-engine-ui --format="value(status.url)"`
