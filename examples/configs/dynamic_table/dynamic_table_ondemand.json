@@ -1,6 +1,6 @@
 {
     "template_id": "data_governance",
-    "template_project": "tag-engine-run",
+    "template_project": "dgtoolkit",
     "template_region": "us-central1",
     "fields": [
         {
@@ -12,7 +12,7 @@
             "query_expression": "select 'CONTENT'"
         }
     ],
-    "included_tables_uris": "bigquery/project/warehouse-337221/dataset/cities_311/*",
+    "included_tables_uris": "bigquery/project/dgtoolkit/dataset/tickets/*",
     "excluded_tables_uris": "",
     "refresh_mode": "ON_DEMAND",
     "tag_history": false

@@ -31,18 +31,18 @@ class TaskManager:
     task_handler_uri = task handler uri in the Flask app hosted by Cloud Run 
     """
     def __init__(self,
-                cloud_run_sa,
-                queue_project,
-                queue_region,
-                queue_name, 
+                tag_engine_sa,
+                tag_engine_project,
+                tag_engine_region,
+                tag_engine_queue, 
                 task_handler_uri,
                 db_project,
                 db_name):
 
-        self.cloud_run_sa = cloud_run_sa
-        self.queue_project = queue_project
-        self.queue_region = queue_region
-        self.queue_name = queue_name
+        self.tag_engine_sa = tag_engine_sa
+        self.tag_engine_project = tag_engine_project
+        self.tag_engine_region = tag_engine_region
+        self.tag_engine_queue = tag_engine_queue
         self.task_handler_uri = task_handler_uri
         
         self.db = firestore.Client(project=db_project, database=db_name, client_info=ClientInfo(user_agent=USER_AGENT))
@@ -241,7 +241,7 @@ class TaskManager:
                    'tag_invoker_account': tag_invoker_account}
         
         client = tasks_v2.CloudTasksClient()
-        parent = client.queue_path(self.queue_project, self.queue_region, self.queue_name)
+        parent = client.queue_path(self.tag_engine_project, self.tag_engine_region, self.tag_engine_queue)
                 
         task = {
             'name': parent + '/tasks/' + task_id,
@@ -251,7 +251,7 @@ class TaskManager:
                 'url': self.task_handler_uri,
                 'headers': {'content-type': 'application/json'},
                 'body': json.dumps(payload).encode(),
-                'oidc_token': {'service_account_email': self.cloud_run_sa, 'audience': self.task_handler_uri}
+                'oidc_token': {'service_account_email': self.tag_engine_sa, 'audience': self.task_handler_uri}
             }
         }
         print('task request:', task)
@@ -277,7 +277,7 @@ class TaskManager:
                    'tag_invoker_account': tag_invoker_account}
         
         client = tasks_v2.CloudTasksClient()
-        parent = client.queue_path(self.queue_project, self.queue_region, self.queue_name)
+        parent = client.queue_path(self.tag_engine_project, self.tag_engine_region, self.tag_engine_queue)
         
         task = {
             'name': parent + '/tasks/' + task_id,
@@ -287,7 +287,7 @@ class TaskManager:
                 'url': self.task_handler_uri,
                 'headers': {'content-type': 'application/json'},
                 'body': json.dumps(payload).encode(),
-                'oidc_token': {'service_account_email': self.cloud_run_sa, 'audience': self.task_handler_uri}
+                'oidc_token': {'service_account_email': self.tag_engine_sa, 'audience': self.task_handler_uri}
             }
         }
         

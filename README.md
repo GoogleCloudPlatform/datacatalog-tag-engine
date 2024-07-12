@@ -45,15 +45,13 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 3. Open `datacatalog-tag-engine/tagengine.ini` and set the following variables in this file: 
 
 	```
+	TAG_ENGINE_SA
+	TAG_CREATOR_SA
 	TAG_ENGINE_PROJECT
 	TAG_ENGINE_REGION
 	FIRESTORE_PROJECT
 	FIRESTORE_REGION
-	FIRESTORE_DATABASE
-	QUEUE_PROJECT
-	QUEUE_REGION  
-	TAG_ENGINE_SA
-	TAG_CREATOR_SA
+	FIRESTORE_DATABASE 
 	BIGQUERY_REGION
 	ENABLE_AUTH
 	OAUTH_CLIENT_CREDENTIALS
@@ -113,10 +111,10 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	```
 	git clone https://github.com/GoogleCloudPlatform/datacatalog-templates.git 
 	cd datacatalog-templates
-	python create_template.py $TAG_ENGINE_PROJECT $TAG_ENGINE_REGION data_governance.yaml 
+	python create_template.py $DATA_CATALOG_PROJECT $DATA_CATALOG_REGION data_governance.yaml 
 	```
 
-	The previous command creates the `data_governance` tag template in the $TAG_ENGINE_PROJECT and $TAG_ENGINE_REGION. 
+	The previous command creates the `data_governance` tag template in the $DATA_CATALOG_PROJECT and $DATA_CATALOG_REGION. 
 <br>
 
 2. Grant permissions to invoker account (user or service)
@@ -126,17 +124,19 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	If you'll be invoking the Tag Engine API with a user account, authorize your user account as follows:
 
 	```
+	gcloud auth login
+	
 	export INVOKER_USER_ACCOUNT="username@example.com"
 
 	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-		--member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountUser
+	--member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountUser --project=$DATA_CATALOG_PROJECT
 
 	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-		--member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountTokenCreator 
+	--member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountTokenCreator --project=$DATA_CATALOG_PROJECT 
 
-	gcloud run services add-iam-policy-binding tag-engine-api 
-		--member=user:$INVOKER_USER_ACCOUNT --role=roles/run.invoker \
-		--region=$TAG_ENGINE_REGION	
+	gcloud run services add-iam-policy-binding tag-engine-api \
+	--member=user:$INVOKER_USER_ACCOUNT --role=roles/run.invoker \
+	--project=$TAG_ENGINE_PROJECT --region=$TAG_ENGINE_REGION 
 	```
 
 	If you are invoking the Tag Engine API with a service account, authorize your service account as follows:
