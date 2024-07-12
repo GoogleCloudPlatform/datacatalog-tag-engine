@@ -21,10 +21,13 @@ Follow the steps below to deploy Tag Engine with Terraform.
 Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/cloud-run/docs/manual_deployment.md) instead of running the Terraform.
 
 <br>
+
 1. Create (or designate) two service accounts: <br><br>
 
    - A service account that runs the Tag Engine Cloud Run services (both API and UI). This account is referred to as `TAG_ENGINE_SA`. 
    - A service account that sources the metadata from BigQuery or Cloud Storage, and then performs the tagging in Data Catalog. This account is referred to as `TAG_CREATOR_SA`. <br>
+
+   See [Creating Service Accounts](https://cloud.google.com/iam/docs/service-accounts-create) for more details.
 
    Why do we need two different service accounts? The key benefit of decoupling them is to allow individual teams to have their own Tag Creator SA. This account has permissions to read specific data assets in BigQuery and Cloud Storage. For example, the Finance team can have a different Tag Creator SA from the Finance team if they own different data assets. The Tag Engine admin then links each invoker account (either service or user) to a specific Tag Creator SA. Invoker accounts call Tag Engine through either the API or UI. This allows the Tag Engine admin to run and maintain a single instance of Tag Engine, as opposed to one instance per team. <br><br>
 
@@ -42,7 +45,9 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 
    Note: The client secret file is required for establishing the authorization flow from the UI.  
 
-3. Open `datacatalog-tag-engine/tagengine.ini` and set the following variables in this file: 
+3. Make a copy of `datacatalog-tag-engine/tagengine.ini.tpl` naming the new copy `datacatalog-tag-engine/tagengine.ini`.
+
+4. Open `datacatalog-tag-engine/tagengine.ini` and set the following variables in this file: 
 
 	```
 	TAG_ENGINE_PROJECT
@@ -71,14 +76,17 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 
    - The `tagengine.ini` file also has two additional variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. These determine the names of the cloud task queues. You do not need to change them. If you change their name, you need to also change them in the `deploy/variables.tf`.<br><br> 
 
+5. Create a new GCS bucket for CSV imports. Remember GCS bucket names are globally unique. 
+	For example: `gsutil mb gs://$(gcloud config get-value project)-csv-import`
 
-4. Set the Terraform variables:
+6. Set the Terraform variables:
 
    Open `deploy/variables.tf` and change the default value of each variable.<br>
    Save the file.<br><br> 
+   Alternatively, create a new file, named `deploy/terrform.tfvars` and specify your variables values there.  
 
 
-5. Run the Terraform scripts:
+7. Run the Terraform scripts:
 
 	```
 	cd deploy
@@ -89,21 +97,6 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 
 	When the Terraform finishes running, it should output two URIs. One for the API service (which looks like this https://tag-engine-api-xxxxxxxxxxxxx.a.run.app) and another for the UI service (which looks like this https://tag-engine-ui-xxxxxxxxxxxxx.a.run.app). <br><br>
 
-
-6. Set the authorized redirect URI and add authorized users:
-
-    - Re-open [API Credentials](https://console.cloud.google.com/apis/credentials)<br>
-
-    - Under OAuth 2.0 Client IDs, edit the `tag-engine-oauth` entry which you created earlier. <br>
-
-	- Under Authorized redirect URIs, add the URI:
-      https://tag-engine-ui-xxxxxxxxxxxxx.a.run.app/oauth2callback
-	
-	- Replace xxxxxxxxxxxxx in the URI with the actual value from the Terraform. This URI will be referred to below as the `UI_SERVICE_URI`.
-
-    - Open the OAuth consent screen page and under the Test users section, click on add users.
-
-    - Add the email address of each user for which you would like to grant access to the Tag Engine UI. 
 
 <br><br>
 ### <a name="testa"></a> Part 2: Testing your Tag Engine API setup
@@ -134,7 +127,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
 		--member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountTokenCreator 
 
-	gcloud run services add-iam-policy-binding tag-engine-api 
+	gcloud run services add-iam-policy-binding tag-engine-api \
 		--member=user:$INVOKER_USER_ACCOUNT --role=roles/run.invoker \
 		--region=$TAG_ENGINE_REGION	
 	```
@@ -176,6 +169,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	For now, open `examples/configs/dynamic_table/dynamic_table_ondemand.json` and update the project and dataset values in this file to match your Tag Engine and BigQuery environments.  
 
 	```
+    cd <PATH_TO_TAG_ENGINE_PROJECT>
 	export TAG_ENGINE_URL=$SERVICE_URL
 
 	curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config -d @examples/configs/dynamic_table/dynamic_table_ondemand.json \
@@ -250,25 +244,40 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 
 ### <a name="testb"></a> Part 3: Testing your Tag Engine UI Setup
 
-1. Grant permissions to your invoker user account(s):
+1. Set the authorized redirect URI and add authorized users:
 
-	```
-	export INVOKER_USER_ACCOUNT="username@example.com"`
+    - Re-open [API Credentials](https://console.cloud.google.com/apis/credentials)<br>
 
-	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-		--member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountUser
-	```
+    - Under OAuth 2.0 Client IDs, edit the `tag-engine-oauth` entry which you created earlier. <br>
 
-2. Open a browser window
-3. Navigate to `UI_SERVICE_URI` 
-4. You should be prompted to sign in with Google
-5. Once signed in, you will be redirected to the Tag Engine home page (i.e. `UI_SERVICE_URI`/home)
-6. Enter your template id, template project, and template region
-7. Enter your `TAG_CREATOR_SA` as the service account
-8. Click on `Search Tag Templates` to continue to the next step 
-9. Create a tag configuration by selecting one of the options from this page. 
+    - Under Authorized redirect URIs, add the URI:
+      https://tag-engine-ui-xxxxxxxxxxxxx.a.run.app/oauth2callback
+	
+    - Replace xxxxxxxxxxxxx in the URI with the actual value from the Terraform. This URI will be referred to below as the `UI_SERVICE_URI`.
 
-	If you encouter a 500 error, open the Cloud Run logs for `tag-engine-ui` to troubleshoot. 
+    - Open the OAuth consent screen page and under the Test users section, click on add users.
+
+    - Add the email address of each user for which you would like to grant access to the Tag Engine UI. 
+
+2. Grant permissions to your invoker user account(s):
+
+    ```
+    export INVOKER_USER_ACCOUNT="username@example.com"`
+
+    gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
+        --member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountUser
+    ```
+
+3. Open a browser window
+4. Navigate to `UI_SERVICE_URI` 
+5. You should be prompted to sign in with Google
+6. Once signed in, you will be redirected to the Tag Engine home page (i.e. `UI_SERVICE_URI`/home)
+7. Enter your template id, template project, and template region
+8. Enter your `TAG_CREATOR_SA` as the service account
+9. Click on `Search Tag Templates` to continue to the next step 
+10. Create a tag configuration by selecting one of the options from this page. 
+
+     If you encounter a 500 error, open the Cloud Run logs for `tag-engine-ui` to troubleshoot. 
 
 <br>
 

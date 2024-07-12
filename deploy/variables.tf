@@ -43,7 +43,7 @@ variable "firestore_region" {
 variable "firestore_database" {
     type = string
 	description = "name of your firestore database. Make sure that it matches the same variable that you put in tagengine.ini."
-	default = "(default)"
+	default = "default"
 }
 
 variable "bigquery_project" {
