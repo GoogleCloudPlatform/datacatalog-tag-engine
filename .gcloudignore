@@ -19,6 +19,10 @@
 # Ignore files specified in the .gitignore (keep the leading '#'):
 #!include:.gitignore
 
+# To explicitly include important files that are in `.gitignore`:
+!te_client_secret.json
+!tagengine.ini
+
 # Python pycache:
 __pycache__/
 # Ignored by the build system
