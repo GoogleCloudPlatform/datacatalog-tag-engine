@@ -4,33 +4,35 @@ This procedure deploys the Tag Engine v2 components by hand. The steps are carri
 
 1. Create (or designate) two service accounts:
 
-   - A service account that runs the Tag Engine Cloud Run service, referred to below as `TAG_ENGINE_SA`. 
-   - A service account that performs the tagging in Data Catalog, and sourcing the contents of those tags from BigQuery, referred to below as `TAG_CREATOR_SA`. <br><br>
+   - A service account that runs the Tag Engine Cloud Run service, referred to below as `TAG_ENGINE_SA`. You should create this SA in the same project as where you are going to run the Cloud Run service(s) for Tag Engine. 
+   - A service account that performs the tagging in Data Catalog, and sourcing the contents of those tags from BigQuery, referred to below as `TAG_CREATOR_SA`. You should create this service account in your Data Catalog project. <br><br>
 
 
 2. Define the environment variables to be used throughout the deployment:
 
 	```
-	export TAG_ENGINE_PROJECT="<PROJECT>"  # GCP project id for running the Tag Engine service
-	export TAG_ENGINE_REGION="<REGION>"    # GCP region for running Tag Engine service, e.g. us-central1
+	export CLOUD_RUN_PROJECT="<PROJECT>"  # GCP project id for running the Tag Engine Cloud Run service
+	export CLOUD_RUN_REGION="<REGION>"    # GCP region where the Tag Engine Cloud Run service is running, e.g. us-central1
 
 	export FIRESTORE_PROJECT="<PROJECT>"   # GCP project id for running Firestore
-	export FIRESTORE_REGION="<REGION>"     # GCP region for the Firestore database e.g. us-central1
-	export FIRESTORE_DATABASE="(default)"  # Name of the firestore database
+	export FIRESTORE_REGION="<REGION>"     # GCP region of your Firestore database e.g. us-central1
+	export FIRESTORE_DATABASE="(default)"  # The name of your Firestore database
 
 	export QUEUE_PROJECT="<PROJECT>"       # GCP project id for creating the task queues
 	export QUEUE_REGION="<REGION>"         # GCP region for creating the task queues
 
-	export BIGQUERY_PROJECT="<PROJECT>"    # GCP project used by BigQuery data assets, can be equal to TAG_ENGINE_PROJECT. This variable is only used for setting IAM permissions in steps 10 and 11 
+ 	export DATA_CATALOG_PROJECT="<PROJECT>"  # GCP project id where you have created your tag templates
+
+	export BIGQUERY_PROJECT="<PROJECT>"    # GCP project used by BigQuery data assets
 	export BIGQUERY_REGION="<REGION>"      # GCP region in which data assets in BigQuery are stored, e.g. us-central1
 
-	export TAG_ENGINE_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"    # email of your Cloud Run service account for running Tag Engine service
-	export TAG_CREATOR_SA="<ID>@<PROJECT>.iam.gserviceaccount.com"   # email of your Tag creator service account for running BQ queries and creating DC tags
+	export TAG_ENGINE_SA="<ID>@<CLOUD_RUN_PROJECT>.iam.gserviceaccount.com"       # email of your Cloud Run service account for running the Tag Engine Cloud Run service(s)
+	export TAG_CREATOR_SA="<ID>@<DATA_CATALOG_PROJECT>.iam.gserviceaccount.com"   # email of your Tag creator service account for creating the metadata tags
 	```
 
-<b>The key benefit of decoupling `TAG_ENGINE_SA` from `TAG_CREATOR_SA` is to limit the scope of what a Tag Engine client is allowed to tag.</b> More specifically, when a client submits a request to Tag Engine, Tag Engine checks to see if they are authorized to use `TAG_CREATOR_SA` before processing their request. A Tag Engine client can either be a user identity or a service account.  
+<b>The key benefit of decoupling TAG_ENGINE_SA from TAG_CREATOR_SA is to limit the scope of what a client is allowed to tag.</b> More specifically, when a client submits a request to Tag Engine, Tag Engine checks to see if they are authorized to use TAG_CREATOR_SA before processing their request. Note that a Tag Engine client can either be a user identity or a service account.  
 
-If multiple teams want to share an instance of Tag Engine and they own different assets in BigQuery, they can each have their own `TAG_CREATOR_SA` to prevent one team from tagging another team's assets. `TAG_CREATOR_SA` is set in the `tagengine.ini` file (next step) with the default account for the entire Tag Engine instance. Tag Engine clients can override the default `TAG_CREATOR_SA` when creating tag configurations by specifying a `service_account` attribute in the json request (as shown [here](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/tests/configs/dynamic_table/dynamic_dataset_non_default_service_account.json)).  <br><br>   
+If multiple teams want to share a single instance of Tag Engine and they own different assets in BigQuery, they can each have their own TAG_CREATOR_SA to prevent one team from tagging another team's assets. TAG_CREATOR_SA is set in the `tagengine.ini` file (next step) with the default account for the entire Tag Engine instance. Tag Engine clients can override the default TAG_CREATOR_SA when creating tag configurations by specifying a service_account attribute in the json request (as shown [here](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/tests/configs/dynamic_table/dynamic_dataset_non_default_service_account.json)).  <br><br>   
 
 
 3. Create an OAuth client ID for your Tag Engine web application: 
@@ -47,8 +49,8 @@ If multiple teams want to share an instance of Tag Engine and they own different
 4. Open `tagengine.ini` and set the following variables in this file. 
 
 	```
-	TAG_ENGINE_PROJECT
-	TAG_ENGINE_REGION
+	CLOUD_RUN_PROJECT
+	CLOUD_RUN_REGION
 	FIRESTORE_PROJECT
 	FIRESTORE_REGION
 	FIRESTORE_DATABASE
@@ -75,26 +77,37 @@ If multiple teams want to share an instance of Tag Engine and they own different
    - The `tagengine.ini` file also has two additional variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. These determine the names of the cloud tasks queues. You do not need to change them. The queues are created in step 6 of this setup.  <br><br> 
 
 
-5. Enable the required Google Cloud APIs in your TAG_ENGINE_PROJECT:
-
-	`gcloud config set project $TAG_ENGINE_PROJECT`
+5. Enable the required Google Cloud APIs:
 
 	```
+	gcloud config set project $CLOUD_RUN_PROJECT
 	gcloud services enable iam.googleapis.com
 	gcloud services enable cloudresourcemanager.googleapis.com
-	gcloud services enable datacatalog.googleapis.com
 	gcloud services enable artifactregistry.googleapis.com
 	gcloud services enable cloudbuild.googleapis.com
 	```
+
+	```
+	gcloud config set project $DATA_CATALOG_PROJECT 
+ 	gcloud services enable datacatalog.googleapis.com
+ 	```
+
+  	```
+   	gcloud config set project $QUEUE_PROJECT
+   	gcloud services enable cloudtasks.googleapis.com
+   	```
+
+   	```
+	gcloud config set project $FIRESTORE_PROJECT
+	gcloud services enable firestore.googleapis.com
+    	```
 <br> 
 
 6. Enable the required APIs in QUEUE_PROJECT and create two cloud task queues. The first queue is used to queue the entire job while the second is used to queue individual work items. If a task fails, a second one will get created due to `max-attempts=2`:
 
 	```
-	gcloud config set project $QUEUE_PROJECT
-	
-	gcloud services enable cloudtasks.googleapis.com
-	
+ 	gcloud config set project $QUEUE_PROJECT
+ 
 	gcloud tasks queues create tag-engine-injector-queue \
 		--location=$QUEUE_REGION --max-attempts=2 --max-concurrent-dispatches=100
 
@@ -103,15 +116,11 @@ If multiple teams want to share an instance of Tag Engine and they own different
 	```
 <br>
 
-7. Enable the required APIs in FIRESTORE_PROJECT, create the Firestore database, and create the Firestore indexes. 
+7. Create the Firestore database and indexes. 
 
 	```
 	gcloud config set project $FIRESTORE_PROJECT
-	
-	gcloud services enable firestore.googleapis.com
-	
 	gcloud firestore databases create --database=$FIRESTORE_DATABASE --project=$FIRESTORE_PROJECT --location=$FIRESTORE_REGION
-	
 	```
 	
 	If you're not able to create the Firestore database in your preferred region, consult [the available](https://cloud.google.com/firestore/docs/locations) regions and choose the nearest region to what you set `TAG_ENGINE_REGION`. <br><br> 
@@ -123,7 +132,7 @@ If multiple teams want to share an instance of Tag Engine and they own different
 	cd ..
 	```
 
-    Creating the indexes takes ~10 minutes. As the indexes get created, you will see them show up in the Firestore console. There should be about 36 indexes in total. <br><br>
+    	Creating the indexes can take up to ~10 minutes. As the indexes get created, you will see them show up in the Firestore console. There should be about 36 indexes in total. <br><br>
 
 	
 <br>
@@ -131,14 +140,18 @@ If multiple teams want to share an instance of Tag Engine and they own different
 8. Create two custom IAM roles which are required by `SENSITIVE_COLUMN_CONFIG`. If you are not planning to use this configuration type, you can skip this step. This configuration type creates policy tags on sensitive columns:
 
 	```
-	gcloud iam roles create BigQuerySchemaUpdate \
+	gcloud config set project $BIGQUERY_PROJECT
+ 
+ 	gcloud iam roles create BigQuerySchemaUpdate \
 	 	--project $BIGQUERY_PROJECT \
 	 	--title BigQuerySchemaUpdate \
 	 	--description "Update table schema with policy tags" \
 	 	--permissions bigquery.tables.setCategory
 
-	gcloud iam roles create PolicyTagReader \
-		--project $TAG_ENGINE_PROJECT \
+	gcloud config set project $DATA_CATALOG_PROJECT
+ 
+ 	gcloud iam roles create PolicyTagReader \
+		--project $DATA_CATALOG_PROJECT \
 		--title PolicyTagReader \
 		--description "Read Policy Tag Taxonomy" \
 		--permissions datacatalog.taxonomies.get,datacatalog.taxonomies.list
@@ -146,11 +159,9 @@ If multiple teams want to share an instance of Tag Engine and they own different
 <br> 
 	
 	
-9. Grant the required IAM roles and policy bindings for the accounts `TAG_ENGINE_SA` and `TAG_CREATOR_SA`:
+9. Grant the required IAM roles to the service accounts `TAG_ENGINE_SA` and `TAG_CREATOR_SA`:
 
 	```
-	gcloud config set project $TAG_ENGINE_PROJECT
- 
 	gcloud projects add-iam-policy-binding $QUEUE_PROJECT \
 		--member=serviceAccount:$TAG_ENGINE_SA \
 		--role=roles/cloudtasks.enqueuer
@@ -158,7 +169,7 @@ If multiple teams want to share an instance of Tag Engine and they own different
 	gcloud projects add-iam-policy-binding $QUEUE_PROJECT \
 		--member=serviceAccount:$TAG_ENGINE_SA \
 		--role=roles/cloudtasks.taskRunner
-	
+
 	gcloud projects add-iam-policy-binding $FIRESTORE_PROJECT \
 		--member=serviceAccount:$TAG_ENGINE_SA \
 		--role=roles/datastore.user
@@ -166,30 +177,35 @@ If multiple teams want to share an instance of Tag Engine and they own different
 	gcloud projects add-iam-policy-binding $FIRESTORE_PROJECT \
 		--member=serviceAccount:$TAG_ENGINE_SA \
 		--role=roles/datastore.indexAdmin  
-	
+
 	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
 		--member=serviceAccount:$TAG_ENGINE_SA \
-		--role=roles/run.invoker 
-	```
+		--role=roles/run.invoker
 
 	```
- 	gcloud config set project $TAG_ENGINE_PROJECT
- 
-	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+ 	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+		--member=serviceAccount:$TAG_CREATOR_SA \
+		--role=roles/logging.viewer
+	
+	gcloud projects add-iam-policy-binding $DATA_CATALOG_PROJECT \
 		--member=serviceAccount:$TAG_CREATOR_SA \
 		--role=roles/datacatalog.tagEditor
 
-	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+	gcloud projects add-iam-policy-binding $DATA_CATALOG_PROJECT \
 		--member=serviceAccount:$TAG_CREATOR_SA \
 		--role=roles/datacatalog.tagTemplateUser
 	
-	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+	gcloud projects add-iam-policy-binding $DATA_CATALOG_PROJECT \
 		--member=serviceAccount:$TAG_CREATOR_SA \
 		--role=roles/datacatalog.tagTemplateViewer
 
-	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
+	gcloud projects add-iam-policy-binding $DATA_CATALOG_PROJECT \
 		--member=serviceAccount:$TAG_CREATOR_SA \
 		--role=roles/datacatalog.viewer
+
+	gcloud projects add-iam-policy-binding $DATA_CATALOG_PROJECT \
+		--member=serviceAccount:$TAG_CREATOR_SA \
+		--role=projects/$DATA_CATALOG_PROJECT/roles/PolicyTagReader
 
 	gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
 		--member=serviceAccount:$TAG_CREATOR_SA \
@@ -202,37 +218,31 @@ If multiple teams want to share an instance of Tag Engine and they own different
 	gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
 		--member=serviceAccount:$TAG_CREATOR_SA \
 		--role=roles/bigquery.metadataViewer
-
-	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
-		--member=serviceAccount:$TAG_CREATOR_SA \
-		--role=roles/logging.viewer
-
-	gcloud projects add-iam-policy-binding $TAG_ENGINE_PROJECT \
-		--member=serviceAccount:$TAG_CREATOR_SA \
-		--role=projects/$TAG_ENGINE_PROJECT/roles/PolicyTagReader 
-
-	gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
+ 
+ 	gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
 		--member=serviceAccount:$TAG_CREATOR_SA \
 		--role=projects/$BIGQUERY_PROJECT/roles/BigQuerySchemaUpdate	   
 	```
 
+10. Grant the necessary IAM roles to TAG_ENGINE_SA:
+
 	```
 	gcloud iam service-accounts add-iam-policy-binding $TAG_ENGINE_SA \
-		--member=serviceAccount:$TAG_ENGINE_SA --role roles/iam.serviceAccountUser
+		--member=serviceAccount:$TAG_ENGINE_SA --role roles/iam.serviceAccountUser --project $CLOUD_RUN_PROJECT 
 	
 	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-		--member=serviceAccount:$TAG_ENGINE_SA --role=roles/iam.serviceAccountUser
+		--member=serviceAccount:$TAG_ENGINE_SA --role=roles/iam.serviceAccountUser --project $CLOUD_RUN_PROJECT
 
 	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-	    --member=serviceAccount:$TAG_ENGINE_SA --role=roles/iam.serviceAccountViewer
+	    --member=serviceAccount:$TAG_ENGINE_SA --role=roles/iam.serviceAccountViewer --project $CLOUD_RUN_PROJECT
 
 	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-	    --member=serviceAccount:$TAG_ENGINE_SA --role=roles/iam.serviceAccountTokenCreator
-			 
+	    --member=serviceAccount:$TAG_ENGINE_SA --role=roles/iam.serviceAccountTokenCreator --project $CLOUD_RUN_PROJECT		 
 	```
 
+11.  Optional step needed only for creating tags from CSV files:
 
-	Note: If you plan to create tags from CSV files, you also need to ensure that `TAG_CREATOR_SA` has the 
+	Note: If you plan to create tags from CSV files, you also need to ensure that TAG_CREATOR_SA has the 
 	`storage.buckets.get` permission on the GCS bucket where the CSV files are stored. To do that, you can create a custom role with 
 	this permission or assign the `storage.legacyBucketReader` role:
 
@@ -244,9 +254,9 @@ If multiple teams want to share an instance of Tag Engine and they own different
 <br> 
 	
 
-10. Build and deploy the Cloud Run services:
+12. Build and deploy the Cloud Run services:
 
-	There is one service in Cloud Run for the API (tag-engine-api) and another service in Cloud Run for the UI (tag-engine-ui). They are both built from the same code base. You can build either one or both, depending on your needs. 
+	There is one Cloud Run service for the API (tag-engine-api) and another for the UI (tag-engine-ui). They are both built from the same code base. 	You can build either one or the other, depending on your needs. 
 
 	```
 	gcloud run deploy tag-engine-api \
@@ -276,14 +286,14 @@ If multiple teams want to share an instance of Tag Engine and they own different
 
 11. Set the `SERVICE_URL` environment variable:
 
-	If you are deploying the API, run:
+	If you are deploying the API, you also need to set the environment variable SERVICE_URL on tag-engine-api:
 
 	```
 	export API_SERVICE_URL=`gcloud run services describe tag-engine-api --format="value(status.url)"`
 	gcloud run services update tag-engine-api --set-env-vars SERVICE_URL=$API_SERVICE_URL
 	```
 
-	If you are deploying the UI, run:
+	If you are deploying the UI, you also need to set the environment variable SERVICE_URL on tag-engine-ui:
 
 	```
 	export UI_SERVICE_URL=`gcloud run services describe tag-engine-ui --format="value(status.url)"`
@@ -293,6 +303,6 @@ If multiple teams want to share an instance of Tag Engine and they own different
 <br> 
 
 
-This completes the manual setup for Tag Engine. Please consult [Part 2](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#testa) and [Part 3](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#testb) for next steps. 
+This completes the manual setup for Tag Engine. Please consult [Part 2](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#testa) and [Part 3](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#testb) for testing your installation. 
 
 <br><br>
