@@ -1,0 +1,17 @@
+project,instance,database,schema,table,column,is_compliant,reason
+tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,pts,TRUE,Passed automated controls
+tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,recType,TRUE,Passed automated controls
+tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,companyName,TRUE,Passed automated controls
+tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,cik,TRUE,Passed automated controls
+tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,status,TRUE,Passed automated controls
+tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,industryID,TRUE,Passed automated controls
+tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,spRating,TRUE,Passed automated controls
+tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,foundingDate,TRUE,Passed automated controls
+tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,addr_line1,TRUE,Passed automated controls
+tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,addr_line2,TRUE,Passed automated controls
+tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,postalCode,TRUE,Passed automated controls
+tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,city,TRUE,Passed automated controls
+tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,stateProvince,TRUE,Passed automated controls
+tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,country,TRUE,Passed automated controls
+tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,ceoName,FALSE,Name was used by knowledge graph
+tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,description,FALSE,Description was used in financial analysis
