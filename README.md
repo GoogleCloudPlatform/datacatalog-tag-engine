@@ -85,7 +85,9 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 
 
 7. Run the Terraform scripts:
-
+	
+	__NOTE__: The terraform script will run with the default credentials currently configured on your system. Make sure that your current user has the required permissions to make changes to your project(s), or set new credentials using the `GOOGLE APPLICATION_CREDENTIALS` environment variable.
+	
 	```
 	cd deploy
 	terraform init
