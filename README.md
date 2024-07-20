@@ -20,16 +20,13 @@ Follow the steps below to deploy Tag Engine with Terraform.
 
 Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/cloud-run/docs/manual_deployment.md) instead of running the Terraform.
 
-<br>
-
-1. Create (or designate) two service accounts: <br><br>
-
+1. Create (or designate) two service accounts: <br>
    - A service account that runs the Tag Engine Cloud Run services (both API and UI). This account is referred to as `TAG_ENGINE_SA`. 
    - A service account that sources the metadata from BigQuery or Cloud Storage, and then performs the tagging in Data Catalog. This account is referred to as `TAG_CREATOR_SA`. <br>
 
    See [Creating Service Accounts](https://cloud.google.com/iam/docs/service-accounts-create) for more details.
 
-   Why do we need two different service accounts? The key benefit of decoupling them is to allow individual teams to have their own Tag Creator SA. This account has permissions to read specific data assets in BigQuery and Cloud Storage. For example, the Finance team can have a different Tag Creator SA from the Finance team if they own different data assets. The Tag Engine admin then links each invoker account (either service or user) to a specific Tag Creator SA. Invoker accounts call Tag Engine through either the API or UI. This allows the Tag Engine admin to run and maintain a single instance of Tag Engine, as opposed to one instance per team. <br><br>
+   Why do we need two different service accounts? The key benefit of decoupling them is to allow individual teams to have their own Tag Creator SA. This account has permissions to read specific data assets in BigQuery and Cloud Storage. For example, the Finance team can have a different Tag Creator SA from the Finance team if they own different data assets. The Tag Engine admin then links each invoker account (either service or user) to a specific Tag Creator SA. Invoker accounts call Tag Engine through either the API or UI. This allows the Tag Engine admin to run and maintain a single instance of Tag Engine, as opposed to one instance per team. <br>
 
 2. Create an OAuth client:
 
@@ -41,14 +38,13 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
    Name: tag-engine-oauth<br>
    Authorized redirects URIs: <i>Leave this field blank for now.</i>  
    Click Create<br>
-   Download the credentials as `te_client_secret.json` and place the file in the root of the `datacatalog-tag-engine` directory<br><br>
+   Download the credentials as `te_client_secret.json` and place the file in the root of the `datacatalog-tag-engine` directory<br>
 
    Note: The client secret file is required for establishing the authorization flow from the UI.  
 
 3. Make a copy of `datacatalog-tag-engine/tagengine.ini.tpl` naming the new copy `datacatalog-tag-engine/tagengine.ini`.
 
 4. Open `datacatalog-tag-engine/tagengine.ini` and set the following variables in this file: 
-
 	```
 	TAG_ENGINE_SA
 	TAG_CREATOR_SA
@@ -58,6 +54,8 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	FIRESTORE_REGION
 	FIRESTORE_DATABASE 
 	BIGQUERY_REGION
+ 	FILESET_REGION
+ 	SPANNER_REGION
 	ENABLE_AUTH
 	OAUTH_CLIENT_CREDENTIALS
 	ENABLE_TAG_HISTORY
@@ -97,8 +95,6 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 
 	When the Terraform finishes running, it should output two URIs. One for the API service (which looks like this https://tag-engine-api-xxxxxxxxxxxxx.a.run.app) and another for the UI service (which looks like this https://tag-engine-ui-xxxxxxxxxxxxx.a.run.app). <br><br>
 
-
-<br><br>
 ### <a name="testa"></a> Part 2: Testing your Tag Engine API setup
 
 1. Create the sample `data_governance` tag template:
@@ -110,7 +106,6 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	```
 
 	The previous command creates the `data_governance` tag template in the `$DATA_CATALOG_PROJECT` and `$DATA_CATALOG_REGION`. 
-<br>
 
 2. Grant permissions to invoker account (user or service)
 
@@ -152,8 +147,6 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 
 	<b>Very important: Tag Engine requires that these roles be directly attached to your invoker account(s).</b> 
 
-<br>
-
 3. Generate an IAM token (aka Bearer token) for authenticating to Tag Engine: 
 
 	If you are invoking Tag Engine with a user account, run `gcloud auth login` and authenticate with your user account. 
@@ -162,7 +155,6 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	```
 	export IAM_TOKEN=$(gcloud auth print-identity-token)
 	```
-<br>
 
 4. Create your first Tag Engine configuration:
 
@@ -185,7 +177,6 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	```
 	{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"facb59187f1711eebe2b4f918967d564"}
 	```
-<br>
 
 5. Run your first job:
 
@@ -217,7 +208,6 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	
 	The job metadata parameter gets written into a BigQuery table that is associated with the job_uuid. 
 
-<br>
 
 6. View your job status:
 
@@ -280,47 +270,42 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 10. Create a tag configuration by selecting one of the options from this page. 
 
      If you encounter a 500 error, open the Cloud Run logs for `tag-engine-ui` to troubleshoot. 
-
 <br>
 
 ### <a name="troubleshooting"></a> Part 4: Troubleshooting
 
 There is a known issue with the Terraform. If you encounter the error `The requested URL was not found on this server` when you try to create a configuration from the API, the issue is that the container didn't build correctly. Try to rebuild and redeploy the Cloud Run API service with this command:
 
-	```
-	cd datacatalog-tag-engine
-	gcloud run deploy tag-engine-api \
- 		--source . \
- 		--platform managed \
- 		--region $TAG_ENGINE_REGION \
- 		--no-allow-unauthenticated \
- 		--ingress=all \
- 		--memory=4G \
-		--timeout=60m \
- 		--service-account=$TAG_ENGINE_SA
-	```
+```
+    cd datacatalog-tag-engine
+    gcloud run deploy tag-engine-api \
+ 	--source . \
+ 	--platform managed \
+ 	--region $TAG_ENGINE_REGION \
+ 	--no-allow-unauthenticated \
+ 	--ingress=all \
+ 	--memory=4G \
+	--timeout=60m \
+ 	--service-account=$TAG_ENGINE_SA
+```
 
 Then, call the `ping` endpoint as follows:
 
-	```
-	curl $TAG_ENGINE_URL/ping -H "Authorization: Bearer $IAM_TOKEN"
-	```
+```
+    curl $TAG_ENGINE_URL/ping -H "Authorization: Bearer $IAM_TOKEN"
+```
 
 You should see the following response:
 
-	```
-	Tag Engine is alive
-	```
-
-<br>
+```
+    Tag Engine is alive
+```
 
 ### <a name="next"></a> Part 5: Next Steps
 
 1. Explore additional API methods and run them through curl commands:
 
    Open `examples/unit_test.sh` and go through the different methods for interracting with Tag Engine, including `configure_tag_history`, `create_static_asset_config`, `create_dynamic_column_config`, etc. <br>
-
-<br>
 
 2. Explore the script samples:
 
@@ -342,8 +327,6 @@ You should see the following response:
 	python read_config.py
 	python purge_inactive_configs.py
 	```
-
-<br>
 
 3. Explore sample workflows:
 
