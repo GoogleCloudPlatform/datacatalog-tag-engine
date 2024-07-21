@@ -243,8 +243,8 @@ If multiple teams want to share a single instance of Tag Engine and they own dif
 
 12.  Optional step needed only if creating tags from CSV files:
 
-	Creating tags from CSV files requires `$TAG_CREATOR_SA` to have the `storage.buckets.get` permission on the GCS bucket in which the CSV files are stored. You can either create a custom role with this permission or assign the `storage.legacyBucketReader` role:
-	
+	Creating tags from CSV files requires `$TAG_CREATOR_SA` to have the `storage.buckets.get` permission on the GCS bucket in which the CSV files are stored. You can either create a custom role with this permission or assign it `storage.legacyBucketReader` role:
+
 	```
 	gcloud storage buckets add-iam-policy-binding gs://<BUCKET> \
 		--member=serviceAccount:$TAG_CREATOR_SA' \
