@@ -228,7 +228,8 @@ If multiple teams want to share a single instance of Tag Engine and they own dif
 	```
 
 11. Optional step only needed if creating tags on Spanner data assets. If you don't have a Spanner database, you can skip this step:
-
+	
+	```
 	gcloud iam roles create SpannerTagReadWrite \
 	--project $DATA_CATALOG_PROJECT \
 	--title SpannerTagReadWrite \
@@ -238,7 +239,7 @@ If multiple teams want to share a single instance of Tag Engine and they own dif
 	gcloud projects add-iam-policy-binding $DATA_CATALOG_PROJECT \
 	--member=serviceAccount:$TAG_CREATOR_SA \
 	--role=projects/$DATA_CATALOG_PROJECT/roles/SpannerTagReadWrite
-	
+	```
 
 12.  Optional step needed only if creating tags from CSV files:
 
