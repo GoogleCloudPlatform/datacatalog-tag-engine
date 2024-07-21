@@ -1,6 +1,7 @@
 deploy/.terraform*
 deploy/terraform.tfstate*
 deploy/variables.tfvars
+deploy/terraform.tfvars
 client_secret.json
 bkp/*
 notes/*
@@ -11,3 +12,4 @@ set_env.sh
 .DS_Store
 .idea
 .envrc
+tagengine.ini

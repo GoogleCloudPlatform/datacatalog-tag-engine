@@ -90,41 +90,57 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
 curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"f106ae4aef4911edb86ee96cdaa8e7ae"}' \
 	-H "Authorization: Bearer $IAM_TOKEN"
 
-####### Table and column import tags from CSV #######
+####### BigQuery table and column tags from CSV imports #######
 
-# create the import table config
-curl -X POST $TAG_ENGINE_URL/create_import_config -d @examples/configs/import/sakila_table_tags.json \
+# create an import config for tagging tables
+curl -X POST $TAG_ENGINE_URL/create_import_config -d @examples/configs/import/bigquery_table_config.json \
 	-H "Authorization: Bearer $IAM_TOKEN"
 
-# trigger job
+# trigger the job
 curl -i -X POST $TAG_ENGINE_URL/trigger_job \
   -d '{"config_type":"TAG_IMPORT","config_uuid":"0e674d78eddd11ed8d3d09299afaece0"}' \
   -H "Authorization: Bearer $IAM_TOKEN"
 
-# trigger job with metadata
+# alternatively, trigger the job with metadata
 curl -i -X POST $TAG_ENGINE_URL/trigger_job \
   -d '{"config_type":"TAG_IMPORT","config_uuid":"0e674d78eddd11ed8d3d09299afaece0", "job_metadata": {"source": "Collibra", "workflow": "process_sensitive_data"}}' \
   -H "Authorization: Bearer $IAM_TOKEN"
 
+# get the job status 
 curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"2755de6ceddd11ed9e0e3f1388bde9d6"}' \
 	-H "Authorization: Bearer $IAM_TOKEN"
 
-# create the import column config
-curl -X POST $TAG_ENGINE_URL/create_import_config -d @examples/configs/import/sakila_column_tags.json \
+# create an import config for tagging columns
+curl -X POST $TAG_ENGINE_URL/create_import_config -d @examples/configs/import/bigquery_column_config.json \
 	-H "Authorization: Bearer $IAM_TOKEN"
 
-# trigger job
+# trigger the job
 curl -i -X POST $TAG_ENGINE_URL/trigger_job \
   -d '{"config_type":"TAG_IMPORT","config_uuid":"426ddac4eddd11ed9e0e3f1388bde9d6"}' \
   -H "Authorization: Bearer $IAM_TOKEN"
 
+# get the job status 
 curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"4abb1a0ceddd11edb0341b486213f8b6"}' \
 	-H "Authorization: Bearer $IAM_TOKEN"
 
-####### Fileset import tags from CSV #######
+# create an import config for tagging datasets
+curl -X POST $TAG_ENGINE_URL/create_import_config -d @examples/configs/import/bigquery_dataset_config.json \
+	-H "Authorization: Bearer $IAM_TOKEN"
 
-# create the fileset import config
-curl -X POST $TAG_ENGINE_URL/create_import_config -d @examples/configs/import/sakila_fileset_config.json \
+# trigger the job
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+  -d '{"config_type":"TAG_IMPORT","config_uuid":"7d4618be478211efa28142004e494300"}' \
+  -H "Authorization: Bearer $IAM_TOKEN"
+
+# get the job status 
+curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"75052fd2478211efa28142004e494300"}' \
+	-H "Authorization: Bearer $IAM_TOKEN"
+
+
+####### GCS fileset tags from CSV imports #######
+
+# create an import config for tagging filesets
+curl -X POST $TAG_ENGINE_URL/create_import_config -d @examples/configs/import/fileset_config.json \
 	-H "Authorization: Bearer $IAM_TOKEN"
 
 # trigger job
@@ -132,14 +148,36 @@ curl -i -X POST $TAG_ENGINE_URL/trigger_job \
   -d '{"config_type":"TAG_IMPORT","config_uuid":"0e674d78eddd11ed8d3d09299afaece0"}' \
   -H "Authorization: Bearer $IAM_TOKEN"
 
-# create the fileset column import config
-curl -X POST $TAG_ENGINE_URL/create_import_config -d @examples/configs/import/sakila_fileset_column_config.json \
+# create an import config for tagging fileset columns
+curl -X POST $TAG_ENGINE_URL/create_import_config -d @examples/configs/import/fileset_column_config.json \
 	-H "Authorization: Bearer $IAM_TOKEN"
 
 # trigger job
 curl -i -X POST $TAG_ENGINE_URL/trigger_job \
   -d '{"config_type":"TAG_IMPORT","config_uuid":"0e674d78eddd11ed8d3d09299afaece0"}' \
   -H "Authorization: Bearer $IAM_TOKEN"
+
+
+####### Spanner tags from CSV imports #######
+
+# create an import config for tagging Spanner tables 
+curl -X POST $TAG_ENGINE_URL/create_import_config -d @examples/configs/import/spanner_table_config.json \
+	-H "Authorization: Bearer $IAM_TOKEN"
+
+# trigger job
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+  -d '{"config_type":"TAG_IMPORT","config_uuid":"0e674d78eddd11ed8d3d09299afaece0"}' \
+  -H "Authorization: Bearer $IAM_TOKEN"
+
+# create an import config for tagging Spanner table columns
+curl -X POST $TAG_ENGINE_URL/create_import_config -d @examples/configs/import/spanner_column_config.json \
+	-H "Authorization: Bearer $IAM_TOKEN"
+
+# trigger job
+curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+  -d '{"config_type":"TAG_IMPORT","config_uuid":"0e674d78eddd11ed8d3d09299afaece0"}' \
+  -H "Authorization: Bearer $IAM_TOKEN"
+
 
 ####### Restore tags from metadata export #######
 
