@@ -21,8 +21,6 @@ def load_tables(project, queue_region, queue_name, url, src_uri, dest_project, d
         
 def create_task(project, queue_region, queue_name, url, src_table, dest_project, dest_dataset, table_prefix, start, stop):
     
-    print('*** enter create_task ***')
-
     client = tasks_v2.CloudTasksClient()
     parent = client.queue_path(project, queue_region, queue_name)
     

@@ -1,0 +1,9 @@
+{
+    "template_id": "data_governance",
+    "template_project": "tag-engine-run",
+    "template_region": "us-central1",
+    "metadata_import_location": "gs://tag-import/latest/bigquery_dataset_tags.csv",
+	"data_asset_type": "bigquery",
+	"data_asset_region": "us-central1",
+	"overwrite": true  
+}

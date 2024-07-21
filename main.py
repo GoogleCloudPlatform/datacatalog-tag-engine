@@ -65,7 +65,20 @@ if 'FIRESTORE_DB' in config['DEFAULT']:
 else:
     FIRESTORE_DB = '(default)'
 
-BIGQUERY_REGION = config['DEFAULT']['BIGQUERY_REGION'].strip()
+if 'BIGQUERY_REGION' in config['DEFAULT']:
+    BIGQUERY_REGION = config['DEFAULT']['BIGQUERY_REGION'].strip()
+else:
+    BIGQUERY_REGION = None
+
+if 'SPANNER_REGION' in config['DEFAULT']:
+    SPANNER_REGION = config['DEFAULT']['SPANNER_REGION'].strip()
+else:
+    SPANNER_REGION = None
+    
+if 'FILESET_REGION' in config['DEFAULT']:
+    FILESET_REGION = config['DEFAULT']['FILESET_REGION'].strip()
+else:
+    FILESET_REGION = None
 
 SPLIT_WORK_HANDLER = os.environ['SERVICE_URL'] + '/_split_work'
 RUN_TASK_HANDLER = os.environ['SERVICE_URL'] + '/_run_task'
@@ -2652,10 +2665,21 @@ def create_import_config():
     else:
         overwrite = True
         
+    if 'data_asset_type' in json_request:  
+        data_asset_type = json_request['data_asset_type']
+    else:
+        data_asset_type = None
+        
+    if 'data_asset_region' in json_request:  
+        data_asset_region = json_request['data_asset_region']
+    else:
+        data_asset_region = None
+        
     tag_history_option, _ = store.read_tag_history_settings()
 
     config_uuid = store.write_tag_import_config(tag_creator_sa, template_uuid, template_id, template_project, template_region, \
-                                                metadata_import_location, tag_history_option, overwrite)                                                      
+                                                data_asset_type, data_asset_region, metadata_import_location, \
+                                                tag_history_option, overwrite)                                                      
     
     return jsonify(config_uuid=config_uuid, config_type='TAG_IMPORT')
 
@@ -3412,7 +3436,44 @@ def _split_work():
                 jm.set_job_status(job_uuid, 'ERROR')
                 resp = jsonify(success=False)
                 return resp
-    
+                
+            # infer the data_asset_type if not present in the config
+            if 'data_asset_type' not in config or config.get('data_asset_type') == None:
+                if (extracted_tags[0].keys() >= {'dataset'}):
+                    config['data_asset_type'] = 'bigquery'
+                elif (extracted_tags[0].keys() >= {'entry_group', 'fileset'}):
+                    config['data_asset_type'] = 'fileset'
+                elif (extracted_tags[0].keys() >= {'instance', 'database'}):
+                    config['data_asset_type'] = 'spanner'
+                else:
+                    print('Error: unable to determine the data asset type of your config (bigquery, fileset, or spanner). Please add data_asset_type to your config and verify the format of your CSV.') 
+                    store.update_job_status(config_uuid, config_type, 'ERROR')
+                    jm.set_job_status(job_uuid, 'ERROR')
+                    resp = jsonify(success=False)
+                    return resp
+                
+                # save the update in Firestore
+                store.update_tag_import_config(config_uuid, config.get('data_asset_type'))     
+             
+            # infer the data_asset_region if not present in the config 
+            if 'data_asset_region' not in config or config.get('data_asset_region') == None:
+                if config.get('data_asset_type') == 'bigquery':
+                    config['data_asset_region'] = BIGQUERY_REGION
+                elif config.get('data_asset_type') == 'fileset':
+                    config['data_asset_region'] = FILESET_REGION
+                elif config.get('data_asset_type') == 'spanner':
+                    config['data_asset_region'] = SPANNER_REGION    
+                else:
+                    print('Error: unable to determine the data asset region of your config (us-central1, etc.). Please add data_asset_region to your config or add the appropriate default region variable to tagengine.ini.') 
+                    store.update_job_status(config_uuid, config_type, 'ERROR')
+                    jm.set_job_status(job_uuid, 'ERROR')
+                    resp = jsonify(success=False)
+                    return resp    
+                
+                # save the update in Firestore
+                store.update_tag_import_config(config_uuid, config.get('data_asset_region'))
+
+
         if config_type == 'TAG_RESTORE':
             bkp_files = list(re.get_resources(config.get('metadata_export_location'), None))
         
@@ -3555,8 +3616,8 @@ def _run_task():
         creation_status = dcc.apply_export_config(config['config_uuid'], config['target_project'], config['target_dataset'], config['target_region'], uri)
     
     if config_type == 'TAG_IMPORT':
-        creation_status = dcc.apply_import_config(job_uuid, config_uuid, tag_extract, \
-                                                  config['tag_history'], config['overwrite'])
+        creation_status = dcc.apply_import_config(job_uuid, config_uuid, config['data_asset_type'], config['data_asset_region'], \
+                                                  tag_extract, config['tag_history'], config['overwrite'])
     if config_type == 'TAG_RESTORE':
         creation_status = dcc.apply_restore_config(job_uuid, config_uuid, tag_extract, \
                                                    config['tag_history'], config['overwrite'])
