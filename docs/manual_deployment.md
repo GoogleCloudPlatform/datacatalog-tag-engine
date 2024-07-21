@@ -231,27 +231,26 @@ If multiple teams want to share a single instance of Tag Engine and they own dif
 	
 	```
 	gcloud iam roles create SpannerTagReadWrite \
-	--project $DATA_CATALOG_PROJECT \
+	--project $SPANNER_PROJECT \
 	--title SpannerTagReadWrite \
 	--description "Read and Update Spanner metadata" \
 	--permissions spanner.databases.get,spanner.databases.updateTag,spanner.instances.updateTag
 	
-	gcloud projects add-iam-policy-binding $DATA_CATALOG_PROJECT \
+	gcloud projects add-iam-policy-binding $SPANNER_PROJECT \
 	--member=serviceAccount:$TAG_CREATOR_SA \
-	--role=projects/$DATA_CATALOG_PROJECT/roles/SpannerTagReadWrite
+	--role=projects/$SPANNER_PROJECT/roles/SpannerTagReadWrite
 	```
 
 12.  Optional step needed only if creating tags from CSV files:
 
-	Note: If you plan to create tags from CSV files, you also need to ensure that `$TAG_CREATOR_SA` has the 
-	`storage.buckets.get` permission on the GCS bucket where the CSV files are stored. To do that, you can create a custom role with 
-	this permission or assign the `storage.legacyBucketReader` role:
-
+	Creating tags from CSV files requires `$TAG_CREATOR_SA` to have the `storage.buckets.get` permission on the GCS bucket in which the CSV files are stored. You can either create a custom role with this permission or assign the `storage.legacyBucketReader` role:
+	
 	```
 	gcloud storage buckets add-iam-policy-binding gs://<BUCKET> \
 		--member=serviceAccount:$TAG_CREATOR_SA' \
 		--role=roles/storage.legacyBucketReader
 	```
+	
 
 13. Build and deploy the Cloud Run services:
 
