@@ -40,12 +40,12 @@ resource "null_resource" "firestore_indexes" {
     firestore_db = google_firestore_database.create.id
   }
   provisioner "local-exec" {
-    command = "python create_indexes.py create ${var.firestore_project} ${var.firestore_database}"
+    command = "python3 create_indexes.py create ${var.firestore_project} ${var.firestore_database}"
   }
 
   provisioner "local-exec" {
     when = destroy
-    command = "python create_indexes.py destroy ${self.triggers.firestore_project} ${self.triggers.firestore_database}"
+    command = "python3 create_indexes.py destroy ${self.triggers.firestore_project} ${self.triggers.firestore_database}"
   }
   
   depends_on = [google_firestore_database.create, null_resource.install_packages]
