@@ -384,7 +384,7 @@ class DataCatalogController:
                  
         if num_columns == 0:
             # no columns to tag
-            msg = f"Error could not find columns to tag. Please check column_query parameter in your config. Current value: {column_query}"
+            msg = f"Error could not find columns to tag. Please check column_query parameter in your config. Current value: {columns_query}"
             log_error(msg, None, job_uuid)
             op_status = constants.ERROR
             return op_status
