@@ -3452,8 +3452,8 @@ def _split_work():
                     resp = jsonify(success=False)
                     return resp
                 
-                # save the update in Firestore
-                store.update_tag_import_config(config_uuid, config.get('data_asset_type'))     
+                # save the update to Firestore
+                store.update_tag_import_config(config_uuid, config.get('data_asset_type'), None, None)     
              
             # infer the data_asset_region if not present in the config 
             if 'data_asset_region' not in config or config.get('data_asset_region') == None:
@@ -3470,8 +3470,8 @@ def _split_work():
                     resp = jsonify(success=False)
                     return resp    
                 
-                # save the update in Firestore
-                store.update_tag_import_config(config_uuid, config.get('data_asset_region'))
+                # save the update to Firestore
+                store.update_tag_import_config(config_uuid, None, config.get('data_asset_region'), None)
 
 
         if config_type == 'TAG_RESTORE':
