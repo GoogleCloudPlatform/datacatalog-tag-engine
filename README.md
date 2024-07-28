@@ -1,5 +1,5 @@
 ## Tag Engine 3.0
-This is the Dataplex branch for Tag Engine. Tag Engine v3 is the newest flavor of Tag Engine that supports both Dataplex and Data Catalog. It is based on the Cloud Run branch and therefore also supports user authentication and role based access control.  
+This is the Dataplex branch for Tag Engine. Tag Engine v3 is the newest flavor of Tag Engine that supports both Data Catalog and Dataplex. It is based on the Cloud Run branch and therefore is compatible with VPC-SC, user authentication, role based access control.  
 
 Tag Engine automates the tagging of BigQuery tables and views as well as data lake files in Cloud Storage. You create tag configurations that specify how to populate the various fields of an aspect type or tag template through SQL expressions or static values. Tag Engine runs the configurations either on demand or on a schedule to create, update or delete the tags.
 
