@@ -1,18 +1,18 @@
-## Tag Engine 2.0
-This is the main branch for Tag Engine. Tag Engine v2 is a flavor of Tag Engine that is hosted on Cloud Run instead of App Engine and is [VPC-SC compatible](https://cloud.google.com/vpc-service-controls/docs/supported-products). It supports user authentication and role based access control. Customers who have multiple teams using BigQuery and Cloud Storage can authorize each team to tag only their data assets using separate Tag Creator service accounts (more on that later). 
+## Tag Engine 3.0
+This is the Dataplex branch for Tag Engine. Tag Engine v3 is the newest flavor of Tag Engine that supports both Dataplex and Data Catalog. It is based on the Cloud Run branch and therefore also supports user authentication and role based access control.  
 
-Tag Engine is an open-source extension to Google Cloud's Data Catalog which is now part of the Dataplex product suite. Tag Engine automates the tagging of BigQuery tables and views as well as data lake files in Cloud Storage. You create tag configurations that specify how to populate the various fields of a tag template through SQL expressions or static values. Tag Engine runs the configurations either on demand or on a schedule to create, update or delete the tags.
+Tag Engine automates the tagging of BigQuery tables and views as well as data lake files in Cloud Storage. You create tag configurations that specify how to populate the various fields of an aspect type or tag template through SQL expressions or static values. Tag Engine runs the configurations either on demand or on a schedule to create, update or delete the tags.
 
 This README file contains deployment steps, testing procedures, and code samples. It is organized into five sections:  <br>
-- Part 1: [Deploying Tag Engine v2](#deploy) <br>
+- Part 1: [Deploying Tag Engine v3](#deploy) <br>
 - Part 2: [Testing your Tag Engine API Setup](#testa)  <br>
 - Part 3: [Testing your Tag Engine UI Setup](#testb)  <br>
 - Part 4: [Troubleshooting](#troubleshooting)  <br>
 - Part 5: [Next Steps](#next)  <br> 
 
-### <a name="deploy"></a> Part 1: Deploying Tag Engine v2
+### <a name="deploy"></a> Part 1: Deploying Tag Engine v3
 
-Tag Engine 2.0 comes with two Cloud Run services. One service is for the API (`tag-engine-api`) and the other is for the UI (`tag-engine-ui`). 
+Tag Engine v3 comes with two Cloud Run services. One service is for the API (`tag-engine-api`) and the other is for the UI (`tag-engine-ui`). 
 
 Both services use access tokens for authorization. The API service expects the client to pass in an access token when calling the API functions (`gcloud auth print-identity-token`) whereas the UI service uses OAuth to authorize the client from the front-end. Note that a client secret file is required for the OAuth flow.  
 
