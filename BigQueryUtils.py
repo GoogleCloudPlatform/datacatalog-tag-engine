@@ -126,7 +126,7 @@ class BigQueryUtils:
             asset_name = tagged_table
             
         asset_name = asset_name.replace("/datasets/", "/dataset/").replace("/tables/", "/table/")
-        print('asset_name: ', asset_name)
+        #print('asset_name: ', asset_name)
                 
         success = self.insert_history_row(tag_creator_account, tag_invoker_account, job_uuid, table_id, asset_name, tagged_values)  
         
@@ -390,12 +390,6 @@ class BigQueryUtils:
     # writes tag history record
     def insert_history_row(self, tag_creator_account, tag_invoker_account, job_uuid, table_id, asset_name, tagged_values):
         
-        print('enter insert_history_row')
-        print('job_uuid:', job_uuid)
-        print('table_id:', table_id)
-        print('asset_name:', asset_name)
-        print('tagged_values:', tagged_values)
-        
         success = True
         
         row = {'event_time': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f') + ' UTC', 'asset_name': asset_name, 
@@ -419,14 +413,16 @@ class BigQueryUtils:
                 row[tagged_value['field_id']]= json.dumps(tagged_value['field_value'], default=str)
                 row[tagged_value['field_id']]= tagged_value['field_value']
     
-        print('insert row: ' + str(row))
+        #print('insert row: ' + str(row))
         row_to_insert = [row,]
 
         try:
             status = self.client.insert_rows_json(table_id, row_to_insert) 
             
             if len(status) > 0: 
-                print('Inserted row into tag history table. Return status: ', status) 
+                print('Inserted row into tag history table. Return status: ', status)
+            else:
+                print('Inserted row into tag history table.') 
         
         except Exception as e:
             print('Error while writing to tag history table:', e)

@@ -40,10 +40,6 @@ config.read("tagengine.ini")
 
 BIGQUERY_REGION = config['DEFAULT']['BIGQUERY_REGION']
 
-# this variable is needed for tagging filesets
-if 'CLOUD_STORAGE_REGION' in config['DEFAULT']:
-    CLOUD_STORAGE_REGION = config['DEFAULT']['CLOUD_STORAGE_REGION']
-
 USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v2'
 
 class DataCatalogController:
@@ -158,7 +154,7 @@ class DataCatalogController:
         
     def check_if_tag_exists(self, parent, column=None):
         
-        print('enter check_if_tag_exists')
+        print(f'enter check_if_tag_exists, parent: {parent}')
         
         tag_exists = False
         tag_id = ""
@@ -375,20 +371,20 @@ class DataCatalogController:
         
         target_columns = [] # columns in the table which need to be tagged
         columns_query = self.parse_query_expression(uri, columns_query)
-        #print('columns_query:', columns_query)
+        print('columns_query:', columns_query)
         
         rows = self.bq_client.query(columns_query).result()
 
         num_columns = 0
         for row in rows:    
             for column in row:
-                #print('column:', column)
+                print('column:', column)
                 target_columns.append(column)
                 num_columns += 1
                  
         if num_columns == 0:
             # no columns to tag
-            msg = f"Error could not find columns to tag. Please check column_query parameter in your config. Current value: {column_query}"
+            msg = f"Error could not find columns to tag. Please check column_query parameter in your config. Current value: {columns_query}"
             log_error(msg, None, job_uuid)
             op_status = constants.ERROR
             return op_status
@@ -1216,8 +1212,10 @@ class DataCatalogController:
         return export_status
         
             
-    def apply_import_config(self, job_uuid, config_uuid, tag_dict, tag_history, overwrite=False):
+    def apply_import_config(self, job_uuid, config_uuid, data_asset_type, data_asset_region, tag_dict, tag_history, overwrite=False):
     
+        print(f'apply_import_config: {job_uuid}, {config_uuid}, {data_asset_type}, {data_asset_region}, {tag_dict}, {tag_history}')
+        
         op_status = constants.SUCCESS
         
         if 'project' in tag_dict:
@@ -1228,48 +1226,71 @@ class DataCatalogController:
             op_status = constants.ERROR
             return op_status
         
-        if ('dataset' not in tag_dict):
-            if ('entry_group' not in tag_dict or 'fileset' not in tag_dict):
-                msg = "Error: could not find required fields in CSV. Expecting either dataset or entry_group in CSV"
+        if data_asset_type == constants.BQ_ASSET:
+            if 'dataset' not in tag_dict:
+                msg = "Error: could not find the required dataset field in the CSV"
                 log_error_tag_dict(msg, None, job_uuid, tag_dict)
                 op_status = constants.ERROR
                 return op_status
-            
-        if 'dataset' in tag_dict:
-            dataset = tag_dict['dataset']
-            entry_type = constants.DATASET
-        
-        if 'table' in tag_dict:
-            table = tag_dict['table']
-            entry_type = constants.TABLE
-        
-        if 'entry_group' in tag_dict:
-            entry_group = tag_dict['entry_group']
-            entry_type = constants.FILESET
-        
-            if 'fileset' in tag_dict:
-                fileset = tag_dict['fileset']
             else:
-                msg = "Error: could not find required fields in CSV. Expecting entry_group and fileset in CSV"
+                entry_type = constants.DATASET
+                dataset = tag_dict['dataset']
+                
+                if 'table' in tag_dict:
+                    table = tag_dict['table']
+                    entry_type = constants.BQ_TABLE
+            
+        if data_asset_type == constants.FILESET_ASSET:
+            if 'entry_group' not in tag_dict or 'fileset' not in tag_dict:
+                msg = "Error: could not find the required fields in the CSV. Missing entry_group or fileset or both"
                 log_error_tag_dict(msg, None, job_uuid, tag_dict)
                 op_status = constants.ERROR
                 return op_status
-                    
+            else:
+                entry_type = constants.FILESET
+                entry_group = tag_dict['entry_group']
+                fileset = tag_dict['fileset']
+        
+        if data_asset_type == constants.SPAN_ASSET:
+            if 'instance' not in tag_dict or 'database' not in tag_dict or 'table' not in tag_dict:
+                msg = "Error: could not find the required fields in the CSV. The required fields for Spanner are instance, database, and table"
+                log_error_tag_dict(msg, None, job_uuid, tag_dict)
+                op_status = constants.ERROR
+                return op_status
+            else:
+               entry_type = constants.SPAN_TABLE
+               instance = tag_dict['instance']
+               database = tag_dict['database']
+               
+               if 'schema' in tag_dict:
+                   schema = tag_dict['schema']
+                   table = tag_dict['table']
+                   table = f"`{schema}.{table}`"
+               else:
+                   table = tag_dict['table']
+                                
         if entry_type == constants.DATASET:
-            resource = '//bigquery.googleapis.com/projects/{}/datasets/{}'.format(project, dataset)
+            resource = f'//bigquery.googleapis.com/projects/{project}/datasets/{dataset}'
             request = datacatalog.LookupEntryRequest()
             request.linked_resource=resource
             
-        if entry_type == constants.TABLE:
-            resource = '//bigquery.googleapis.com/projects/{}/datasets/{}/tables/{}'.format(project, dataset, table)
+        if entry_type == constants.BQ_TABLE:
+            resource = f'//bigquery.googleapis.com/projects/{project}/datasets/{dataset}/tables/{table}'
             request = datacatalog.LookupEntryRequest()
             request.linked_resource=resource
          
         if entry_type == constants.FILESET:
-            resource = '//datacatalog.googleapis.com/projects/{}/locations/{}/entryGroups/{}/entries/{}'.format(project, CLOUD_STORAGE_REGION, entry_group, fileset)
+            resource = f'//datacatalog.googleapis.com/projects/{project}/locations/{data_asset_region}/entryGroups/{entry_group}/entries/{fileset}'
             request = datacatalog.LookupEntryRequest()
             request.linked_resource=resource
-        
+            
+        if entry_type == constants.SPAN_TABLE:
+            resource = f'spanner:{project}.regional-{data_asset_region}.{instance}.{database}.{table}'
+            request = datacatalog.LookupEntryRequest()
+            request.fully_qualified_name=resource
+            request.project=project
+            request.location=data_asset_region
+
         try:
             entry = self.client.lookup_entry(request)
         except Exception as e:
@@ -1278,6 +1299,16 @@ class DataCatalogController:
             op_status = constants.ERROR
             return op_status
 
+        # format uri for storing in tag history table
+        if data_asset_type == constants.BQ_ASSET:
+            uri = entry.linked_resource.replace('//bigquery.googleapis.com/projects/', '')
+        if data_asset_type == constants.SPAN_ASSET:
+            uri = entry.linked_resource.replace('///projects/', '').replace('instances', 'instance').replace('databases', 'database') + '/table/' + table.replace('`', '')
+        if data_asset_type == constants.FILESET_ASSET:
+            uri = entry.linked_resource.replace('//datacatalog.googleapis.com/projects/', '').replace('locations', 'location').replace('entryGroups', 'entry_group').replace('entries', 'entry')
+        
+        target_column = None
+        
         if 'column' in tag_dict:
             target_column = tag_dict['column'] 
             
@@ -1289,11 +1320,8 @@ class DataCatalogController:
                 op_status = constants.ERROR
                 return op_status
             
-            uri = entry.linked_resource.replace('//bigquery.googleapis.com/projects/', '') + '/column/' + target_column
-        else:
-            target_column = None
-            uri = entry.linked_resource.replace('//bigquery.googleapis.com/projects/', '')
-            
+            uri = uri + '/column/' + target_column
+  
         try:    
             tag_exists, tag_id = self.check_if_tag_exists(parent=entry.name, column=target_column)
 
@@ -1315,7 +1343,8 @@ class DataCatalogController:
         for field_name in tag_dict:
            
             if field_name == 'project' or field_name == 'dataset' or field_name == 'table' or \
-                field_name == 'column' or field_name == 'entry_group' or field_name == 'fileset':
+                field_name == 'column' or field_name == 'entry_group' or field_name == 'fileset' or \
+                field_name == 'instance' or field_name == 'database' or field_name == 'schema':
                 continue
         
             field_type = None
@@ -2163,18 +2192,19 @@ if __name__ == '__main__':
         target_scopes=SCOPES,
         lifetime=1200)
         
-    template_id = 'data_governance'
+    template_id = 'data_sensitivity'
     template_project = 'tag-engine-run'
     template_region = 'us-central1' 
     
-    fields = [{'field_type': 'enum', 'field_id': 'data_domain', 'enum_values': ['ENG', 'PRODUCT', 'OPERATIONS', 'LOGISTICS', 'FINANCE', 'HR', 'LEGAL', 'MARKETING', 'SALES', 'CONSUMER', 'GOVERNMENT'], 'is_required': True, 'display_name': 'Data Domain', 'order': 10, 'query_expression': "select 'LOGISTICS'"}, {'field_type': 'enum', 'field_id': 'broad_data_category', 'enum_values': ['CONTENT', 'METADATA', 'CONFIGURATION'], 'is_required': True, 'display_name': 'Broad Data Category', 'order': 9, 'query_expression': "select 'CONTENT'"}]
-    columns_query = "select 'unique_key', 'created_date', 'incident.city', 'incident.county'"
-    uri = 'tag-engine-run/datasets/cities_311/tables/austin_311_service_requests'
-    job_uuid = '3291b93804d211ef9d2549bd5e1feaa2'
-    config_uuid = '6fb997443e0311ef9f5242004e494300'
-    template_uuid = 'fa8aa3007f1711eebe2b4f918967d564'
-    tag_history = False
+    job_uuid = 'df0ddb3e477511ef95dc42004e494300' 
+    config_uuid = '3404d03a477a11ef995442004e494300'
+    data_asset_type = 'fileset'
+    data_asset_region = 'us-central1'
+    tag_dict = {'project': 'tag-engine-run', 'entry_group': 'sakila_eg', 'fileset': 'staff', 'column': 'first_name', 'sensitive_field': 'TRUE', 'sensitive_type': 'Sensitive_Personal_Identifiable_Information'}
+    tag_history = True
+    overwrite = True
     
     dcu = DataCatalogController(credentials, target_service_account, 'scohen@gcp.solutions', template_id, template_project, template_region)
-    dcu.apply_dynamic_column_config(fields, columns_query, uri, job_uuid, config_uuid, template_uuid, tag_history, batch_mode=False)
+    dcu.apply_import_config(job_uuid, config_uuid, data_asset_type, data_asset_region, tag_dict, tag_history, overwrite)
     
+        

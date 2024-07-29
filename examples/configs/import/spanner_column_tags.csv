@@ -1,17 +1,17 @@
-project,instance,database,schema,table,column,is_compliant,reason
-tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,pts,TRUE,Passed automated controls
-tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,recType,TRUE,Passed automated controls
-tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,companyName,TRUE,Passed automated controls
-tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,cik,TRUE,Passed automated controls
-tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,status,TRUE,Passed automated controls
-tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,industryID,TRUE,Passed automated controls
-tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,spRating,TRUE,Passed automated controls
-tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,foundingDate,TRUE,Passed automated controls
-tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,addr_line1,TRUE,Passed automated controls
-tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,addr_line2,TRUE,Passed automated controls
-tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,postalCode,TRUE,Passed automated controls
-tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,city,TRUE,Passed automated controls
-tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,stateProvince,TRUE,Passed automated controls
-tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,country,TRUE,Passed automated controls
-tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,ceoName,FALSE,Name was used by knowledge graph
-tag-engine-run,goog-dev,user-testing,finwire,FINWIRE2024Q3_CMP,description,FALSE,Description was used in financial analysis
+project,instance,database,schema,table,column,sensitive_field,sensitive_type
+tag-engine-run,goog-dev,user-testing,dev,FINWIRE2024Q3_CMP,pts,FALSE,
+tag-engine-run,goog-dev,user-testing,dev,FINWIRE2024Q3_CMP,recType,FALSE,
+tag-engine-run,goog-dev,user-testing,dev,FINWIRE2024Q3_CMP,companyName,FALSE,
+tag-engine-run,goog-dev,user-testing,dev,FINWIRE2024Q3_CMP,cik,FALSE,
+tag-engine-run,goog-dev,user-testing,dev,FINWIRE2024Q3_CMP,status,FALSE,
+tag-engine-run,goog-dev,user-testing,dev,FINWIRE2024Q3_CMP,industryID,FALSE,
+tag-engine-run,goog-dev,user-testing,dev,FINWIRE2024Q3_CMP,spRating,TRUE,Personal_Identifiable_Information
+tag-engine-run,goog-dev,user-testing,dev,FINWIRE2024Q3_CMP,foundingDate,FALSE,
+tag-engine-run,goog-dev,user-testing,dev,FINWIRE2024Q3_CMP,addr_line1,FALSE,
+tag-engine-run,goog-dev,user-testing,dev,FINWIRE2024Q3_CMP,addr_line2,FALSE,
+tag-engine-run,goog-dev,user-testing,dev,FINWIRE2024Q3_CMP,postalCode,FALSE,
+tag-engine-run,goog-dev,user-testing,dev,FINWIRE2024Q3_CMP,city,FALSE,
+tag-engine-run,goog-dev,user-testing,dev,FINWIRE2024Q3_CMP,stateProvince,FALSE,
+tag-engine-run,goog-dev,user-testing,dev,FINWIRE2024Q3_CMP,country,FALSE,
+tag-engine-run,goog-dev,user-testing,dev,FINWIRE2024Q3_CMP,ceoName,TRUE,Sensitive_Personal_Identifiable_Information
+tag-engine-run,goog-dev,user-testing,dev,FINWIRE2024Q3_CMP,description,FALSE,

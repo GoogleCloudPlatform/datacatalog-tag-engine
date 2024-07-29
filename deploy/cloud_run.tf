@@ -40,9 +40,9 @@ EOF
   }
   depends_on = [google_artifact_registry_repository.image_registry,
     google_project_service.tag_engine_project,
-    google_project_iam_binding.storage_object_get,
-    google_project_iam_binding.log_writer,
-    google_project_iam_binding.repo_admin]
+    google_project_iam_member.storage_object_get,
+    google_project_iam_member.log_writer,
+    google_project_iam_member.repo_admin]
 }
 
 resource "google_cloud_run_v2_service" "api_service" {
@@ -110,7 +110,7 @@ ${self.triggers.full_image_path} \
 EOF
   }
   
-  depends_on = [google_artifact_registry_repository.image_registry, google_project_service.tag_engine_project, google_project_iam_binding.storage_object_get, google_project_iam_binding.log_writer, google_project_iam_binding.repo_admin]
+  depends_on = [google_artifact_registry_repository.image_registry, google_project_service.tag_engine_project, google_project_iam_member.storage_object_get, google_project_iam_member.log_writer, google_project_iam_member.repo_admin]
 }
 
 resource "google_cloud_run_v2_service" "ui_service" {

@@ -18,8 +18,6 @@ def make_copies(project, queue_region, queue_name, url, src_table, dest_project,
         
 def create_task(project, queue_region, queue_name, url, src_table, dest_project, dest_dataset, start, stop):
     
-    print('*** enter create_task ***')
-
     client = tasks_v2.CloudTasksClient()
     parent = client.queue_path(project, queue_region, queue_name)
     

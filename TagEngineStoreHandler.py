@@ -964,11 +964,12 @@ class TagEngineStoreHandler:
         
 
     def write_tag_import_config(self, service_account, template_uuid, template_id, template_project, template_region, \
-                                metadata_import_location, tag_history, overwrite=True):
+                                data_asset_type, data_asset_region, metadata_import_location, tag_history,  \
+                                overwrite=True):
                                     
         print('** write_tag_import_config **')
         
-        # check to see if this config already exists and if so, return it
+        # check if this config already exists and if so, return it
         coll_ref = self.db.collection('import_configs')
         query = coll_ref.where(filter=FieldFilter('template_uuid', '==', template_uuid))
         query = query.where(filter=FieldFilter('metadata_import_location', '==', metadata_import_location))
@@ -986,7 +987,7 @@ class TagEngineStoreHandler:
         config_uuid = uuid.uuid1().hex
         doc_ref = coll_ref.document(config_uuid)
         
-        doc_ref.set({
+        config_dict = {
             'config_uuid': config_uuid,
             'config_type': 'TAG_IMPORT',
             'config_status': 'ACTIVE', 
@@ -999,20 +1000,39 @@ class TagEngineStoreHandler:
             'tag_history': tag_history,
             'overwrite': overwrite,
             'service_account': service_account
-        })
+        }
+        
+        if data_asset_type != None:
+            config_dict['data_asset_type'] = data_asset_type
+            
+        if data_asset_region != None:
+            config_dict['data_asset_region'] = data_asset_region
+        
+        doc_ref.set(config_dict)
         
         return config_uuid
 
     
-    def update_tag_import_config(self, config_uuid, metadata_import_location):
+    def update_tag_import_config(self, config_uuid, data_asset_type, data_asset_region, metadata_import_location):
                                     
         print('** update_tag_import_config **')
         success = True
         
         config_ref = self.db.collection("import_configs").document(config_uuid)
         
+        updated_config = {}
+        
+        if data_asset_type != None:
+            updated_config['data_asset_type'] = data_asset_type
+            
+        if data_asset_region != None:
+            updated_config['data_asset_region'] = data_asset_region
+            
+        if metadata_import_location != None:
+            updated_config['metadata_import_location'] = metadata_import_location
+            
         try:
-            config_ref.update({"metadata_import_location": metadata_import_location})
+            config_ref.update(updated_config)
         
         except Exception as e:
             msg = 'Error updating config {}'.format(config_uuid)

@@ -1,5 +1,0 @@
-project,entry_group,fileset,column,sensitive_field,sensitive_type
-tag-engine-run,sakila_eg,address,address,TRUE,Personal_Identifiable_Information
-tag-engine-run,sakila_eg,address,phone,TRUE,Personal_Identifiable_Information
-tag-engine-run,sakila_eg,address,phone.area_code,TRUE,Personal_Identifiable_Information
-tag-engine-run,sakila_eg,address,phone.phone_number,TRUE,Personal_Identifiable_Information

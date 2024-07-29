@@ -1,0 +1,7 @@
+project,entry_group,fileset,column,sensitive_field,sensitive_type
+tag-engine-run,sakila_eg,actor,first_name,TRUE,Sensitive_Personal_Identifiable_Information
+tag-engine-run,sakila_eg,actor,last_name,TRUE,Sensitive_Personal_Identifiable_Information
+tag-engine-run,sakila_eg,customer,first_name,TRUE,Sensitive_Personal_Identifiable_Information
+tag-engine-run,sakila_eg,customer,last_name,TRUE,Sensitive_Personal_Identifiable_Information
+tag-engine-run,sakila_eg,staff,first_name,TRUE,Sensitive_Personal_Identifiable_Information
+tag-engine-run,sakila_eg,staff,last_name,TRUE,Sensitive_Personal_Identifiable_Information

@@ -1,8 +1,0 @@
-project,dataset,table,column,sensitive_field,sensitive_type
-tag-engine-run,sakila_dw,actor,actor_id,,
-tag-engine-run,sakila_dw,actor,first_name,TRUE,Personal_Identifiable_Information
-tag-engine-run,sakila_dw,actor,last_name,TRUE,Personal_Identifiable_Information
-tag-engine-run,sakila_dw,actor,Middle_Name,TRUE,Personal_Identifiable_Information
-tag-engine-run,sakila_dw,actor,Initials,TRUE,Personal_Identifiable_Information
-tag-engine-run,sakila_dw,actor,FULL_NAME,TRUE,SPII
-tag-engine-run,sakila_dw,actor,CONTRACT_NAME,,
