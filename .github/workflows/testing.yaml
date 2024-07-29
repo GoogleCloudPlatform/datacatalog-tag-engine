@@ -29,4 +29,6 @@ jobs:
       - name: Test App Code
         run: |
           pytest -v
+          pwd
+          ls -la
           pytest
