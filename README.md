@@ -8,7 +8,8 @@ This README file contains deployment steps, testing procedures, and code samples
 - Part 2: [Testing your Tag Engine API Setup](#testa)  <br>
 - Part 3: [Testing your Tag Engine UI Setup](#testb)  <br>
 - Part 4: [Troubleshooting](#troubleshooting)  <br>
-- Part 5: [Next Steps](#next)  <br> 
+- Part 5: [Local Development and Testing](#local) <br>
+- Part 6: [Next Steps](#next)  <br> 
 
 ### <a name="deploy"></a> Part 1: Deploying Tag Engine v2
 
@@ -314,7 +315,31 @@ You should see the following response:
 
 <br>
 
-### <a name="next"></a> Part 5: Next Steps
+### <a name="local"></a> Part 5: Local Development and Testing
+
+1. Clone this repo and change directory into the newly cloned directory
+```bash
+git clone git@github.com:GoogleCloudPlatform/datacatalog-tag-engine.git
+cd datacatalog-tag-engine
+```
+
+2. Create a new virtual environment and activate it
+```bash
+python -m venv venv
+source venv/bin/activate
+```
+
+3. Install dev requirements 
+```bash
+pip install -r requirments/dev.txt
+```
+
+4. Run tests
+```
+pytest
+```
+
+### <a name="next"></a> Part 6: Next Steps
 
 1. Explore additional API methods and run them through curl commands:
 
