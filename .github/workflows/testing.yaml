@@ -26,9 +26,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements/dev.txt
 
+      - name: Prepare Test Configurations
+        run: |
+          cp tagengine.ini.tpl tagengine.ini
+
       - name: Test App Code
         run: |
           pytest -v
-          pwd
-          ls -la
           pytest
