@@ -2,14 +2,13 @@ import pytest
 from flask import Flask
 from flask.testing import FlaskClient, FlaskCliRunner
 from google.cloud import firestore
-from main import app as main_app
 
 
 @pytest.fixture()
 def app(mocker) -> Flask:
+    mocker.patch.object(firestore, "Client")
 
-    mocker.patch.object(firestore.Client, "__init__")
-
+    from main import app as main_app
     app = main_app
     app.config.update({
         "TESTING": True,
