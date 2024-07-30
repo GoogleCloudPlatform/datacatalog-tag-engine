@@ -1,14 +1,14 @@
-import os
-
+import pytest
 from flask import Flask
 from flask.testing import FlaskClient, FlaskCliRunner
-
-import pytest
+from google.cloud import firestore
 from main import app as main_app
 
 
 @pytest.fixture()
-def app() -> Flask:
+def app(mocker) -> Flask:
+
+    mocker.patch.object(firestore.Client, "__init__")
 
     app = main_app
     app.config.update({
@@ -32,3 +32,4 @@ def client(app: Flask) -> FlaskClient:
 @pytest.fixture()
 def runner(app: Flask) -> FlaskCliRunner:
     return app.test_cli_runner()
+
