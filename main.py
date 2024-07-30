@@ -50,6 +50,7 @@ config.read("tagengine.ini")
 ##################### INIT GLOBAL VARIABLES ##################################
 
 PORT = int(os.environ.get("PORT", 8080))
+DEBUG = bool(os.environ.get("DEBUG", "False"))
 SERVICE_URL = os.environ.get("SERVICE_URL", f"http://localhost:{PORT}")
 
 TAG_ENGINE_SA = config['DEFAULT']['TAG_ENGINE_SA'].strip()
@@ -3676,7 +3677,6 @@ def server_error(e):
 if __name__ == "__main__":
     #os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = "1" # uncomment only when running locally
     os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = "1"  # to allow for scope changes
-    time.sleep(5000)
-    app.run(debug=True, host="0.0.0.0", port=PORT)  # for running on Cloud Run
+    app.run(debug=DEBUG, host="0.0.0.0", port=PORT)  # for running on Cloud Run
     #app.run(debug=True, port=5000) # for running locally 
     
