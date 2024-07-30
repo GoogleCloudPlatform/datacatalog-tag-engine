@@ -8,6 +8,8 @@ from google.cloud import firestore
 def app(mocker) -> Flask:
     mocker.patch.object(firestore, "Client")
 
+    # It's important to import the main app here, AFTER some mocking,
+    # specifically of external GCP libraries.
     from main import app as main_app
     app = main_app
     app.config.update({
