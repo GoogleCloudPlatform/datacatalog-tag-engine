@@ -2,7 +2,7 @@
     "template_id": "data_sensitivity",
     "template_project": "tag-engine-run",
     "template_region": "us-central1",
-    "metadata_import_location": "gs://tag-import/latest/spanner_table_tags.csv",
+    "metadata_import_location": "gs://tag-import/latest/spanner_table_tags_without_schema.csv",
 	"data_asset_type": "spanner",
 	"data_asset_region": "us-central1",
     "overwrite": true    
