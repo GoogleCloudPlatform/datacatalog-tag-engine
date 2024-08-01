@@ -25,7 +25,7 @@ from common import log_error
 import ConfigType as ct
 import constants
 
-USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v2'
+USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v3'
 
 class TagEngineStoreHandler:
     
@@ -336,11 +336,34 @@ class TagEngineStoreHandler:
         # should either be a single matching template or no matching templates
         if len(matches) == 1:
             if matches[0].exists:
-                print('Tag Template exists. Template uuid: ' + str(matches[0].id))
+                print('Tag template exists. Template uuid: ' + str(matches[0].id))
                 template_uuid = matches[0].id
                 template_exists = True
         
         return (template_exists, template_uuid)
+        
+    
+    def read_aspect_type(self, aspect_type_id, aspect_type_project, aspect_type_region):
+        
+        aspect_type_exists = False
+        aspect_type_uuid = ""
+        
+        # check to see if this aspect_type already exists
+        template_ref = self.db.collection('aspect_types')
+        query = template_ref.where(filter=FieldFilter('aspect_type_id', '==', aspect_type_id))
+        query = query.where(filter=FieldFilter('aspect_type_project', '==', aspect_type_project))
+        query = query.where(filter=FieldFilter('aspect_type_region', '==', aspect_type_region))
+        
+        matches = query.get()
+        
+        # should either be a single matching template or no matching templates
+        if len(matches) == 1:
+            if matches[0].exists:
+                print('Aspect type exists. Aspect type uuid: ' + str(matches[0].id))
+                aspect_type_uuid = matches[0].id
+                aspect_type_exists = True
+        
+        return (aspect_type_exists, aspect_type_uuid)
         
     
     def write_tag_template(self, template_id, template_project, template_region):
@@ -348,7 +371,7 @@ class TagEngineStoreHandler:
         template_exists, template_uuid = self.read_tag_template(template_id, template_project, template_region)
         
         if template_exists == False:    
-            print('tag template {} doesn\'t exist. Creating new template'.format(template_id))
+            print(f'tag template {template_id} doesn\'t exist in Tag Engine. Creating new template')
              
             template_uuid = uuid.uuid1().hex
                      
@@ -361,6 +384,26 @@ class TagEngineStoreHandler:
             })
                                    
         return template_uuid
+        
+    
+    def write_aspect_type(self, aspect_type_id, aspect_type_project, aspect_type_region):
+        
+        aspect_type_exists, aspect_type_uuid = self.read_aspect_type(aspect_type_id, aspect_type_project, aspect_type_region)
+        
+        if aspect_type_exists == False:    
+            print(f'aspect type {aspect_type_id} doesn\'t exist in Tag Engine. Creating new aspect type')
+             
+            aspect_type_uuid = uuid.uuid1().hex
+                     
+            doc_ref = self.db.collection('aspect_types').document(aspect_type_uuid)
+            doc_ref.set({
+                'aspect_type_uuid': aspect_type_uuid, 
+                'aspect_type_id': aspect_type_id,
+                'aspect_type_project': aspect_type_project,
+                'aspect_type_region': aspect_type_region
+            })
+                                   
+        return aspect_type_uuid
         
         
     def write_static_asset_config(self, service_account, fields, included_assets_uris, excluded_assets_uris, template_uuid, \
@@ -964,8 +1007,7 @@ class TagEngineStoreHandler:
         
 
     def write_tag_import_config(self, service_account, template_uuid, template_id, template_project, template_region, \
-                                data_asset_type, data_asset_region, metadata_import_location, tag_history,  \
-                                overwrite=True):
+                                data_asset_type, data_asset_region, metadata_import_location, tag_history, overwrite=True):
                                     
         print('** write_tag_import_config **')
         
@@ -1012,6 +1054,55 @@ class TagEngineStoreHandler:
         
         return config_uuid
 
+
+    def write_aspect_import_config(self, service_account, aspect_type_uuid, aspect_type_id, aspect_type_project, aspect_type_region, \
+                                data_asset_type, data_asset_region, metadata_import_location, tag_history, overwrite=True):
+        
+        print('** write_aspect_import_config **')
+        
+        # check if this config already exists and if so, return it
+        coll_ref = self.db.collection('import_configs')
+        query = coll_ref.where(filter=FieldFilter('aspect_type_uuid', '==', aspect_type_uuid))
+        query = query.where(filter=FieldFilter('metadata_import_location', '==', metadata_import_location))
+        query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
+        query = query.where(filter=FieldFilter('service_account', '==', service_account))
+        
+        matches = query.get()
+       
+        for matched_config in matches:
+            if matched_config.exists:
+                print('config already exists. Returning existing config_uuid:', matched_config.id)
+                return matched_config.id
+       
+        # create a new config because we did not find a matching one
+        config_uuid = uuid.uuid1().hex
+        doc_ref = coll_ref.document(config_uuid)
+        
+        config_dict = {
+            'config_uuid': config_uuid,
+            'config_type': 'TAG_IMPORT',
+            'config_status': 'ACTIVE', 
+            'creation_time': datetime.utcnow(), 
+            'aspect_type_uuid': aspect_type_uuid,
+            'aspect_type_id': aspect_type_id, 
+            'aspect_type_project': aspect_type_project,
+            'aspect_type_region': aspect_type_region,
+            'metadata_import_location': metadata_import_location,
+            'tag_history': tag_history,
+            'overwrite': overwrite,
+            'service_account': service_account
+        }
+        
+        if data_asset_type != None:
+            config_dict['data_asset_type'] = data_asset_type
+            
+        if data_asset_region != None:
+            config_dict['data_asset_region'] = data_asset_region
+        
+        doc_ref.set(config_dict)
+        
+        return config_uuid
+        
     
     def update_tag_import_config(self, config_uuid, data_asset_type, data_asset_region, metadata_import_location):
                                     

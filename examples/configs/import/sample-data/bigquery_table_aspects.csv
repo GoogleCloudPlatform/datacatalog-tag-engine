@@ -1,0 +1,16 @@
+project,dataset,table,data_domain,is_content,num_stars,rating,data_creation,data_owner
+tag-engine-develop,sakila_dw,actor,LOGISTICS,False,3,4.5,2024-07-30,John Smith
+tag-engine-develop,sakila_dw,address,LOGISTICS,True,7,4.5,2024-07-31,John Smith
+tag-engine-develop,sakila_dw,category,LOGISTICS,True,3,4.5,2024-07-01,John Smith
+tag-engine-develop,sakila_dw,city,LOGISTICS,False,3,4.5,2024-07-02,John Smith
+tag-engine-develop,sakila_dw,country,LOGISTICS,True,10,4.5,2024-07-03,John Smith
+tag-engine-develop,sakila_dw,customer,LOGISTICS,True,3,4.5,2024-07-05,John Smith
+tag-engine-develop,sakila_dw,film,MARKETING,True,3,4.5,2024-07-27,Carlos William
+tag-engine-develop,sakila_dw,film_actor,MARKETING,True,3,5.0,2024-07-25,Carlos William
+tag-engine-develop,sakila_dw,film_category,MARKETING,True,3,10.0,2024-07-20,Carlos William
+tag-engine-develop,sakila_dw,film_text,MARKETING,False,3,4.5,2024-07-01,Carlos William
+tag-engine-develop,sakila_dw,inventory,MARKETING,True,5,3.5,2024-07-07,Carlos William
+tag-engine-develop,sakila_dw,language,MARKETING,True,3,3.5,2024-07-06,Carlos William
+tag-engine-develop,sakila_dw,payment,FINANCE,True,0,3.5,2024-07-11,Diana Hanner
+tag-engine-develop,sakila_dw,rental,FINANCE,True,8,2.5,2024-07-12,Diana Hanner
+tag-engine-develop,sakila_dw,staff,FINANCE,True,2,3.5,2024-07-15,Diana Hanner

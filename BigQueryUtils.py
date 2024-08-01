@@ -106,7 +106,7 @@ class BigQueryUtils:
         return success
       
         
-    # API method used by tag history function
+    # API method used by tag history functions (Data Catalog and Dataplex)
     def copy_tag(self, tag_creator_account, tag_invoker_account, job_uuid, table_name, table_fields, tagged_table, tagged_column, tagged_values):
         
         exists, table_id, settings = self.history_table_exists(table_name)
@@ -131,9 +131,9 @@ class BigQueryUtils:
         success = self.insert_history_row(tag_creator_account, tag_invoker_account, job_uuid, table_id, asset_name, tagged_values)  
         
         return success
-        
+                
     
-    # API method used by tag history function
+    # API method used by tag history function 
     def copy_tags(self, tag_creator_account, tag_invoker_account, job_uuid, table_name, table_fields, asset_table, column_fields_list):
 
         print('enter BigQueryUtils.copy_tags')

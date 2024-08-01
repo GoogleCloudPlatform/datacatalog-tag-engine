@@ -32,7 +32,8 @@ from access import get_tag_invoker_account
 
 from common import log_error
 
-import DataCatalogController as controller
+import DataCatalogController as dc_controller
+import DataplexController as dp_controller
 import TagEngineStoreHandler as tesh
 import Resources as res
 import BackupFileParser as bfp
@@ -91,7 +92,7 @@ tm = taskm.TaskManager(TAG_ENGINE_SA, TAG_ENGINE_PROJECT, TAG_ENGINE_REGION, WOR
 
 SCOPES = ['openid', 'https://www.googleapis.com/auth/cloud-platform', 'https://www.googleapis.com/auth/userinfo.email']
  
-USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v2'
+USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v3'
 store = tesh.TagEngineStoreHandler()
 
 if 'ENABLE_TAG_HISTORY' in config['DEFAULT'] and config['DEFAULT']['ENABLE_TAG_HISTORY'].strip().lower() == 'true':
@@ -515,7 +516,7 @@ def search_tag_template():
     if success == False:
         print('Error acquiring credentials from', service_account)
      
-    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     fields = dcc.get_template()
     
     if len(fields) == 0:
@@ -556,7 +557,7 @@ def view_remaining_configs(service_account, template_id, template_project, templ
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template_fields = dcc.get_template()
     
     configs = store.read_configs(service_account, 'ALL', template_id, template_project, template_region)
@@ -612,7 +613,7 @@ def view_config_options():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template_fields = dcc.get_template()
     
     history_enabled, _ = store.read_tag_history_settings()
@@ -969,7 +970,7 @@ def choose_config_action():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template_fields = dcc.get_template()
     #print('template_fields:', template_fields)
     
@@ -1158,7 +1159,7 @@ def process_static_asset_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
 
-    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1270,7 +1271,7 @@ def process_dynamic_table_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1361,7 +1362,7 @@ def process_dynamic_column_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1459,7 +1460,7 @@ def process_entry_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1549,7 +1550,7 @@ def process_glossary_asset_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1654,7 +1655,7 @@ def process_sensitive_column_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1746,7 +1747,7 @@ def process_restore_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1825,7 +1826,7 @@ def process_import_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":
@@ -1973,32 +1974,46 @@ def get_refresh_parameters(json_request):
     return refresh_mode, refresh_frequency, refresh_unit
 
 
-def check_template_parameters(request_name, json_request):
+def check_template_aspect_parameters(request_name, json_request):
 
     valid_parameters = True
+    is_dataplex = False
+
+    if (json_request.keys() >= {'aspect_type_id', 'aspect_type_project', 'aspect_type_region'}):
+        is_dataplex = True
 
     if 'template_id' in json_request:
         template_id = json_request['template_id']
+    elif 'aspect_type_id' in json_request:
+        aspect_type_id = json_request['aspect_type_id']
     else:
-        print("The " + request_name + " request requires a template_id parameter.")
+        print("The " + request_name + " request requires either a template_id or an aspect_type_id.")
         valid_parameters = False
-        return valid_parameters, None, None, None
+        return valid_parameters, None, None, None, None
 
     if 'template_project' in json_request:
         template_project = json_request['template_project']
+    elif 'aspect_type_project' in json_request:
+        aspect_type_project = json_request['aspect_type_project']
     else:
-        print("The " + request_name + " request requires a template_project parameter.")
+        print("The " + request_name + " request requires either a template_project or an aspect_type_project.")
         valid_parameters = False
-        return valid_parameters, None, None, None
+        return valid_parameters, None, None, None, None
 
     if 'template_region' in json_request:
         template_region = json_request['template_region']
+    elif 'aspect_type_region' in json_request:
+        aspect_type_region = json_request['aspect_type_region']
     else:
-        print("The " + request_name + " request requires a template_region parameter.")
+        print("The " + request_name + " request requires either a template_region or an aspect_type_region.")
         valid_parameters = False
-        return valid_parameters, None, None, None
+        return valid_parameters, None, None, None, None
 
-    return valid_parameters, template_id, template_project, template_region
+    # json is valid
+    if is_dataplex:
+        return valid_parameters, is_dataplex, aspect_type_id, aspect_type_project, aspect_type_region
+    else:
+        return valid_parameters, is_dataplex, template_id, template_project, template_region
 
       
 def check_config_type(requested_ct):
@@ -2047,7 +2062,7 @@ def create_static_asset_config():
     if status == False:
         return jsonify(response), 400
         
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('static_asset_config', json_request)
+    valid_parameters, is_dataplex, template_id, template_project, template_region = check_template_aspect_parameters('static_asset_config', json_request)
     
     if valid_parameters != True:
         response = {
@@ -2067,7 +2082,7 @@ def create_static_asset_config():
     if success == False:
         print('Error acquiring credentials from', tag_creator_sa)
     
-    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     fields = dcc.get_template(included_fields=json_request['fields'])
     #print('fields:', fields)
     
@@ -2124,7 +2139,7 @@ def create_dynamic_table_config():
     if status == False:
         return jsonify(response), 400
        
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('dynamic_table_config', json_request)
+    valid_parameters, is_dataplex, template_id, template_project, template_region = check_template_aspect_parameters('dynamic_table_config', json_request)
     
     if valid_parameters != True:
         response = {
@@ -2144,7 +2159,7 @@ def create_dynamic_table_config():
     if success == False:
         print('Error acquiring credentials from', tag_creator_sa)
     
-    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     included_fields = json_request['fields']
     
     fields = dcc.get_template(included_fields=included_fields)
@@ -2199,7 +2214,7 @@ def create_dynamic_column_config():
     if status == False:
         return jsonify(response), 400
        
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('dynamic_column_config', json_request)
+    valid_parameters, is_dataplex, template_id, template_project, template_region = check_template_aspect_parameters('dynamic_column_config', json_request)
     
     if valid_parameters != True:
         response = {
@@ -2219,7 +2234,7 @@ def create_dynamic_column_config():
     if success == False:
         print('Error acquiring credentials from', tag_creator_sa)
     
-    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     included_fields = json_request['fields']
     fields = dcc.get_template(included_fields=included_fields)
 
@@ -2278,7 +2293,7 @@ def create_entry_config():
     if status == False:
         return jsonify(response), 400
         
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('entry_config', json_request)
+    valid_parameters, is_dataplex, template_id, template_project, template_region = check_template_aspect_parameters('entry_config', json_request)
     
     if valid_parameters != True:
         response = {
@@ -2298,7 +2313,7 @@ def create_entry_config():
     if success == False:
         print('Error acquiring credentials from', tag_creator_sa)
         
-    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     fields = dcc.get_template(included_fields=json_request['fields'])
 
     if 'included_assets_uris' in json_request:
@@ -2350,7 +2365,7 @@ def create_glossary_asset_config():
     if status == False:
         return jsonify(response), 400
        
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('glossary_asset_config', json_request)
+    valid_parameters, is_dataplex, template_id, template_project, template_region = check_template_aspect_parameters('glossary_asset_config', json_request)
     
     if valid_parameters != True:
         response = {
@@ -2366,7 +2381,7 @@ def create_glossary_asset_config():
     if success == False:
         print('Error acquiring credentials from', tag_creator_sa)
         
-    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     fields = dcc.get_template(included_fields=json_request['fields'])
     
     # validate mapping_table field
@@ -2435,7 +2450,7 @@ def create_sensitive_column_config():
     if status == False:
         return jsonify(response), 400
     
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('sensitive_column_config', json_request)
+    valid_parameters, is_dataplex, template_id, template_project, template_region = check_template_aspect_parameters('sensitive_column_config', json_request)
     
     if valid_parameters != True:
         response = {
@@ -2455,7 +2470,7 @@ def create_sensitive_column_config():
     if success == False:
         print('Error acquiring credentials from', tag_creator_sa)
     
-    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     fields = dcc.get_template(included_fields=json_request['fields'])
 
     # validate dlp_dataset parameter
@@ -2622,10 +2637,15 @@ def create_restore_config():
 
 """
 Args:
-    template_id: The tag template id with which to create the tags
-    template_project: The tag template's project id 
-    template_region: The tag template's region 
+    template_id: The tag template id, if applicable
+    template_project: The tag template's project id, if applicable
+    template_region: The tag template's region, if applicable
+    aspect_type_id: The aspect type id, if applicable
+    aspect_type_project: The project id of the aspect type, if applicable
+    aspect_type_region: The region of the aspect type, if applicable
     metadata_import_location: The path to the import files on GCS
+	data_asset_type: "bigquery" or "fileset" or "spanner"
+	data_asset_region: The region in which the data assets reside (e.g. us-central1)
     service_account: The email address of the Tag Creator SA (optional param)
     overwrite: Whether to overwrite the existing tags, True or False, defaults to True (optional param)
 Returns:
@@ -2642,7 +2662,7 @@ def create_import_config():
     if status == False:
         return jsonify(response), 400
        
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('import_config', json_request)
+    valid_parameters, is_dataplex, _id, _project, _region = check_template_aspect_parameters('import_config', json_request)
     
     if valid_parameters != True:
         response = {
@@ -2650,13 +2670,22 @@ def create_import_config():
                 "message": "Request JSON is missing some required tag template parameters",
         }
         return jsonify(response), 400
-
-    template_uuid = store.write_tag_template(template_id, template_project, template_region)
+    
+    if is_dataplex:
+        aspect_type_id = _id
+        aspect_type_project = _project
+        aspect_type_region = _region
+        aspect_type_uuid = store.write_aspect_type(aspect_type_id, aspect_type_project, aspect_type_region)
+    else:
+        template_id = _id
+        template_project = _project
+        template_region = _region
+        template_uuid = store.write_tag_template(template_id, template_project, template_region)
 
     if 'metadata_import_location' in json_request:
         metadata_import_location = json_request['metadata_import_location']
     else:
-        print("import config type requires the metadata_import_location parameter. Please add this parameter to the json object.")
+        print("The import config type requires a metadata_import_location field. Please add this field to the json object.")
         resp = jsonify(success=False)
         return resp
               
@@ -2677,9 +2706,14 @@ def create_import_config():
         
     tag_history_option, _ = store.read_tag_history_settings()
 
-    config_uuid = store.write_tag_import_config(tag_creator_sa, template_uuid, template_id, template_project, template_region, \
-                                                data_asset_type, data_asset_region, metadata_import_location, \
-                                                tag_history_option, overwrite)                                                      
+    if is_dataplex:
+        config_uuid = store.write_aspect_import_config(tag_creator_sa, aspect_type_uuid, aspect_type_id, aspect_type_project, \
+                                                        aspect_type_region, data_asset_type, data_asset_region, metadata_import_location, \
+                                                        tag_history_option, overwrite)
+    else:
+        config_uuid = store.write_tag_import_config(tag_creator_sa, template_uuid, template_id, template_project, template_region, \
+                                                    data_asset_type, data_asset_region, metadata_import_location, \
+                                                    tag_history_option, overwrite)                                                      
     
     return jsonify(config_uuid=config_uuid, config_type='TAG_IMPORT')
 
@@ -2849,7 +2883,7 @@ def copy_tags():
     if success == False:
         print('Error acquiring credentials from', tag_creator_sa)
     
-    dcc = controller.DataCatalogController(credentials)
+    dcc = dc_controller.DataCatalogController(credentials)
     success = dcc.copy_tags(source_project, source_dataset, source_table, target_project, target_dataset, target_table)                                                      
     
     if success:
@@ -2871,7 +2905,7 @@ def update_tag_subset():
     if status == False:
         return jsonify(response), 400
     
-    valid_parameters, template_id, template_project, template_region = check_template_parameters('update_tag_subset', json_request)
+    valid_parameters, is_dataplex, template_id, template_project, template_region = check_template_aspect_parameters('update_tag_subset', json_request)
     
     if valid_parameters != True:
         response = {
@@ -2903,7 +2937,7 @@ def update_tag_subset():
     if success == False:
         print('Error acquiring credentials from', tag_creator_sa)
         
-    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     success = dcc.update_tag_subset(template_id, template_project, template_region, entry_name, changed_fields)
 
     if success:
@@ -2948,14 +2982,13 @@ def trigger_job():
         return resp
         
     if is_valid == False:
-        print("Invalid config_type parameter. Please choose a config_type from this list: " + get_available_config_types())
+        print("Invalid config_type field. Please choose a config_type from this list: " + get_available_config_types())
         resp = jsonify(success=False)
         return resp
     
     if 'config_uuid' in json_request:
         
         config_uuid = json_request['config_uuid']
-        config_type = json_request['config_type']
         
         if isinstance(config_uuid, str):
             is_active = store.check_active_config(config_uuid, config_type)
@@ -2964,30 +2997,8 @@ def trigger_job():
                 print('Error: The config_uuid', config_uuid, 'is not active and cannot be used to run a job.')
                 resp = jsonify(success=False)
                 return resp
-    
-    elif 'template_id' in json_request and 'template_project' in json_request and 'template_region' in json_request:
-         template_id = json_request['template_id']
-         template_project = json_request['template_project']
-         template_region = json_request['template_region']
-         
-         if 'included_tables_uris' in json_request:
-             included_uris = json_request['included_tables_uris']
-         elif 'included_assets_uris' in json_request:
-             included_uris = json_request['included_assets_uris'] 
-         else:
-             print("trigger_job request is missing the required parameter included_tables_uris or included_assets_uris. Please add this parameter to the json object.")
-             resp = jsonify(success=False)
-             return resp 
-             
-         success, config_uuid = store.lookup_config_by_uris(template_id, template_project, template_region, config_type, included_uris)
-         
-         if success != True or config_uuid == '':
-             print('Error: could not locate the config based on the parameters provided in json request.')
-             resp = jsonify(success=False)
-             return resp
-
     else:
-        print("trigger_job request is missing the required parameters. Please add the config_uuid or the template_id, template_project, template_region, and included_uris to the json object.")
+        print("trigger_job request is missing a required . Please add the config_uuid to the json object.")
         resp = jsonify(success=False)
         return resp
         
@@ -3452,8 +3463,8 @@ def _split_work():
                     resp = jsonify(success=False)
                     return resp
                 
-                # save the update in Firestore
-                store.update_tag_import_config(config_uuid, config.get('data_asset_type'))     
+                # save the update to Firestore
+                store.update_tag_import_config(config_uuid, config.get('data_asset_type'), None, None)     
              
             # infer the data_asset_region if not present in the config 
             if 'data_asset_region' not in config or config.get('data_asset_region') == None:
@@ -3470,8 +3481,8 @@ def _split_work():
                     resp = jsonify(success=False)
                     return resp    
                 
-                # save the update in Firestore
-                store.update_tag_import_config(config_uuid, config.get('data_asset_region'))
+                # save the update to Firestore
+                store.update_tag_import_config(config_uuid, None, config.get('data_asset_region'), None)
 
 
         if config_type == 'TAG_RESTORE':
@@ -3507,6 +3518,7 @@ def _split_work():
 def _run_task():
     
     creation_status = constants.ERROR
+    is_dataplex = False
     
     json_request = request.get_json(force=True)
     job_uuid = json_request['job_uuid']
@@ -3529,7 +3541,6 @@ def _run_task():
     else:
         tag_extract = None
         
-    
     credentials, success = get_target_credentials(tag_creator_sa)
     
     if success == False:
@@ -3540,22 +3551,31 @@ def _run_task():
     tm.update_task_status(shard_uuid, task_uuid, 'RUNNING')
     
     config = store.read_config(tag_creator_sa, config_uuid, config_type)
-    print('config: ', config)
+    print('in _run_task(), config: ', config)
            
     if config_type == 'TAG_EXPORT':
-        dcc = controller.DataCatalogController(credentials)
+        dcc = dc_controller.DataCatalogController(credentials)
     
     elif config_type == 'TAG_IMPORT':
         
-        if 'template_id' not in config or 'template_project' not in config or 'template_region' not in config:
-            response = {
+        if config.keys() < {'template_id', 'template_project', 'template_region'}: 
+            if config.keys() < {'aspect_type_id', 'aspect_type_project', 'aspect_type_region'}:
+                response = {
                     "status": "error",
-                    "message": "Request JSON is missing required template parameters",
-            }
-            return jsonify(response), 400
+                    "message": "Request JSON is missing the required tag template or aspect type fields",
+                }
+                return jsonify(response), 400
         
-        dcc = controller.DataCatalogController(credentials, tag_creator_sa, tag_invoker_sa, \
-                                               config['template_id'], config['template_project'], config['template_region'])
+        elif 'template_id' in config:
+            dcc = dc_controller.DataCatalogController(credentials, tag_creator_sa, tag_invoker_sa, \
+                                                       config['template_id'], config['template_project'], \
+                                                       config['template_region'])
+                                                   
+        elif 'aspect_type_id' in config:
+            is_dataplex = True
+            dpc = dp_controller.DataplexController(credentials, tag_creator_sa, tag_invoker_sa, \
+                                                   config['aspect_type_id'], config['aspect_type_project'], \
+                                                   config['aspect_type_region'])
     
     elif config_type == 'TAG_RESTORE':
         
@@ -3572,9 +3592,9 @@ def _run_task():
             }
             return jsonify(response), 400
         
-        dcc = controller.DataCatalogController(credentials, tag_creator_sa, tag_invoker_sa, \
-                                                config['target_template_id'], config['target_template_project'], 
-                                                config['target_template_region'])
+        dcc = dc_controller.DataCatalogController(credentials, tag_creator_sa, tag_invoker_sa, \
+                                                    config['target_template_id'], config['target_template_project'], 
+                                                    config['target_template_region'])
     else:
         if 'template_uuid' not in config:
             response = {
@@ -3584,9 +3604,9 @@ def _run_task():
             return jsonify(response), 400
             
         template_config = store.read_tag_template_config(config['template_uuid'])
-        dcc = controller.DataCatalogController(credentials, tag_creator_sa, tag_invoker_sa, \
-                                               template_config['template_id'], template_config['template_project'], \
-                                               template_config['template_region'])
+        dcc = dc_controller.DataCatalogController(credentials, tag_creator_sa, tag_invoker_sa, \
+                                                   template_config['template_id'], template_config['template_project'], \
+                                                   template_config['template_region'])
             
     
     if config_type == 'DYNAMIC_TAG_TABLE':
@@ -3594,8 +3614,7 @@ def _run_task():
                                                          config['template_uuid'], config['tag_history'])                                               
     if config_type == 'DYNAMIC_TAG_COLUMN':
         creation_status = dcc.apply_dynamic_column_config(config['fields'], config['included_columns_query'], uri, job_uuid, config_uuid, \
-                                                          config['template_uuid'], config['tag_history'])
-        
+                                                          config['template_uuid'], config['tag_history'])  
     if config_type == 'STATIC_TAG_ASSET':
         creation_status = dcc.apply_static_asset_config(config['fields'], uri, job_uuid, config_uuid, \
                                                         config['template_uuid'], config['tag_history'], \
@@ -3616,8 +3635,13 @@ def _run_task():
         creation_status = dcc.apply_export_config(config['config_uuid'], config['target_project'], config['target_dataset'], config['target_region'], uri)
     
     if config_type == 'TAG_IMPORT':
-        creation_status = dcc.apply_import_config(job_uuid, config_uuid, config['data_asset_type'], config['data_asset_region'], \
-                                                  tag_extract, config['tag_history'], config['overwrite'])
+        
+        if is_dataplex:
+            creation_status = dpc.apply_import_config(job_uuid, config_uuid, config['data_asset_type'], config['data_asset_region'], \
+                                                      tag_extract, config['tag_history'], config['overwrite'])        
+        else:
+            creation_status = dcc.apply_import_config(job_uuid, config_uuid, config['data_asset_type'], config['data_asset_region'], \
+                                                      tag_extract, config['tag_history'], config['overwrite'])
     if config_type == 'TAG_RESTORE':
         creation_status = dcc.apply_restore_config(job_uuid, config_uuid, tag_extract, \
                                                    config['tag_history'], config['overwrite'])
@@ -3655,7 +3679,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 2.3.2\n"
+    return "Welcome to Tag Engine version 3.0.0\n"
     
 ####################### TEST METHOD ####################################  
     

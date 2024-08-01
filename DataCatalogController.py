@@ -1894,7 +1894,6 @@ class DataCatalogController:
                 # expected format for datetime values in DC: 2020-12-02T16:34:14Z
                 # however, field_value can be a date value e.g. "2022-05-08", a datetime value e.g. "2022-05-08 15:00:00"
                 # or timestamp value e.g. datetime.datetime(2022, 9, 14, 18, 24, 31, 615000, tzinfo=datetime.timezone.utc)
-                field_value = field_value
                 #print('field_value:', field_value)
                 #print('field_value type:', type(field_value))
                 
