@@ -247,8 +247,8 @@ If multiple teams want to share a single instance of Tag Engine and they own dif
 
 	```
 	gcloud storage buckets add-iam-policy-binding gs://<BUCKET> \
-		--member=serviceAccount:$TAG_CREATOR_SA' \
-		--role=roles/storage.legacyBucketReader
+	--member=serviceAccount:$TAG_CREATOR_SA \
+	--role=roles/storage.legacyBucketReader
 	```
 	
 
