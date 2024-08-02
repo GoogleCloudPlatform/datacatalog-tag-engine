@@ -154,7 +154,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	
 	Copy `examples/configs/import/sample-data/bigquery_table_aspects.csv` to your own GCS bucket. 
 		
-	Open examples/configs/import/aspect-types/bigquery_table_config.json and change the aspect_type_project, aspect_type_region, and metadata_import_location to point to your Dataplex project, region and GCS bucket, respectively. 
+	Open `examples/configs/import/aspect-types/bigquery_table_config.json` and change the `aspect_type_project`, `aspect_type_region`, and `metadata_import_location` to point to your Dataplex project, region and GCS bucket, respectively. 
 	
 	```
 	export IAM_TOKEN=$(gcloud auth print-identity-token)
