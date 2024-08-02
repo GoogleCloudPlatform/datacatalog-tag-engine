@@ -1,7 +1,7 @@
 ## Tag Engine 3.0
 This is the Dataplex branch for Tag Engine. Tag Engine v3 is the newest flavor of Tag Engine that is compatible with both Data Catalog and Dataplex. It is based on the Cloud Run branch and therefore is compatible with VPC-SC, user authentication, role based access control. 
 
-As of this writing (2024-08-01), Dataplex support is limited to CSV imports. See Part 2 of this guide for more details. Please note that dynamic table and column tagging for Dataplex are not yet supported. We anticipate adding support for dynamic tagging within 30 days.  
+*As of this writing (2024-08-02), Dataplex support is limited to CSV imports. See [Part 2](#test-dataplex) of this guide for more details. Please note that dynamic table and column tagging for Dataplex are **not** yet supported. We anticipate adding support for dynamic tagging within 30 days.*  
 
 Tag Engine automates the tagging of BigQuery tables and views as well as data lake files in Cloud Storage. You create tag configurations that specify how to populate the various fields of an aspect type or tag template through SQL expressions or static values. Tag Engine runs the configurations either on demand or on a schedule to create, update or delete the tags.
 
