@@ -1,20 +1,21 @@
-## Tag Engine 2.0
-This is the stable branch for Tag Engine. Tag Engine v2 is a flavor of Tag Engine that is compatible with Data Catalog and is hosted on Cloud Run. It supports user authentication and role based access control. Customers who have multiple teams using BigQuery and Cloud Storage can authorize each team to tag only their data assets using separate Tag Creator service accounts (more on that later). 
+## Tag Engine 3.0
+This is the Dataplex branch for Tag Engine. Tag Engine v3 is the newest flavor of Tag Engine that is compatible with both Data Catalog and Dataplex. It is based on the Cloud Run branch and therefore is compatible with VPC-SC, user authentication, role based access control. 
 
-If you are looking for Dataplex support, please check out the [dataplex](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/dataplex) branch in this repo.  
+As of this writing (2024-08-01), Dataplex support is limited to CSV imports. See Part 2 of this guide for more details. Please note that dynamic table and column tagging for Dataplex are not yet supported. We anticipate adding support for dynamic tagging within 30 days.  
 
-Tag Engine v2 is an open-source extension to Data Catalog on Google Cloud, which is now part of the Dataplex product suite. Tag Engine automates the tagging of BigQuery tables and views as well as data lake files in Cloud Storage. You create tag configurations that specify how to populate the various fields of a tag template through SQL expressions or static values. Tag Engine runs the configurations either on demand or on a schedule to create, update or delete the tags.
+Tag Engine automates the tagging of BigQuery tables and views as well as data lake files in Cloud Storage. You create tag configurations that specify how to populate the various fields of an aspect type or tag template through SQL expressions or static values. Tag Engine runs the configurations either on demand or on a schedule to create, update or delete the tags.
 
 This README file contains deployment steps, testing procedures, and code samples. It is organized into five sections:  <br>
-- Part 1: [Deploying Tag Engine v2](#deploy) <br>
-- Part 2: [Testing your Tag Engine API Setup](#testa)  <br>
-- Part 3: [Testing your Tag Engine UI Setup](#testb)  <br>
-- Part 4: [Troubleshooting](#troubleshooting)  <br>
-- Part 5: [Next Steps](#next)  <br> 
+- Part 1: [Deploying Tag Engine v3](#deploy) <br>
+- Part 2: [Testing your Tag Engine API Setup with Dataplex](#test-dataplex)
+- Part 3: [Testing your Tag Engine API Setup with Data Catalog](#test-api)  <br>
+- Part 4: [Testing your Tag Engine UI Setup with Data Catalog](#test-ui)  <br>
+- Part 5: [Troubleshooting](#troubleshooting)  <br>
+- Part 6: [Code Samples](#code-samples)  <br>
 
-### <a name="deploy"></a> Part 1: Deploying Tag Engine v2
+### <a name="deploy"></a> Part 1: Deploying Tag Engine v3
 
-Tag Engine v2 comes with two Cloud Run services. One service is for the API (`tag-engine-api`) and the other is for the UI (`tag-engine-ui`). 
+Tag Engine v3 comes with two Cloud Run services. One service is for the API (`tag-engine-api`) and the other is for the UI (`tag-engine-ui`). 
 
 Both services use access tokens for authorization. The API service expects the client to pass in an access token when calling the API functions (`gcloud auth print-identity-token`) whereas the UI service uses OAuth to authorize the client from the front-end. Note that a client secret file is required for the OAuth flow.  
 
@@ -97,7 +98,82 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 
 	When the Terraform finishes running, it should output two URIs. One for the API service (which looks like this https://tag-engine-api-xxxxxxxxxxxxx.a.run.app) and another for the UI service (which looks like this https://tag-engine-ui-xxxxxxxxxxxxx.a.run.app). <br><br>
 
-### <a name="testa"></a> Part 2: Testing your Tag Engine API setup
+
+### <a name="test-dataplex"></a> Part 2: Testing your Tag Engine API setup with Dataplex
+
+1. Create the sample `data-governance` aspect type:
+
+	```
+	git clone https://github.com/GoogleCloudPlatform/datacatalog-templates.git 
+	cd datacatalog-templates
+	python create_aspect_type.py $DATAPLEX_PROJECT $DATAPLEX_REGION aspect-types/data-governance.yaml 
+	```
+
+2. Grant permissions to invoker account (user or service):
+
+	Depending on how you are involving the Tag Engine API, you'll need to grant permissions to either your service account or user account (or both). 
+
+	If you'll be invoking the Tag Engine API with a user account, authorize your user account as follows:
+
+	```
+	gcloud auth login
+	
+	export INVOKER_USER_ACCOUNT="username@example.com"
+
+	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
+	--member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountUser --project=$DATA_CATALOG_PROJECT
+
+	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
+	--member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountTokenCreator --project=$DATA_CATALOG_PROJECT 
+
+	gcloud run services add-iam-policy-binding tag-engine-api \
+	--member=user:$INVOKER_USER_ACCOUNT --role=roles/run.invoker \
+	--project=$TAG_ENGINE_PROJECT --region=$TAG_ENGINE_REGION 
+	```
+
+	If you are invoking the Tag Engine API with a service account, authorize your service account as follows:
+
+	```
+	export INVOKER_SERVICE_ACCOUNT="tag-engine-invoker@<PROJECT>.iam.gserviceaccount.com"
+
+	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
+		--member=serviceAccount:$INVOKER_SERVICE_ACCOUNT --role=roles/iam.serviceAccountUser 
+
+	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
+		--member=serviceAccount:$INVOKER_SERVICE_ACCOUNT --role=roles/iam.serviceAccountTokenCreator 
+
+	gcloud run services add-iam-policy-binding tag-engine-api \
+		--member=serviceAccount:$INVOKER_SERVICE_ACCOUNT --role=roles/run.invoker \
+		--region=$TAG_ENGINE_REGION	
+	```
+
+	<b>Very important: Tag Engine requires that these roles be directly attached to your invoker account(s).</b> 
+
+
+3.  Run the following commands to create Dataplex aspects from CSV files:
+	
+	Copy `examples/configs/import/sample-data/bigquery_table_aspects.csv` to your own GCS bucket. 
+		
+	Open examples/configs/import/aspect-types/bigquery_table_config.json and change the aspect_type_project, aspect_type_region, and metadata_import_location to point to your Dataplex project, region and GCS bucket, respectively. 
+	
+	```
+	export IAM_TOKEN=$(gcloud auth print-identity-token)
+	
+	curl -X POST $TAG_ENGINE_URL/create_import_config -d @examples/configs/import/aspect-types/bigquery_table_config.json \
+	 -H "Authorization: Bearer $IAM_TOKEN"
+	 
+	curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+	-d '{"config_type":"TAG_IMPORT","config_uuid":"23b772a24f7011efbbe242004e494300"}' \
+	-H "Authorization: Bearer $IAM_TOKEN"
+
+	curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"23440e26501e11ef9de142004e494300"}' \
+	-H "Authorization: Bearer $IAM_TOKEN"
+	```
+	
+	Please note that you need to replace the `config_uuid` and `job_uuid` with your own values! 
+
+
+### <a name="test-api"></a> Part 3: Testing your Tag Engine API setup with Data Catalog
 
 1. Create the sample `data_governance` tag template:
 
@@ -109,7 +185,8 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 
 	The previous command creates the `data_governance` tag template in the `$DATA_CATALOG_PROJECT` and `$DATA_CATALOG_REGION`. 
 
-2. Grant permissions to invoker account (user or service)
+
+2. Grant permissions to invoker account (user or service):
 
 	Depending on how you are involving the Tag Engine API, you'll need to grant permissions to either your service account or user account (or both). 
 
@@ -236,7 +313,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 
 <br>
 
-### <a name="testb"></a> Part 3: Testing your Tag Engine UI Setup
+### <a name="test-ui"></a> Part 4: Testing your Tag Engine UI Setup with Data Catalog
 
 1. Set the authorized redirect URI and add authorized users:
 
@@ -274,7 +351,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
      If you encounter a 500 error, open the Cloud Run logs for `tag-engine-ui` to troubleshoot. 
 <br>
 
-### <a name="troubleshooting"></a> Part 4: Troubleshooting
+### <a name="troubleshooting"></a> Part 5: Troubleshooting
 
 There is a known issue with the Terraform. If you encounter the error `The requested URL was not found on this server` when you try to create a configuration from the API, the issue is that the container didn't build correctly. Try to rebuild and redeploy the Cloud Run API service with this command:
 
@@ -303,19 +380,19 @@ You should see the following response:
     Tag Engine is alive
 ```
 
-### <a name="next"></a> Part 5: Next Steps
+### <a name="code-samples"></a> Part 6: Code Samples
 
 1. Explore additional API methods and run them through curl commands:
 
    Open `examples/unit_test.sh` and go through the different methods for interracting with Tag Engine, including `configure_tag_history`, `create_static_asset_config`, `create_dynamic_column_config`, etc. <br>
 
-2. Explore the script samples:
+2. Explore the sample scripts library:
 
-   There are multiple test scripts in Python in the `examples/scripts` folder. These are intended to help you get started with the Tag Engine API. 
+   There are multiple samples scripts in the `examples/scripts` folder. These are intended to help you get started with the Tag Engine API. 
 
    Before running the scripts, open each file and update the `TAG_ENGINE_URL` variable on line 11 with your own Cloud Run service URL. You'll also need to update the project and dataset values which may be in the script itself or in the referenced json config file. 
 
-   Here are some of the scripts you can look at and run:
+   Here are some of the scripts that you can look at:
 
 	```
 	python configure_tag_history.py

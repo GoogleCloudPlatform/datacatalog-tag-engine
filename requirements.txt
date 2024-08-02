@@ -2,6 +2,7 @@ gunicorn
 Flask==2.3.2
 Flask-Session
 google-cloud-datacatalog==3.19.0
+google-cloud-dataplex==2.2.0
 google-cloud-bigquery==3.19.0
 google-cloud-core
 google-cloud-firestore==2.15.0

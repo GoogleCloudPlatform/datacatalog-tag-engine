@@ -172,6 +172,12 @@ indexes:
       - field: config_status
   - collection: import_configs
     fields:
+      - field: aspect_type_uuid
+      - field: metadata_import_location
+      - field: service_account
+      - field: config_status
+  - collection: import_configs
+    fields:
       - field: metadata_import_location
       - field: template_uuid
       - field: config_status
