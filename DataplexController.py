@@ -317,7 +317,10 @@ class DataplexController:
                 return op_status
     
             if field_type == 'bool':
-                field_value = bool(field_value)
+                if field_value in ('True', 'TRUE', 'true'):
+                    field_value = True
+                else:
+                    field_value = False
             
             elif field_type in ('datetime'):
                 # timestamp needs to look like this: "2024-07-31T05:00:00.000Z"

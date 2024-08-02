@@ -1,0 +1,9 @@
+{
+    "aspect_type_id": "data-sensitivity",
+    "aspect_type_project": "tag-engine-develop",
+    "aspect_type_region": "us-central1",
+    "metadata_import_location": "gs://tag-imports/latest/bigquery_column_aspects.csv",
+	"data_asset_type": "bigquery",
+	"data_asset_region": "us-central1",
+    "overwrite": true  
+}
