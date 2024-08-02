@@ -173,6 +173,18 @@ If multiple teams want to share a single instance of Tag Engine and they own dif
 	gcloud projects add-iam-policy-binding $DATA_CATALOG_PROJECT \
 	--member=serviceAccount:$TAG_CREATOR_SA \
 	--role=roles/datacatalog.viewer
+	
+	gcloud projects add-iam-policy-binding $DATA_CATALOG_PROJECT \
+	--member=serviceAccount:$TAG_CREATOR_SA \
+	--role=roles/dataplex.aspectTypeUser
+	
+	gcloud projects add-iam-policy-binding $DATA_CATALOG_PROJECT \
+	--member=serviceAccount:$TAG_CREATOR_SA \
+	--role=roles/dataplex.catalogEditor
+	
+	gcloud projects add-iam-policy-binding $DATA_CATALOG_PROJECT \
+	--member=serviceAccount:$TAG_CREATOR_SA \
+	--role=roles/dataplex.catalogViewer
 
 	gcloud projects add-iam-policy-binding $BIGQUERY_PROJECT \
 	--member=serviceAccount:$TAG_CREATOR_SA \

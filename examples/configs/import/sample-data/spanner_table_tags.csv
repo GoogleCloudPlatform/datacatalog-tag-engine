@@ -1,4 +1,0 @@
-project,instance,database,schema,table,sensitive_field,sensitive_type
-tag-engine-run,goog-dev,user-testing,dev,FINWIRE2024Q1_CMP,TRUE,Personal_Identifiable_Information
-tag-engine-run,goog-dev,user-testing,dev,FINWIRE2024Q2_CMP,TRUE,Sensitive_Personal_Identifiable_Information
-tag-engine-run,goog-dev,user-testing,dev,FINWIRE2024Q3_CMP,FALSE,

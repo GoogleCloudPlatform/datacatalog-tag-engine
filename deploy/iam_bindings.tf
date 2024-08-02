@@ -154,6 +154,27 @@ resource "google_project_iam_member" "PolicyTagReader" {
   depends_on = [google_project_iam_custom_role.policy_tag_reader]
 }
 
+resource "google_project_iam_member" "aspectTypeUser" {
+  project    = var.tag_engine_project
+  role       = "roles/dataplex.aspectTypeUser"
+  member     = "serviceAccount:${var.tag_creator_sa}"
+  depends_on = [google_project_service.tag_engine_project]
+}
+
+resource "google_project_iam_member" "catalogEditor" {
+  project    = var.tag_engine_project
+  role       = "roles/dataplex.catalogEditor"
+  member     = "serviceAccount:${var.tag_creator_sa}"
+  depends_on = [google_project_service.tag_engine_project]
+}
+
+resource "google_project_iam_member" "catalogViewer" {
+  project    = var.tag_engine_project
+  role       = "roles/dataplex.catalogViewer"
+  member     = "serviceAccount:${var.tag_creator_sa}"
+  depends_on = [google_project_service.tag_engine_project]
+}
+
 # ************************************************************ #
 # Create the service account policy bindings for tag_engine_sa
 # ************************************************************ #
