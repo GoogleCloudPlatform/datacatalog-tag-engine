@@ -5,7 +5,7 @@ This is the Dataplex branch for Tag Engine. Tag Engine v3 is the newest flavor o
 
 Tag Engine automates the tagging of BigQuery tables and views as well as data lake files in Cloud Storage. You create tag configurations that specify how to populate the various fields of an aspect type or tag template through SQL expressions or static values. Tag Engine runs the configurations either on demand or on a schedule to create, update or delete the tags.
 
-This README file contains deployment steps, testing procedures, and code samples. It is organized into five sections:  <br>
+This README file contains deployment steps, testing procedures, and code samples. It is organized into 6 sections:  <br>
 - Part 1: [Deploying Tag Engine v3](#deploy) <br>
 - Part 2: [Testing your Tag Engine API Setup with Dataplex](#test-dataplex)
 - Part 3: [Testing your Tag Engine API Setup with Data Catalog](#test-api)  <br>
