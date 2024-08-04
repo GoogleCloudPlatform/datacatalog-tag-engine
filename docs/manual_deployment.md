@@ -93,6 +93,7 @@ If multiple teams want to share a single instance of Tag Engine and they own dif
 	```
 	gcloud config set project $DATA_CATALOG_PROJECT 
 	gcloud services enable datacatalog.googleapis.com
+	gcloud services enable dataplex.googleapis.com
 	``` 
 
 6. Create the two cloud task queues. The first queue is used to queue the entire job while the second is used to queue individual work items. If a task fails, a second one will get created due to `max-attempts=2`:

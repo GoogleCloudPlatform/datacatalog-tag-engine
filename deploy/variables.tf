@@ -1,7 +1,7 @@
 variable "tag_engine_required_apis" {
 	type = list
 	description = "list of required GCP services for the tag engine project"
-	default = ["cloudresourcemanager.googleapis.com", "iam.googleapis.com", "cloudbuild.googleapis.com", "artifactregistry.googleapis.com", "datacatalog.googleapis.com", "run.googleapis.com", "cloudtasks.googleapis.com"]
+	default = ["cloudresourcemanager.googleapis.com", "iam.googleapis.com", "cloudbuild.googleapis.com", "artifactregistry.googleapis.com", "datacatalog.googleapis.com", "dataplex.googleapis.com", "run.googleapis.com", "cloudtasks.googleapis.com"]
 }
 
 variable "firestore_required_apis" {
