@@ -53,15 +53,15 @@
 			{% if config['config_type'] == 'TAG_RESTORE' %}
  		       <table style="background-color:#f1eeee" width="930">
 			   <tr>
- 		          <td>&nbsp;<span style="color:#0b5394;">Source template id:</span>
+ 		          <td>&nbsp;<span style="color:#0b5394;">Source Template Id:</span>
  		           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{ config['source_template_id'] }}</td>
  	           </tr>
  		       <tr>
- 		          <td>&nbsp;<span style="color:#0b5394;">Source template project:</span>
+ 		          <td>&nbsp;<span style="color:#0b5394;">Source Template Project:</span>
  		             &nbsp;&nbsp;{{ config['source_template_project'] }}</td>
  	           </tr>
  		       <tr>
- 		          <td>&nbsp;<span style="color:#0b5394;">Source template region:</span>
+ 		          <td>&nbsp;<span style="color:#0b5394;">Source Template Region:</span>
  		           &nbsp;&nbsp;&nbsp;{{ config['source_template_region'] }}</td>
  	           </tr>
  		       <tr>
@@ -85,20 +85,29 @@
 		{% elif config['config_type'] == 'TAG_IMPORT' %}
 	       <table style="background-color:#f1eeee" width="930">
 		   <tr>
-	          <td>&nbsp;<span style="color:#0b5394;">Template id:</span>
+	          <td>&nbsp;<span style="color:#0b5394;">Template Id:</span>
 	           &nbsp;&nbsp;{{ config['template_id'] }}</td>
            </tr>
 	       <tr>
-	          <td>&nbsp;<span style="color:#0b5394;">Template project:</span>
+	          <td>&nbsp;<span style="color:#0b5394;">Template Project:</span>
 	             &nbsp;&nbsp;{{ config['template_project'] }}</td>
            </tr>
 	       <tr>
-	          <td>&nbsp;<span style="color:#0b5394;">Template region:</span>
+	          <td>&nbsp;<span style="color:#0b5394;">Template Region:</span>
 	           &nbsp;&nbsp;{{ config['template_region'] }}</td>
            </tr>
 		   <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+		   <tr>
+	          <td>&nbsp;<span style="color:#0b5394;">Data Asset Type:</span>
+	           &nbsp;&nbsp;{{ config['data_asset_type'] }}</td>
+           </tr>
 	       <tr>
-	          <td>&nbsp;<span style="color:#0b5394;">Metadata import location:</span>
+	          <td>&nbsp;<span style="color:#0b5394;">Data Asset Region:</span>
+	             &nbsp;&nbsp;{{ config['data_asset_region'] }}</td>
+           </tr>
+		   <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+	       <tr>
+	          <td>&nbsp;<span style="color:#0b5394;">Metadata Import Location:</span>
 	           &nbsp;&nbsp;{{ config['metadata_import_location'] }}</td>
            </tr>
 		   </table>
