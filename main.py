@@ -1810,9 +1810,10 @@ def process_import_config():
     template_id = request.form['template_id']
     template_project = request.form['template_project']
     template_region = request.form['template_region']
-    
-    service_account = request.form['service_account']
+    data_asset_type = request.form['data_asset_type']
+    data_asset_region = request.form['data_asset_region']
     metadata_import_location = request.form['metadata_import_location']
+    service_account = request.form['service_account']
     action = request.form['action']
     
     if 'config_uuid' in request.form:
@@ -1859,8 +1860,7 @@ def process_import_config():
         
     # update existing config
     if config_uuid != None:
-        print('here')
-        store.update_tag_import_config(config_uuid, metadata_import_location)
+        store.update_tag_import_config(config_uuid, data_asset_type, data_asset_region, metadata_import_location)
         config = store.read_config(service_account, config_uuid, 'TAG_IMPORT')
     
         return render_template(
@@ -1868,6 +1868,8 @@ def process_import_config():
             template_id=template_id,
             template_project=template_project,
             template_region=template_region,
+            data_asset_type=data_asset_type,
+            data_asset_region=data_asset_region,
             service_account=service_account,
             config=config,
             settings=1)
@@ -1876,7 +1878,7 @@ def process_import_config():
     else:    
         template_uuid = store.write_tag_template(template_id, template_project, template_region)
         config_uuid = store.write_tag_import_config(service_account, template_uuid, template_id, template_project, template_region, \
-                                                    metadata_import_location, tag_history_option)                                                      
+                                                    data_asset_type, data_asset_region, metadata_import_location, tag_history_option)                                                      
 
         return render_template(
             'created_import_config.html',
@@ -1885,6 +1887,8 @@ def process_import_config():
             template_id=template_id,
             template_project=template_project,
             template_region=template_region,
+            data_asset_type=data_asset_type,
+            data_asset_region=data_asset_region,
             service_account=service_account,
             metadata_import_location=metadata_import_location,
             tag_history=tag_history_display)
@@ -3655,7 +3659,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 2.3.3\n"
+    return "Welcome to Tag Engine version 2.3.4\n"
     
 ####################### TEST METHOD ####################################  
     
