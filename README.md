@@ -123,9 +123,6 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
 	--member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountUser --project=$DATA_CATALOG_PROJECT
 
-	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-	--member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountTokenCreator --project=$DATA_CATALOG_PROJECT 
-
 	gcloud run services add-iam-policy-binding tag-engine-api \
 	--member=user:$INVOKER_USER_ACCOUNT --role=roles/run.invoker \
 	--project=$TAG_ENGINE_PROJECT --region=$TAG_ENGINE_REGION 
@@ -138,9 +135,6 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 
 	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
 		--member=serviceAccount:$INVOKER_SERVICE_ACCOUNT --role=roles/iam.serviceAccountUser 
-
-	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-		--member=serviceAccount:$INVOKER_SERVICE_ACCOUNT --role=roles/iam.serviceAccountTokenCreator 
 
 	gcloud run services add-iam-policy-binding tag-engine-api \
 		--member=serviceAccount:$INVOKER_SERVICE_ACCOUNT --role=roles/run.invoker \
