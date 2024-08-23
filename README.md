@@ -123,12 +123,8 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
 	--member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountUser --project=$DATA_CATALOG_PROJECT
 
-	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-	--member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountTokenCreator --project=$DATA_CATALOG_PROJECT 
-
 	gcloud run services add-iam-policy-binding tag-engine-api \
-	--member=user:$INVOKER_USER_ACCOUNT --role=roles/run.invoker \
-	--project=$TAG_ENGINE_PROJECT --region=$TAG_ENGINE_REGION 
+	--member=user:$INVOKER_USER_ACCOUNT --role=roles/run.invoker --project=$TAG_ENGINE_PROJECT --region=$TAG_ENGINE_REGION 
 	```
 
 	If you are invoking the Tag Engine API with a service account, authorize your service account as follows:
@@ -137,14 +133,10 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	export INVOKER_SERVICE_ACCOUNT="tag-engine-invoker@<PROJECT>.iam.gserviceaccount.com"
 
 	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-		--member=serviceAccount:$INVOKER_SERVICE_ACCOUNT --role=roles/iam.serviceAccountUser 
-
-	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-		--member=serviceAccount:$INVOKER_SERVICE_ACCOUNT --role=roles/iam.serviceAccountTokenCreator 
+	--member=serviceAccount:$INVOKER_SERVICE_ACCOUNT --role=roles/iam.serviceAccountUser 
 
 	gcloud run services add-iam-policy-binding tag-engine-api \
-		--member=serviceAccount:$INVOKER_SERVICE_ACCOUNT --role=roles/run.invoker \
-		--region=$TAG_ENGINE_REGION	
+	--member=serviceAccount:$INVOKER_SERVICE_ACCOUNT --role=roles/run.invoker --region=$TAG_ENGINE_REGION	
 	```
 
 	<b>Very important: Tag Engine requires that these roles be directly attached to your invoker account(s).</b> 
@@ -200,9 +192,6 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
 	--member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountUser --project=$DATA_CATALOG_PROJECT
 
-	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-	--member=user:$INVOKER_USER_ACCOUNT --role=roles/iam.serviceAccountTokenCreator --project=$DATA_CATALOG_PROJECT 
-
 	gcloud run services add-iam-policy-binding tag-engine-api \
 	--member=user:$INVOKER_USER_ACCOUNT --role=roles/run.invoker \
 	--project=$TAG_ENGINE_PROJECT --region=$TAG_ENGINE_REGION 
@@ -215,9 +204,6 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 
 	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
 		--member=serviceAccount:$INVOKER_SERVICE_ACCOUNT --role=roles/iam.serviceAccountUser 
-
-	gcloud iam service-accounts add-iam-policy-binding $TAG_CREATOR_SA \
-		--member=serviceAccount:$INVOKER_SERVICE_ACCOUNT --role=roles/iam.serviceAccountTokenCreator 
 
 	gcloud run services add-iam-policy-binding tag-engine-api \
 		--member=serviceAccount:$INVOKER_SERVICE_ACCOUNT --role=roles/run.invoker \
