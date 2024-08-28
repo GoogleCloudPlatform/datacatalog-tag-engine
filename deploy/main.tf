@@ -5,6 +5,9 @@ terraform {
       version = "5.37.0"
     }
   }
+  provider_meta "google" {
+      module_name = "cloud-solutions/datacatalog-tag-engine-v3"
+  }
 }
 
 # enable the required APIs
