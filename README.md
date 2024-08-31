@@ -1,11 +1,11 @@
 ## Tag Engine 3.0
 This is the Dataplex branch for Tag Engine. Tag Engine v3 is the newest flavor of Tag Engine that is compatible with both Data Catalog and Dataplex. It is based on the Cloud Run branch and therefore supports VPC-SC, user authentication, role based access control. 
 
-*As of this writing (2024-08-30), Tag Engine's Dataplex support is limited. You can only create Dataplex aspects with the Tag Engine API from CSV files with the import config type. The Tag Engine UI does not yet support Dataplex aspects. See [Part 2](#test-dataplex) of this guide for more details. Our plan is to first add dynamic table and column aspects with the Tag Engine API before extending the functionality to the UI.*  
+*As of this writing (2024-08-30), Tag Engine's Dataplex support is limited to the import config type. That is, you can only create Dataplex aspects from CSV files. See [Part 2](#test-dataplex) of this guide for more details. Moreover, only the Tag Engine API supports this functionality thus far. The Tag Engine UI does not yet support Dataplex aspects. Our plan is to continue adding more Dataplex functionality the Tag Engine API before extending it to the UI.*  
 
-Tag Engine automates the metadata tagging of BigQuery tables and views as well as data lake files in Cloud Storage. You create configurations that specify how to populate various fields of a tag or aspect through URIs and SQL expressions. Tag Engine then runs the configurations either on demand or on a schedule to create, update or delete the metadata tags.
+If you're not familiar with Tag Engine, this is an open-source tool which automates the metadata tagging of BigQuery, Cloud Storage, and Spanner data assets. It allows you to tag at the dataset level, table level, and field level. Tag Engine is used to import metadata from CSV files and it is also used for dynamic tagging where the metadata is sourced from BigQuery. With dynamic tagging, you create configurations that specify how to populate various fields of a tag or aspect using URI paths and SQL expressions. Tag Engine runs the configurations either on demand or on a schedule and carries out the tagging: creating new metadata tags, updating existing tags or deleting them when they are no longer needed.
 
-This README file contains deployment steps, testing procedures, and code samples. It is organized into 6 sections:  <br>
+This README file describes the deployment steps, testing procedures, and some code samples. It is organized into 6 sections:  <br>
 - Part 1: [Deploying Tag Engine v3](#deploy) <br>
 - Part 2: [Testing your Tag Engine API Setup with Dataplex](#test-dataplex)
 - Part 3: [Testing your Tag Engine API Setup with Data Catalog](#test-api)  <br>
@@ -15,7 +15,7 @@ This README file contains deployment steps, testing procedures, and code samples
 
 ### <a name="deploy"></a> Part 1: Deploying Tag Engine v3
 
-Tag Engine v3 comes with two Cloud Run services. One service is for the API (`tag-engine-api`) and the other is for the UI (`tag-engine-ui`). 
+Tag Engine v3 (just like Tag Engine v2) comes with two Cloud Run services. One service is for the API (`tag-engine-api`) and the other is for the UI (`tag-engine-ui`). 
 
 Both services use access tokens for authorization. The API service expects the client to pass in an access token when calling the API functions (`gcloud auth print-identity-token`) whereas the UI service uses OAuth to authorize the client from the front-end. Note that a client secret file is required for the OAuth flow.  
 
