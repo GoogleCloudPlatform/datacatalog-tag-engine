@@ -5,6 +5,8 @@ This is the Dataplex branch for Tag Engine. Tag Engine v3 is the newest flavor o
 
 If you're not familiar with Tag Engine, this is an open-source tool which automates the metadata tagging of BigQuery, Cloud Storage, and Spanner data assets. It allows you to tag at the dataset level, table level, and field level. Tag Engine is used to import metadata from CSV files and it is also used for dynamic tagging where the metadata is sourced from BigQuery. With dynamic tagging, you create configurations that specify how to populate various fields of a tag or aspect using URI paths and SQL expressions. Tag Engine runs the configurations either on demand or on a schedule and carries out the tagging: creating new metadata tags, updating existing tags or deleting them when they are no longer needed.
 
+<img src="docs/arch_diagram.png" alt="architecture diagram" width="550"/>
+
 This README file describes the deployment steps, testing procedures, and some code samples. It is organized into 6 sections:  <br>
 - Part 1: [Deploying Tag Engine v3](#deploy) <br>
 - Part 2: [Testing your Tag Engine API Setup with Dataplex](#test-dataplex)
