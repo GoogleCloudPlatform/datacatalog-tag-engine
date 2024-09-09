@@ -1410,7 +1410,8 @@ def process_dynamic_column_config():
      
     template_uuid = store.write_tag_template(template_id, template_project, template_region)
     config_uuid = store.write_dynamic_column_config(service_account, fields, included_columns_query, \
-                                                    included_tables_uris, excluded_tables_uris, template_uuid,\
+                                                    included_tables_uris, excluded_tables_uris, template_uuid, \
+                                                    template_id, template_project, template_region, \
                                                     refresh_mode, refresh_frequency, refresh_unit, \
                                                     tag_history_option)
      
@@ -3659,7 +3660,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 2.3.4\n"
+    return "Welcome to Tag Engine version 2.3.5\n"
     
 ####################### TEST METHOD ####################################  
     
