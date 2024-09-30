@@ -12,42 +12,33 @@ resource "google_firestore_database" "create" {
   depends_on                = [google_project_service.firestore_project]
 }
 
-
-# ************************************************************ #
-# Install python packages
-# ************************************************************ #
-resource "null_resource" "install_packages" {
-
-  provisioner "local-exec" {
-    command = "/bin/bash install_packages.sh"
-  }
-
-  triggers = {
-    always_run = timestamp()
-  }
-
-  depends_on = [google_cloud_run_v2_service.api_service, google_cloud_run_v2_service.ui_service]
-}
-  
 # ************************************************************ #
 # Create the firestore indexes
 # ************************************************************ #
 
-resource "null_resource" "firestore_indexes" {
-  triggers = {
-    firestore_project = var.firestore_project,
-    firestore_database = var.firestore_database
-    firestore_db = google_firestore_database.create.id
-  }
-  provisioner "local-exec" {
-    command = "python3 create_indexes.py create ${var.firestore_project} ${var.firestore_database}"
-  }
 
-  provisioner "local-exec" {
-    when = destroy
-    command = "python3 create_indexes.py destroy ${self.triggers.firestore_project} ${self.triggers.firestore_database}"
-  }
-  
-  depends_on = [google_firestore_database.create, null_resource.install_packages]
+locals {
+  config = yamldecode(file("firestore.yaml"))
+  indexes = local.config["indexes"]
 }
-   
+
+resource "google_firestore_index" "indices" {
+  # generate a map from each index object defined in the yaml file, where the key is just all the fields and collection
+  # put together and the value is the index object (with collection, fields and an optional order fields).
+  for_each = {for index in local.indexes: "${index["collection"]}--${join("-", index["fields"][*]["field"])}" => index}
+
+  project                       = google_firestore_database.create.project
+  database                      = google_firestore_database.create.name
+  collection                    = each.value["collection"]
+
+  dynamic "fields" {
+    for_each = [for f in each.value["fields"] : {
+      field = f["field"]
+      order = lookup(f, "order", "ASCENDING")
+    }]
+    content {
+      field_path = fields.value.field
+      order = fields.value.order
+    }
+  }
+}

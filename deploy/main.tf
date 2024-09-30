@@ -42,3 +42,20 @@ resource "google_project_service" "data_catalog_project" {
   disable_on_destroy = false
   disable_dependent_services = true
 }
+
+resource "local_file" "tagengineini" {
+  filename = "${path.module}/../tagengine.ini"
+  content = templatefile("${path.module}/tagengine.ini.tpl", {
+    tag_engine_sa = var.tag_engine_sa
+    tag_creator_sa = var.tag_creator_sa
+    project_id = var.tag_engine_project
+    region = var.tag_engine_region
+    firestore_project = google_firestore_database.create.project
+    firestore_db = google_firestore_database.create.name
+    injector_queue = google_cloud_tasks_queue.injector_queue.name
+    work_queue = google_cloud_tasks_queue.work_queue.name
+    bq_region = var.bigquery_region
+    fileset_region = var.tag_engine_region
+    spanner_region = var.tag_engine_region
+  })
+}
