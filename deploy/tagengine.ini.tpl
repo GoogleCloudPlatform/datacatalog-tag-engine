@@ -1,0 +1,20 @@
+[DEFAULT]
+TAG_ENGINE_SA = ${tag_engine_sa}
+TAG_CREATOR_SA = ${tag_creator_sa}
+TAG_ENGINE_PROJECT = ${project_id}
+TAG_ENGINE_REGION = ${region}
+FIRESTORE_PROJECT = ${firestore_project}
+FIRESTORE_DB = ${firestore_db}
+INJECTOR_QUEUE = ${injector_queue}
+WORK_QUEUE = ${work_queue}
+BIGQUERY_REGION = ${bq_region}
+FILESET_REGION = ${fileset_region}
+SPANNER_REGION = ${spanner_region}
+ENABLE_AUTH = True
+OAUTH_CLIENT_CREDENTIALS = te_client_secret.json
+ENABLE_TAG_HISTORY = True
+TAG_HISTORY_PROJECT = ${project_id}
+TAG_HISTORY_DATASET = tag_history
+ENABLE_JOB_METADATA = True
+JOB_METADATA_PROJECT = ${project_id}
+JOB_METADATA_DATASET = job_metadata
