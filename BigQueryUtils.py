@@ -343,6 +343,11 @@ class BigQueryUtils:
     # used by tag history function
     def create_history_table(self, dataset_id, table_name, fields):
         
+        #print('enter create_history_table()')
+        #print('dataset_id:', dataset_id)
+        #print('table_name:', table_name)
+        #print('fields:', fields)
+        
         schema = [bigquery.SchemaField('event_time', 'TIMESTAMP', mode='REQUIRED'), 
                   bigquery.SchemaField('asset_name', 'STRING', mode='REQUIRED'), 
                   bigquery.SchemaField('tag_creator_account', 'STRING', mode='REQUIRED'), 
@@ -379,8 +384,12 @@ class BigQueryUtils:
         table_id = dataset_id.table(table_name)
         table = bigquery.Table(table_id, schema=schema)
         table.time_partitioning = bigquery.TimePartitioning(type_=bigquery.TimePartitioningType.DAY, field="event_time")  
-        table = self.client.create_table(table, exists_ok=True)  
-        
+                
+        try:
+            table = self.client.create_table(table, exists_ok=True)  
+        except Exception as e:
+            print("Error creating tag_history table:", e)
+            
         print("Created table {}.{}.{}".format(table.project, table.dataset_id, table.table_id))        
         table_id = ("{}.{}.{}".format(table.project, table.dataset_id, table.table_id))
         

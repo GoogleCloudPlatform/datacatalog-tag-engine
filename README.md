@@ -1,7 +1,7 @@
 ## Tag Engine 3.0
 This is the Dataplex branch for Tag Engine. Tag Engine v3 is the newest flavor of Tag Engine that is compatible with both Data Catalog and Dataplex. It is based on the Cloud Run branch and therefore supports VPC-SC, user authentication, role based access control. 
 
-*As of this writing (2024-10-13), Tag Engine's Dataplex support is limited to the import, dynamic table, and dynamic column config types. See [Part 2](#test-dataplex) of this guide for more details. Note: Only the Tag Engine API supports Dataplex aspects. Our plan is to continue adding Dataplex support to Tag Engine over the coming months, which will include the Tag Engine UI.*  
+*As of this writing (2024-10-13), Tag Engine's Dataplex support is limited to the import, dynamic table, and dynamic column config types. See [Part 2](#test-dataplex) of this guide for more details. Note: Only the Tag Engine API supports operating on Dataplex aspects. Our plan is to add compatibility for the Tag Engine UI by end of year.*  
 
 If you're not familiar with Tag Engine, it is an open-source tool which automates the metadata tagging of BigQuery, Cloud Storage, and Spanner data assets. It allows you to tag at the dataset level, table level, and field level. Tag Engine is used to import metadata from CSV files and it is also used for dynamic tagging where the metadata is sourced from BigQuery. With dynamic tagging, you create configurations that specify how to populate various fields of a tag or aspect using URI paths and SQL expressions. Tag Engine runs the configurations either on demand or on a schedule and carries out the tagging: creating new metadata tags, updating existing tags or deleting them when they are no longer needed.
 
@@ -107,8 +107,8 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 
 	```
 	git clone https://github.com/GoogleCloudPlatform/datacatalog-templates.git 
-	cd datacatalog-templates
-	python create_aspect_type.py $DATAPLEX_PROJECT $DATAPLEX_REGION aspect-types/data-governance.yaml 
+	cd aspect_types
+	python create_aspect_type.py $DATAPLEX_PROJECT $DATAPLEX_REGION aspect_types/data-governance.yaml 
 	```
 
 2. Grant permissions to invoker account (user or service):
@@ -153,7 +153,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	```
 	export IAM_TOKEN=$(gcloud auth print-identity-token)
 	
-	curl -X POST $TAG_ENGINE_URL/create_import_config -d @examples/configs/import/aspect-types/bigquery_table_config.json \
+	curl -X POST $TAG_ENGINE_URL/create_import_config -d @examples/configs/import/aspect_types/bigquery_table_config.json \
 	 -H "Authorization: Bearer $IAM_TOKEN"
 	 
 	curl -i -X POST $TAG_ENGINE_URL/trigger_job \
@@ -219,7 +219,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 
 	```
 	git clone https://github.com/GoogleCloudPlatform/datacatalog-templates.git 
-	cd datacatalog-templates
+	cd datacatalog_templates
 	python create_template.py $DATA_CATALOG_PROJECT $DATA_CATALOG_REGION data_governance.yaml 
 	```
 

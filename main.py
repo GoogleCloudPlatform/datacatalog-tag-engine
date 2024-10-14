@@ -1828,7 +1828,7 @@ def process_import_config():
     if success == False:
         print('Error acquiring credentials from', service_account)
     
-    dcc = controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template = dcc.get_template()
     
     if action == "Cancel Changes":

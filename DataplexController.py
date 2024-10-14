@@ -55,9 +55,13 @@ class DataplexController:
             
         self.bq_client = bigquery.Client(credentials=self.credentials, location=BIGQUERY_REGION, client_info=ClientInfo(user_agent=USER_AGENT))
         
-        
+    # note: included_fields can be populated or null
+    # null = we want to return all the fields from the template
     def get_aspect_type(self, included_fields=None):
         
+        print('enter get_aspect_type()')
+        #print('included_fields:', included_fields)
+              
         aspect_fields = []
         
         try:
@@ -70,31 +74,37 @@ class DataplexController:
             return fields
         
         record_fields = aspect_type.metadata_template.record_fields
+        #print('record_fields:', record_fields)
 
         for field in record_fields:
-
-            if included_fields:
-                match_found = False
+            
+            match_found = False
+            
+            if included_fields != None:
+                
                 for included_field in included_fields:
+                
                     if included_field['field_id'] == field.name:
+                    
+                        print('found_match:', field.name)
+                    
                         match_found = True
-                        
+                    
                         if 'field_value' in included_field:
                             assigned_value = included_field['field_value']
                         else:
                             assigned_value = None
-                            
+                        
                         if 'query_expression' in included_field:
                             query_expression = included_field['query_expression']
                         else:
                             query_expression = None
-                        
+                    
                         break
-                
-                if match_found == False:
-                    continue
             
-     
+            if included_fields != None and match_found == False:
+                continue
+            
             enum_values = []
 
             if field.type_ == "enum":   
@@ -119,8 +129,11 @@ class DataplexController:
                    aspect_field['query_expression'] = query_expression
 
             aspect_fields.append(aspect_field)
+        
+        sorted_aspect_fields = sorted(aspect_fields, key=itemgetter('order'))
+        #print('sorted_aspect_fields:', sorted_aspect_fields)
                             
-        return sorted(aspect_fields, key=itemgetter('order'), reverse=True)
+        return sorted_aspect_fields
     
     
     def check_column_exists(self, aspects, target_column):
@@ -614,13 +627,17 @@ class DataplexController:
                 query_expression = field['query_expression']
                 query_str = self.parse_query_expression(uri, query_expression, target_column)
                 query_strings.append(query_str)
-
+            
+            print('query_strings:', query_strings)
+                
             # combine query expressions 
             combined_query = self.combine_queries(query_strings)
             
             # run combined query, adding the results to the field_values for each field
             # Note: field_values is of type list
             fields, error_exists = self.run_combined_query(combined_query, target_column, fields, job_uuid)
+            
+            print('fields:', fields)
 
             if error_exists:
                 op_status = constants.ERROR
@@ -757,14 +774,17 @@ if __name__ == '__main__':
     aspect_type_region = 'us-central1'
     aspect_type_uuid = 'Bofcfg9kkkFz4d0Dk2SM'
     
-    fields = [{'field_type': 'enum', 'field_id': 'data_domain', 'enum_values': ['LOGISTICS', 'FINANCE', 'HR', 'LEGAL', 'MARKETING', 'SALES'], 'is_required': True, 'display_name': 'Data Domain', 'order': 1, 'query_expression': "select 'LOGISTICS'"}]
+    #fields = [{'field_type': 'enum', 'field_id': 'data_domain', 'enum_values': ['LOGISTICS', 'FINANCE', 'HR', 'LEGAL', 'MARKETING', 'SALES'], 'is_required': True, 'display_name': 'Data Domain', 'order': 1, 'query_expression': "select 'LOGISTICS'"}]
     columns_query = "select 'c_id'"
     uri = 'tag-engine-develop/datasets/crm/tables/UpdAcct'
     job_uuid = 'b0a8e1de89cf11ef833d42004e494300'
     config_uuid = '9aaaed5089cf11ef825b42004e494300'
     tag_history = True
         
+    included_fields = [{'field_id': 'data_domain', 'query_expression': "select 'LOGISTICS'"}, {'field_id': 'broad_data_category', 'query_expression': "select 'CONTENT'"}]
     dpc = DataplexController(credentials, target_service_account, 'scohen@gcp.solutions', aspect_type_id, aspect_type_project, aspect_type_region)
-    #dpc.get_aspect_type()
-    dpc.apply_dynamic_column_config(fields, columns_query, uri, job_uuid, config_uuid, aspect_type_uuid, tag_history)
+    #dpc.get_aspect_type(included_fields)
+    dpc.get_aspect_type()
+    
+    #dpc.apply_dynamic_column_config(fields, columns_query, uri, job_uuid, config_uuid, aspect_type_uuid, tag_history)
    
