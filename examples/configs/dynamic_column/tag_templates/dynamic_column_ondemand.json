@@ -1,6 +1,6 @@
 {
     "template_id": "data_governance",
-    "template_project": "dgtoolkit",
+    "template_project": "tag-engine-develop",
     "template_region": "us-central1",
     "fields": [
         {
@@ -12,7 +12,7 @@
             "query_expression": "select 'CONTENT'"
         }
     ],
-    "included_columns_query": "select 'unique_key', 'created_date', 'incident.city', 'incident.county'",
-    "included_tables_uris": "bigquery/project/dgtoolkit/dataset/tickets/*",
+    "included_columns_query": "select 'c_id'",
+    "included_tables_uris": "bigquery/project/tag-engine-develop/dataset/crm/*",
     "refresh_mode": "ON_DEMAND" 
 }
