@@ -2,5 +2,6 @@ project,dataset,table,column,sensitive_field,sensitive_type
 tag-engine-develop,sakila_dw,customer,customer_id,TRUE,PII
 tag-engine-develop,sakila_dw,customer,first_name,TRUE,SPII
 tag-engine-develop,sakila_dw,customer,last_name,TRUE,SPII
+tag-engine-develop,sakila_dw,customer,full-name,TRUE,SPII
 tag-engine-develop,sakila_dw,customer,email,TRUE,SPII
 tag-engine-develop,sakila_dw,customer,store_id,FALSE,

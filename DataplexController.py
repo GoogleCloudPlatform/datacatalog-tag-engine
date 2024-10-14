@@ -348,6 +348,333 @@ class DataplexController:
         return op_status
         
     
+    def apply_dynamic_table_config(self, fields, uri, job_uuid, config_uuid, aspect_type_uuid, tag_history):
+        
+        print('*** apply_dynamic_table_config ***')
+        #print('fields:', fields)
+        #print('uri:', uri)
+        #print('job_uuid:', job_uuid)
+        #print('config_uuid:', config_uuid)
+        #print('aspect_type_uuid:', aspect_type_uuid)
+        #print('tag_history:', tag_history)
+        
+        op_status = constants.SUCCESS
+        error_exists = False
+        
+        bigquery_project = uri.split('/')[0]
+
+        # TO DO: allow user to overwrite default region with config value
+        bigquery_region = BIGQUERY_REGION # default to the region from the ini file 
+        
+        entry_name = f'bigquery.googleapis.com/projects/{uri}'
+        entry_path = f'projects/{bigquery_project}/locations/{bigquery_region}/entryGroups/@bigquery/entries/{entry_name}'
+        
+        entry_request = dataplex.GetEntryRequest(
+            name=entry_path,
+            view=dataplex.EntryView.ALL
+        )
+
+        try:
+            entry = self.client.get_entry(request=entry_request)
+            #print('entry:', entry)
+        except Exception as e:
+            msg = f"Error could not locate entry {entry_name}"
+            log_error(msg, e, job_uuid)
+            op_status = constants.ERROR
+            return op_status
+
+        # run query expressions
+        verified_field_count = 0
+        
+        for field in fields:
+            field_id = field['field_id']
+            field_type = field['field_type']
+            query_expression = field['query_expression']
+
+            # parse the query expression
+            query_str = self.parse_query_expression(uri, query_expression)
+            print('returned query_str: ' + query_str)
+            
+            # run the SQL query
+            # note: field_values is of type list
+            field_values, error_exists = self.run_query(query_str, field_type, job_uuid)
+    
+            if error_exists or field_values == []:
+                continue
+                      
+            verified_field_count = verified_field_count + 1
+            
+            if field_type == 'richtext':
+                formatted_value = ', '.join(str(v) for v in field_values)
+            else:
+                formatted_value = field_values[0]
+               
+            field['field_value'] = formatted_value
+       
+        if verified_field_count == 0:
+            # aspect is empty due to SQL errors, skip aspect creation
+            op_status = constants.ERROR
+            return op_status
+                           
+        aspect_type_path = f'{self.aspect_type_project}.{self.aspect_type_region}.{self.aspect_type_id}'
+        
+        op_status = self.create_update_delete_aspect(fields, aspect_type_path, entry_path, job_uuid, \
+                                                     config_uuid, 'DYNAMIC_TAG_TABLE', tag_history, uri, None)
+                         
+        return op_status
+    
+    
+    def parse_query_expression(self, uri, query_expression, column=None):
+        
+        query_str = None
+        
+        # analyze query expression
+        from_index = query_expression.rfind(" from ", 0)
+        where_index = query_expression.rfind(" where ", 0)
+        project_index = query_expression.rfind("$project", 0)
+        dataset_index = query_expression.rfind("$dataset", 0)
+        table_index = query_expression.rfind("$table", 0)
+        from_clause_table_index = query_expression.rfind(" from $table", 0)
+        from_clause_backticks_table_index = query_expression.rfind(" from `$table`", 0)
+        column_index = query_expression.rfind("$column", 0)
+        
+        if project_index != -1:
+            project_end = uri.find('/') 
+            project = uri[0:project_end]
+            
+        if dataset_index != -1:
+            dataset_start = uri.find('/datasets/') + 10
+            dataset_string = uri[dataset_start:]
+            dataset_end = dataset_string.find('/') 
+            
+            if dataset_end == -1:
+                dataset = dataset_string[0:]
+            else:
+                dataset = dataset_string[0:dataset_end]
+        
+        # $table referenced in from clause, use fully qualified table
+        if from_clause_table_index > 0 or from_clause_backticks_table_index > 0:
+             qualified_table = uri.replace('/project/', '.').replace('/datasets/', '.').replace('/tables/', '.')
+             query_str = query_expression.replace('$table', qualified_table)
+             
+        # $table is referenced somewhere in the expression, replace $table with actual table name
+        else:
+        
+            if table_index != -1:
+                table_index = uri.rfind('/') + 1
+                table_name = uri[table_index:]
+                query_str = query_expression.replace('$table', table_name)
+            
+            # $project referenced in where clause too
+            if project_index > -1:
+                
+                if query_str == None:
+                    query_str = query_expression.replace('$project', project)
+                else:
+                    query_str = query_str.replace('$project', project)
+                
+                #print('query_str: ', query_str)
+            
+            # $dataset referenced in where clause too    
+            if dataset_index > -1:
+
+                if query_str == None:
+                    query_str = query_expression.replace('$dataset', dataset)
+                else:
+                    query_str = query_str.replace('$dataset', dataset)
+                    
+                #print('query_str: ', query_str)
+            
+        # table not in query expression (e.g. select 'string')
+        if table_index == -1 and query_str == None:
+            query_str = query_expression
+            
+        if column_index != -1:
+            
+            if query_str == None:
+                query_str = query_expression.replace('$column', column)
+            else:
+                query_str = query_str.replace('$column', column)
+        
+        #print('returning query_str:', query_str)            
+        return query_str
+    
+    
+    def run_query(self, query_str, field_type, job_uuid):
+        
+        field_values = []
+        error_exists = False
+            
+        try:
+            #print('query_str:', query_str)
+            rows = self.bq_client.query_and_wait(query_str)
+            
+            # if query expression is well-formed, there should only be a single row returned with a single field_value
+            # However, user may mistakenly run a query that returns a list of rows. In that case, grab only the top row.  
+            row_count = 0
+
+            for row in rows:
+                row_count = row_count + 1
+                field_values.append(row[0])
+            
+                if field_type != 'richtext' and row_count == 1:
+                    return field_values, error_exists
+        
+            # check row_count
+            if row_count == 0:
+                #error_exists = True
+                print('sql query returned nothing:', query_str)
+        
+        except Exception as e:
+            error_exists = True
+            msg = 'Error occurred during run_query {}'.format(query_str)
+            log_error(msg, e, job_uuid)
+            
+        #print('field_values: ', field_values)
+        
+        return field_values, error_exists
+    
+    
+    def apply_dynamic_column_config(self, fields, columns_query, uri, job_uuid, config_uuid, aspect_type_uuid, tag_history):
+        
+        print('*** apply_dynamic_column_config ***')
+        #print('fields:', fields)
+        #print('columns_query:', columns_query)
+        #print('uri:', uri)
+        #print('job_uuid:', job_uuid)
+        #print('config_uuid:', config_uuid)
+        #print('aspect_type_uuid:', aspect_type_uuid)
+        #print('tag_history:', tag_history)
+        
+        op_status = constants.SUCCESS
+        error_exists = False
+        
+        bigquery_project = uri.split('/')[0]
+
+        # TO DO: allow user to overwrite default region with config value
+        bigquery_region = BIGQUERY_REGION # default to the region from the ini file 
+        
+        entry_name = f'bigquery.googleapis.com/projects/{uri}'
+        entry_path = f'projects/{bigquery_project}/locations/{bigquery_region}/entryGroups/@bigquery/entries/{entry_name}'
+        
+        entry_request = dataplex.GetEntryRequest(
+            name=entry_path,
+            view=dataplex.EntryView.ALL
+        )
+
+        try:
+            entry = self.client.get_entry(request=entry_request)
+            #print('entry:', entry)
+        except Exception as e:
+            msg = f"Error could not locate entry {entry_name}"
+            log_error(msg, e, job_uuid)
+            op_status = constants.ERROR
+            return op_status
+                         
+        target_columns = [] # columns in the table which need to be tagged
+        
+        columns_query = self.parse_query_expression(uri, columns_query)
+        #print('columns_query:', columns_query)
+        
+        rows = self.bq_client.query(columns_query).result()
+
+        num_columns = 0
+        for row in rows:    
+            for column in row:
+                print('column:', column)
+                target_columns.append(column)
+                num_columns += 1
+                 
+        if num_columns == 0:
+            # no columns to tag
+            msg = f"Error could not find columns to tag. Please check column_query parameter in your config. Current value: {columns_query}"
+            log_error(msg, None, job_uuid)
+            op_status = constants.ERROR
+            return op_status
+                                      
+        column_fields_list = [] # list<dictionaries> where dict = {column, fields}
+
+        for target_column in target_columns:
+            
+            #print('target_column:', target_column)
+            
+            # fail quickly if a column is not found in the entry's schema
+            column_exists = self.check_column_exists(entry.aspects, target_column)
+            
+            if column_exists != True:
+                msg = f"Error could not find column {target_column} in {entry.name}"
+                log_error(msg, None, job_uuid)
+                op_status = constants.ERROR
+                return op_status
+
+            verified_field_count = 0
+            query_strings = []
+            
+            for field in fields:
+                query_expression = field['query_expression']
+                query_str = self.parse_query_expression(uri, query_expression, target_column)
+                query_strings.append(query_str)
+
+            # combine query expressions 
+            combined_query = self.combine_queries(query_strings)
+            
+            # run combined query, adding the results to the field_values for each field
+            # Note: field_values is of type list
+            fields, error_exists = self.run_combined_query(combined_query, target_column, fields, job_uuid)
+
+            if error_exists:
+                op_status = constants.ERROR
+                continue
+                                                                     
+            aspect_type_path = f'{self.aspect_type_project}.{self.aspect_type_region}.{self.aspect_type_id}@Schema.{target_column}'
+            uri_column = f'{uri}/column/{target_column}' 
+            
+            op_status = self.create_update_delete_aspect(fields, aspect_type_path, entry_path, job_uuid, \
+                                                         config_uuid, 'DYNAMIC_TAG_COLUMN', tag_history, uri_column, target_column)
+                        
+            # fail fast if aspect does not get created, updated or deleted 
+            if op_status == constants.ERROR:
+                return op_status
+                                              
+        return op_status
+        
+    
+    def combine_queries(self, query_strings):
+        
+        large_query = "select "
+        
+        for query in query_strings:
+             large_query += "({}), ".format(query)
+        
+        return large_query[0:-2]
+        
+     
+    def run_combined_query(self, combined_query, column, fields, job_uuid):
+        
+        error_exists = False
+            
+        try:
+            rows = self.bq_client.query_and_wait(combined_query)
+            row_count = 0
+
+            for row in rows:
+                for i, field in enumerate(fields):
+                    field['field_value'] = row[i]
+            
+                row_count += 1    
+        
+            if row_count == 0:
+                error_exists = True
+                print('sql query returned empty set:', combined_query)
+        
+        except Exception as e:
+            error_exists = True
+            msg = 'Error occurred during run_combined_query {}'.format(combined_query)
+            log_error(msg, e, job_uuid)
+            
+        return fields, error_exists
+        
+           
     def create_update_delete_aspect(self, aspect_fields, aspect_type_path, entry_path, job_uuid, config_uuid, config_type, tag_history, uri, target_column):
         
         print("enter create_update_delete_tag")
@@ -425,19 +752,19 @@ if __name__ == '__main__':
         target_scopes=SCOPES,
         lifetime=1200)
         
+    aspect_type_id = 'data-governance'
     aspect_type_project = 'tag-engine-develop'
     aspect_type_region = 'us-central1'
+    aspect_type_uuid = 'Bofcfg9kkkFz4d0Dk2SM'
     
-    job_uuid = "1"
-    config_uuid = "cd1983bc4d1811efbd33acde48001122"
-    data_asset_type = "bigquery"
-    data_asset_region = "us-central1"
-    
-    aspect_type_id = 'data-governance'
-    tag_dict = {"project": "tag-engine-develop", "dataset": "sakila_dw", "table": "actor", "column": "actor_id", "data_domain": "LOGISTICS"} 
+    fields = [{'field_type': 'enum', 'field_id': 'data_domain', 'enum_values': ['LOGISTICS', 'FINANCE', 'HR', 'LEGAL', 'MARKETING', 'SALES'], 'is_required': True, 'display_name': 'Data Domain', 'order': 1, 'query_expression': "select 'LOGISTICS'"}]
+    columns_query = "select 'c_id'"
+    uri = 'tag-engine-develop/datasets/crm/tables/UpdAcct'
+    job_uuid = 'b0a8e1de89cf11ef833d42004e494300'
+    config_uuid = '9aaaed5089cf11ef825b42004e494300'
     tag_history = True
-    overwrite = True
-    
+        
     dpc = DataplexController(credentials, target_service_account, 'scohen@gcp.solutions', aspect_type_id, aspect_type_project, aspect_type_region)
     #dpc.get_aspect_type()
-    dpc.apply_import_config(job_uuid, config_uuid, data_asset_type, data_asset_region, tag_dict, tag_history, overwrite) 
+    dpc.apply_dynamic_column_config(fields, columns_query, uri, job_uuid, config_uuid, aspect_type_uuid, tag_history)
+   

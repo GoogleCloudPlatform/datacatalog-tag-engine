@@ -2144,31 +2144,40 @@ def create_dynamic_table_config():
     if status == False:
         return jsonify(response), 400
        
-    valid_parameters, is_dataplex, template_id, template_project, template_region = check_template_aspect_parameters('dynamic_table_config', json_request)
+    valid_parameters, is_dataplex, _id, _project, _region = check_template_aspect_parameters('dynamic_table_config', json_request)
     
     if valid_parameters != True:
         response = {
                 "status": "error",
-                "message": "Request JSON is missing some required tag template parameters",
+                "message": "Request JSON is missing some required tag template or aspect type parameters",
         }
         return jsonify(response), 400
      
-    print('template_id: ' + template_id)
-    print('template_project: ' + template_project)
-    print('template_region: ' + template_region)
-    
-    template_uuid = store.write_tag_template(template_id, template_project, template_region)
+    if is_dataplex:
+        aspect_type_id = _id
+        aspect_type_project = _project
+        aspect_type_region = _region
+        aspect_type_uuid = store.write_aspect_type(aspect_type_id, aspect_type_project, aspect_type_region)
+    else:
+        template_id = _id
+        template_project = _project
+        template_region = _region
+        template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
     credentials, success = get_target_credentials(tag_creator_sa)
     
     if success == False:
         print('Error acquiring credentials from', tag_creator_sa)
     
-    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     included_fields = json_request['fields']
     
-    fields = dcc.get_template(included_fields=included_fields)
-    print('returned template fields:', fields)
+    if is_dataplex:
+        dpc = dp_controller.DataplexController(credentials, None, None, aspect_type_id, aspect_type_project, aspect_type_region)
+        fields = dpc.get_aspect_type(included_fields=included_fields)
+    else:
+        dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+        fields = dcc.get_template(included_fields=included_fields)
+        print('returned template fields:', fields)
     
     if 'included_tables_uris' in json_request:
         included_tables_uris = json_request['included_tables_uris']
@@ -2185,10 +2194,17 @@ def create_dynamic_table_config():
     refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json_request)
     
     tag_history_option, _ = store.read_tag_history_settings()
-    config_uuid = store.write_dynamic_table_config(tag_creator_sa, fields, included_tables_uris, excluded_tables_uris, \
-                                                   template_uuid, template_id, template_project, template_region, \
-                                                   refresh_mode, refresh_frequency, refresh_unit, \
-                                                   tag_history_option)                                                      
+    
+    if is_dataplex:
+        config_uuid = store.write_aspect_dynamic_table_config(tag_creator_sa, fields, included_tables_uris, excluded_tables_uris, \
+                                                              aspect_type_uuid, aspect_type_id, aspect_type_project, aspect_type_region, \
+                                                              refresh_mode, refresh_frequency, refresh_unit, \
+                                                              tag_history_option)
+    else:
+        config_uuid = store.write_dynamic_table_config(tag_creator_sa, fields, included_tables_uris, excluded_tables_uris, \
+                                                       template_uuid, template_id, template_project, template_region, \
+                                                       refresh_mode, refresh_frequency, refresh_unit, \
+                                                       tag_history_option)                                                      
 
 
     return jsonify(config_uuid=config_uuid, config_type='DYNAMIC_TAG_TABLE')
@@ -2219,29 +2235,39 @@ def create_dynamic_column_config():
     if status == False:
         return jsonify(response), 400
        
-    valid_parameters, is_dataplex, template_id, template_project, template_region = check_template_aspect_parameters('dynamic_column_config', json_request)
+    valid_parameters, is_dataplex, _id, _project, _region = check_template_aspect_parameters('dynamic_column_config', json_request)
     
     if valid_parameters != True:
         response = {
                 "status": "error",
-                "message": "Request JSON is missing some required tag template parameters",
+                "message": "Request JSON is missing some required tag template or aspect type parameters",
         }
         return jsonify(response), 400
      
-    #print('template_id: ' + template_id)
-    #print('template_project: ' + template_project)
-    #print('template_region: ' + template_region)
-    
-    template_uuid = store.write_tag_template(template_id, template_project, template_region)
+    if is_dataplex:
+        aspect_type_id = _id
+        aspect_type_project = _project
+        aspect_type_region = _region
+        aspect_type_uuid = store.write_aspect_type(aspect_type_id, aspect_type_project, aspect_type_region)
+    else:
+        template_id = _id
+        template_project = _project
+        template_region = _region
+        template_uuid = store.write_tag_template(template_id, template_project, template_region)
     
     credentials, success = get_target_credentials(tag_creator_sa)
     
     if success == False:
         print('Error acquiring credentials from', tag_creator_sa)
     
-    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     included_fields = json_request['fields']
-    fields = dcc.get_template(included_fields=included_fields)
+    
+    if is_dataplex:
+        dpc = dp_controller.DataplexController(credentials, None, None, aspect_type_id, aspect_type_project, aspect_type_region)
+        fields = dpc.get_aspect_type(included_fields=included_fields)
+    else:
+        dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+        fields = dcc.get_template(included_fields=included_fields)
 
     if 'included_columns_query' in json_request:
         included_columns_query = json_request['included_columns_query']
@@ -2265,9 +2291,15 @@ def create_dynamic_column_config():
     refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json_request)
     
     tag_history_option, _ = store.read_tag_history_settings()
-    config_uuid = store.write_dynamic_column_config(tag_creator_sa, fields, included_columns_query, included_tables_uris, \
-                                                    excluded_tables_uris, template_uuid, template_id, template_project, template_region, \
-                                                    refresh_mode, refresh_frequency, refresh_unit, tag_history_option)                                                      
+    
+    if is_dataplex:
+        config_uuid = store.write_aspect_dynamic_column_config(tag_creator_sa, fields, included_columns_query, included_tables_uris, \
+                                                                excluded_tables_uris, aspect_type_uuid, aspect_type_id, aspect_type_project, \
+                                                                aspect_type_region, refresh_mode, refresh_frequency, refresh_unit, tag_history_option)                                                      
+    else:    
+        config_uuid = store.write_dynamic_column_config(tag_creator_sa, fields, included_columns_query, included_tables_uris, \
+                                                        excluded_tables_uris, template_uuid, template_id, template_project, template_region, \
+                                                        refresh_mode, refresh_frequency, refresh_unit, tag_history_option)                                                      
 
 
     return jsonify(config_uuid=config_uuid, config_type='DYNAMIC_TAG_COLUMN')
@@ -2672,7 +2704,7 @@ def create_import_config():
     if valid_parameters != True:
         response = {
                 "status": "error",
-                "message": "Request JSON is missing some required tag template parameters",
+                "message": "Request JSON is missing some required tag template or aspect type parameters",
         }
         return jsonify(response), 400
     
@@ -3561,27 +3593,6 @@ def _run_task():
     if config_type == 'TAG_EXPORT':
         dcc = dc_controller.DataCatalogController(credentials)
     
-    elif config_type == 'TAG_IMPORT':
-        
-        if config.keys() < {'template_id', 'template_project', 'template_region'}: 
-            if config.keys() < {'aspect_type_id', 'aspect_type_project', 'aspect_type_region'}:
-                response = {
-                    "status": "error",
-                    "message": "Request JSON is missing the required tag template or aspect type fields",
-                }
-                return jsonify(response), 400
-        
-        elif 'template_id' in config:
-            dcc = dc_controller.DataCatalogController(credentials, tag_creator_sa, tag_invoker_sa, \
-                                                       config['template_id'], config['template_project'], \
-                                                       config['template_region'])
-                                                   
-        elif 'aspect_type_id' in config:
-            is_dataplex = True
-            dpc = dp_controller.DataplexController(credentials, tag_creator_sa, tag_invoker_sa, \
-                                                   config['aspect_type_id'], config['aspect_type_project'], \
-                                                   config['aspect_type_region'])
-    
     elif config_type == 'TAG_RESTORE':
         
         if 'target_template_id' not in config or 'target_template_project' not in config or 'target_template_region' not in config:
@@ -3600,26 +3611,45 @@ def _run_task():
         dcc = dc_controller.DataCatalogController(credentials, tag_creator_sa, tag_invoker_sa, \
                                                     config['target_template_id'], config['target_template_project'], 
                                                     config['target_template_region'])
-    else:
-        if 'template_uuid' not in config:
-            response = {
-                    "status": "error",
-                    "message": "Request JSON is missing some required template_uuid parameter",
-            }
-            return jsonify(response), 400
-            
-        template_config = store.read_tag_template_config(config['template_uuid'])
-        dcc = dc_controller.DataCatalogController(credentials, tag_creator_sa, tag_invoker_sa, \
-                                                   template_config['template_id'], template_config['template_project'], \
-                                                   template_config['template_region'])
-            
     
+    else:
+        # handles most config types
+        if config.keys() < {'template_id', 'template_project', 'template_region'}: 
+            if config.keys() < {'aspect_type_id', 'aspect_type_project', 'aspect_type_region'}:
+                response = {
+                    "status": "error",
+                    "message": "Request JSON is missing the required tag template or aspect type fields",
+                }
+                return jsonify(response), 400
+        
+        elif 'template_id' in config:
+            dcc = dc_controller.DataCatalogController(credentials, tag_creator_sa, tag_invoker_sa, \
+                                                       config['template_id'], config['template_project'], \
+                                                       config['template_region'])
+        elif 'aspect_type_id' in config:
+            is_dataplex = True
+            dpc = dp_controller.DataplexController(credentials, tag_creator_sa, tag_invoker_sa, \
+                                                   config['aspect_type_id'], config['aspect_type_project'], \
+                                                   config['aspect_type_region'])
+        
     if config_type == 'DYNAMIC_TAG_TABLE':
-        creation_status = dcc.apply_dynamic_table_config(config['fields'], uri, job_uuid, config_uuid, \
-                                                         config['template_uuid'], config['tag_history'])                                               
+        
+        if is_dataplex:
+            creation_status = dpc.apply_dynamic_table_config(config['fields'], uri, job_uuid, config_uuid, \
+                                                             config['aspect_type_uuid'], config['tag_history']) 
+        else:                                              
+            creation_status = dcc.apply_dynamic_table_config(config['fields'], uri, job_uuid, config_uuid, \
+                                                             config['template_uuid'], config['tag_history'])                                               
+    
     if config_type == 'DYNAMIC_TAG_COLUMN':
-        creation_status = dcc.apply_dynamic_column_config(config['fields'], config['included_columns_query'], uri, job_uuid, config_uuid, \
-                                                          config['template_uuid'], config['tag_history'])  
+        
+        if is_dataplex:
+            creation_status = dpc.apply_dynamic_column_config(config['fields'], config['included_columns_query'], uri, \
+                                                              job_uuid, config_uuid, config['aspect_type_uuid'], config['tag_history'])
+        else:
+            creation_status = dcc.apply_dynamic_column_config(config['fields'], config['included_columns_query'], uri, \
+                                                              job_uuid, config_uuid, config['template_uuid'], config['tag_history'])  
+    
     if config_type == 'STATIC_TAG_ASSET':
         creation_status = dcc.apply_static_asset_config(config['fields'], uri, job_uuid, config_uuid, \
                                                         config['template_uuid'], config['tag_history'], \
@@ -3684,7 +3714,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 3.0.2\n"
+    return "Welcome to Tag Engine version 3.0.3\n"
     
 ####################### TEST METHOD ####################################  
     

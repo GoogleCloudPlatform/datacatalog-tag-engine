@@ -578,6 +578,89 @@ class TagEngineStoreHandler:
         return config_uuid
 
     
+    def write_aspect_dynamic_table_config(self, service_account, fields, included_tables_uris, excluded_tables_uris, \
+                                          aspect_type_uuid, aspect_type_id, aspect_type_project, aspect_type_region, \
+                                          refresh_mode, refresh_frequency, refresh_unit, tag_history):
+        
+        included_tables_uris_hash = hashlib.md5(included_tables_uris.encode()).hexdigest()
+        
+        # check to see if this config already exists
+        configs_ref = self.db.collection('dynamic_table_configs')
+        query = configs_ref.where(filter=FieldFilter('aspect_type_uuid', '==', aspect_type_uuid))
+        query = query.where(filter=FieldFilter('included_tables_uris_hash', '==', included_tables_uris_hash))
+        query = query.where(filter=FieldFilter('config_type', '==', 'DYNAMIC_TAG_TABLE'))
+        query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
+       
+        matches = query.get()
+       
+        for match in matches:
+            if match.exists:
+                config_uuid_match = match.id
+                #print('Config already exists. Config_uuid: ' + str(config_uuid_match))
+                
+                # update status to INACTIVE 
+                self.db.collection('dynamic_table_configs').document(config_uuid_match).update({
+                    'config_status' : "INACTIVE"
+                })
+                print('Updated status to INACTIVE.')
+       
+        config_uuid = uuid.uuid1().hex
+        config = self.db.collection('dynamic_table_configs')
+        doc_ref = config.document(config_uuid)
+        
+        if refresh_mode == 'AUTO':
+            
+            delta, next_run = self.validate_auto_refresh(refresh_frequency, refresh_unit)
+            
+            doc_ref.set({
+                'config_uuid': config_uuid,
+                'config_type': 'DYNAMIC_TAG_TABLE',
+                'config_status': 'ACTIVE', 
+                'creation_time': datetime.utcnow(), 
+                'fields': fields,
+                'included_tables_uris': included_tables_uris,
+                'included_tables_uris_hash': included_tables_uris_hash,
+                'excluded_tables_uris': excluded_tables_uris,
+                'aspect_type_uuid': aspect_type_uuid,
+                'aspect_type_id': aspect_type_id,
+                'aspect_type_project': aspect_type_project,
+                'aspect_type_region': aspect_type_region,
+                'refresh_mode': refresh_mode, # AUTO refresh mode
+                'refresh_frequency': delta,
+                'refresh_unit': refresh_unit,
+                'tag_history': tag_history,
+                'scheduling_status': 'READY',
+                'next_run': next_run,
+                'version': 1,
+                'service_account': service_account
+            })
+            
+        else:
+            doc_ref.set({
+                'config_uuid': config_uuid,
+                'config_type': 'DYNAMIC_TAG_TABLE',
+                'config_status': 'ACTIVE', 
+                'creation_time': datetime.utcnow(), 
+                'fields': fields,
+                'included_tables_uris': included_tables_uris,
+                'included_tables_uris_hash': included_tables_uris_hash,
+                'excluded_tables_uris': excluded_tables_uris,
+                'aspect_type_uuid': aspect_type_uuid,
+                'aspect_type_id': aspect_type_id,
+                'aspect_type_project': aspect_type_project,
+                'aspect_type_region': aspect_type_region,
+                'refresh_mode': refresh_mode, # ON_DEMAND refresh mode
+                'refresh_frequency': 0,
+                'tag_history': tag_history,
+                'version': 1,
+                'service_account': service_account
+            })
+        
+        print('Created dynamic table config.')
+        
+        return config_uuid
+        
+    
     def write_dynamic_column_config(self, service_account, fields, included_columns_query, included_tables_uris, excluded_tables_uris, \
                                     template_uuid, template_id, template_project, template_region, \
                                     refresh_mode, refresh_frequency, refresh_unit, tag_history):
@@ -661,7 +744,92 @@ class TagEngineStoreHandler:
         print('Created dynamic column config.')
         
         return config_uuid
+ 
     
+    def write_aspect_dynamic_column_config(self, service_account, fields, included_columns_query, included_tables_uris, excluded_tables_uris, \
+                                            aspect_type_uuid, aspect_type_id, aspect_type_project, aspect_type_region, \
+                                            refresh_mode, refresh_frequency, refresh_unit, tag_history):
+        
+        included_tables_uris_hash = hashlib.md5(included_tables_uris.encode()).hexdigest()
+        
+        # check to see if this config already exists
+        configs_ref = self.db.collection('dynamic_column_configs')
+        query = configs_ref.where(filter=FieldFilter('aspect_type_uuid', '==', aspect_type_uuid))
+        query = query.where(filter=FieldFilter('included_tables_uris_hash', '==', included_tables_uris_hash))
+        query = query.where(filter=FieldFilter('config_type', '==', 'DYNAMIC_TAG_COLUMN'))
+        query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
+       
+        matches = query.get()
+       
+        for match in matches:
+            if match.exists:
+                config_uuid_match = match.id
+                #print('Config already exists. Config_uuid: ' + str(config_uuid_match))
+                
+                # update status to INACTIVE 
+                self.db.collection('dynamic_column_configs').document(config_uuid_match).update({
+                    'config_status' : "INACTIVE"
+                })
+                print('Updated status to INACTIVE.')
+       
+        config_uuid = uuid.uuid1().hex
+        config = self.db.collection('dynamic_column_configs')
+        doc_ref = config.document(config_uuid)
+        
+        if refresh_mode == 'AUTO':
+            
+            delta, next_run = self.validate_auto_refresh(refresh_frequency, refresh_unit)
+            
+            doc_ref.set({
+                'config_uuid': config_uuid,
+                'config_type': 'DYNAMIC_TAG_COLUMN',
+                'config_status': 'ACTIVE', 
+                'creation_time': datetime.utcnow(), 
+                'fields': fields,
+                'included_columns_query': included_columns_query,
+                'included_tables_uris': included_tables_uris,
+                'included_tables_uris_hash': included_tables_uris_hash,
+                'excluded_tables_uris': excluded_tables_uris,
+                'aspect_type_uuid': aspect_type_uuid,
+                'aspect_type_id': aspect_type_id, 
+                'aspect_type_project': aspect_type_project,
+                'aspect_type_region': aspect_type_region,
+                'refresh_mode': refresh_mode, # AUTO refresh mode
+                'refresh_frequency': delta,
+                'refresh_unit': refresh_unit,
+                'tag_history': tag_history,
+                'scheduling_status': 'READY',
+                'next_run': next_run,
+                'version': 1,
+                'service_account': service_account
+            })
+            
+        else:
+            doc_ref.set({
+                'config_uuid': config_uuid,
+                'config_type': 'DYNAMIC_TAG_COLUMN',
+                'config_status': 'ACTIVE', 
+                'creation_time': datetime.utcnow(), 
+                'fields': fields,
+                'included_columns_query': included_columns_query,
+                'included_tables_uris': included_tables_uris,
+                'included_tables_uris_hash': included_tables_uris_hash,
+                'excluded_tables_uris': excluded_tables_uris,
+                'aspect_type_uuid': aspect_type_uuid,
+                'aspect_type_id': aspect_type_id, 
+                'aspect_type_project': aspect_type_project,
+                'aspect_type_region': aspect_type_region,
+                'refresh_mode': refresh_mode, # ON_DEMAND refresh mode
+                'refresh_frequency': 0,
+                'tag_history': tag_history,
+                'version': 1,
+                'service_account': service_account
+            })
+        
+        print('Created dynamic column config.')
+        
+        return config_uuid
+
 
     def validate_auto_refresh(self, refresh_frequency, refresh_unit):
         

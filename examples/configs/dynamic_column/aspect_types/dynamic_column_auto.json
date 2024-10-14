@@ -1,0 +1,33 @@
+{
+    "aspect_type_id": "glossary-attributes",
+    "aspect_type_project": "tag-engine-develop",
+    "aspect_type_region": "us-central1",
+    "fields": [
+        {
+            "field_id": "formal_name",
+            "query_expression": "select formal_name from tag-engine-develop.enterprise_glossary.glossary_attributes where column_name = '$column'"
+        },
+        {
+            "field_id": "definition",
+            "query_expression": "select definition from tag-engine-develop.enterprise_glossary.glossary_attributes where column_name = '$column'"
+        },
+        {
+            "field_id": "synonym",
+            "query_expression": "select synonym from tag-engine-develop.enterprise_glossary.glossary_attributes where column_name = '$column'"
+        },
+        {
+            "field_id": "acronym",
+            "query_expression": "select acronym from tag-engine-develop.enterprise_glossary.glossary_attributes where column_name = '$column'"
+        },
+        {
+            "field_id": "url",
+            "query_expression": "select url from tag-engine-develop.enterprise_glossary.glossary_attributes where column_name = '$column'"
+        }
+    ],
+    "included_columns_query": "select column_name from tag-engine-develop.enterprise_glossary.glossary_attributes",
+    "included_tables_uris": "bigquery/project/tag-engine-develop/dataset/data_source/*",
+    "excluded_tables_uris": "bigquery/project/tag-engine-develop/dataset/data_source/farm",
+    "refresh_mode": "AUTO",
+    "refresh_frequency": 24,
+    "refresh_unit": "hours"  
+}

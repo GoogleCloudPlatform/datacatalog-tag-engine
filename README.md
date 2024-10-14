@@ -1,9 +1,9 @@
 ## Tag Engine 3.0
 This is the Dataplex branch for Tag Engine. Tag Engine v3 is the newest flavor of Tag Engine that is compatible with both Data Catalog and Dataplex. It is based on the Cloud Run branch and therefore supports VPC-SC, user authentication, role based access control. 
 
-*As of this writing (2024-08-30), Tag Engine's Dataplex support is limited to the import config type. That is, you can only create Dataplex aspects from CSV files. See [Part 2](#test-dataplex) of this guide for more details. Moreover, only the Tag Engine API supports this functionality thus far. The Tag Engine UI does not yet support Dataplex aspects. Our plan is to continue adding more Dataplex functionality in the coming weeks and we are prioritizing the API before the UI.*  
+*As of this writing (2024-10-13), Tag Engine's Dataplex support is limited to the import, dynamic table, and dynamic column config types. See [Part 2](#test-dataplex) of this guide for more details. Note: Only the Tag Engine API supports Dataplex aspects. Our plan is to continue adding Dataplex support to Tag Engine over the coming months, which will include the Tag Engine UI.*  
 
-If you're not familiar with Tag Engine, this is an open-source tool which automates the metadata tagging of BigQuery, Cloud Storage, and Spanner data assets. It allows you to tag at the dataset level, table level, and field level. Tag Engine is used to import metadata from CSV files and it is also used for dynamic tagging where the metadata is sourced from BigQuery. With dynamic tagging, you create configurations that specify how to populate various fields of a tag or aspect using URI paths and SQL expressions. Tag Engine runs the configurations either on demand or on a schedule and carries out the tagging: creating new metadata tags, updating existing tags or deleting them when they are no longer needed.
+If you're not familiar with Tag Engine, it is an open-source tool which automates the metadata tagging of BigQuery, Cloud Storage, and Spanner data assets. It allows you to tag at the dataset level, table level, and field level. Tag Engine is used to import metadata from CSV files and it is also used for dynamic tagging where the metadata is sourced from BigQuery. With dynamic tagging, you create configurations that specify how to populate various fields of a tag or aspect using URI paths and SQL expressions. Tag Engine runs the configurations either on demand or on a schedule and carries out the tagging: creating new metadata tags, updating existing tags or deleting them when they are no longer needed.
 
 <img src="docs/arch_diagram.png" alt="architecture diagram" width="550"/>
 
@@ -146,9 +146,9 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 
 3.  Run the following commands to create Dataplex aspects from CSV files:
 	
-	Copy `examples/configs/import/sample-data/bigquery_table_aspects.csv` to your own GCS bucket. 
+	Copy `examples/configs/import/sample_data/bigquery_table_aspects.csv` to your own GCS bucket. 
 		
-	Open `examples/configs/import/aspect-types/bigquery_table_config.json` and change the `aspect_type_project`, `aspect_type_region`, and `metadata_import_location` to point to your Dataplex project, region and GCS bucket, respectively. 
+	Open `examples/configs/import/aspect_types/bigquery_table_config.json` and change the `aspect_type_project`, `aspect_type_region`, and `metadata_import_location` to point to your Dataplex project, region and GCS bucket, respectively. 
 	
 	```
 	export IAM_TOKEN=$(gcloud auth print-identity-token)
@@ -165,6 +165,52 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	```
 	
 	Please note that you need to replace the `config_uuid` and `job_uuid` with your own values! 
+
+
+3.  Run the following commands to create dynamic table-level aspects from BQ metadata:
+
+	Open `examples/configs/dynamic_table/aspect_types/dynamic_table_ondemand.json` and change the `aspect_type_project`, `aspect_type_region`, 
+	and `included_tables_uris` to point to your Dataplex project, region, and BQ tables, respectively. 
+	
+	```
+	export IAM_TOKEN=$(gcloud auth print-identity-token)
+	
+	curl -X POST $TAG_ENGINE_URL/create_dynamic_table_config \
+	-d @examples/configs/dynamic_table/aspect_types/dynamic_table_ondemand.json \
+	-H "Authorization: Bearer $IAM_TOKEN"
+	 
+	curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+	-d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"59c51d0689ac11efb20b42004e494300"}' \
+	-H "Authorization: Bearer $IAM_TOKEN"
+
+	curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"2679a3f66fa611efae5242004e494300"}' \
+	-H "Authorization: Bearer $IAM_TOKEN"
+	```
+	
+	Please note that you need to replace the `config_uuid` and `job_uuid` with your own values!
+
+
+4.  Run the following commands to create dynamic column-level aspects from BQ metadata:
+
+	Open `examples/configs/dynamic_column/aspect_types/dynamic_column_ondemand.json` and change the `aspect_type_project`, `aspect_type_region`, 
+	`included_columns_query`, and `included_tables_uris` to point to your Dataplex project, region, BQ columns, and BQ tables, respectively. 
+	
+	```
+	export IAM_TOKEN=$(gcloud auth print-identity-token)
+	
+	curl -X POST $TAG_ENGINE_URL/create_dynamic_column_config \
+	-d @examples/configs/dynamic_table/aspect_types/dynamic_column_ondemand.json \
+	-H "Authorization: Bearer $IAM_TOKEN"
+	 
+	curl -i -X POST $TAG_ENGINE_URL/trigger_job \
+	-d '{"config_type":"DYNAMIC_TAG_COLUMN","config_uuid":"9aaaed5089cf11ef825b42004e494300"}' \
+	-H "Authorization: Bearer $IAM_TOKEN"
+
+	curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"b0a8e1de89cf11ef833d42004e494300"}' \
+	-H "Authorization: Bearer $IAM_TOKEN"
+	```
+	
+	Please note that you need to replace the `config_uuid` and `job_uuid` with your own values!
 
 
 ### <a name="test-api"></a> Part 3: Testing your Tag Engine API setup with Data Catalog

@@ -1,0 +1,18 @@
+{
+    "template_id": "data_governance",
+    "template_project": "dgtoolkit",
+    "template_region": "us-central1",
+    "fields": [
+        {
+            "field_id": "data_domain",
+            "query_expression": "select 'LOGISTICS'"
+        },
+        {
+            "field_id": "broad_data_category",
+            "query_expression": "select 'CONTENT'"
+        }
+    ],
+    "included_tables_uris": "bigquery/project/dgtoolkit/dataset/tickets/*",
+    "excluded_tables_uris": "",
+    "refresh_mode": "ON_DEMAND"
+}
