@@ -178,4 +178,5 @@ indexes:
   - collection: jobs
     fields:
       - field: config_uuid
-      - field: completion_time:DESCENDING
+      - field: completion_time
+        order: DESCENDING
