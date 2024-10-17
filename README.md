@@ -47,9 +47,31 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 
    Note: The client secret file is required for establishing the authorization flow from the UI.  
 
-3. Make a copy of `datacatalog-tag-engine/tagengine.ini.tpl` naming the new copy `datacatalog-tag-engine/tagengine.ini`.
+3. Create a new GCS bucket for CSV imports. Remember GCS bucket names are globally unique. 
+	For example: `gsutil mb gs://$(gcloud config get-value project)-csv-import`
 
-4. Open `datacatalog-tag-engine/tagengine.ini` and set the following variables in this file: 
+4. Set the Terraform variables:
+
+   Open `deploy/variables.tf` and change the default value of each variable.<br>
+   Save the file.<br><br> 
+   Alternatively, create a new file, named `deploy/terrform.tfvars` and specify your variables values there.  
+
+
+5. Run the Terraform scripts:
+	
+	__NOTE__: The terraform script will run with the default credentials currently configured on your system. Make sure that your current user has the required permissions to make changes to your project(s), or set new credentials using the `GOOGLE APPLICATION_CREDENTIALS` environment variable.
+	
+	```
+	cd deploy
+	terraform init
+	terraform plan
+	terraform apply
+	```
+
+	When the Terraform finishes running, it should output two URIs. One for the API service (which looks like this https://tag-engine-api-xxxxxxxxxxxxx.a.run.app) and another for the UI service (which looks like this https://tag-engine-ui-xxxxxxxxxxxxx.a.run.app). <br><br>
+
+
+6. The terraform script has created the tag engine configuration file (`datacatalog-tag-engine/tagengine.ini`). Open the file and verify the content, modifying if needed: 
 	```
 	TAG_ENGINE_SA
 	TAG_CREATOR_SA
@@ -77,28 +99,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 
    - The `tagengine.ini` file also has two additional variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. These determine the names of the cloud task queues. You do not need to change them. If you change their name, you need to also change them in the `deploy/variables.tf`.<br><br> 
 
-5. Create a new GCS bucket for CSV imports. Remember GCS bucket names are globally unique. 
-	For example: `gsutil mb gs://$(gcloud config get-value project)-csv-import`
 
-6. Set the Terraform variables:
-
-   Open `deploy/variables.tf` and change the default value of each variable.<br>
-   Save the file.<br><br> 
-   Alternatively, create a new file, named `deploy/terrform.tfvars` and specify your variables values there.  
-
-
-7. Run the Terraform scripts:
-	
-	__NOTE__: The terraform script will run with the default credentials currently configured on your system. Make sure that your current user has the required permissions to make changes to your project(s), or set new credentials using the `GOOGLE APPLICATION_CREDENTIALS` environment variable.
-	
-	```
-	cd deploy
-	terraform init
-	terraform plan
-	terraform apply
-	```
-
-	When the Terraform finishes running, it should output two URIs. One for the API service (which looks like this https://tag-engine-api-xxxxxxxxxxxxx.a.run.app) and another for the UI service (which looks like this https://tag-engine-ui-xxxxxxxxxxxxx.a.run.app). <br><br>
 
 
 ### <a name="test-dataplex"></a> Part 2: Testing your Tag Engine API setup with Dataplex
