@@ -12,43 +12,47 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from flask import Flask, render_template, request, redirect, url_for, jsonify, json, session
-from flask_session import Session
-
-import datetime, time, configparser, os, base64
-import requests
+import configparser
+import datetime
+import os
+import time
 
 import google_auth_oauthlib.flow
-from googleapiclient import discovery
-
+from flask import (
+    Flask, render_template, request, redirect, url_for, jsonify,
+    json, session,
+)
 from google.api_core.client_info import ClientInfo
 from google.cloud import logging_v2
+from googleapiclient import discovery
 
-from access import do_authentication
-from access import check_user_credentials_from_ui
-from access import credentials_to_dict
-from access import get_target_credentials
-from access import get_tag_invoker_account
-
-from common import log_error
-
-import DataCatalogController as controller
-import TagEngineStoreHandler as tesh
-import Resources as res
 import BackupFileParser as bfp
-import CsvParser as cp
-import constants
-
-import JobManager as jobm
-import TaskManager as taskm
 import BigQueryUtils as bq
 import ConfigType as ct
+import CsvParser as cp
+import DataCatalogController as controller
+import JobManager as jobm
+import Resources as res
+import TagEngineStoreHandler as tesh
+import TaskManager as taskm
+import constants
+from access import check_user_credentials_from_ui
+from access import credentials_to_dict
+from access import do_authentication
+from access import get_tag_invoker_account
+from access import get_target_credentials
+from common import log_error
+from flask_session import Session
 
 config = configparser.ConfigParser()
 config.read("tagengine.ini")
 
 ##################### INIT GLOBAL VARIABLES ##################################
-        
+
+PORT = int(os.environ.get("PORT", 8080))
+DEBUG = bool(os.environ.get("DEBUG", "False"))
+SERVICE_URL = os.environ.get("SERVICE_URL", f"http://localhost:{PORT}")
+
 TAG_ENGINE_SA = config['DEFAULT']['TAG_ENGINE_SA'].strip()
 TAG_CREATOR_SA = config['DEFAULT']['TAG_CREATOR_SA'].strip()
 
@@ -80,8 +84,8 @@ if 'FILESET_REGION' in config['DEFAULT']:
 else:
     FILESET_REGION = None
 
-SPLIT_WORK_HANDLER = os.environ['SERVICE_URL'] + '/_split_work'
-RUN_TASK_HANDLER = os.environ['SERVICE_URL'] + '/_run_task'
+SPLIT_WORK_HANDLER = SERVICE_URL + "/_split_work"
+RUN_TASK_HANDLER = SERVICE_URL + '/_run_task'
 
 INJECTOR_QUEUE = config['DEFAULT']['INJECTOR_QUEUE'].strip()
 WORK_QUEUE = config['DEFAULT']['WORK_QUEUE'].strip()
@@ -3677,7 +3681,7 @@ def server_error(e):
 
 if __name__ == "__main__":
     #os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = "1" # uncomment only when running locally
-    os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = "1" # to allow for scope changes
-    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080))) # for running on Cloud Run
+    os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = "1"  # to allow for scope changes
+    app.run(debug=DEBUG, host="0.0.0.0", port=PORT)  # for running on Cloud Run
     #app.run(debug=True, port=5000) # for running locally 
     
