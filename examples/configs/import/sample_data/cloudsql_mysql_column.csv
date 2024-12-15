@@ -1,0 +1,11 @@
+project,instance,database,table,column,sensitive_field,sensitive_type
+tag-engine-develop,northwind-dev02,northwind,customers,customer_id,FALSE,
+tag-engine-develop,northwind-dev02,northwind,customers,city,TRUE,PII
+tag-engine-develop,northwind-dev02,northwind,customers,contact_name,TRUE,SPII
+tag-engine-develop,northwind-dev02,northwind,customers,contact_title,FALSE,
+tag-engine-develop,northwind-dev02,northwind,customers,postal_code,TRUE,PII
+tag-engine-develop,northwind-dev02,northwind,customers,country,TRUE,PII
+tag-engine-develop,northwind-dev02,northwind,customers,address,TRUE,PII
+tag-engine-develop,northwind-dev02,northwind,customers,company_name,TRUE,SPII
+tag-engine-develop,northwind-dev02,northwind,customer_demographics,customer_desc,TRUE,SPII
+tag-engine-develop,northwind-dev02,northwind,customer_customer_demo,customer_id,FALSE,

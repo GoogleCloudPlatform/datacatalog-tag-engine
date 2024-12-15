@@ -147,7 +147,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 
 3.  Run the following commands to create Dataplex aspects from CSV files:
 	
-	Copy `examples/configs/import/sample_data/bigquery_table_aspects.csv` to your own GCS bucket. 
+	Copy `examples/configs/import/sample_data/bigquery_table.csv` to your own GCS bucket. 
 		
 	Open `examples/configs/import/aspect_types/bigquery_table_config.json` and change the `aspect_type_project`, `aspect_type_region`, and `metadata_import_location` to point to your Dataplex project, region and GCS bucket, respectively. 
 	
@@ -166,6 +166,8 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	```
 	
 	Please note that you need to replace the `config_uuid` and `job_uuid` with your own values! 
+
+	The `examples/configs/import/aspect_types` folder also has working examples for creating bulk aspects on Fileset, Spanner, and Cloud SQL resources. 
 
 
 3.  Run the following commands to create dynamic table-level aspects from BQ metadata:

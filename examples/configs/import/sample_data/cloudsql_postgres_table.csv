@@ -1,0 +1,11 @@
+project,instance,database,schema,table,sensitive_field,sensitive_type
+tag-engine-develop,northwind-dev01,postgres,northwind,us_states,TRUE,PII
+tag-engine-develop,northwind-dev01,postgres,northwind,territories,TRUE,SPII
+tag-engine-develop,northwind-dev01,postgres,northwind,shippers,FALSE,
+tag-engine-develop,northwind-dev01,postgres,northwind,region,FALSE,
+tag-engine-develop,northwind-dev01,postgres,northwind,orders,TRUE,PII
+tag-engine-develop,northwind-dev01,postgres,northwind,order_details,TRUE,PII
+tag-engine-develop,northwind-dev01,postgres,northwind,employee_territories,TRUE,SPII
+tag-engine-develop,northwind-dev01,postgres,northwind,customers,TRUE,SPII
+tag-engine-develop,northwind-dev01,postgres,northwind,customer_demographics,TRUE,SPII
+tag-engine-develop,northwind-dev01,postgres,northwind,customer_customer_demo,TRUE,SPII

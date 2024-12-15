@@ -1,0 +1,4 @@
+project,instance,database,schema,table,sensitive_field,sensitive_type
+tag-engine-develop,goog-dev,user-testing,dev,FINWIRE2024Q1_CMP,TRUE,PII
+tag-engine-develop,goog-dev,user-testing,dev,FINWIRE2024Q2_CMP,TRUE,SPII
+tag-engine-develop,goog-dev,user-testing,dev,FINWIRE2024Q3_CMP,FALSE,

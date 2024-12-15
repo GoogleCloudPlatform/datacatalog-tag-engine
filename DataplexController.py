@@ -180,6 +180,14 @@ class DataplexController:
     
     def apply_import_config(self, job_uuid, config_uuid, data_asset_type, data_asset_region, tag_dict, tag_history, overwrite=False):
             
+        print("*** apply_import_config ***")
+        #print("job_uuid: ", job_uuid)
+        #print("config_uuid: ", config_uuid)
+        #print("data_asset_type: ", data_asset_type)
+        #print("data_asset_region: ", data_asset_region)
+        #print("tag_dict: ", tag_dict)
+        #print("tag_history: ", tag_history)
+        
         op_status = constants.SUCCESS
         
         if 'project' in tag_dict:
@@ -225,13 +233,29 @@ class DataplexController:
                entry_type = constants.SPAN_TABLE
                instance = tag_dict['instance']
                database = tag_dict['database']
+               table = tag_dict['table']
                
                if 'schema' in tag_dict:
                    schema = tag_dict['schema']
-                   table = tag_dict['table']
-                   table = f"`{schema}.{table}`"
                else:
-                   table = tag_dict['table']
+                   schema = None
+        
+        if data_asset_type == constants.CSQL_ASSET:
+            if 'instance' not in tag_dict or 'database' not in tag_dict or 'table' not in tag_dict:
+                msg = "Error: could not find the required fields in the CSV. The required fields for Cloud SQL are instance, database, and table"
+                log_error_tag_dict(msg, None, job_uuid, tag_dict)
+                op_status = constants.ERROR
+                return op_status
+            else:
+               entry_type = constants.CSQL_TABLE
+               instance = tag_dict['instance']
+               database = tag_dict['database']
+               table = tag_dict['table']
+               
+               if 'schema' in tag_dict:
+                   schema = tag_dict['schema']
+               else:
+                   schema = None
                                 
         if entry_type == constants.DATASET:
             entry_name = f'bigquery.googleapis.com/projects/{project}/datasets/{dataset}'
@@ -246,9 +270,23 @@ class DataplexController:
             entry_group = '@fileset'
             
         if entry_type == constants.SPAN_TABLE:
-            entry_name = f'spanner:{project}.regional-{data_asset_region}.{instance}.{database}.{table}'
+            #entry_name = f'spanner:{project}.regional-{data_asset_region}.{instance}.{database}.{table}'
             entry_group = '@spanner'
-        
+            
+            if schema:
+                entry_name = f'spanner.googleapis.com/projects/{project}/instances/{instance}/databases/{database}/tables/{schema}.{table}'
+            else:
+                entry_name = f'spanner.googleapis.com/projects/{project}/instances/{instance}/databases/{database}/tables/{table}'
+            
+        if entry_type == constants.CSQL_TABLE:
+            entry_group = '@cloudsql'
+            
+            if schema:
+                entry_name = f'cloudsql.googleapis.com/projects/{project}/locations/{data_asset_region}/instances/{instance}/databases/{database}/schemas/{schema}/tables/{table}'
+            else:
+                entry_name = f'cloudsql.googleapis.com/projects/{project}/locations/{data_asset_region}/instances/{instance}/databases/{database}/tables/{table}'
+                
+                
         entry_path = f'projects/{project}/locations/{data_asset_region}/entryGroups/{entry_group}/entries/{entry_name}'
         
         entry_request = dataplex.GetEntryRequest(
@@ -268,7 +306,16 @@ class DataplexController:
         # format uri for tag history table
         if data_asset_type == constants.BQ_ASSET:
             uri = entry.name.replace('bigquery.googleapis.com/projects/', '')
-               
+        
+        if data_asset_type == constants.FILESET:
+            uri = entry.name.replace('datacatalog.googleapis.com/projects/', '')
+        
+        if data_asset_type == constants.SPAN_ASSET:
+            uri = entry.name.replace('spanner.googleapis.com/projects/', '')
+        
+        if data_asset_type == constants.CSQL_ASSET:
+            uri = entry.name.replace('cloudsql.googleapis.com/projects/', '')
+                   
         target_column = None
         
         if 'column' in tag_dict:
@@ -694,13 +741,13 @@ class DataplexController:
            
     def create_update_delete_aspect(self, aspect_fields, aspect_type_path, entry_path, job_uuid, config_uuid, config_type, tag_history, uri, target_column):
         
-        print("enter create_update_delete_tag")
-        print("aspect_fields:", aspect_fields)
-        print("aspect_type_path:", aspect_type_path)
-        print("entry_path:", entry_path)
-        print("job_uuid:", job_uuid)
-        print("config_uuid:", config_uuid)
-        print("config_type:", config_type)
+        #print("enter create_update_delete_tag")
+        #print("aspect_fields:", aspect_fields)
+        #print("aspect_type_path:", aspect_type_path)
+        #print("entry_path:", entry_path)
+        #print("job_uuid:", job_uuid)
+        #print("config_uuid:", config_uuid)
+        #print("config_type:", config_type)
         #print("tag_history:", tag_history)
         #print("uri:", uri)
         
@@ -769,22 +816,20 @@ if __name__ == '__main__':
         target_scopes=SCOPES,
         lifetime=1200)
         
-    aspect_type_id = 'data-governance'
+    aspect_type_id = 'data-sensitivity'
     aspect_type_project = 'tag-engine-develop'
     aspect_type_region = 'us-central1'
-    aspect_type_uuid = 'Bofcfg9kkkFz4d0Dk2SM'
+    aspect_type_uuid = 'd946a1b4510611ef957642004e494300'
     
-    #fields = [{'field_type': 'enum', 'field_id': 'data_domain', 'enum_values': ['LOGISTICS', 'FINANCE', 'HR', 'LEGAL', 'MARKETING', 'SALES'], 'is_required': True, 'display_name': 'Data Domain', 'order': 1, 'query_expression': "select 'LOGISTICS'"}]
-    columns_query = "select 'c_id'"
-    uri = 'tag-engine-develop/datasets/crm/tables/UpdAcct'
-    job_uuid = 'b0a8e1de89cf11ef833d42004e494300'
-    config_uuid = '9aaaed5089cf11ef825b42004e494300'
+    job_uuid = '282df436bb0a11efa14942004e494300'
+    config_uuid = '0ed05c90bb0a11ef9ba042004e494300'
+    data_asset_type = 'spanner'
+    data_asset_region = 'us-central1'
+    tag_dict = {'project': 'tag-engine-develop', 'instance': 'goog-dev', 'database': 'user-testing', 'schema': 'dev', 'table': 'FINWIRE2024Q3_CMP', 'sensitive_field': 'FALSE', 'sensitive_type': ''}
     tag_history = True
-        
-    included_fields = [{'field_id': 'data_domain', 'query_expression': "select 'LOGISTICS'"}, {'field_id': 'broad_data_category', 'query_expression': "select 'CONTENT'"}]
-    dpc = DataplexController(credentials, target_service_account, 'scohen@gcp.solutions', aspect_type_id, aspect_type_project, aspect_type_region)
-    #dpc.get_aspect_type(included_fields)
-    dpc.get_aspect_type()
     
-    #dpc.apply_dynamic_column_config(fields, columns_query, uri, job_uuid, config_uuid, aspect_type_uuid, tag_history)
+    dpc = DataplexController(credentials, target_service_account, 'scohen@gcp.solutions', aspect_type_id, aspect_type_project, aspect_type_region)
+
+    dpc.apply_import_config(job_uuid, config_uuid, data_asset_type, data_asset_region, tag_dict, tag_history)
+    
    
