@@ -319,7 +319,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	
 	```
 	curl -i -X POST $TAG_ENGINE_URL/trigger_job \
-		-d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"c255f764d56711edb96eb170f969c0af","job_metadata": {"source": "Collibra", 		"workflow": "process_sensitive_data"}}' \
+		-d '{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"c255f764d56711edb96eb170f969c0af","job_metadata": {"source": "Collibra", "workflow": "process_sensitive_data"}}' \
 		-H "Authorization: Bearer $IAM_TOKEN"
 	```
 	
