@@ -10,6 +10,7 @@ WORK_QUEUE = ${work_queue}
 BIGQUERY_REGION = ${bq_region}
 FILESET_REGION = ${fileset_region}
 SPANNER_REGION = ${spanner_region}
+CLOUDSQL_REGION = ${cloudsql_region}
 ENABLE_AUTH = True
 OAUTH_CLIENT_CREDENTIALS = te_client_secret.json
 ENABLE_TAG_HISTORY = True

@@ -55,7 +55,8 @@ resource "local_file" "tagengineini" {
     injector_queue = google_cloud_tasks_queue.injector_queue.name
     work_queue = google_cloud_tasks_queue.work_queue.name
     bq_region = var.bigquery_region
-    fileset_region = var.tag_engine_region
-    spanner_region = var.tag_engine_region
+    fileset_region = var.fileset_region
+    spanner_region = var.spanner_region
+	cloudsql_region = var.cloudsql_region
   })
 }

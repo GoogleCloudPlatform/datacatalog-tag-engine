@@ -43,7 +43,7 @@ If multiple teams want to share a single instance of Tag Engine and they own dif
 
    - Download the OAuth client secret and save the json file to the root of your local Tag Engine repository as `te_client_secret.json`.   
 
-4. Open `tagengine.ini` and set the following variables in this file. 
+4. Create a file `tagengine.ini` in the root of your `datacatalog-tag-engine` folder and set the following variables in this file: 
 
 	```
 	TAG_ENGINE_ACCOUNT
@@ -56,6 +56,7 @@ If multiple teams want to share a single instance of Tag Engine and they own dif
 	BIGQUERY_REGION
 	FILESET_REGION
 	SPANNER_REGION
+	CLOUDSQL_REGION
 	OAUTH_CLIENT_CREDENTIALS
 	ENABLE_AUTH
 	TAG_HISTORY_PROJECT

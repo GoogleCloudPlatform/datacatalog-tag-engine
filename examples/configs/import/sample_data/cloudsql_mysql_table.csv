@@ -3,8 +3,10 @@ tag-engine-develop,northwind-dev02,northwind,us_states,TRUE,PII
 tag-engine-develop,northwind-dev02,northwind,territories,TRUE,SPII
 tag-engine-develop,northwind-dev02,northwind,shippers,FALSE,
 tag-engine-develop,northwind-dev02,northwind,region,FALSE,
+tag-engine-develop,northwind-dev02,northwind,products,FALSE,
 tag-engine-develop,northwind-dev02,northwind,orders,TRUE,PII
 tag-engine-develop,northwind-dev02,northwind,order_details,TRUE,PII
+tag-engine-develop,northwind-dev02,northwind,employees,TRUE,SPII
 tag-engine-develop,northwind-dev02,northwind,employee_territories,TRUE,SPII
 tag-engine-develop,northwind-dev02,northwind,customers,TRUE,SPII
 tag-engine-develop,northwind-dev02,northwind,customer_demographics,TRUE,SPII

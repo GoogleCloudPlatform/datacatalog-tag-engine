@@ -84,7 +84,25 @@ variable "bigquery_project" {
 
 variable "bigquery_region" {
      type = string
-	 description = "region in which your bigquery data assets reside"
+	 description = "default region for your bigquery data"
+	 default = "us-central1"
+}
+
+variable "fileset_region" {
+     type = string
+	 description = "default region for your GCS fileset data"
+	 default = "us-central1"
+}
+
+variable "spanner_region" {
+     type = string
+	 description = "default region for your spanner data"
+	 default = "us-central1"
+}
+
+variable "cloudsql_region" {
+     type = string
+	 description = "default region for your cloudsql data"
 	 default = "us-central1"
 }
 

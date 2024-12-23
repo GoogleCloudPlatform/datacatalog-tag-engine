@@ -3,7 +3,7 @@
     "aspect_type_project": "tag-engine-develop",
     "aspect_type_region": "us-central1",
     "metadata_import_location": "gs://tag-imports/latest/spanner_schema.csv",
-	"data_asset_type": "spanner",
-	"data_asset_region": "us-central1",
+    "data_asset_type": "spanner",
+    "data_asset_region": "us-central1",
     "overwrite": true    
 }
