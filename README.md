@@ -83,6 +83,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	BIGQUERY_REGION
 	FILESET_REGION
 	SPANNER_REGION
+	CLOUDSQL_REGION
 	ENABLE_AUTH
 	OAUTH_CLIENT_CREDENTIALS
 	ENABLE_TAG_HISTORY

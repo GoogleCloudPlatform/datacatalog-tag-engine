@@ -1,0 +1,3 @@
+project,instance,database,schema,sensitive_field,sensitive_type
+tag-engine-develop,northwind-dev01,postgres,public,TRUE,PII
+tag-engine-develop,northwind-dev01,postgres,northwind,TRUE,SPII

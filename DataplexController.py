@@ -224,53 +224,81 @@ class DataplexController:
                 fileset = tag_dict['fileset']
         
         if data_asset_type == constants.SPAN_ASSET:
-            if 'instance' not in tag_dict or 'database' not in tag_dict or 'table' not in tag_dict:
-                msg = "Error: could not find the required fields in the CSV. The required fields for Spanner are instance, database, and table"
+            if 'instance' not in tag_dict or 'database' not in tag_dict:
+                msg = "Error: could not find the required fields in the CSV. The required fields for Spanner are instance and database"
                 log_error_tag_dict(msg, None, job_uuid, tag_dict)
                 op_status = constants.ERROR
                 return op_status
             else:
-               entry_type = constants.SPAN_TABLE
                instance = tag_dict['instance']
                database = tag_dict['database']
-               table = tag_dict['table']
                
-               if 'schema' in tag_dict:
-                   schema = tag_dict['schema']
+               if 'table' in tag_dict:
+                   table = tag_dict['table']
+                   entry_type = constants.SPAN_TABLE
+                   
+                   if 'schema' in tag_dict:
+                       schema = tag_dict['schema']
+                   else:
+                       schema = None
                else:
-                   schema = None
+                   table = None
+               
+                   if 'schema' in tag_dict:
+                       schema = tag_dict['schema']
+                       entry_type = constants.SPAN_SCHEMA
+                   else:
+                       schema = None
+                       entry_type = constants.SPAN_DATABASE
         
-        if data_asset_type == constants.CSQL_ASSET:
-            if 'instance' not in tag_dict or 'database' not in tag_dict or 'table' not in tag_dict:
-                msg = "Error: could not find the required fields in the CSV. The required fields for Cloud SQL are instance, database, and table"
+        if data_asset_type == constants.SQL_ASSET:
+            if 'instance' not in tag_dict or 'database' not in tag_dict:
+                msg = "Error: could not find the required fields in the CSV. The required fields for Cloud SQL are instance and database"
                 log_error_tag_dict(msg, None, job_uuid, tag_dict)
                 op_status = constants.ERROR
                 return op_status
             else:
-               entry_type = constants.CSQL_TABLE
-               instance = tag_dict['instance']
-               database = tag_dict['database']
-               table = tag_dict['table']
+                instance = tag_dict['instance']
+                database = tag_dict['database']
                
-               if 'schema' in tag_dict:
-                   schema = tag_dict['schema']
-               else:
-                   schema = None
-                                
+                if 'table' in tag_dict:
+                   table = tag_dict['table']
+                   entry_type = constants.SQL_TABLE
+                   
+                   if 'schema' in tag_dict:
+                       schema = tag_dict['schema']
+                   else:
+                       schema = None
+                   
+                else:
+                   table = None
+                   if 'schema' in tag_dict:
+                       schema = tag_dict['schema']
+                       entry_type = constants.SQL_SCHEMA
+                   else:
+                       schema = None
+                       entry_type = constants.SQL_DATABASE     
+
+
+        
+        # BQ entry types (table, dataset)                                     
+        if entry_type == constants.BQ_TABLE:
+            entry_name = f'bigquery.googleapis.com/projects/{project}/datasets/{dataset}/tables/{table}'
+            entry_group = '@bigquery'
+        
         if entry_type == constants.DATASET:
             entry_name = f'bigquery.googleapis.com/projects/{project}/datasets/{dataset}'
             entry_group = '@bigquery'
             
-        if entry_type == constants.BQ_TABLE:
-            entry_name = f'bigquery.googleapis.com/projects/{project}/datasets/{dataset}/tables/{table}'
-            entry_group = '@bigquery'
             
+        # Fileset entry type    
         if entry_type == constants.FILESET:
             entry_name = f'datacatalog.googleapis.com/projects/{project}/locations/{data_asset_region}/entryGroups/{entry_group}/entries/{fileset}'
             entry_group = '@fileset'
-            
+        
+        
+        # Spanner entry types (table, schema, database)    
         if entry_type == constants.SPAN_TABLE:
-            #entry_name = f'spanner:{project}.regional-{data_asset_region}.{instance}.{database}.{table}'
             entry_group = '@spanner'
             
             if schema:
@@ -278,7 +306,17 @@ class DataplexController:
             else:
                 entry_name = f'spanner.googleapis.com/projects/{project}/instances/{instance}/databases/{database}/tables/{table}'
             
-        if entry_type == constants.CSQL_TABLE:
+        if entry_type == constants.SPAN_SCHEMA:
+            entry_group = '@spanner'
+            entry_name = f'spanner.googleapis.com/projects/{project}/instances/{instance}/databases/{database}/tables/{schema}'
+        
+        if entry_type == constants.SPAN_DATABASE:
+            entry_group = '@spanner'
+            entry_name = f'spanner.googleapis.com/projects/{project}/instances/{instance}/databases/{database}'
+            
+        
+        # Cloud SQL entry types (table, database)
+        if entry_type == constants.SQL_TABLE:
             entry_group = '@cloudsql'
             
             if schema:
@@ -286,7 +324,15 @@ class DataplexController:
             else:
                 entry_name = f'cloudsql.googleapis.com/projects/{project}/locations/{data_asset_region}/instances/{instance}/databases/{database}/tables/{table}'
                 
-                
+        if entry_type == constants.SQL_SCHEMA:
+            entry_group = '@cloudsql'
+            entry_name = f'cloudsql.googleapis.com/projects/{project}/locations/{data_asset_region}/instances/{instance}/databases/{database}/schemas/{schema}'
+        
+        if entry_type == constants.SQL_DATABASE:
+            entry_group = '@cloudsql'
+            entry_name = f'cloudsql.googleapis.com/projects/{project}/locations/{data_asset_region}/instances/{instance}/databases/{database}'
+                    
+        print(f'entry_type: {entry_type}')
         entry_path = f'projects/{project}/locations/{data_asset_region}/entryGroups/{entry_group}/entries/{entry_name}'
         
         entry_request = dataplex.GetEntryRequest(
@@ -313,7 +359,7 @@ class DataplexController:
         if data_asset_type == constants.SPAN_ASSET:
             uri = entry.name.replace('spanner.googleapis.com/projects/', '')
         
-        if data_asset_type == constants.CSQL_ASSET:
+        if data_asset_type == constants.SQL_ASSET:
             uri = entry.name.replace('cloudsql.googleapis.com/projects/', '')
                    
         target_column = None

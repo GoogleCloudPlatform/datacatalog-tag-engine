@@ -81,6 +81,11 @@ if 'FILESET_REGION' in config['DEFAULT']:
 else:
     FILESET_REGION = None
 
+if 'CLOUDSQL_REGION' in config['DEFAULT']:
+    CLOUDSQL_REGION = config['DEFAULT']['CLOUDSQL_REGION'].strip()
+else:
+    CLOUDSQL_REGION = None
+
 SPLIT_WORK_HANDLER = os.environ['SERVICE_URL'] + '/_split_work'
 RUN_TASK_HANDLER = os.environ['SERVICE_URL'] + '/_run_task'
 
@@ -3491,10 +3496,8 @@ def _split_work():
                     config['data_asset_type'] = 'bigquery'
                 elif (extracted_tags[0].keys() >= {'entry_group', 'fileset'}):
                     config['data_asset_type'] = 'fileset'
-                elif (extracted_tags[0].keys() >= {'instance', 'database'}):
-                    config['data_asset_type'] = 'spanner'
                 else:
-                    print('Error: unable to determine the data asset type of your config (bigquery, fileset, or spanner). Please add data_asset_type to your config and verify the format of your CSV.') 
+                    print('Error: unable to determine the data asset type of your config (bigquery, fileset, spanner or cloudsql). Please add data_asset_type to your config and verify the format of your CSV.') 
                     store.update_job_status(config_uuid, config_type, 'ERROR')
                     jm.set_job_status(job_uuid, 'ERROR')
                     resp = jsonify(success=False)
@@ -3510,7 +3513,9 @@ def _split_work():
                 elif config.get('data_asset_type') == 'fileset':
                     config['data_asset_region'] = FILESET_REGION
                 elif config.get('data_asset_type') == 'spanner':
-                    config['data_asset_region'] = SPANNER_REGION    
+                    config['data_asset_region'] = SPANNER_REGION
+                elif config.get('data_asset_type') == 'cloudsql':
+                    config['data_asset_region'] = CLOUDSQL_REGION    
                 else:
                     print('Error: unable to determine the data asset region of your config (us-central1, etc.). Please add data_asset_region to your config or add the appropriate default region variable to tagengine.ini.') 
                     store.update_job_status(config_uuid, config_type, 'ERROR')
@@ -3714,7 +3719,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 3.0.4\n"
+    return "Welcome to Tag Engine version 3.0.5\n"
     
 ####################### TEST METHOD ####################################  
     

@@ -8,4 +8,5 @@ tag-engine-develop,northwind-dev02,northwind,customers,country,TRUE,PII
 tag-engine-develop,northwind-dev02,northwind,customers,address,TRUE,PII
 tag-engine-develop,northwind-dev02,northwind,customers,company_name,TRUE,SPII
 tag-engine-develop,northwind-dev02,northwind,customer_demographics,customer_desc,TRUE,SPII
-tag-engine-develop,northwind-dev02,northwind,customer_customer_demo,customer_id,FALSE,
+tag-engine-develop,northwind-dev02,northwind,customer_customer_demo,customer_id,TRUE,PII
+tag-engine-develop,northwind-dev02,northwind,customer_customer_demo,customer_type_id,FALSE,
