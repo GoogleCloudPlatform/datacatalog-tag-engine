@@ -3057,11 +3057,11 @@ def trigger_job():
                 job_uuid = jm.create_job(tag_creator_sa, tag_invoker_sa, config_uuid, json_request['config_type'])
             else:
                 job_uuid = jm.create_job(tag_creator_sa, tag_invoker_sa, config_uuid, config_type, job_metadata)
-                template_id = store.lookup_tag_template(config_type, config_uuid)
+                tag_history_table = store.lookup_tag_history_table(config_type, config_uuid)
                 
                 credentials, success = get_target_credentials(tag_creator_sa)
                 bqu = bq.BigQueryUtils(credentials, BIGQUERY_REGION)
-                success = bqu.write_job_metadata(job_uuid, template_id, job_metadata, tag_creator_sa, tag_invoker_sa)
+                success = bqu.write_job_metadata(job_uuid, tag_history_table, job_metadata, tag_creator_sa, tag_invoker_sa)
                 print('Wrote job metadata to BigQuery for job', job_uuid, '. Success =', success)
                        
     else:    
@@ -3719,7 +3719,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 3.0.5\n"
+    return "Welcome to Tag Engine version 3.0.6\n"
     
 ####################### TEST METHOD ####################################  
     

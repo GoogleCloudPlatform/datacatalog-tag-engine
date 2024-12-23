@@ -1,4 +1,4 @@
-# Copyright 2023 Google, LLC.
+# Copyright 2023-2024 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,7 +42,11 @@ def get_requested_service_account(json):
         service_account = store.lookup_service_account(json['config_type'], json['config_uuid'])
     elif isinstance(json, dict) and 'job_uuid' in json:
         config_uuid, config_type = store.read_config_by_job(json['job_uuid'])
-        service_account = store.lookup_service_account(config_type, config_uuid)
+        
+        if config_uuid != None and config_type != None:
+            service_account = store.lookup_service_account(config_type, config_uuid)
+        else:
+            service_account = None
     else:
         service_account = TAG_CREATOR_SA
     
@@ -91,11 +95,19 @@ def do_authentication(headers, json_request, ENABLE_AUTH):
     tag_invoker_account = get_tag_invoker_account(headers.get('Authorization'))
     tag_creator_sa = get_requested_service_account(json_request)
     
-    if tag_creator_sa == None:
+    if tag_creator_sa == None and 'config_uuid' in json_request:
         status = False
         response = {
             "status": "error",
-            "message": "Fatal error: Tag Creator service account not found. Make sure that your config UUID exists."
+            "message": "Fatal error: Tag Creator service account not found. Make sure that your config_uuid is valid."
+        }
+        return status, response, tag_creator_sa
+    
+    if tag_creator_sa == None and 'job_uuid' in json_request:
+        status = False
+        response = {
+            "status": "error",
+            "message": "Fatal error: Tag Creator service account not found. Make sure that your job_uuid is valid."
         }
         return status, response, tag_creator_sa
     

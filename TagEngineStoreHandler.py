@@ -1687,20 +1687,26 @@ class TagEngineStoreHandler:
         return success, config_uuid
 
 
-    def lookup_tag_template(self, config_type, config_uuid):
+    def lookup_tag_history_table(self, config_type, config_uuid):
         
-        template_id = None
+        tag_history_table = None
 
         coll_name = self.lookup_config_collection(config_type)
         doc = self.db.collection(coll_name).document(config_uuid).get()
         
         if doc.exists:
             config = doc.to_dict()
-            template_id = config['template_id']
+            
+            if 'template_id' in config:
+                tag_history_table = config['template_id']
+            elif 'aspect_type_id' in config:
+                tag_history_table = config['aspect_type_id']
+            else:
+                tag_history_table = None
         else:
             print('Error: could not locate the config')
                   
-        return template_id
+        return tag_history_table
 
 
     def lookup_service_account(self, config_type, config_uuid):
