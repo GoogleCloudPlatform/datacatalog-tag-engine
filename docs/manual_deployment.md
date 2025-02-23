@@ -1,6 +1,6 @@
 ### <a name="setup"></a> Manual Deployment
 
-This procedure deploys the Tag Engine v2 components by hand. The steps are carried out via gcloud and in some cases using the Google Cloud console. For the Terraform deployment, please consult [README.md](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/README.md).<br>
+This procedure deploys the Tag Engine v3 components by hand. The steps are carried out via gcloud and in some cases using the Google Cloud console. For the Terraform deployment, please consult [README.md](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/README.md).<br>
 
 1. Create (or designate) two service accounts:
 
@@ -43,11 +43,11 @@ If multiple teams want to share a single instance of Tag Engine and they own dif
 
    - Download the OAuth client secret and save the json file to the root of your local Tag Engine repository as `te_client_secret.json`.   
 
-4. Create a file `tagengine.ini` in the root of your `datacatalog-tag-engine` folder and set the following variables in this file: 
+4. Create a file `tagengine.ini` from `datacatalog-tag-engine/deploy/tagengine.ini.tpl` and place it in the root of your `datacatalog-tag-engine` folder. Set the following variables in this file: 
 
 	```
-	TAG_ENGINE_ACCOUNT
-	TAG_CREATOR_ACCOUNT
+	TAG_ENGINE_SA
+	TAG_CREATOR_SA
 	TAG_ENGINE_PROJECT
 	TAG_ENGINE_REGION
 	FIRESTORE_PROJECT
@@ -57,8 +57,9 @@ If multiple teams want to share a single instance of Tag Engine and they own dif
 	FILESET_REGION
 	SPANNER_REGION
 	CLOUDSQL_REGION
-	OAUTH_CLIENT_CREDENTIALS
 	ENABLE_AUTH
+	OAUTH_CLIENT_CREDENTIALS
+	ENABLE_TAG_HISTORY
 	TAG_HISTORY_PROJECT
 	TAG_HISTORY_DATASET
 	ENABLE_JOB_METADATA
@@ -68,11 +69,11 @@ If multiple teams want to share a single instance of Tag Engine and they own dif
 
    A couple of notes:
 
-   - Set the variable `OAUTH_CLIENT_CREDENTIALS` to the name of your OAuth client secret file (e.g. `te_client_secret.json`). If you are not deploying the UI, you don't need to set `OAUTH_CLIENT_CREDENTIALS`.  
+   - Set the variable `OAUTH_CLIENT_CREDENTIALS` to the name of your OAuth client secret file (e.g. `te_client_secret.json`). If you don't plan to run the Tag Engine UI, you don't need to set `OAUTH_CLIENT_CREDENTIALS`.  
 
    - The variable `ENABLE_AUTH` is a boolean. When set to `True`, Tag Engine verifies that the end user is authorized to use `TAG_CREATOR_SA` prior to processing their tag requests. This is the recommended value. 
 
-   - The `tagengine.ini` file also has two additional variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. These determine the names of the cloud tasks queues. You do not need to change them. The queues are created in step 6 of this setup.   
+   - The `tagengine.ini` file also has two additional variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. Those determine the names of the cloud tasks queues. You do not need to change them. The queues are created in step 6 of this setup.   
 
 
 5. Enable the required Google Cloud APIs:
@@ -315,6 +316,8 @@ If multiple teams want to share a single instance of Tag Engine and they own dif
 	```
 
 
-This completes the manual setup for Tag Engine. Please consult [Part 2](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#test-dataplex-api) for testing Tag Engine with Dataplex Catalog and [Part 3](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#test-datacatalog-api) and [Part 4](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#test-datacatalog-ui) for testing your Tag Engine with Data Catalog. 
+This completes the manual setup for Tag Engine. Please consult [Part 2](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#test-dataplex-api) for testing Tag Engine with Dataplex Catalog. [Part 3](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#test-datacatalog-api) and [Part 4](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#test-datacatalog-ui) for testing your Tag Engine with Data Catalog. 
+
+Note: the Tag Engine UI is currently only available for Data Catalog. If you would like a Tag Engine UI for Dataplex, please open a feature request [here](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/issues). 
 
 <br><br>
