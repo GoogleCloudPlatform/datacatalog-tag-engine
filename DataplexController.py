@@ -1,4 +1,4 @@
-# Copyright 2024 Google, LLC.
+# Copyright 2024-2025 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -138,9 +138,17 @@ class DataplexController:
     
     def check_column_exists(self, aspects, target_column):
         
-        print('enter check_column_exists')
+        print('*** enter check_column_exists ***')
         print('target_column:', target_column)
-        #print('aspects:', aspects)
+        print('aspects:', aspects)
+        
+        # figure out if the target column is nested
+        if len(target_column.split('.')) > 1:
+            is_nested_column = True
+            parent_column = target_column.split('.')[0]
+            child_column = target_column.split('.')[1]
+        else:
+            is_nested_column = False
         
         column_exists = False
         
@@ -149,13 +157,20 @@ class DataplexController:
                 break
         
         aspect_dict = json_format.MessageToDict(aspect_payload._pb)
-        #print('aspect_dict:', aspect_dict)
         
         for field in aspect_dict['data']['fields']: 
+
             if field['name'] == target_column:
                 column_exists = True
-                print('found the target column', target_column)
                 break
+            
+            if is_nested_column and field['name'] == parent_column:
+                subfields = field['fields']
+
+                for subfield in subfields:
+                    if subfield['name'] == child_column:
+                        column_exists = True
+                        break
                   
         return column_exists
     

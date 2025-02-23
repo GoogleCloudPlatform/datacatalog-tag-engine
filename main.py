@@ -1,4 +1,4 @@
-# Copyright 2020-2024 Google, LLC.
+# Copyright 2020-2025 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,6 +24,16 @@ from googleapiclient import discovery
 from google.api_core.client_info import ClientInfo
 from google.cloud import logging_v2
 
+config = configparser.ConfigParser()
+found = config.read("tagengine.ini")
+
+def check_ini_file(found):
+    if len(found) == 0:
+        print('Fatal Error: Could not find tagengine.ini file. Please create it from deploy/tagengine.ini.tpl and place it in the datacatalog-tag-engine folder. \n Once you\'ve created tagengine.ini, rebuild the container and rerun.')
+        return -1
+
+check_ini_file(found)
+
 from access import do_authentication
 from access import check_user_credentials_from_ui
 from access import credentials_to_dict
@@ -45,8 +55,12 @@ import TaskManager as taskm
 import BigQueryUtils as bq
 import ConfigType as ct
 
-config = configparser.ConfigParser()
-config.read("tagengine.ini")
+def check_service_url():
+    if os.environ['SERVICE_URL'] == None:
+        print('Fatal Error: SERVICE_URL environment variable not set. Please set it before running the Tag Engine app.')
+        return -1
+        
+check_service_url()
 
 ##################### INIT GLOBAL VARIABLES ##################################
         
@@ -3719,7 +3733,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 3.0.6\n"
+    return "Welcome to Tag Engine version 3.0.7\n"
     
 ####################### TEST METHOD ####################################  
     

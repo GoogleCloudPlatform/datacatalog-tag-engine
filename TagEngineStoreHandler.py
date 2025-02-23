@@ -1,4 +1,4 @@
-# Copyright 2020-2024 Google, LLC.
+# Copyright 2020-2025 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -1182,9 +1182,11 @@ class TagEngineStoreHandler:
         # check if this config already exists and if so, return it
         coll_ref = self.db.collection('import_configs')
         query = coll_ref.where(filter=FieldFilter('template_uuid', '==', template_uuid))
+        query = query.where(filter=FieldFilter('service_account', '==', service_account))
+        query = query.where(filter=FieldFilter('data_asset_type', '==', data_asset_type))
+        query = query.where(filter=FieldFilter('data_asset_region', '==', data_asset_region))
         query = query.where(filter=FieldFilter('metadata_import_location', '==', metadata_import_location))
         query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
-        query = query.where(filter=FieldFilter('service_account', '==', service_account))
         
         matches = query.get()
        
@@ -1231,6 +1233,8 @@ class TagEngineStoreHandler:
         # check if this config already exists and if so, return it
         coll_ref = self.db.collection('import_configs')
         query = coll_ref.where(filter=FieldFilter('aspect_type_uuid', '==', aspect_type_uuid))
+        query = query.where(filter=FieldFilter('data_asset_type', '==', data_asset_type))
+        query = query.where(filter=FieldFilter('data_asset_region', '==', data_asset_region))
         query = query.where(filter=FieldFilter('metadata_import_location', '==', metadata_import_location))
         query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
         query = query.where(filter=FieldFilter('service_account', '==', service_account))
@@ -1242,7 +1246,7 @@ class TagEngineStoreHandler:
                 print('config already exists. Returning existing config_uuid:', matched_config.id)
                 return matched_config.id
        
-        # create a new config because we did not find a matching one
+        # create a new config because we could not find a matching one
         config_uuid = uuid.uuid1().hex
         doc_ref = coll_ref.document(config_uuid)
         

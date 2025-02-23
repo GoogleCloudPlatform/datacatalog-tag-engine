@@ -1,7 +1,7 @@
 ## Tag Engine 3.0
 This is the Dataplex branch for Tag Engine. Tag Engine v3 is the newest flavor of Tag Engine that is compatible with both Data Catalog and Dataplex. It is based on the Cloud Run branch and therefore supports VPC-SC, user authentication, role based access control. 
 
-*As of this writing (2024-12-15), this branch supports creating and updating aspects in bulk through the Tag Engine API. You can create aspects from CSV files on BigQuery, GCS Fileset, Spanner, and Cloud SQL resources using the import config type. You can also create dynamic aspects from BigQuery metadata on BigQuery resources (columns, tables, views, datasets) through the dynamic table and column config types. See [Part 2](#test-dataplex) for more details on how this all works.*  
+*As of this writing (2024-12-15), this branch supports creating and updating aspects in bulk through the Tag Engine API. You can create aspects from CSV files on BigQuery, GCS Fileset, Spanner, and Cloud SQL resources using the import config type. You can also create dynamic aspects from BigQuery metadata on BigQuery resources (columns, tables, views, datasets) through the dynamic table and column config types. See [Part 2](#test-dataplex-api) for more details on how this all works.*  
 
 If you're not familiar with Tag Engine, it is an open-source tool which automates the metadata tagging of BigQuery, Cloud Storage, and Spanner data assets. It allows you to tag at the dataset level, table level, and field level. Tag Engine is used to import metadata from CSV files and it is also used for dynamic tagging where the metadata is sourced from BigQuery. With dynamic tagging, you create configurations that specify how to populate various fields of a tag or aspect using URI paths and SQL expressions. Tag Engine runs the configurations either on demand or on a schedule and carries out the tagging: creating new metadata tags, updating existing tags or deleting them when they are no longer needed.
 
@@ -9,9 +9,9 @@ If you're not familiar with Tag Engine, it is an open-source tool which automate
 
 This README file describes the deployment steps, testing procedures, and some code samples. It is organized into 6 sections:  <br>
 - Part 1: [Deploying Tag Engine v3](#deploy) <br>
-- Part 2: [Testing your Tag Engine API Setup with Dataplex](#test-dataplex)
-- Part 3: [Testing your Tag Engine API Setup with Data Catalog](#test-api)  <br>
-- Part 4: [Testing your Tag Engine UI Setup with Data Catalog](#test-ui)  <br>
+- Part 2: [Testing your Tag Engine API Setup with Dataplex](#test-dataplex-api)
+- Part 3: [Testing your Tag Engine API Setup with Data Catalog](#test-datacatalog-api)  <br>
+- Part 4: [Testing your Tag Engine UI Setup with Data Catalog](#test-datacatalog-ui)  <br>
 - Part 5: [Troubleshooting](#troubleshooting)  <br>
 - Part 6: [Code Samples](#code-samples)  <br>
 
@@ -103,7 +103,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 
 
 
-### <a name="test-dataplex"></a> Part 2: Testing your Tag Engine API setup with Dataplex
+### <a name="test-dataplex-api"></a> Part 2: Testing your Tag Engine API setup with Dataplex
 
 1. Create the sample `data-governance` aspect type:
 
@@ -217,7 +217,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	Please note that you need to replace the `config_uuid` and `job_uuid` with your own values!
 
 
-### <a name="test-api"></a> Part 3: Testing your Tag Engine API setup with Data Catalog
+### <a name="test-datacatalog-api"></a> Part 3: Testing your Tag Engine API setup with Data Catalog
 
 1. Create the sample `data_governance` tag template:
 
@@ -351,7 +351,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 
 <br>
 
-### <a name="test-ui"></a> Part 4: Testing your Tag Engine UI Setup with Data Catalog
+### <a name="test-datacatalog-ui"></a> Part 4: Testing your Tag Engine UI Setup with Data Catalog
 
 1. Set the authorized redirect URI and add authorized users:
 

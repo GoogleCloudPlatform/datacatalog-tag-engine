@@ -185,12 +185,17 @@ indexes:
   - collection: import_configs
     fields:
       - field: aspect_type_uuid
+      - field: data_asset_type
+      - field: data_asset_region
       - field: metadata_import_location
       - field: service_account
       - field: config_status
   - collection: import_configs
     fields:
+      - field: data_asset_region
+      - field: data_asset_type
       - field: metadata_import_location
+      - field: service_account
       - field: template_uuid
       - field: config_status
   - collection: jobs

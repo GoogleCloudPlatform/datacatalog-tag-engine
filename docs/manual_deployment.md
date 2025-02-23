@@ -315,6 +315,6 @@ If multiple teams want to share a single instance of Tag Engine and they own dif
 	```
 
 
-This completes the manual setup for Tag Engine. Please consult [Part 2](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#testa) and [Part 3](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#testb) for testing your installation and further steps. 
+This completes the manual setup for Tag Engine. Please consult [Part 2](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#test-dataplex-api) for testing Tag Engine with Dataplex Catalog and [Part 3](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#test-datacatalog-api) and [Part 4](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine#test-datacatalog-ui) for testing your Tag Engine with Data Catalog. 
 
 <br><br>
