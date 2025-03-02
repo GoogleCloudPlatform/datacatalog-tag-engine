@@ -99,7 +99,7 @@ def do_authentication(headers, json_request, ENABLE_AUTH):
         status = False
         response = {
             "status": "error",
-            "message": "Fatal error: Tag Creator service account not found. Make sure that your config_uuid is valid."
+            "message": "Fatal error: Invalid config_uuid in the json request."
         }
         return status, response, tag_creator_sa
     
@@ -107,7 +107,7 @@ def do_authentication(headers, json_request, ENABLE_AUTH):
         status = False
         response = {
             "status": "error",
-            "message": "Fatal error: Tag Creator service account not found. Make sure that your job_uuid is valid."
+            "message": "Fatal error: Invalid job_uuid in the json request."
         }
         return status, response, tag_creator_sa
     

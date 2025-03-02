@@ -196,12 +196,6 @@ class DataplexController:
     def apply_import_config(self, job_uuid, config_uuid, data_asset_type, data_asset_region, tag_dict, tag_history, overwrite=False):
             
         print("*** apply_import_config ***")
-        #print("job_uuid: ", job_uuid)
-        #print("config_uuid: ", config_uuid)
-        #print("data_asset_type: ", data_asset_type)
-        #print("data_asset_region: ", data_asset_region)
-        #print("tag_dict: ", tag_dict)
-        #print("tag_history: ", tag_history)
         
         op_status = constants.SUCCESS
         
@@ -236,7 +230,7 @@ class DataplexController:
             else:
                 entry_type = constants.FILESET
                 entry_group = tag_dict['entry_group']
-                fileset = tag_dict['fileset']
+                entry_name = tag_dict['fileset']
         
         if data_asset_type == constants.SPAN_ASSET:
             if 'instance' not in tag_dict or 'database' not in tag_dict:
@@ -295,7 +289,6 @@ class DataplexController:
                        entry_type = constants.SQL_DATABASE     
 
 
-        
         # BQ entry types (table, dataset)                                     
         if entry_type == constants.BQ_TABLE:
             entry_name = f'bigquery.googleapis.com/projects/{project}/datasets/{dataset}/tables/{table}'
@@ -304,14 +297,7 @@ class DataplexController:
         if entry_type == constants.DATASET:
             entry_name = f'bigquery.googleapis.com/projects/{project}/datasets/{dataset}'
             entry_group = '@bigquery'
-            
-            
-        # Fileset entry type    
-        if entry_type == constants.FILESET:
-            entry_name = f'datacatalog.googleapis.com/projects/{project}/locations/{data_asset_region}/entryGroups/{entry_group}/entries/{fileset}'
-            entry_group = '@fileset'
-        
-        
+              
         # Spanner entry types (table, schema, database)    
         if entry_type == constants.SPAN_TABLE:
             entry_group = '@spanner'
@@ -346,8 +332,7 @@ class DataplexController:
         if entry_type == constants.SQL_DATABASE:
             entry_group = '@cloudsql'
             entry_name = f'cloudsql.googleapis.com/projects/{project}/locations/{data_asset_region}/instances/{instance}/databases/{database}'
-                    
-        print(f'entry_type: {entry_type}')
+
         entry_path = f'projects/{project}/locations/{data_asset_region}/entryGroups/{entry_group}/entries/{entry_name}'
         
         entry_request = dataplex.GetEntryRequest(
@@ -368,8 +353,8 @@ class DataplexController:
         if data_asset_type == constants.BQ_ASSET:
             uri = entry.name.replace('bigquery.googleapis.com/projects/', '')
         
-        if data_asset_type == constants.FILESET:
-            uri = entry.name.replace('datacatalog.googleapis.com/projects/', '')
+        if data_asset_type == constants.FILESET_ASSET:
+            uri = entry.name.replace('projects/', '')
         
         if data_asset_type == constants.SPAN_ASSET:
             uri = entry.name.replace('spanner.googleapis.com/projects/', '')
@@ -877,16 +862,16 @@ if __name__ == '__main__':
         target_scopes=SCOPES,
         lifetime=1200)
         
-    aspect_type_id = 'data-sensitivity'
+    aspect_type_id = 'data-governance'
     aspect_type_project = 'tag-engine-develop'
     aspect_type_region = 'us-central1'
-    aspect_type_uuid = 'd946a1b4510611ef957642004e494300'
+    aspect_type_uuid = 'Bofcfg9kkkFz4d0Dk2SM'
     
-    job_uuid = '282df436bb0a11efa14942004e494300'
-    config_uuid = '0ed05c90bb0a11ef9ba042004e494300'
-    data_asset_type = 'spanner'
+    job_uuid = '238f7420f7a211ef915a42004e494300'
+    config_uuid = 'b8a4616ef79e11efa14242004e494300'
+    data_asset_type = 'fileset'
     data_asset_region = 'us-central1'
-    tag_dict = {'project': 'tag-engine-develop', 'instance': 'goog-dev', 'database': 'user-testing', 'schema': 'dev', 'table': 'FINWIRE2024Q3_CMP', 'sensitive_field': 'FALSE', 'sensitive_type': ''}
+    tag_dict = {'project': 'tag-engine-develop', 'entry_group': 'sakila_eg', 'fileset': 'city', 'data_domain': 'LOGISTICS', 'broad_data_category': 'CONTENT', 'data_creation': '2023-11-10', 'data_ownership': 'THIRD_PARTY_OPS', 'data_asset_owner': 'John Smith', 'data_confidentiality': 'PUBLIC', 'data_retention': 'DAYS_90', 'data_asset_documentation': 'https://dev.mysql.com/doc/sakila/en/sakila-structure.html'}
     tag_history = True
     
     dpc = DataplexController(credentials, target_service_account, 'scohen@gcp.solutions', aspect_type_id, aspect_type_project, aspect_type_region)
