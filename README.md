@@ -5,7 +5,7 @@ This branch supports creating and updating aspects in bulk through the Tag Engin
 
 If you're new to Tag Engine, it is an open-source extension to Dataplex. It runs on Google Cloud on Cloud Run and Firestore. It allows you to create your metadata in bulk which you can source from CSV or BigQuery. All the metadata created by Tag Engine is schema based, using either aspect types or tag templates. The metadata you create can be attached to datasets, tables or files, and fields. Tag Engine is used to import metadata from CSV files and it is also used for dynamic tagging where the metadata is sourced from BigQuery. With dynamic tagging, you create configurations that specify how to populate various fields of a tag or aspect using URI paths and SQL expressions. Tag Engine runs the configurations on demand or on a schedule. 
 
-<img src="docs/arch_diagram.png" alt="architecture diagram" width="550"/>
+<img src="docs/arch_diagram.png" alt="architecture diagram" width="700"/>
 
 This README file describes the deployment steps, testing procedures, and some code samples. It is organized into 6 sections:  <br>
 - Part 1: [Deploying Tag Engine v3](#deploy) <br>
