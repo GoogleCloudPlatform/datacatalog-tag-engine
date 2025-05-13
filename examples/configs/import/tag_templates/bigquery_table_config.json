@@ -3,9 +3,9 @@
     "template_project": "tag-engine-develop",
     "template_region": "us-central1",
     "metadata_import_location": "gs://tag-imports/latest/bigquery_table.csv",
-	"data_asset_type": "bigquery",
-	"data_asset_region": "us-central1",
+    "data_asset_type": "bigquery",
+    "data_asset_region": "us-central1",
     "overwrite": true,
-	"clone_tags": true,
-	"retire_tags": false   
+    "clone_tags": true,
+    "retire_tags": false   
 }
