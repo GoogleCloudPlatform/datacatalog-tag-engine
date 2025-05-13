@@ -1175,7 +1175,8 @@ class TagEngineStoreHandler:
         
 
     def write_tag_import_config(self, service_account, template_uuid, template_id, template_project, template_region, \
-                                data_asset_type, data_asset_region, metadata_import_location, tag_history, overwrite=True):
+                                data_asset_type, data_asset_region, metadata_import_location, tag_history, \
+                                clone_tags, retire_tags, overwrite=True):
                                     
         print('** write_tag_import_config **')
         
@@ -1192,7 +1193,16 @@ class TagEngineStoreHandler:
        
         for matched_config in matches:
             if matched_config.exists:
-                print('config already exists. Returning existing config_uuid:', matched_config.id)
+                matched_config_dict = matched_config.to_dict()
+                
+                if all(key in matched_config_dict for key in ('clone_tags', 'retire_tags')):  
+                    if matched_config_dict['clone_tags'] == clone_tags and matched_config_dict['retire_tags'] == retire_tags:
+                        print('config already exists. Returning existing config_uuid:', matched_config.id)
+                    else:
+                        break
+                else:    
+                    # clone_tags and retire_tags don't exist in the config
+                    print('config already exists. Returning existing config_uuid:', matched_config.id)
                 return matched_config.id
        
         # create a new config because we did not find a matching one
@@ -1210,6 +1220,8 @@ class TagEngineStoreHandler:
             'template_region': template_region,
             'metadata_import_location': metadata_import_location,
             'tag_history': tag_history,
+            'clone_tags': clone_tags,
+            'retire_tags': retire_tags,
             'overwrite': overwrite,
             'service_account': service_account
         }
@@ -1728,6 +1740,22 @@ class TagEngineStoreHandler:
                   
         return service_account
         
+
+        
+    def lookup_template_aspect_mapping(self, template_uuid):
+        
+        mapping = None
+        
+        doc = self.db.collection('mapping_registry').document(template_uuid).get()
+        
+        if doc.exists:
+            mapping = doc.to_dict()
+        else:
+            print(f'Error: could not locate the mapping for template_uuid {template_uuid}, returning an empty mapping')
+                  
+        return mapping
+    
+    
 
     def update_config(self, old_config_uuid, config_type, config_status, fields, included_uris, excluded_uris, template_uuid, \
                       template_id, template_project, template_region, refresh_mode, refresh_frequency, \

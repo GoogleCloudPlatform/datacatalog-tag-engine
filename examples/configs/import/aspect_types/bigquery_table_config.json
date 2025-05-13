@@ -5,5 +5,5 @@
     "metadata_import_location": "gs://tag-imports/latest/bigquery_table.csv",
     "data_asset_type": "bigquery",
     "data_asset_region": "us-central1",
-    "overwrite": true  
+    "overwrite": true
 }

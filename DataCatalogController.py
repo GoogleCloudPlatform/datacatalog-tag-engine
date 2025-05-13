@@ -1214,7 +1214,13 @@ class DataCatalogController:
             
     def apply_import_config(self, job_uuid, config_uuid, data_asset_type, data_asset_region, tag_dict, tag_history, overwrite=False):
     
-        #print(f'apply_import_config: {job_uuid}, {config_uuid}, {data_asset_type}, {data_asset_region}, {tag_dict}, {tag_history}')
+        print("*** DataCatalogController.apply_import_config ***")
+        print("job_uuid:", job_uuid)
+        print("config_uuid:", config_uuid)
+        print("data_asset_type:", data_asset_type)
+        print("data_asset_region:", data_asset_region)
+        print("tag_dict:", tag_dict)
+        print("tag_history:", tag_history)
         
         op_status = constants.SUCCESS
         

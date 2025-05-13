@@ -71,7 +71,7 @@ class DataplexController:
         except Exception as e:
             msg = f'Error retrieving aspect type {self.aspect_type_path}'
             log_error(msg, e)
-            return fields
+            return aspect_fields
         
         record_fields = aspect_type.metadata_template.record_fields
         #print('record_fields:', record_fields)
@@ -195,7 +195,13 @@ class DataplexController:
     
     def apply_import_config(self, job_uuid, config_uuid, data_asset_type, data_asset_region, tag_dict, tag_history, overwrite=False):
             
-        print("*** apply_import_config ***")
+        print("*** DataplexController.apply_import_config ***")
+        #print("job_uuid:", job_uuid)
+        #print("config_uuid:", config_uuid)
+        #print("data_asset_type:", data_asset_type)
+        #print("data_asset_region:", data_asset_region)
+        #print("tag_dict:", tag_dict)
+        #print("tag_history:", tag_history)
         
         op_status = constants.SUCCESS
         
@@ -787,7 +793,7 @@ class DataplexController:
            
     def create_update_delete_aspect(self, aspect_fields, aspect_type_path, entry_path, job_uuid, config_uuid, config_type, tag_history, uri, target_column):
         
-        #print("enter create_update_delete_tag")
+        #print("*** DataplexController.create_update_delete_aspect ***")
         #print("aspect_fields:", aspect_fields)
         #print("aspect_type_path:", aspect_type_path)
         #print("entry_path:", entry_path)
@@ -796,6 +802,7 @@ class DataplexController:
         #print("config_type:", config_type)
         #print("tag_history:", tag_history)
         #print("uri:", uri)
+        #print("target_column:", target_column)
         
         op_status = constants.SUCCESS
         valid_field = False
@@ -867,15 +874,16 @@ if __name__ == '__main__':
     aspect_type_region = 'us-central1'
     aspect_type_uuid = 'Bofcfg9kkkFz4d0Dk2SM'
     
-    job_uuid = '238f7420f7a211ef915a42004e494300'
-    config_uuid = 'b8a4616ef79e11efa14242004e494300'
-    data_asset_type = 'fileset'
-    data_asset_region = 'us-central1'
-    tag_dict = {'project': 'tag-engine-develop', 'entry_group': 'sakila_eg', 'fileset': 'city', 'data_domain': 'LOGISTICS', 'broad_data_category': 'CONTENT', 'data_creation': '2023-11-10', 'data_ownership': 'THIRD_PARTY_OPS', 'data_asset_owner': 'John Smith', 'data_confidentiality': 'PUBLIC', 'data_retention': 'DAYS_90', 'data_asset_documentation': 'https://dev.mysql.com/doc/sakila/en/sakila-structure.html'}
+    job_uuid = "0d6265ac2e9f11f0aaf842004e494300"
+    config_uuid = "919f20c02e9b11f0bb7342004e494300"
+    data_asset_type = "bigquery"
+    data_asset_region = "us-central1"
+    tag_dict = {'project': 'tag-engine-develop', 'dataset': 'sakila_dw', 'table': 'film_actor', 'data_domain': 'MARKETING', 'is_content': 'True', 'num_stars': '3', 'rating': '5.0', 'data_creation': '2025-05-11', 'data_owner': 'Carlos William'}
     tag_history = True
+    overwrite = True
     
     dpc = DataplexController(credentials, target_service_account, 'scohen@gcp.solutions', aspect_type_id, aspect_type_project, aspect_type_region)
 
-    dpc.apply_import_config(job_uuid, config_uuid, data_asset_type, data_asset_region, tag_dict, tag_history)
+    dpc.apply_import_config(job_uuid, config_uuid, data_asset_type, data_asset_region, tag_dict, tag_history, overwrite)
     
    

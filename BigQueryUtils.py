@@ -1,4 +1,4 @@
-# Copyright 2020-2023 Google, LLC.
+# Copyright 2020-2025 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ from google.cloud.exceptions import NotFound
 
 import TagEngineStoreHandler as tesh
 
-USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v2'
+USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v3'
 
 class BigQueryUtils:
     
@@ -367,6 +367,9 @@ class BigQueryUtils:
             if field['field_type'] == 'double':
                 col_type = 'NUMERIC'
                 
+            if field['field_type'] == 'int':
+                col_type = 'INTEGER'
+
             if field['field_type'] == 'bool':
                 col_type = 'BOOLEAN'
                 
@@ -422,7 +425,7 @@ class BigQueryUtils:
                 row[tagged_value['field_id']]= json.dumps(tagged_value['field_value'], default=str)
                 row[tagged_value['field_id']]= tagged_value['field_value']
     
-        #print('insert row: ' + str(row))
+        #print('row to insert into BQ: ' + str(row))
         row_to_insert = [row,]
 
         try:

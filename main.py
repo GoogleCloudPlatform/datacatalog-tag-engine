@@ -144,6 +144,15 @@ if 'JOB_METADATA_DATASET' in config['DEFAULT']:
 else:
     JOB_METADATA_DATASET = None
 
+if 'CLONE_TAGS' in config['DEFAULT'] and config['DEFAULT']['CLONE_TAGS'].strip().lower() == 'true':    
+    CLONE_TAGS = True
+else:
+    CLONE_TAGS = False
+    
+if 'RETIRE_TAGS' in config['DEFAULT'] and config['DEFAULT']['CLONE_TAGS'].strip().lower() == 'true':    
+    RETIRE_TAGS = True
+else:
+    RETIRE_TAGS = False
 
 ##################### CHECK SERVICE_URL #####################
 def check_service_url():
@@ -2704,6 +2713,8 @@ Args:
 	data_asset_region: The region in which the data assets reside (e.g. us-central1)
     service_account: The email address of the Tag Creator SA (optional param)
     overwrite: Whether to overwrite the existing tags, True or False, defaults to True (optional param)
+    clone_tags: Create tags and their equivalent aspects when set to True (optional param)
+    retire_tags: Create only the equivalent aspects without creating the tags when set to True (optional param) 
 Returns:
     {config_type, config_uuid} 
 """
@@ -2760,16 +2771,26 @@ def create_import_config():
     else:
         data_asset_region = None
         
+    if 'clone_tags' in json_request:  
+        clone_tags = json_request['clone_tags']
+    else:
+        clone_tags = CLONE_TAGS
+    
+    if 'retire_tags' in json_request:  
+        retire_tags = json_request['retire_tags']
+    else:
+        retire_tags = RETIRE_TAGS
+        
     tag_history_option, _ = store.read_tag_history_settings()
 
     if is_dataplex:
         config_uuid = store.write_aspect_import_config(tag_creator_sa, aspect_type_uuid, aspect_type_id, aspect_type_project, \
-                                                        aspect_type_region, data_asset_type, data_asset_region, metadata_import_location, \
-                                                        tag_history_option, overwrite)
+                                                       aspect_type_region, data_asset_type, data_asset_region, metadata_import_location, \
+                                                       tag_history_option, overwrite)
     else:
         config_uuid = store.write_tag_import_config(tag_creator_sa, template_uuid, template_id, template_project, template_region, \
                                                     data_asset_type, data_asset_region, metadata_import_location, \
-                                                    tag_history_option, overwrite)                                                      
+                                                    tag_history_option, clone_tags, retire_tags, overwrite)                                                      
     
     return jsonify(config_uuid=config_uuid, config_type='TAG_IMPORT')
 
@@ -3645,6 +3666,7 @@ def _run_task():
             dcc = dc_controller.DataCatalogController(credentials, tag_creator_sa, tag_invoker_sa, \
                                                        config['template_id'], config['template_project'], \
                                                        config['template_region'])
+                                                    
         elif 'aspect_type_id' in config:
             is_dataplex = True
             dpc = dp_controller.DataplexController(credentials, tag_creator_sa, tag_invoker_sa, \
@@ -3694,8 +3716,48 @@ def _run_task():
             creation_status = dpc.apply_import_config(job_uuid, config_uuid, config['data_asset_type'], config['data_asset_region'], \
                                                       tag_extract, config['tag_history'], config['overwrite'])        
         else:
-            creation_status = dcc.apply_import_config(job_uuid, config_uuid, config['data_asset_type'], config['data_asset_region'], \
-                                                      tag_extract, config['tag_history'], config['overwrite'])
+            
+            if ('clone_tags' in config and config['clone_tags']) or ('retire_tags' in config and config['retire_tags']):
+                
+                # look up the aspect type details
+                mapping = store.lookup_template_aspect_mapping(config['template_uuid'])
+                print("mapping:", mapping)
+                
+                if mapping == None:
+                
+                    response = {
+                            "status": "error",
+                            "message": "Mapping for template_uuid doesn't exist in database",
+                    }
+                    return jsonify(response), 400
+                
+                # create the tags because retire flag not set
+                if config['retire_tags'] != True:
+                    creation_status = dcc.apply_import_config(job_uuid, config_uuid, config['data_asset_type'], config['data_asset_region'], \
+                                                              tag_extract, config['tag_history'], config['overwrite'])
+                
+                # write the aspects config if it doesn't already exist
+                aspect_config_uuid = store.write_aspect_import_config(config['service_account'], mapping['aspect_type_uuid'], 
+                                                                      mapping['aspect_type_id'], mapping['aspect_type_project'], 
+                                                                      mapping['aspect_type_region'], \
+                                                                      config['data_asset_type'], config['data_asset_region'], \
+                                                                      config['metadata_import_location'], config['tag_history'])
+                
+                # create the aspects based on the config
+                dpc = dp_controller.DataplexController(credentials, tag_creator_sa, tag_invoker_sa, \
+                                                       mapping['aspect_type_id'], mapping['aspect_type_project'], \
+                                                       mapping['aspect_type_region'])
+                
+                creation_status = dpc.apply_import_config(job_uuid, aspect_config_uuid, config['data_asset_type'], config['data_asset_region'], \
+                                                          tag_extract, config['tag_history'], config['overwrite'])
+                                            
+                                                          
+            else:
+                # clone and retire flags not set, create only the tags
+                creation_status = dcc.apply_import_config(job_uuid, config_uuid, config['data_asset_type'], config['data_asset_region'], \
+                                                          tag_extract, config['tag_history'], config['overwrite'])
+                
+                                    
     if config_type == 'TAG_RESTORE':
         creation_status = dcc.apply_restore_config(job_uuid, config_uuid, tag_extract, \
                                                    config['tag_history'], config['overwrite'])
@@ -3733,7 +3795,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 3.0.8\n"
+    return "Welcome to Tag Engine version 3.0.9\n"
     
 ####################### TEST METHOD ####################################  
     

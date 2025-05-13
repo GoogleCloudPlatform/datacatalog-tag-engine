@@ -109,7 +109,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 
 	```
 	git clone https://github.com/GoogleCloudPlatform/datacatalog-templates.git 
-	cd aspect_types
+	cd datacatalog-templates
 	python create_aspect_type.py $DATAPLEX_PROJECT $DATAPLEX_REGION aspect_types/data-governance.yaml 
 	```
 
@@ -224,7 +224,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	```
 	git clone https://github.com/GoogleCloudPlatform/datacatalog-templates.git 
 	cd datacatalog_templates
-	python create_template.py $DATA_CATALOG_PROJECT $DATA_CATALOG_REGION data_governance.yaml 
+	python create_template.py $DATA_CATALOG_PROJECT $DATA_CATALOG_REGION tag_templates/data_governance.yaml 
 	```
 
 	The previous command creates the `data_governance` tag template in the `$DATA_CATALOG_PROJECT` and `$DATA_CATALOG_REGION`. 
@@ -273,7 +273,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	export IAM_TOKEN=$(gcloud auth print-identity-token)
 	```
 
-4. Create your first Tag Engine configuration:
+4. Create a Tag Engine configuration:
 
 	Tag Engine uses configurations (configs for short) to define tag requests. There are several types of configs from ones that create dynamic table-level tags to ones that create tags from CSV. You'll find several example configs in the `examples/configs/` subfolders.
 
@@ -295,7 +295,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	{"config_type":"DYNAMIC_TAG_TABLE","config_uuid":"facb59187f1711eebe2b4f918967d564"}
 	```
 
-5. Run your first job:
+5. Run your Tag Engine job:
 
 	Now that we have created a config, we need to trigger it in order to create the tags. A Tag Engine job is an execution of a config. In this step, you execute the dynamic table config using the config_uuid from the previous step. 
 
@@ -352,6 +352,8 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 <br>
 
 ### <a name="test-datacatalog-ui"></a> Part 4: Testing your Tag Engine UI Setup with Data Catalog
+
+Tag Engine comes with a simple UI front-end that lets you create configurations and trigger jobs. The UI is currently compatible only with the Data Catalog API. If you would like to use a UI to create your aspects with Dataplex, please add a comment to [this](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/issues/134) feature request.
 
 1. Set the authorized redirect URI and add authorized users:
 
