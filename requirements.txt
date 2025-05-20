@@ -21,3 +21,4 @@ google-auth
 oauth2client
 requests
 cachelib
+pyyaml

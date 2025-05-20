@@ -16,6 +16,7 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify, j
 from flask_session import Session
 
 import datetime, time, configparser, os, base64
+from pathlib import Path
 import requests
 
 import google_auth_oauthlib.flow
@@ -25,7 +26,7 @@ from google.api_core.client_info import ClientInfo
 from google.cloud import logging_v2
 
 config = configparser.ConfigParser()
-found = config.read("tagengine.ini")
+found = config.read('tagengine.ini')
 
 def check_ini_file(found):
     if len(found) == 0:
@@ -40,7 +41,7 @@ from access import credentials_to_dict
 from access import get_target_credentials
 from access import get_tag_invoker_account
 
-from common import log_error
+from common import log_error, log_info
 
 import DataCatalogController as dc_controller
 import DataplexController as dp_controller
@@ -149,12 +150,13 @@ if 'CLONE_TAGS' in config['DEFAULT'] and config['DEFAULT']['CLONE_TAGS'].strip()
 else:
     CLONE_TAGS = False
     
-if 'RETIRE_TAGS' in config['DEFAULT'] and config['DEFAULT']['CLONE_TAGS'].strip().lower() == 'true':    
+if 'RETIRE_TAGS' in config['DEFAULT'] and config['DEFAULT']['RETIRE_TAGS'].strip().lower() == 'true':    
     RETIRE_TAGS = True
 else:
     RETIRE_TAGS = False
 
 ##################### CHECK SERVICE_URL #####################
+
 def check_service_url():
     if os.environ['SERVICE_URL'] == None:
         print('Fatal Error: SERVICE_URL environment variable not set. Please set it before running the Tag Engine app.')
@@ -218,6 +220,43 @@ def configure_job_metadata():
             
 configure_job_metadata()
 
+##################### REGISTER TAG TEMPLATE TO ASPECT TYPE MAPPINGS ###############
+
+def check_mappings_file():
+    
+    mappings_file = Path('migrate/mappings.yaml')
+    
+    if mappings_file.exists():
+        print('Info: Detected mappings file (migrate/mappings.yaml)')
+        log_info('Info: Detected mappings file (migrate/mappings.yaml)')
+        from migrate.mappings import register_mappings
+        status = register_mappings()
+    
+        if status == constants.ERROR:
+            print('Fatal Error: Could not register mappings. Please verify your mappings file (migrate/mappings.yml) and note that the tag templates and aspect types in this file must already exist in Dataplex.')
+            log_error('Fatal Error: Could not register mappings. Please verify your mappings file (migrate/mappings.yml) and note that the tag templates and aspect types in this file must already exist in Dataplex.')
+            return -1
+    else:
+        print('Info: No mappings file found in the migrate subdirectory')
+        log_info('Info: No mappings file found in the migrate subdirectory')
+        
+        try:
+            if CLONE_TAGS:
+                CLONE_TAGS = False
+                print('Info: Turned off CLONE_TAGS')
+                log_info('Info: Turned off CLONE_TAGS')
+        except NameError:
+            print("Info: CLONE_TAGS not set in ini")
+        
+        try:
+            if RETIRE_TAGS:
+                RETIRE_TAGS = False
+                print('Info: Turned off RETIRE_TAGS')
+                log_info('Info: Turned off RETIRE_TAGS')
+        except NameError:
+            print("Info: RETIRE_TAGS not set in ini")
+                    
+check_mappings_file()
 
 ##################### COMMON METHOD USED BY UI #################
 
@@ -3721,13 +3760,13 @@ def _run_task():
                 
                 # look up the aspect type details
                 mapping = store.lookup_template_aspect_mapping(config['template_uuid'])
-                print("mapping:", mapping)
                 
                 if mapping == None:
                 
+                    # fail fast, instead of running the job without the mapping
                     response = {
                             "status": "error",
-                            "message": "Mapping for template_uuid doesn't exist in database",
+                            "message": "Fatal Error: mapping for template_uuid doesn't exist in Firestore",
                     }
                     return jsonify(response), 400
                 

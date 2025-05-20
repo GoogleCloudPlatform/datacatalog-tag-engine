@@ -38,7 +38,8 @@ from common import log_error, log_error_tag_dict, log_info, log_info_tag_dict
 config = configparser.ConfigParser()
 config.read("tagengine.ini")
 
-BIGQUERY_REGION = config['DEFAULT']['BIGQUERY_REGION']
+if 'BIGQUERY_REGION' in config['DEFAULT']:
+    BIGQUERY_REGION = config['DEFAULT']['BIGQUERY_REGION']
 
 USER_AGENT = 'cloud-solutions/datacatalog-tag-engine-v2'
 
@@ -852,7 +853,8 @@ class DataCatalogController:
         column = ''
         
         if isinstance(uri, str) == False:
-            print('Error: url ' + str(url) + ' is not of type string.')
+            msg = 'Error: url ' + str(url) + ' is not of type string'
+            log_error(msg, '', job_uuid)
             op_status = constants.ERROR
             return op_status
             
@@ -1056,6 +1058,7 @@ class DataCatalogController:
         if op_status != constants.SUCCESS:
             msg = 'Error occurred when tagging {}'.format(uri) 
             error = {'job_uuid': job_uuid, 'msg': msg}
+            log_error(msg, error, job_uuid)
             print(json.dumps(error))
                 
         return op_status
@@ -1107,7 +1110,8 @@ class DataCatalogController:
         bqu = bq.BigQueryUtils(self.credentials, target_region)
         
         if isinstance(uri, str) == False:
-            print('Error: url ' + str(url) + ' is not of type string.')
+            msg = 'Error: url ' + str(url) + ' is not of type string.'
+            log_error(msg)
             export_status = constants.ERROR
             return export_status
         
@@ -1362,7 +1366,8 @@ class DataCatalogController:
                     break
     
             if field_type == None:
-                print('Error while preparing the tag. The field ', field_name, ' was not found in the tag template ', self.template_id)
+                print('Error preparing the tag. The field ', field_name, ' was not found in the tag template ', self.template_id)
+                log_error_tag_dict(f'Error preparing the tag. The field {field_name} was not found in the tag template {self.template_id}', job_uuid=job_uuid, tag_dict=tag_dict)
                 op_status = constants.ERROR
                 return op_status
     
@@ -1962,7 +1967,7 @@ class DataCatalogController:
         if source_entry.bigquery_table_spec.table_source_type != types.TableSourceType.BIGQUERY_TABLE:
             success = False
             msg = 'Error {} is not a BQ table'.format(source_table)
-            log_info(msg, None)
+            log_info(msg)
             print(json.dumps(msg))
             return success
         

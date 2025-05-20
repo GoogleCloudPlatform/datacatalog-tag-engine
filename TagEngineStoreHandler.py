@@ -285,8 +285,8 @@ class TagEngineStoreHandler:
             
             if 'scheduling_status' in config:
                 config_ref.update({'scheduling_status': status})
-                         
-    
+                      
+                          
     def increment_version_next_run(self, service_account, config_uuid, config_type):
         
         config = self.read_config(service_account, config_uuid, config_type)
@@ -307,6 +307,7 @@ class TagEngineStoreHandler:
             'version': version,
             'next_run' : next_run
         })
+      
                                                                                   
     def read_tag_template_config(self, template_uuid):
                 
@@ -1851,4 +1852,38 @@ class TagEngineStoreHandler:
                                                         metadata_export_location, tag_history, overwrite)
                     
         return new_config_uuid
+
+
+    def create_update_mapping(self, template_uuid, mapping_dict):
+    
+        success = True
+        
+        mapping_ref = self.db.collection('mapping_registry').document(template_uuid)
+        
+        doc = mapping_ref.get()
+        
+        if doc.exists:
+            
+            mapping = doc.to_dict()
+                
+            try:
+                mapping_ref.update(mapping_dict)
+            
+            except Exception as e:
+                msg = 'Error updating mapping in Firestore for template_uuid {}'.format(template_uuid)
+                log_error(msg, e) 
+                success = False
+            
+        else:
+
+            try:
+                mapping_ref.set(mapping_dict)
+                
+            except Exception as e:
+                msg = 'Error writing mapping to Firestore for template_uuid {}'.format(template_uuid)
+                log_error(msg, e) 
+                success = False
+        
+        return success
+
     

@@ -425,6 +425,7 @@ class DataplexController:
     
             if found_field != True:
                 print('Error preparing the aspect. {field_name} was not found in {self.aspect_type_id}')
+                log_error_tag_dict(f'Error preparing the aspect. {field_name} was not found in {self.aspect_type_id}', job_uuid=job_uuid, tag_dict=tag_dict) 
                 op_status = constants.ERROR
                 return op_status
     

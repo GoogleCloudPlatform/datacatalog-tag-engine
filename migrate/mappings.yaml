@@ -1,0 +1,13 @@
+mappings:
+  - template_id: data_governance
+    template_project: tag-engine-develop
+    template_region: us-central1
+    aspect_type_id: data-governance
+    aspect_type_project: tag-engine-develop
+    aspect_type_region: us-central1
+  - template_id: data_sensitivity
+    template_project: tag-engine-develop
+    template_region: us-central1
+    aspect_type_id: data-sensitivity
+    aspect_type_project: tag-engine-develop
+    aspect_type_region: us-central1
