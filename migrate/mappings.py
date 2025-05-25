@@ -33,6 +33,8 @@ def register_mappings():
         full = yaml.full_load(yf)
         mappings = full.get("mappings")
         
+        store.clear_mappings()
+        
         for mapping in mappings: 
             template_id = mapping['template_id']
             template_project = mapping['template_project']
@@ -47,7 +49,7 @@ def register_mappings():
                 aspect_type_uuid = store.write_aspect_type(aspect_type_id, aspect_type_project, aspect_type_region)
                 
                 mapping['aspect_type_uuid'] = aspect_type_uuid
-                success = store.create_update_mapping(template_uuid, mapping)
+                success = store.write_mapping(template_uuid, mapping)
                                               
                 if success:
                     num_mappings += 1
@@ -56,8 +58,8 @@ def register_mappings():
                 print('Error occurred while registering mapping in Firestore. Error:', e)
                 log_error('Error occurred while registering mapping in Firestore. Error:', e)
             
-    print('Created', num_mappings, ' tag template to aspect type mappings.')
-    log_info(f'Created {num_mappings} tag template to aspect type mappings.')
+    print('Wrote', num_mappings, ' template-to-aspect mappings.')
+    log_info(f'Wrote {num_mappings} template-to-aspect mappings.')
     
  
 if __name__ == '__main__':

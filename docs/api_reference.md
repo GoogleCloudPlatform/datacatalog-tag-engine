@@ -4,26 +4,14 @@ This page lists the API methods for Tag Engine.
 
 #### Methods
 
-* `static_asset_tags`: creates static tags on BigQuery or Google Cloud Storage assets
 * `dynamic_table_tags`: creates dynamic tags on BigQuery tables, views and datasets
 * `dynamic_column_tags`: creates dynamic tags on BigQuery columns
-* `glossary_asset_tags`: creates glossary tags on BigQuery or Google Cloud Storage assets
-* `sensitive_column_tags`: creates sensitive tags on BigQuery tables
-* `entries`: creates Data Catalog entries on Google Cloud Storage assets
 * `import_tags`: imports tags from a CSV file to either BigQuery tables, views and datasets or columns
 * `export_tags`: exports tags from Data Catalog to BigQuery
 * `restore_tags`: restores tags from a Data Catalog metadata export file
 * `get_job_status`: gets the status of a job
 * `scheduled_auto_updates`: updates all the tags whose configurations set to refresh_mode = 'AUTO'
 
-
-#### static_asset_tags
-
-creates static tags on BigQuery or Google Cloud Storage assets. 
-
-```
-POST [TAG_ENGINE_URL]/static_asset_tags -d datacatalog-tag-engine/examples/static_asset_configs/static_asset_create_auto_bq.json
-```
 
 #### dynamic_table_tags
 
@@ -39,22 +27,6 @@ creates dynamic tags on BigQuery columns.
 
 ```
 POST [TAG_ENGINE_URL]/dynamic_column_tags -d datacatalog-tag-engine/examples/dynamic_column_configs/dynamic_column_create_auto.json
-``` 
-
-#### glossary_asset_tags
-
-creates glossary tags on BigQuery or Google Cloud Storage assets. Requires a column to glossary attribute mapping table in BigQuery. 
-
-```
-POST [TAG_ENGINE_URL]/glossary_asset_tags -d datacatalog-tag-engine/examples/glossary_asset_configs/glossary_asset_create_ondemand_bq.json
-``` 
-
-#### sensitive_column_tags
-
-creates sensitive tags on BQ tables. Requires Data Loss Prevention inspection job findings in BigQuery. 
-
-```
-POST [TAG_ENGINE_URL]/sensitive_column_tags -d datacatalog-tag-engine/examples/sensitive_column_configs/sensitive_column_create_auto.json
 ``` 
 
 #### import_tags

@@ -404,34 +404,7 @@ def default_settings(saved):
         service_account=service_account,
         settings=saved)
     # [END render_template]
-         
-@app.route("/coverage_report_settings<int:saved>")
-def coverage_report_settings(saved):
-    
-    if 'credentials' not in session:
-        return redirect('/')
-        
-    exists, settings = store.read_coverage_report_settings()
-    
-    if exists:
-        included_bigquery_projects = settings['included_bigquery_projects']
-        excluded_bigquery_datasets = settings['excluded_bigquery_datasets']
-        excluded_bigquery_tables = settings['excluded_bigquery_tables']
-    else:
-        included_bigquery_projects = "{projectA}, {projectB}, {projectC}"
-        excluded_bigquery_datasets = "{project.dataset1}, {project.dataset2}, {project.dataset3}"
-        excluded_bigquery_tables = "{project.dataset.table1}, {project.dataset.table2}, {project.dataset.view3}"
-    
-    # [END report_settings]
-    # [START render_template]
-    return render_template(
-        'coverage_report_settings.html',
-        included_bigquery_projects=included_bigquery_projects,
-        excluded_bigquery_datasets=excluded_bigquery_datasets,
-        excluded_bigquery_tables=excluded_bigquery_tables,
-        settings=saved)
-    # [END render_template]
-    
+             
 @app.route("/tag_history_settings", methods=["GET"])
 def tag_history_settings():
     
@@ -478,80 +451,7 @@ def set_default_settings():
         store.write_default_settings(session['user_email'], template_id, template_project, template_region, service_account)
         
     return default_settings(1)
-        
-                
-@app.route("/set_coverage_report", methods=['POST'])
-def set_coverage_report():
-    
-    if 'credentials' not in session:
-        return redirect('/')
-        
-    included_bigquery_projects = request.form['included_bigquery_projects'].rstrip()
-    
-    if request.form['excluded_bigquery_datasets']:
-        excluded_bigquery_datasets = request.form['excluded_bigquery_datasets'].rstrip()
-    else:
-        excluded_bigquery_datasets = None
-        
-    if request.form['excluded_bigquery_tables']:
-        excluded_bigquery_tables = request.form['excluded_bigquery_tables'].rstrip()
-    else:
-        excluded_bigquery_tables = None
-    
-    print("included_bigquery_projects: ", included_bigquery_projects)
-    print("excluded_bigquery_datasets: ", excluded_bigquery_datasets)
-    print("excluded_bigquery_tables: ", excluded_bigquery_tables)
-    
-    if included_bigquery_projects == "{projectA}, {projectB}, {projectC}":
-        included_bigquery_projects = None
-    if excluded_bigquery_datasets == "{project.dataset1}, {project.dataset2}, {project.dataset3}":
-        excluded_bigquery_datasets = None
-    if excluded_bigquery_tables == "{project.dataset.table1}, {project.dataset.table2}, {project.dataset.view3}":
-        excluded_bigquery_tables = None
-    
-    if included_bigquery_projects != None:
-        store.write_coverage_report_settings(included_bigquery_projects, excluded_bigquery_datasets, excluded_bigquery_tables)
-        
-    return coverage_report_settings(1)  
-     
-@app.route("/coverage_report")
-def coverage_report():
-    
-    if 'credentials' not in session:
-        return redirect('/')
-        
-    summary_report, detailed_report = store.generate_coverage_report(session['credentials'])
-    
-    print('summary_report: ' + str(summary_report))
-    print('detailed_report: ' + str(detailed_report))
-    
-    exists, settings = store.read_coverage_report_settings()
-    included_bigquery_projects = settings['included_bigquery_projects']
-    
-    return render_template(
-        "coverage_report.html",
-        included_bigquery_projects=included_bigquery_projects,
-        report_headers=summary_report,
-        report_data=detailed_report)
-
-# TO DO: re-implement this method using the DC API        
-@app.route("/coverage_details<string:res>", methods=['GET'])
-def coverage_details(res):
-    
-    if 'credentials' not in session:
-        return redirect('/')
-    
-    bigquery_project = res.split('.')[0]
-    resource = res.split('.')[1]
-    
-    configs = store.read_configs_on_res(res)
-    
-    return render_template(
-        'view_tags_on_res.html',
-        resource=res,
-        bigquery_project=bigquery_project,
-        configs=configs)
-                
+                        
 # [START search_tag_template]
 @app.route('/search_tag_template', methods=['POST'])
 def search_tag_template():
@@ -698,18 +598,7 @@ def view_config_options():
             template_region=template_region,
             service_account=service_account,
             configs=configs)
-        
-    elif action == "Create Static Asset Tags":
-        return render_template(
-            'static_asset_config.html',
-            template_id=template_id,
-            template_project=template_project,
-            template_region=template_region,
-            service_account=service_account,
-            fields=template_fields,
-            current_time=datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
-            tag_history_option=history_enabled)
-            
+                    
     elif action == "Create Dynamic Table Tags":
         return render_template(
             'dynamic_table_config.html',
@@ -729,37 +618,7 @@ def view_config_options():
             service_account=service_account,
             fields=template_fields,
             tag_history_option=history_enabled)
-            
-    elif action == "Create Data Catalog Entries":
-        return render_template(
-            'entry_config.html',
-            template_id=template_id,
-            template_project=template_project,
-            template_region=template_region,
-            service_account=service_account,
-            fields=template_fields,
-            tag_history_option=history_enabled)
-            
-    elif action == "Create Glossary Asset Tags":
-        return render_template(
-            'glossary_asset_config.html',
-            template_id=template_id,
-            template_project=template_project,
-            template_region=template_region,
-            service_account=service_account,
-            fields=template_fields,
-            tag_history_option=history_enabled)
-    
-    elif action == "Create Sensitive Column Tags":
-        return render_template(
-            'sensitive_column_config.html',
-            template_id=template_id,
-            template_project=template_project,
-            template_region=template_region,
-            service_account=service_account,
-            fields=template_fields,
-            tag_history_option=history_enabled)
-                        
+                                    
     elif action == "Import Tags":
         return render_template(
             'import_config.html',
@@ -1040,18 +899,7 @@ def choose_config_action():
     dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     template_fields = dcc.get_template()
     #print('template_fields:', template_fields)
-    
-    if config_type == "STATIC_TAG_ASSET":
-        return render_template(
-            'update_static_asset_config.html',
-            template_id=template_id,
-            template_project=template_project,
-            template_region=template_region,
-            service_account=service_account,
-            fields=template_fields,
-            config=config, 
-            current_time=datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
-    
+        
     if config_type == "DYNAMIC_TAG_TABLE":
         return render_template(
             'update_dynamic_table_config.html',
@@ -1071,37 +919,7 @@ def choose_config_action():
             service_account=service_account,
             fields=template_fields,
             config=config)
-            
-    if config_type == "ENTRY_CREATE":
-        return render_template(
-            'update_entry_config.html',
-            template_id=template_id,
-            template_project=template_project,
-            template_region=template_region,
-            service_account=service_account,
-            fields=template_fields,
-            config=config)
-            
-    if config_type == "GLOSSARY_TAG_ASSET":
-        return render_template(
-            'update_glossary_asset_config.html',
-            template_id=template_id,
-            template_project=template_project,
-            template_region=template_region,
-            service_account=service_account,
-            fields=template_fields,
-            config=config)
-            
-    if config_type == "SENSITIVE_TAG_COLUMN":
-        return render_template(
-            'update_sensitive_column_config.html',
-            template_id=template_id,
-            template_project=template_project,
-            template_region=template_region,
-            service_account=service_account,
-            fields=template_fields,
-            config=config)
-    
+                
     if config_type == "TAG_IMPORT":
         return render_template(
             'update_import_config.html',
@@ -1198,122 +1016,6 @@ def update_export_config():
     return render_template(
         'update_export_config.html',
         config=config)
-    
-    
-@app.route('/process_static_asset_config', methods=['POST'])
-def process_static_asset_config():
-    
-    if 'credentials' not in session:
-        return redirect('/')
-        
-    template_id = request.form['template_id']
-    template_project = request.form['template_project']
-    template_region = request.form['template_region']
-    service_account = request.form['service_account']
-    included_assets_uris = request.form['included_assets_uris'].rstrip()
-    excluded_assets_uris = request.form['excluded_assets_uris'].rstrip()
-    refresh_mode = request.form['refresh_mode']
-    refresh_frequency = request.form['refresh_frequency'].rstrip()
-    refresh_unit = request.form['refresh_unit']
-    action = request.form['action']
-    
-    print('included_assets_uris: ' + included_assets_uris)
-    print('excluded_assets_uris: ' + excluded_assets_uris)
-    print('service_account: ' + service_account)
-
-    credentials, success = get_target_credentials(service_account)
-    
-    if success == False:
-        print('Error acquiring credentials from', service_account)
-
-    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
-    template = dcc.get_template()
-    
-    if action == "Cancel Changes":
-        
-        return render_template(
-            'tag_template.html',
-            template_id=template_id,
-            template_project=template_project,
-            template_region=template_region, 
-            service_account=service_account, 
-            fields=template)
-    
-    if action == "View Existing Configs":
-
-        configs = store.read_configs(service_account, 'ALL', template_id, template_project, template_region)
-
-        return render_template(
-            'view_configs.html',
-            template_id=template_id,
-            template_project=template_project,
-            template_region=template_region,
-            service_account=service_account,
-            configs=configs)
-    
-    fields = []
-    
-    selected_fields = request.form.getlist("selected")
-    print("selected_fields: " + str(selected_fields))
-    
-    for selected_field in selected_fields:
-        selected_type = request.form.get(selected_field + "_datatype")
-
-        if selected_type == 'bool':
-            selected_value = request.form.get(selected_field)
-            
-            if selected_value.lower() == 'true':
-                selected_value = True
-            else:
-                selected_value = False
-        else:
-            selected_value = request.form.get(selected_field)
-        
-        #print(selected_field + ", " + str(selected_value) + ", " + selected_type)
-        
-        for template_field in template:
-            
-            if template_field['field_id'] != selected_field:
-                continue
-            
-            is_required = template_field['is_required']
-            field = {'field_id': selected_field, 'field_value': selected_value, 'field_type': selected_type, 'is_required': is_required}
-            fields.append(field)
-            break
-    
-    #print('fields: ' + str(fields))
-    
-    if excluded_assets_uris == 'None':
-        excluded_assets_uris = ''
-    
-    tag_history_option, _ = store.read_tag_history_settings()
-    
-    if tag_history_option == True:
-        tag_history_display = "ON"
-    else:
-        tag_history_display = "OFF"
-                    
-    template_uuid = store.write_tag_template(template_id, template_project, template_region)
-    
-    # TO DO: decide how best to let users specify the overwrite field from the UI 
-    config_uuid = store.write_static_asset_config(service_account, fields, included_assets_uris, excluded_assets_uris, \
-                                                  template_uuid, template_id, template_project, template_region, \
-                                                  refresh_mode, refresh_frequency, refresh_unit, tag_history_option, overwrite=True)
-    
-    # [START render_template]
-    return render_template(
-        'created_static_asset_config.html',
-        config_uuid=config_uuid,
-        config_type='STATIC_TAG_ASSET',
-        template_id=template_id,
-        template_project=template_project,
-        template_region=template_region,
-        service_account=service_account,
-        fields=fields,
-        included_assets_uris=included_assets_uris,
-        excluded_assets_uris=excluded_assets_uris,
-        tag_history=tag_history_display)
-    # [END render_template]
 
 
 @app.route('/process_dynamic_table_config', methods=['POST'])
@@ -1497,303 +1199,6 @@ def process_dynamic_column_config():
         included_columns_query=included_columns_query,
         included_tables_uris=included_tables_uris,
         excluded_tables_uris=excluded_tables_uris,
-        refresh_mode=refresh_mode,
-        refresh_frequency=refresh_frequency,
-        refresh_unit=refresh_unit,
-        tag_history=tag_history_display)
-    # [END render_template]
-
-
-@app.route('/process_entry_config', methods=['POST'])
-def process_entry_config():
-    template_id = request.form['template_id']
-    template_project = request.form['template_project']
-    template_region = request.form['template_region']
-    service_account = request.form['service_account']
-    included_assets_uris = request.form['included_assets_uris'].rstrip()
-    excluded_assets_uris = request.form['excluded_assets_uris'].rstrip()
-    refresh_mode = request.form['refresh_mode']
-    refresh_frequency = request.form['refresh_frequency']
-    refresh_unit = request.form['refresh_unit']
-    action = request.form['action']
-    
-    #print('included_assets_uris: ' + included_assets_uris)
-    #print('excluded_assets_uris: ' + excluded_assets_uris)
-    #print('refresh_mode: ' + refresh_mode)
-    #print('refresh_frequency: ' + refresh_frequency)
-    #print('refresh_unit: ' + refresh_unit)
-    
-    credentials, success = get_target_credentials(service_account)
-    
-    if success == False:
-        print('Error acquiring credentials from', service_account)
-    
-    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
-    template = dcc.get_template()
-    
-    if action == "Cancel Changes":
-        
-        return render_template(
-            'tag_template.html',
-            template_id=template_id,
-            template_project=template_project,
-            template_region=template_region,
-            service_account=service_account,  
-            fields=template)
-
-    fields = []
-    
-    selected_fields = request.form.getlist("selected")
-    #print("selected_fields: " + str(selected_fields))
-    
-    for selected_field in selected_fields:
-        selected_field_type = request.form.get(selected_field + "_datatype")
-        #print(selected_field + ", " + selected_field_type)
-        
-        for template_field in template:
-            
-            if template_field['field_id'] != selected_field:
-                continue
-        
-            is_required = template_field['is_required']
-            field = {'field_id': selected_field, 'field_type': selected_field_type,\
-                     'is_required': is_required}
-            fields.append(field)
-            break
-    
-    #print('fields: ' + str(fields))
-    
-    if excluded_assets_uris == 'None':
-        excluded_assets_uris = ''
-    
-    tag_history_option, _ = store.read_tag_history_settings()
-    
-    if tag_history_option == True:
-        tag_history_display = "ON"
-    else:
-        tag_history_display = "OFF"
-        
-    template_uuid = store.write_tag_template(template_id, template_project, template_region)
-    config_uuid = store.write_entry_config(service_account, fields, included_assets_uris, excluded_assets_uris, template_uuid,\
-                                           template_id, template_project, template_region, \
-                                           refresh_mode, refresh_frequency, refresh_unit, tag_history_option)
-     
-    # [END process_entry_config]
-    # [START render_template]
-    return render_template(
-        'created_entry_config.html',
-        config_uuid=config_uuid,
-        config_type='ENTRY_CREATE',
-        template_id=template_id,
-        template_project=template_project,
-        template_region=template_region,
-        service_account=service_account,
-        fields=fields,
-        included_assets_uris=included_assets_uris,
-        excluded_assets_uris=excluded_assets_uris,
-        refresh_mode=refresh_mode,
-        refresh_frequency=refresh_frequency,
-        refresh_unit=refresh_unit,
-        tag_history=tag_history_display)
-    # [END render_template]
-
-
-@app.route('/process_glossary_asset_config', methods=['POST'])
-def process_glossary_asset_config():
-    template_id = request.form['template_id']
-    template_project = request.form['template_project']
-    template_region = request.form['template_region']
-    service_account = request.form['service_account']
-    mapping_table = request.form['mapping_table'].rstrip()
-    included_assets_uris = request.form['included_assets_uris'].rstrip()
-    excluded_assets_uris = request.form['excluded_assets_uris'].rstrip()
-    refresh_mode = request.form['refresh_mode']
-    refresh_frequency = request.form['refresh_frequency']
-    refresh_unit = request.form['refresh_unit']
-    overwrite = True # set to true as we are creating a new glossary asset config
-    action = request.form['action']
-    
-    credentials, success = get_target_credentials(service_account)
-    
-    if success == False:
-        print('Error acquiring credentials from', service_account)
-    
-    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
-    template = dcc.get_template()
-    
-    if action == "Cancel Changes":
-        
-        return render_template(
-            'tag_template.html',
-            template_id=template_id,
-            template_project=template_project,
-            template_region=template_region, 
-            service_account=service_account, 
-            fields=template)
-
-    fields = []
-    
-    selected_fields = request.form.getlist("selected")
-    #print("selected_fields: " + str(selected_fields))
-    
-    for selected_field in selected_fields:
-        selected_field_type = request.form.get(selected_field + "_datatype")
-        #print(selected_field + ", " + selected_field_type)
-        
-        for template_field in template:
-            
-            if template_field['field_id'] != selected_field:
-                continue
-        
-            is_required = template_field['is_required']
-            field = {'field_id': selected_field, 'field_type': selected_field_type,\
-                     'is_required': is_required}
-            fields.append(field)
-            break
-    
-    #print('fields: ' + str(fields))
-    
-    if excluded_assets_uris == 'None':
-        excluded_assets_uris = ''
-    
-    tag_history_option, _ = store.read_tag_history_settings()
-    
-    if tag_history_option == True:
-        tag_history_display = "ON"
-    else:
-        tag_history_display = "OFF"
-    
-    template_uuid = store.write_tag_template(template_id, template_project, template_region)
-
-    config_uuid = store.write_glossary_asset_config(service_account, fields, mapping_table, included_assets_uris, \
-                                                    excluded_assets_uris, template_uuid, template_id, template_project, template_region, \
-                                                    refresh_mode, refresh_frequency, refresh_unit, \
-                                                    tag_history_option, overwrite)
-     
-    # [END process_dynamic_tag]
-    # [START render_template]
-    return render_template(
-        'created_glossary_asset_config.html',
-        config_uuid=config_uuid,
-        config_type='GLOSSARY_TAG_ASSET',
-        template_id=template_id,
-        template_project=template_project,
-        template_region=template_region,
-        service_account=service_account,
-        fields=fields,
-        mapping_table=mapping_table,
-        included_assets_uris=included_assets_uris,
-        excluded_assets_uris=excluded_assets_uris,
-        refresh_mode=refresh_mode,
-        refresh_frequency=refresh_frequency,
-        refresh_unit=refresh_unit,
-        tag_history=tag_history_display)
-    # [END render_template]
-
-
-@app.route('/process_sensitive_column_config', methods=['POST'])
-def process_sensitive_column_config():
-    template_id = request.form['template_id']
-    template_project = request.form['template_project']
-    template_region = request.form['template_region']
-    service_account = request.form['service_account']
-    dlp_dataset = request.form['dlp_dataset'].rstrip()
-    infotype_selection_table = request.form['infotype_selection_table'].rstrip()
-    infotype_classification_table = request.form['infotype_classification_table'].rstrip()
-    included_tables_uris = request.form['included_tables_uris'].rstrip()
-    excluded_tables_uris = request.form['excluded_tables_uris'].rstrip()
-    
-    # policy tag inputs
-    policy_tags = request.form['policy_tags']
-    if policy_tags == "true":
-        create_policy_tags = True
-        taxonomy_id = request.form['taxonomy_id'].rstrip()
-    else:
-        create_policy_tags = False
-        taxonomy_id = None
-    
-    refresh_mode = request.form['refresh_mode']
-    refresh_frequency = request.form['refresh_frequency']
-    refresh_unit = request.form['refresh_unit']
-    overwrite = True # set to true as we are creating a new sensitive config
-    action = request.form['action']
-    
-    credentials, success = get_target_credentials(service_account)
-    
-    if success == False:
-        print('Error acquiring credentials from', service_account)
-    
-    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
-    template = dcc.get_template()
-    
-    if action == "Cancel Changes":
-        
-        return render_template(
-            'tag_template.html',
-            template_id=template_id,
-            template_project=template_project,
-            template_region=template_region,
-            service_account=service_account,  
-            fields=template)
-
-    fields = []
-    
-    selected_fields = request.form.getlist("selected")
-    #print("selected_fields: " + str(selected_fields))
-    
-    for selected_field in selected_fields:
-        selected_field_type = request.form.get(selected_field + "_datatype")
-        #print(selected_field + ", " + selected_field_type)
-        
-        for template_field in template:
-            
-            if template_field['field_id'] != selected_field:
-                continue
-        
-            is_required = template_field['is_required']
-            field = {'field_id': selected_field, 'field_type': selected_field_type,\
-                     'is_required': is_required}
-            fields.append(field)
-            break
-    
-    #print('fields: ' + str(fields))
-    
-    if excluded_tables_uris == 'None':
-        excluded_tables_uris = ''
-    
-    tag_history_option, _ = store.read_tag_history_settings()
-    
-    if tag_history_option == True:
-        tag_history_display = "ON"
-    else:
-        tag_history_display = "OFF"
-    
-    template_uuid = store.write_tag_template(template_id, template_project, template_region)
-
-    config_uuid = store.write_sensitive_column_config(service_account, fields, dlp_dataset, infotype_selection_table, \
-                                                      infotype_classification_table, included_tables_uris, excluded_tables_uris, \
-                                                      create_policy_tags, taxonomy_id, template_uuid, template_id, template_project, \
-                                                      template_region, refresh_mode, refresh_frequency, refresh_unit, \
-                                                      tag_history_option, overwrite)
-     
-    # [END process_sensitive_column_config]
-    # [START render_template]
-    return render_template(
-        'created_sensitive_column_config.html',
-        config_uuid=config_uuid,
-        config_type='SENSITIVE_TAG_COLUMN',
-        template_id=template_id,
-        template_project=template_project,
-        template_region=template_region,
-        service_account=service_account,
-        fields=fields,
-        dlp_dataset=dlp_dataset,
-        infotype_selection_table=infotype_selection_table,
-        infotype_classification_table=infotype_classification_table,
-        included_tables_uris=included_tables_uris,
-        excluded_tables_uris=excluded_tables_uris,
-        policy_tags=policy_tags,
-        taxonomy_id=taxonomy_id,
         refresh_mode=refresh_mode,
         refresh_frequency=refresh_frequency,
         refresh_unit=refresh_unit,
@@ -2121,83 +1526,6 @@ Args:
     refresh_frequency: positive integer
     refresh_unit: minutes or hours
 Returns:
-    config_uuid
-"""
-@app.route("/create_static_asset_config", methods=['POST'])
-def create_static_asset_config():
-    
-    json_request = request.get_json(force=True) 
-    print('json request: ', json_request)
-    
-    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
-    
-    if status == False:
-        return jsonify(response), 400
-        
-    valid_parameters, is_dataplex, template_id, template_project, template_region = check_template_aspect_parameters('static_asset_config', json_request)
-    
-    if valid_parameters != True:
-        response = {
-                "status": "error",
-                "message": "Request JSON is missing some required tag template parameters",
-        }
-        return jsonify(response), 400
-     
-    print('template_id: ' + template_id)
-    print('template_project: ' + template_project)
-    print('template_region: ' + template_region)
-    
-    template_uuid = store.write_tag_template(template_id, template_project, template_region)
-    
-    credentials, success = get_target_credentials(tag_creator_sa)
-    
-    if success == False:
-        print('Error acquiring credentials from', tag_creator_sa)
-    
-    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
-    fields = dcc.get_template(included_fields=json_request['fields'])
-    #print('fields:', fields)
-    
-    if 'included_assets_uris' in json_request:
-        included_assets_uris = json_request['included_assets_uris']
-    else:
-        print("The create_static_asset_config request requires an included_assets_uris parameter.")
-        resp = jsonify(success=False)
-        return resp
-    
-    if 'excluded_assets_uris' in json_request:
-        excluded_assets_uris = json_request['excluded_assets_uris']
-    else:
-        excluded_assets_uris = ''
-    
-    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json_request)
-    
-    if 'overwrite' in json_request:  
-        overwrite = json_request['overwrite']
-    else:
-        overwrite = True
-    
-    tag_history_option, _ = store.read_tag_history_settings()     
-    config_uuid = store.write_static_asset_config(tag_creator_sa, fields, included_assets_uris, \
-                                                  excluded_assets_uris, template_uuid, template_id, \
-                                                  template_project, template_region, refresh_mode, refresh_frequency, refresh_unit, \
-                                                  tag_history_option, overwrite)
-
-    return jsonify(config_uuid=config_uuid, config_type='STATIC_TAG_ASSET')
-
-
-"""
-Args:
-    template_id: tag template to use
-    template_project: tag template's Google Cloud project 
-    template_region: tag template's region 
-    fields: list of all the template field names to include in the tag (no need to include the field type)
-    included_tables_uris: The paths to the resources (either in BQ or GCS) 
-    excluded_tables_uris: The paths to the resources to exclude (optional)
-    refresh_mode: AUTO or ON_DEMAND
-    refresh_frequency: positive integer
-    refresh_unit: minutes or hours
-Returns:
     config_uuid 
 """
 @app.route("/create_dynamic_table_config", methods=['POST'])
@@ -2371,373 +1699,6 @@ def create_dynamic_column_config():
 
     return jsonify(config_uuid=config_uuid, config_type='DYNAMIC_TAG_COLUMN')
 
-        
-"""
-Args:
-    template_id: file metadata tag template id
-    template_project: tag template's Google Cloud project 
-    template_region: tag template's region 
-    fields: list of all the template field names to include in the tag (no need to include the field type)
-    included_assets_uris: The paths to the GCS resources 
-    excluded_assets_uris: The paths to the GCS resources to exclude (optional)
-    refresh_mode: AUTO or ON_DEMAND
-    refresh_frequency: positive integer
-    refresh_unit: minutes or hours
-Returns:
-    config_uuid 
-"""
-@app.route("/create_entry_config", methods=['POST'])
-def create_entry_config():
-    
-    json_request = request.get_json(force=True) 
-    print('json request: ', json_request)
-    
-    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
-    
-    if status == False:
-        return jsonify(response), 400
-        
-    valid_parameters, is_dataplex, template_id, template_project, template_region = check_template_aspect_parameters('entry_config', json_request)
-    
-    if valid_parameters != True:
-        response = {
-                "status": "error",
-                "message": "Request JSON is missing some required tag template parameters",
-        }
-        return jsonify(response), 400
-     
-    #print('template_id: ' + template_id)
-    #print('template_project: ' + template_project)
-    #print('template_region: ' + template_region)
-    
-    template_uuid = store.write_tag_template(template_id, template_project, template_region)
-    
-    credentials, success = get_target_credentials(tag_creator_sa)
-    
-    if success == False:
-        print('Error acquiring credentials from', tag_creator_sa)
-        
-    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
-    fields = dcc.get_template(included_fields=json_request['fields'])
-
-    if 'included_assets_uris' in json_request:
-        included_assets_uris = json_request['included_assets_uris']
-    else:
-        print("The entry request requires an included_assets_uris parameter.")
-        resp = jsonify(success=False)
-        return resp
-
-    if 'excluded_assets_uris' in json_request:
-        excluded_assets_uris = json_request['excluded_assets_uris']
-    else:
-        excluded_assets_uris = ''
-    
-    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json_request)
-    
-    tag_history_option, _ = store.read_tag_history_settings()
-    
-    config_uuid = store.write_entry_config(tag_creator_sa, fields, included_assets_uris, excluded_assets_uris,\
-                                            template_uuid, template_id, template_project, template_region, \
-                                            refresh_mode, refresh_frequency, refresh_unit, tag_history_option)                                                      
-
-    return jsonify(config_uuid=config_uuid, config_type='ENTRY_CREATE')
-
-
-"""
-Args:
-    template_id: enterprise dictionary tag template id
-    template_project: tag template's Google Cloud project 
-    template_region: tag template's region 
-    fields: list of all the template field names to include in the tag (no need to include the field type)
-    mapping_table: The path to the mapping table in BQ. This is required. 
-    included_assets_uris: The path(s) to the resources in BQ or GCS 
-    excluded_assets_uris: The path(s) to the resources to exclude (optional)
-    refresh_mode: AUTO or ON_DEMAND
-    refresh_frequency: positive integer
-    refresh_unit: minutes or hours
-Returns:
-    config_uuid 
-"""
-@app.route("/create_glossary_asset_config", methods=['POST'])
-def create_glossary_asset_config():
-    
-    json_request = request.get_json(force=True) 
-    print('json request: ', json_request)
-    
-    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
-    
-    if status == False:
-        return jsonify(response), 400
-       
-    valid_parameters, is_dataplex, template_id, template_project, template_region = check_template_aspect_parameters('glossary_asset_config', json_request)
-    
-    if valid_parameters != True:
-        response = {
-                "status": "error",
-                "message": "Request JSON is missing some required tag template parameters",
-        }
-        return jsonify(response), 400
-     
-    template_uuid = store.write_tag_template(template_id, template_project, template_region)
-    
-    credentials, success = get_target_credentials(tag_creator_sa)
-    
-    if success == False:
-        print('Error acquiring credentials from', tag_creator_sa)
-        
-    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
-    fields = dcc.get_template(included_fields=json_request['fields'])
-    
-    # validate mapping_table field
-    if 'mapping_table' in json_request:
-        mapping_table = json_request['mapping_table']
-    else:
-        print("glossary_asset_configs request doesn't include a mapping_table field. This is a required parameter.")
-        resp = jsonify(success=False)
-        return resp
-    
-    if 'included_assets_uris' in json_request:
-        included_assets_uris = json_request['included_assets_uris']
-    else:
-        print("The glossary_asset_config request requires an included_assets_uris parameter.")
-        resp = jsonify(success=False)
-        return resp
-    
-    if 'excluded_assets_uris' in json_request:
-        excluded_assets_uris = json_request['excluded_assets_uris']
-    else:
-        excluded_assets_uris = ''
-    
-    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json_request)
-    
-    if 'overwrite' in json_request:  
-        overwrite = json_request['overwrite']
-    else:
-        overwrite = True
-     
-    tag_history_option, _ = store.read_tag_history_settings()
-        
-    config_uuid = store.write_glossary_asset_config(tag_creator_sa, fields, mapping_table, included_assets_uris, \
-                                                    excluded_assets_uris, template_uuid, template_id, template_project, template_region, \
-                                                    refresh_mode, refresh_frequency, refresh_unit, tag_history_option, overwrite)                                                      
-    
-    return jsonify(config_uuid=config_uuid, config_type='GLOSSARY_TAG_ASSET')
-
-
-"""
-Args:
-    template_id: data attribute tag template id
-    template_project: tag template's Google Cloud project 
-    template_region: tag template's region 
-    fields: list of aincluded_tables_urisll the template field names to include in the tag (no need to include the field type)
-    dlp_dataset: The path to the dataset in BQ in which the DLP findings tables are stored
-    infotype_selection_table: The path to the infotype selection table in BQ. This is required. 
-    infotype_classification_table: The path to the infotype classification table in BQ. This is required. 
-    included_tables_uris: The path(s) to the BQ tables to be tagged 
-    excluded_tables_uris: The path(s) to the BQ tables to exclude from the tagging (optional)
-    create_policy_tags: true if this request should also create the policy tags on the sensitive columns, false otherwise
-    taxonomy_id: The fully-qualified path to the policy tag taxonomy (projects/[PROJECT]/locations/[REGION]/taxonomies/[TAXONOMY_ID])
-    refresh_mode: AUTO or ON_DEMAND
-    refresh_frequency: positive integer
-    refresh_unit: minutes or hours
-Returns:
-    config_uuid 
-"""
-@app.route("/create_sensitive_column_config", methods=['POST'])
-def create_sensitive_column_config():
-    
-    json_request = request.get_json(force=True) 
-    print('json request: ', json_request)
-    
-    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
-    
-    if status == False:
-        return jsonify(response), 400
-    
-    valid_parameters, is_dataplex, template_id, template_project, template_region = check_template_aspect_parameters('sensitive_column_config', json_request)
-    
-    if valid_parameters != True:
-        response = {
-                "status": "error",
-                "message": "Request JSON is missing some required tag template parameters",
-        }
-        return jsonify(response), 400
-     
-    #print('template_id: ' + template_id)
-    #print('template_project: ' + template_project)
-    #print('template_region: ' + template_region)
-    
-    template_uuid = store.write_tag_template(template_id, template_project, template_region)
-    
-    credentials, success = get_target_credentials(tag_creator_sa)
-    
-    if success == False:
-        print('Error acquiring credentials from', tag_creator_sa)
-    
-    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
-    fields = dcc.get_template(included_fields=json_request['fields'])
-
-    # validate dlp_dataset parameter
-    if 'dlp_dataset' in json_request:
-        dlp_dataset = json_request['dlp_dataset']
-    else:
-        print("The sensitive_column_config request doesn't include a dlp_dataset field. This is a required parameter.")
-        resp = jsonify(success=False)
-        return resp
-            
-    # validate infotype_selection_table parameter
-    if 'infotype_selection_table' in json_request:
-        infotype_selection_table = json_request['infotype_selection_table']
-    else:
-        print("The sensitive_column_config request doesn't include an infotype_selection_table field. This is a required parameter.")
-        resp = jsonify(success=False)
-        return resp
-        
-    # validate infotype_classification_table parameter
-    if 'infotype_classification_table' in json_request:
-        infotype_classification_table = json_request['infotype_classification_table']
-    else:
-        print("The sensitive_column_config request doesn't include an infotype_classification_table field. This is a required parameter.")
-        resp = jsonify(success=False)
-        return resp
-    
-    if 'included_tables_uris' in json_request:
-        included_tables_uris = json_request['included_tables_uris']
-    else:
-        print("The sensitive_column_tags request requires an included_tables_uris parameter.")
-        resp = jsonify(success=False)
-        return resp
-    
-    if 'excluded_tables_uris' in json_request:
-        excluded_tables_uris = json_request['excluded_tables_uris']
-    else:
-        excluded_tables_uris = ''
-    
-    # validate create_policy_tags parameter
-    if 'create_policy_tags' in json_request:
-        create_policy_tags = json_request['create_policy_tags']
-    else:
-        print("The sensitive_column_tags request requires a create_policy_tags field.")
-        resp = jsonify(success=False)
-        return resp
-        
-    if create_policy_tags:
-        if 'taxonomy_id' in json_request:
-            taxonomy_id = json_request['taxonomy_id']
-        else:
-            print("The sensitive_column_tags request requires a taxonomy_id when the create_policy_tags field is true. ")
-            resp = jsonify(success=False)
-            return resp
-        
-    refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json_request)
-            
-    tag_history_option, _ = store.read_tag_history_settings()
-  
-    if 'overwrite' in json_request:  
-        overwrite = json_request['overwrite']
-    else:
-        overwrite = True
-        
-    config_uuid = store.write_sensitive_column_config(tag_creator_sa, fields, dlp_dataset, infotype_selection_table,\
-                                                      infotype_classification_table, included_tables_uris, \
-                                                      excluded_tables_uris, create_policy_tags, \
-                                                      taxonomy_id, template_uuid, template_id, template_project, template_region, \
-                                                      refresh_mode, refresh_frequency, refresh_unit, \
-                                                      tag_history_option, overwrite)                                                      
-    
-    return jsonify(config_uuid=config_uuid, config_type='SENSITIVE_TAG_COLUMN')
-
-
-"""
-Args:
-    source_template_id: The tag template id whose tags are to be restored
-    source_template_project: The source tag template's project id 
-    source_template_region: The source tag template's region 
-    target_template_id: The tag template id whose tags are to be restored
-    target_template_project: The source tag template's project id 
-    target_template_region: The source tag template's region
-    metadata_export_location: The path to the export files on GCS (Cloud Storage)
-Returns:
-    {config_type, config_uuid} 
-"""
-@app.route("/create_restore_config", methods=['POST'])
-def create_restore_config():
-    
-    json_request = request.get_json(force=True) 
-    print('json request: ', json_request)
-    
-    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
-    
-    if status == False:
-        return jsonify(response), 400
-    
-    if 'source_template_id' in json_request:
-        source_template_id = json_request['source_template_id']
-    else:
-        print("The restore_tags request requires a source_template_id parameter.")
-        resp = jsonify(success=False)
-        return resp
-
-    if 'source_template_project' in json_request:
-        source_template_project = json_request['source_template_project']
-    else:
-        print("The restore_tags request requires a source_template_project parameter.")
-        resp = jsonify(success=False)
-        return resp
-    
-    if 'source_template_region' in json_request:
-        source_template_region = json_request['source_template_region']
-    else:
-        print("The restore_tags request requires a source_template_region parameter.")
-        resp = jsonify(success=False)
-        return resp
-       
-    if 'target_template_id' in json_request:
-        target_template_id = json_request['target_template_id']
-    else:
-        print("The restore_tags request requires a target_template_id parameter.")
-        resp = jsonify(success=False)
-        return resp
-
-    if 'target_template_project' in json_request:
-        target_template_project = json_request['target_template_project']
-    else:
-        print("The restore_tags request requires a target_template_project parameter.")
-        resp = jsonify(success=False)
-        return resp
-    
-    if 'target_template_region' in json_request:
-        target_template_region = json_request['target_template_region']
-    else:
-        print("The restore_tags request requires a target_template_region parameter.")
-        resp = jsonify(success=False)
-        return resp
-
-    if 'metadata_export_location' in json_request:
-        metadata_export_location = json_request['metadata_export_location']
-    else:
-        print("The restore_tags request requires the metadata_export_location parameter.")
-        resp = jsonify(success=False)
-        return resp
-
-    source_template_uuid = store.write_tag_template(source_template_id, source_template_project, source_template_region)
-    target_template_uuid = store.write_tag_template(target_template_id, target_template_project, target_template_region)
-    
-    tag_history_option, _ = store.read_tag_history_settings()
-
-    if 'overwrite' in json_request:  
-        overwrite = json_request['overwrite']
-    else:
-        overwrite = True
-        
-    config_uuid = store.write_tag_restore_config(tag_creator_sa, source_template_uuid, source_template_id, \
-                                                source_template_project, source_template_region, \
-                                                target_template_uuid, target_template_id, \
-                                                target_template_project, target_template_region, \
-                                                metadata_export_location, tag_history_option, overwrite)                                                      
-    
-    return jsonify(config_uuid=config_uuid, config_type='TAG_RESTORE')
-
 
 """
 Args:
@@ -2832,7 +1793,7 @@ def create_import_config():
                                                     tag_history_option, clone_tags, retire_tags, overwrite)                                                      
     
     return jsonify(config_uuid=config_uuid, config_type='TAG_IMPORT')
-
+        
 
 @app.route("/create_export_config", methods=['POST'])
 def create_export_config():
@@ -2927,6 +1888,97 @@ def create_export_config():
                                               refresh_mode, refresh_frequency, refresh_unit)                                                      
     
     return jsonify(config_uuid=config_uuid, config_type='TAG_EXPORT')
+
+
+"""
+Args:
+    source_template_id: The tag template id whose tags are to be restored
+    source_template_project: The source tag template's project id 
+    source_template_region: The source tag template's region 
+    target_template_id: The tag template id whose tags are to be restored
+    target_template_project: The source tag template's project id 
+    target_template_region: The source tag template's region
+    metadata_export_location: The path to the export files on GCS (Cloud Storage)
+Returns:
+    {config_type, config_uuid} 
+"""
+@app.route("/create_restore_config", methods=['POST'])
+def create_restore_config():
+    
+    json_request = request.get_json(force=True) 
+    print('json request: ', json_request)
+    
+    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
+    
+    if status == False:
+        return jsonify(response), 400
+    
+    if 'source_template_id' in json_request:
+        source_template_id = json_request['source_template_id']
+    else:
+        print("The restore_tags request requires a source_template_id parameter.")
+        resp = jsonify(success=False)
+        return resp
+
+    if 'source_template_project' in json_request:
+        source_template_project = json_request['source_template_project']
+    else:
+        print("The restore_tags request requires a source_template_project parameter.")
+        resp = jsonify(success=False)
+        return resp
+    
+    if 'source_template_region' in json_request:
+        source_template_region = json_request['source_template_region']
+    else:
+        print("The restore_tags request requires a source_template_region parameter.")
+        resp = jsonify(success=False)
+        return resp
+       
+    if 'target_template_id' in json_request:
+        target_template_id = json_request['target_template_id']
+    else:
+        print("The restore_tags request requires a target_template_id parameter.")
+        resp = jsonify(success=False)
+        return resp
+
+    if 'target_template_project' in json_request:
+        target_template_project = json_request['target_template_project']
+    else:
+        print("The restore_tags request requires a target_template_project parameter.")
+        resp = jsonify(success=False)
+        return resp
+    
+    if 'target_template_region' in json_request:
+        target_template_region = json_request['target_template_region']
+    else:
+        print("The restore_tags request requires a target_template_region parameter.")
+        resp = jsonify(success=False)
+        return resp
+
+    if 'metadata_export_location' in json_request:
+        metadata_export_location = json_request['metadata_export_location']
+    else:
+        print("The restore_tags request requires the metadata_export_location parameter.")
+        resp = jsonify(success=False)
+        return resp
+
+    source_template_uuid = store.write_tag_template(source_template_id, source_template_project, source_template_region)
+    target_template_uuid = store.write_tag_template(target_template_id, target_template_project, target_template_region)
+    
+    tag_history_option, _ = store.read_tag_history_settings()
+
+    if 'overwrite' in json_request:  
+        overwrite = json_request['overwrite']
+    else:
+        overwrite = True
+        
+    config_uuid = store.write_tag_restore_config(tag_creator_sa, source_template_uuid, source_template_id, \
+                                                source_template_project, source_template_region, \
+                                                target_template_uuid, target_template_id, \
+                                                target_template_project, target_template_region, \
+                                                metadata_export_location, tag_history_option, overwrite)                                                      
+    
+    return jsonify(config_uuid=config_uuid, config_type='TAG_RESTORE')
 
 
 @app.route("/copy_tags", methods=['POST'])
@@ -3066,7 +2118,7 @@ def update_tag_subset():
     
 """
 Args:
-    config_type = on of (STATIC_TAG_ASSET, DYNAMIC_TAG_TABLE, DYNAMIC_TAG_COLUMN, etc.) 
+    config_type = on of (DYNAMIC_TAG_TABLE, DYNAMIC_TAG_COLUMN, etc.) 
     config_id = config identifier
     job_metadata = json object containing metadata about the workflow. This parameter is optional. 
 Returns:
@@ -3235,7 +2287,7 @@ def scheduled_auto_updates():
 """
 Method called to list the configs
 Args:
-    config_type = one of (ALL, STATIC_TAG_ASSET, DYNAMIC_TAG_TABLE, DYNAMIC_TAG_COLUMN, SENSITIVE_TAG_COLUMN, etc.)
+    config_type = one of (ALL, DYNAMIC_TAG_TABLE, DYNAMIC_TAG_COLUMN, etc.)
     service_account (Optional) = the service account attached to the config
 Returns:
     True if the request succeeded, False otherwise
@@ -3283,7 +2335,7 @@ def list_configs():
 Method called to get a specific config
 Args:
     service_account (Optional) = the service account attached to the config. Defaults to TAG_CREATOR_ACCOUNT. 
-    config_type = one of (ALL, STATIC_TAG_ASSET, DYNAMIC_TAG_TABLE, DYNAMIC_TAG_COLUMN, SENSITIVE_TAG_COLUMN, etc.)
+    config_type = one of (ALL, DYNAMIC_TAG_TABLE, DYNAMIC_TAG_COLUMN, etc.)
     config_uuid = the unique identifier of the config 
 Returns:
     True if the request succeeded, False otherwise
@@ -3349,7 +2401,7 @@ def get_config():
 Method called to delete a specific config
 Args:
     service_account (Optional) = the service account attached to the config. Defaults to TAG_CREATOR_ACCOUNT. 
-    config_type = one of (ALL, STATIC_TAG_ASSET, DYNAMIC_TAG_TABLE, DYNAMIC_TAG_COLUMN, SENSITIVE_TAG_COLUMN, etc.)
+    config_type = one of (ALL, DYNAMIC_TAG_TABLE, DYNAMIC_TAG_COLUMN, etc.)
     config_uuid = the unique identifier of the config 
 Returns:
     True if the request succeeded, False otherwise
@@ -3411,7 +2463,7 @@ def delete_config():
 Method called to purge the inactive configs from Firestore
 Args:
     service_account (Optional) = the service account attached to the config. Defaults to TAG_CREATOR_ACCOUNT. 
-    config_type = one of (ALL, STATIC_TAG_ASSET, DYNAMIC_TAG_TABLE, DYNAMIC_TAG_COLUMN, SENSITIVE_TAG_COLUMN, etc.)
+    config_type = one of (ALL, DYNAMIC_TAG_TABLE, DYNAMIC_TAG_COLUMN, etc.)
 Returns:
     True if the request succeeded, False otherwise
 """ 
@@ -3480,7 +2532,7 @@ def _split_work():
        
     re = res.Resources(credentials) 
     
-    # dynamic table and dynamic column and sensitive column configs
+    # dynamic table and dynamic column 
     if 'included_tables_uris' in config:
         uris = list(re.get_resources(config.get('included_tables_uris'), config.get('excluded_tables_uris', None)))
         
@@ -3489,17 +2541,7 @@ def _split_work():
         jm.record_num_tasks(job_uuid, len(uris))
         jm.update_job_running(job_uuid) 
         tm.create_config_uuid_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, config_uuid, config_type, uris)
-    
-    # static asset config and glossary asset config    
-    if 'included_assets_uris' in config:
-        uris = list(re.get_resources(config.get('included_assets_uris'), config.get('excluded_assets_uris', None)))
-        
-        print('inside _split_work() uris: ', uris)
-        
-        jm.record_num_tasks(job_uuid, len(uris))
-        jm.update_job_running(job_uuid) 
-        tm.create_config_uuid_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, config_uuid, config_type, uris)
-    
+       
     # export tag config
     if config_type == 'TAG_EXPORT':
         
@@ -3729,26 +2771,7 @@ def _run_task():
         else:
             creation_status = dcc.apply_dynamic_column_config(config['fields'], config['included_columns_query'], uri, \
                                                               job_uuid, config_uuid, config['template_uuid'], config['tag_history'])  
-    
-    if config_type == 'STATIC_TAG_ASSET':
-        creation_status = dcc.apply_static_asset_config(config['fields'], uri, job_uuid, config_uuid, \
-                                                        config['template_uuid'], config['tag_history'], \
-                                                        config['overwrite'])                                                   
-    if config_type == 'ENTRY_CREATE':
-        creation_status = dcc.apply_entry_config(config['fields'], uri, job_uuid, config_uuid, \
-                                                 config['template_uuid'], config['tag_history']) 
-    if config_type == 'GLOSSARY_TAG_ASSET':
-        creation_status = dcc.apply_glossary_asset_config(config['fields'], config['mapping_table'], uri, job_uuid, config_uuid, \
-                                                    config['template_uuid'], config['tag_history'], config['overwrite'])
-    if config_type == 'SENSITIVE_TAG_COLUMN':
-        creation_status = dcc.apply_sensitive_column_config(config['fields'], config['dlp_dataset'], config['infotype_selection_table'], \
-                                                            config['infotype_classification_table'], uri, config['create_policy_tags'], \
-                                                            config['taxonomy_id'], job_uuid, config_uuid, \
-                                                            config['template_uuid'], config['tag_history'], \
-                                                            config['overwrite'])
-    if config_type == 'TAG_EXPORT':
-        creation_status = dcc.apply_export_config(config['config_uuid'], config['target_project'], config['target_dataset'], config['target_region'], uri)
-    
+                                                              
     if config_type == 'TAG_IMPORT':
         
         if is_dataplex:
@@ -3797,6 +2820,10 @@ def _run_task():
                                                           tag_extract, config['tag_history'], config['overwrite'])
                 
                                     
+    if config_type == 'TAG_EXPORT':
+        creation_status = dcc.apply_export_config(config['config_uuid'], config['target_project'], config['target_dataset'], config['target_region'], uri)
+    
+    
     if config_type == 'TAG_RESTORE':
         creation_status = dcc.apply_restore_config(job_uuid, config_uuid, tag_extract, \
                                                    config['tag_history'], config['overwrite'])
@@ -3834,7 +2861,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 3.0.9\n"
+    return "Welcome to Tag Engine version 3.1.0\n"
     
 ####################### TEST METHOD ####################################  
     

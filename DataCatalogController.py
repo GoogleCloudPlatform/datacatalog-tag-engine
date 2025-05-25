@@ -1,4 +1,4 @@
-# Copyright 2020-2024 Google, LLC.
+# Copyright 2020-2025 Google, LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,8 +17,6 @@ from datetime import datetime, date
 from datetime import time as dtime
 import pytz
 from operator import itemgetter
-import pandas as pd
-from pyarrow import parquet
 import json
 import os
 
@@ -187,67 +185,6 @@ class DataCatalogController:
         return tag_exists, tag_id
     
     
-    def apply_static_asset_config(self, fields, uri, job_uuid, config_uuid, template_uuid, tag_history, overwrite=False):
-        
-        # uri is either a BQ table/view path or GCS file path       
-        op_status = constants.SUCCESS
-        column = ''
-        
-        is_gcs = False
-        is_bq = False
-        
-        # look up the entry based on the resource type
-        if isinstance(uri, list):
-            is_gcs = True
-            bucket = uri[0].replace('-', '_')
-            filename = uri[1].split('.')[0].replace('/', '_') # extract the filename without extension, replace '/' with '_'
-            gcs_resource = '//datacatalog.googleapis.com/projects/' + self.template_project + '/locations/' + self.template_region + '/entryGroups/' + bucket + '/entries/' + filename
-            print('gcs_resource: ', gcs_resource)
-            request = datacatalog.LookupEntryRequest()
-            request.linked_resource=gcs_resource
-            uri = '/'.join(uri)
-            #print('uri:', uri)
-            
-            try:
-                entry = self.client.lookup_entry(request)
-                print('GCS entry:', entry.name)
-            except Exception as e:
-                msg = 'Unable to find the entry in the catalog. Entry {} does not exist'.format(gcs_resource)
-                log_error(msg, e)
-                op_status = constants.ERROR
-                return op_status
-                
-        elif isinstance(uri, str):
-            is_bq = True
-            bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
-            print("bigquery_resource: " + bigquery_resource)
-        
-            request = datacatalog.LookupEntryRequest()
-            request.linked_resource=bigquery_resource
-            entry = self.client.lookup_entry(request)
-            print('entry: ', entry.name)
-        
-        try:    
-            tag_exists, tag_id = self.check_if_tag_exists(parent=entry.name)
-            print('tag exists: ', tag_exists)
-        
-        except Exception as e:
-            msg = 'Error during check_if_tag_exists {}'.format(entry.name)
-            log_error(msg, e, job_uuid)
-            op_status = constants.ERROR
-            return op_status
-
-        if tag_exists and overwrite == False:
-            msg = 'Tag already exists and overwrite is False'
-            log_info(msg)
-            op_status = constants.SUCCESS
-            return op_status
-        
-        op_status = self.create_update_delete_tag(fields, tag_exists, tag_id, job_uuid, config_uuid, 'STATIC_ASSET_TAG', tag_history, entry, uri)    
-           
-        return op_status
-
-
     def apply_dynamic_table_config(self, fields, uri, job_uuid, config_uuid, template_uuid, tag_history, batch_mode=False):
         
         print('*** apply_dynamic_table_config ***')
@@ -494,728 +431,8 @@ class DataCatalogController:
              large_query += "({}), ".format(query)
         
         return large_query[0:-2]  
-        
-    
-    def apply_entry_config(self, fields, uri, job_uuid, config_uuid, template_uuid, tag_history):
-        
-        print('** apply_entry_config **')
-        
-        op_status = constants.SUCCESS        
-        bucket_name, filename = uri
-        bucket = self.gcs_client.get_bucket(bucket_name)
-        blob = bucket.get_blob(filename)
-        
-        entry_group_short_name = bucket_name.replace('-', '_')
-        entry_group_full_name = 'projects/' + self.template_project + '/locations/' + self.template_region + '/entryGroups/' + bucket_name.replace('-', '_')
-        
-        # create the entry group    
-        is_entry_group = self.entry_group_exists(entry_group_full_name)
-        print('is_entry_group: ', is_entry_group)
-        
-        if is_entry_group != True:
-            self.create_entry_group(entry_group_short_name)
-        
-        # generate the entry id, replace '/' with '_' and remove the file extension from the name
-        entry_id = filename.split('.')[0].replace('/', '_')
-         
-        try:
-            entry_name = entry_group_full_name + '/entries/' + entry_id
-            print('Info: entry_name: ', entry_name)
-            
-            entry = self.client.get_entry(name=entry_name)
-            print('Info: entry already exists: ', entry.name)
-            
-        except Exception as e: 
-            msg = 'Entry does not exist {}'.format(entry_name)
-            log_error(msg, e, job_uuid)
-         
-            # populate the entry
-            entry = datacatalog.Entry()
-            entry.name = filename
-            
-            entry.display_name = entry_id 
-            entry.type_ = 'FILESET'
-            entry.gcs_fileset_spec.file_patterns = ['gs://' + bucket_name + '/' + filename]
-            entry.fully_qualified_name = 'gs://' + bucket_name + '/' + filename
-            entry.source_system_timestamps.create_time = datetime.utcnow() 
-            entry.source_system_timestamps.update_time = datetime.utcnow() 
-            
-            # get the file's schema
-            # download the file to App Engine's tmp directory 
-            tmp_file = '/tmp/' + entry_id
-            blob.download_to_filename(filename=tmp_file)
-        
-            # validate that it's a parquet file
-            try:
-                parquet.ParquetFile(tmp_file)
-            except Exception as e:
-                # not a parquet file, ignore it
-                msg = 'Error: {} is not a parquet file, ignoring it'.format(filename)
-                log_error(msg, e, job_uuid)
-                op_status = constants.ERROR
-                return op_status   
-        
-            schema = parquet.read_schema(tmp_file, memory_map=True)
-            df = pd.DataFrame(({"column": name, "datatype": str(pa_dtype)} for name, pa_dtype in zip(schema.names, schema.types)))
-            df = df.reindex(columns=["column", "datatype"], fill_value=pd.NA)  
-            #print('df: ', df)
-
-            for index, row in df.iterrows():                            
-                entry.schema.columns.append(
-                   types.ColumnSchema(
-                       column=row['column'],
-                       type_=row['datatype'],
-                       description=None,
-                       mode=None
-                   )
-                ) 
-                                         
-            # create the entry
-            #print('entry request: ', entry)            
-            created_entry = self.client.create_entry(parent=entry_group_full_name, entry_id=entry_id, entry=entry)
-            print('Info: created entry: ', created_entry.name)
-            
-            # get the number of rows in the file
-            num_rows = parquet.ParquetFile(tmp_file).metadata.num_rows
-            #print('num_rows: ', num_rows)
-            
-            # delete the tmp file ASAP to free up memory
-            os.remove(tmp_file)
-            
-            # create the file metadata tag
-            template_path = self.client.tag_template_path(self.template_project, self.template_region, self.template_id)
-            tag = datacatalog.Tag()
-            tag.template = template_path
-    
-            for field in fields:
                 
-                if field['field_id'] == 'name':
-                    string_field = datacatalog.TagField()
-                    string_field.string_value = filename
-                    tag.fields['name'] = string_field
-                    field['field_value'] = filename # field_value is used by the BQ exporter
-                    
-                if field['field_id'] == 'bucket':
-                    string_field = datacatalog.TagField()
-                    string_field.string_value = bucket_name
-                    tag.fields['bucket'] = string_field
-                    field['field_value'] = bucket_name # field_value is used by the BQ exporter
-                    
-                if field['field_id'] == 'path':
-                    string_field = datacatalog.TagField()
-                    string_field.string_value = 'gs://' + bucket_name + '/' + filename
-                    tag.fields['path'] = string_field
-                    field['field_value'] = 'gs://' + bucket_name + '/' + filename # field_value is used by the BQ exporter
-    
-                if field['field_id'] == 'type':
-                    enum_field = datacatalog.TagField()
-                    enum_field.enum_value.display_name = 'PARQUET' # hardcode file extension for now
-                    tag.fields['type'] = enum_field
-                    field['field_value'] = 'PARQUET' # field_value is used by the BQ exporter
-    
-                if field['field_id'] == 'size':
-                    double_field = datacatalog.TagField()
-                    double_field.double_value = blob.size
-                    tag.fields['size'] = double_field
-                    field['field_value'] = blob.size # field_value is used by the BQ exporter
-
-                if field['field_id'] == 'num_rows':
-                    double_field = datacatalog.TagField()
-                    double_field.double_value = num_rows
-                    tag.fields['num_rows'] = double_field
-                    field['field_value'] = num_rows # field_value is used by the BQ exporter
-
-                if field['field_id'] == 'created_time':
-                     datetime_field = datacatalog.TagField()
-                     datetime_field.timestamp_value = blob.time_created
-                     tag.fields['created_time'] = datetime_field
-                     field['field_value'] = blob.time_created # field_value is used by the BQ exporter
-
-                if field['field_id'] == 'updated_time':    
-                     datetime_field = datacatalog.TagField()
-                     datetime_field.timestamp_value = blob.time_created
-                     tag.fields['updated_time'] = datetime_field
-                     field['field_value'] = blob.time_created # field_value is used by the BQ exporter
- 
-                if field['field_id'] == 'storage_class':              
-                      string_field = datacatalog.TagField()
-                      string_field.string_value = blob.storage_class
-                      tag.fields['storage_class'] = string_field
-                      field['field_value'] = blob.storage_class # field_value is used by the BQ exporter
-            
-                if field['field_id'] == 'content_encoding':   
-                    if blob.content_encoding:
-                        string_field = datacatalog.TagField()
-                        string_field.string_value = blob.content_encoding
-                        tag.fields['content_encoding'] = string_field
-                        field['field_value'] = blob.content_encoding # field_value is used by the BQ exporter
-            
-                if field['field_id'] == 'content_language':
-                    if blob.content_language:
-                        string_field = datacatalog.TagField()
-                        string_field.string_value = blob.content_language
-                        tag.fields['content_language'] = string_field
-                        field['field_value'] = blob.content_language # field_value is used by the BQ exporter
-
-                if field['field_id'] == 'media_link':            
-                    string_field = datacatalog.TagField()
-                    string_field.string_value = blob.media_link
-                    tag.fields['media_link'] = string_field
-                    field['field_value'] = blob.media_link # field_value is used by the BQ exporter
-
-            #print('tag request: ', tag)
-            created_tag = self.client.create_tag(parent=entry_name, tag=tag)
-            #print('created_tag: ', created_tag)
-            
-            if tag_history:
-                bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
-                template_fields = self.get_template()
-                bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, job_uuid, self.template_id, template_fields, '/'.join(uri), None, fields)
-                                                
-        return op_status
-
-
-    def entry_group_exists(self, entry_group_full_name):
-    
-        request = datacatalog.GetEntryGroupRequest(name=entry_group_full_name)
-        
-        try:
-            response = self.client.get_entry_group(request=request)
-            return True
-        except Exception as e:
-            msg = 'Error entry goup does not exist {}'.format(entry_group_full_name)
-            log_error(msg, e)
-            return False
-    
-    
-    def create_entry_group(self, entry_group_short_name):
-    
-        eg = datacatalog.EntryGroup()
-        eg.display_name = entry_group_short_name
-        
-        entry_group = self.client.create_entry_group(
-                    parent='projects/' + self.template_project + '/locations/' + self.template_region,
-                    entry_group_id=entry_group_short_name,
-                    entry_group=eg)
-        
-        print('created entry_group: ', entry_group.name)
-        return entry_group.name
-           
-
-    def apply_glossary_asset_config(self, fields, mapping_table, uri, job_uuid, config_uuid, template_uuid, tag_history, overwrite=False):
-        
-        # uri is either a BQ table/view path or GCS file path    
-        op_status = constants.SUCCESS
-        
-        is_gcs = False
-        is_bq = False
-        
-        # look up the entry based on the resource type
-        if isinstance(uri, list):
-            is_gcs = True
-            bucket = uri[0].replace('-', '_')
-            filename = uri[1].split('.')[0].replace('/', '_') # extract the filename without the extension, replace '/' with '_'
-            gcs_resource = '//datacatalog.googleapis.com/projects/' + self.template_project + '/locations/' + self.template_region + '/entryGroups/' + bucket + '/entries/' + filename
-            #print('gcs_resource: ', gcs_resource)
-            request = datacatalog.LookupEntryRequest()
-            request.linked_resource=gcs_resource
-            
-            try:
-                entry = self.client.lookup_entry(request)
-                print('entry: ', entry.name)
-            except Exception as e:
-                msg = 'Unable to find entry in the catalog. Entry {} does not exist: {}'.format(gcs_resource, e)
-                log_error(msg, e, job_uuid)
-                op_status = constants.ERROR
-                return op_status
-                #print('entry found: ', entry)
-        
-        elif isinstance(uri, str):
-            is_bq = True        
-            bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
-            print("bigquery_resource: " + bigquery_resource)
-        
-            request = datacatalog.LookupEntryRequest()
-            request.linked_resource=bigquery_resource
-            entry = self.client.lookup_entry(request)
-            print('entry: ', entry.name)
-        
-        try:    
-            tag_exists, tag_id = self.check_if_tag_exists(parent=entry.name)
-            print('tag_exists: ', tag_exists)
-        
-        except Exception as e:
-            msg = 'Error during check_if_tag_exists: {}'.format(e)
-            log_error(msg, e, job_uuid)
-            op_status = constants.ERROR
-            return op_status
-
-        if tag_exists and overwrite == False:
-            msg = 'Info: tag already exists and overwrite set to False'
-            error = {'job_uuid': job_uuid, 'msg': msg}
-            print(json.dumps(info))
-            
-            op_status = constants.SUCCESS
-            return op_status
-         
-        if entry.schema == None:
-            msg = 'Error entry {} does not have a schema in the catalog'.format(entry.name)
-            error = {'job_uuid': job_uuid, 'msg': msg}
-            print(json.dumps(info))
-            
-            op_status = constants.ERROR
-            return op_status
-        
-        # retrieve the schema columns from the entry
-        column_schema_str = ''
-        for column_schema in entry.schema.columns: 
-            column_schema_str += "'" + column_schema.column + "',"
-        
-        #print('column_schema_str: ', column_schema_str)
-             
-        mapping_table_formatted = mapping_table.replace('bigquery/project/', '').replace('/dataset/', '.').replace('/', '.')
-                
-        query_str = 'select canonical_name from `' + mapping_table_formatted + '` where source_name in (' + column_schema_str[0:-1] + ')'
-        #print('query_str: ', query_str)
-
-        rows = self.bq_client.query(query_str).result()
-        
-        tag = datacatalog.Tag()
-        tag.template = self.template_path
-        
-        tag_is_empty = True
-        
-        for row in rows:
-            canonical_name = row['canonical_name']
-            #print('canonical_name: ', canonical_name)
-        
-            for field in fields:
-                if field['field_id'] == canonical_name:
-                    #print('found match')
-                    bool_field = datacatalog.TagField()
-                    bool_field.bool_value = True
-                    tag.fields[canonical_name] = bool_field
-                    field['field_value'] = True
-                    tag_is_empty = False
-                    break
-                    
-        if tag_is_empty:
-            print("Error: can't create the tag because it's empty")
-            op_status = constants.ERROR
-            return op_status
-                            
-        if tag_exists:
-            # tag already exists and overwrite is True
-            tag.name = tag_id
-            op_status = self.do_create_update_delete_action(job_uuid, 'update', tag)
-        else:
-            op_status = self.do_create_update_delete_action(job_uuid, 'create', tag, entry)
-                    
-        if tag_history:
-            bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
-            template_fields = self.get_template()
-            if is_gcs:
-                bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, job_uuid, self.template_id, template_fields, '/'.join(uri), None, fields)
-            if is_bq:
-                bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, job_uuid, self.template_id, template_fields, uri, None, fields)
-                   
-        return op_status
-      
-                 
-    def apply_sensitive_column_config(self, fields, dlp_dataset, infotype_selection_table, infotype_classification_table, \
-                                      uri, create_policy_tags, taxonomy_id, job_uuid, config_uuid, template_uuid, \
-                                      tag_history, overwrite=False):
-        
-        if create_policy_tags:
-
-            request = datacatalog.ListPolicyTagsRequest(
-                parent=taxonomy_id
-            )
-
-            try:
-                page_result = self.ptm_client.list_policy_tags(request=request)
-            except Exception as e:
-                msg = 'Unable to retrieve the policy tag taxonomy for taxonomy_id {}'.format(taxonomy_id)
-                log_error(msg, e, job_uuid)
-                op_status = constants.ERROR
-                return op_status    
-
-            policy_tag_names = [] # list of fully qualified policy tag names and sensitive categories
-
-            for response in page_result:
-                policy_tag_names.append((response.name, response.display_name))
-
-            policy_tag_requests = [] # stores the list of fully qualified policy tag names and table column names, 
-                                     # so that we can create the policy tags on the various sensitive fields
- 
-        # uri is a BQ table path       
-        op_status = constants.SUCCESS
-        column = ''
-        
-        if isinstance(uri, str) == False:
-            msg = 'Error: url ' + str(url) + ' is not of type string'
-            log_error(msg, '', job_uuid)
-            op_status = constants.ERROR
-            return op_status
-            
-        bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
-        #print("bigquery_resource: ", bigquery_resource)
-        
-        request = datacatalog.LookupEntryRequest()
-        request.linked_resource=bigquery_resource
-        
-        try:
-            entry = self.client.lookup_entry(request)
-        except Exception as e:
-            msg = 'Error looking up entry {} in the catalog: {}'.format(bigquery_resource, e)
-            log_error(msg, e, job_uuid)
-            op_status = constants.ERROR
-            return op_status
-           
-        dlp_dataset = dlp_dataset.replace('bigquery/project/', '').replace('/dataset/', '.').replace('/', '.')        
-        infotype_selection_table = infotype_selection_table.replace('bigquery/project/', '').replace('/dataset/', '.').replace('/', '.')
-        infotype_classification_table = infotype_classification_table.replace('bigquery/project/', '').replace('/dataset/', '.').replace('/', '.')
-        dlp_table = dlp_dataset + '.' + uri.split('/')[4]
-               
-        infotype_fields = []
-        notable_infotypes = []
-    
-        # get an array of infotypes associated with each field in the DLP findings table
-        dlp_sql = 'select field, array_agg(infotype) infotypes '
-        dlp_sql += 'from (select distinct cl.record_location.field_id.name as field, info_type.name as infotype '
-        dlp_sql += 'from ' + dlp_table + ', unnest(location.content_locations) as cl '
-        dlp_sql += 'order by cl.record_location.field_id.name) '
-        dlp_sql += 'group by field'
-        
-        try:
-            dlp_rows = self.bq_client.query(dlp_sql).result()
-        
-        except Exception as e:
-            msg = 'Error querying DLP findings table: {}'.format(dlp_sql)
-            log_error(msg, e, job_uuid)
-            op_status = constants.ERROR
-            return op_status
-
-        dlp_row_count = 0
-    
-        for dlp_row in dlp_rows:
-        
-            dlp_row_count += 1
-        
-            field = dlp_row['field']
-            infotype_fields.append(field)
-            infotypes = dlp_row['infotypes']
-        
-            print('field ', field, ', infotypes [', infotypes, ']')
-        
-            is_sql = 'select notable_infotype '
-            is_sql += 'from ' + infotype_selection_table + ' i, '
-        
-            infotype_count = len(infotypes)
-        
-            for i in range(0, infotype_count):
-            
-                is_sql += 'unnest(i.field_infotypes) as i' + str(i) + ', '
-        
-            is_sql = is_sql[:-2] + ' '
-            
-            for i, infotype in enumerate(infotypes):
-            
-                if i == 0:
-                    is_sql += 'where i' + str(i) + ' = "' + infotype + '" ' 
-                else:
-                    is_sql += 'and i' + str(i) + ' = "' + infotype + '" ' 
-        
-            is_sql += 'order by array_length(i.field_infotypes) '
-            is_sql += 'limit 1'
-        
-            #print('is_sql: ', is_sql)
-            
-            try:
-                ni_rows = self.bq_client.query(is_sql).result()
-            except Exception as e:
-                msg = 'Error querying infotype selection table: {}'.format(is_sql)
-                log_error(msg, e, job_uuid)
-                op_status = constants.ERROR
-                return op_status
-        
-            for ni_row in ni_rows:
-                notable_infotypes.append(ni_row['notable_infotype']) # there should be just one notable infotype per field
-    
-        # there are no DLP findings
-        if dlp_row_count == 0:
-            op_status = constants.SUCCESS
-            return op_status
-    
-        # remove duplicate infotypes from notable list
-        final_set = list(set(notable_infotypes))
-        print('final_set: ', final_set)
-        
-        # lookup classification using set of notable infotypes   
-        c_sql = 'select classification_result '
-        c_sql += 'from ' + infotype_classification_table + ' c, '
-    
-        for i in range(0, len(final_set)):
-            c_sql += 'unnest(c.notable_infotypes) as c' + str(i) + ', '
-    
-        c_sql = c_sql[:-2] + ' '
-    
-        for i, notable_infotype in enumerate(final_set):
-        
-            if i == 0:
-                c_sql += 'where c' + str(i) + ' = "' + notable_infotype + '" '
-            else:
-                c_sql += 'and c' + str(i) + ' = "' + notable_infotype + '" '
-
-        c_sql += 'order by array_length(c.notable_infotypes) '
-        c_sql += 'limit 1'  
-
-        #print('c_sql: ', c_sql)
-    
-        try:
-            c_rows = self.bq_client.query(c_sql).result()
-        except Exception as e:
-            msg = 'Error querying infotype classification table: {}'.format(c_sql)
-            log_error(msg, e, job_uuid)
-            op_status = constants.ERROR
-            return op_status
-        
-        classification_result = None
-    
-        for c_row in c_rows:
-            classification_result = c_row['classification_result'] # we should end up with one classification result per table
-    
-        print('classification_result: ', classification_result)
-        
-        tag = datacatalog.Tag()
-        tag.template = self.template_path
-        
-        # each element represents a field which needs to be tagged
-        for infotype_field in infotype_fields:
-            
-            for field in fields:
-                if 'sensitive_field' in field['field_id']:
-                    bool_field = datacatalog.TagField()
-                    
-                    if classification_result == 'Public_Information':
-                        bool_field.bool_value = False
-                        field['field_value'] = False
-                    else:
-                        bool_field.bool_value = True
-                        field['field_value'] = True
-                    
-                    tag.fields['sensitive_field'] = bool_field
-                    
-                if 'sensitive_type' in field['field_id']:
-                    enum_field = datacatalog.TagField()
-                    enum_field.enum_value.display_name = classification_result
-                    tag.fields['sensitive_type'] = enum_field
-                    field['field_value'] = classification_result
-           
-            tag.column = infotype_field # DLP has a bug and sometimes the infotype field does not equal to the column name in the table
-            print('tag.column: ', infotype_field)
-            
-            # check if a tag already exists on this column
-            try:    
-                tag_exists, tag_id = self.check_if_tag_exists(parent=entry.name, column=infotype_field)
-        
-            except Exception as e:
-                msg = 'Error during check_if_tag_exists: {}'.format(entry.name)
-                log_error(msg, e, job_uuid)
-                op_status = constants.ERROR
-                return op_status   
-            
-            # tag already exists    
-            if tag_exists:
-                
-                if overwrite == False:
-                    # skip this sensitive column because it is already tagged
-                    continue
-                
-                tag.name = tag_id
-                op_status = self.do_create_update_delete_action(job_uuid, 'update', tag)
-            else:
-                op_status = self.do_create_update_delete_action(job_uuid, 'create', tag, entry)
-                                    
-            if op_status == constants.SUCCESS and create_policy_tags and classification_result != 'Public_Information':
-                # add the column name and policy tag name to a list
-                for policy_tag_name, policy_tag_category in policy_tag_names:
-                    if policy_tag_category == classification_result:
-                        policy_tag_requests.append((infotype_field, policy_tag_name))
-                    
-                            
-            if op_status == constants.SUCCESS and tag_history:
-                bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
-                template_fields = self.get_template()
-                bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, job_uuid, self.template_id, template_fields, uri, infotype_field, fields)
-        
                         
-        # once we have created the regular tags, we can create/update the policy tags
-        if create_policy_tags and len(policy_tag_requests) > 0:
-            table_id = uri.replace('/datasets/', '.').replace('/tables/', '.')
-            op_status = self.apply_policy_tags(table_id, policy_tag_requests)
-        
-        if op_status != constants.SUCCESS:
-            msg = 'Error occurred when tagging {}'.format(uri) 
-            error = {'job_uuid': job_uuid, 'msg': msg}
-            log_error(msg, error, job_uuid)
-            print(json.dumps(error))
-                
-        return op_status
-
-    
-    def apply_policy_tags(self, table_id, policy_tag_requests):
-        op_status = constants.SUCCESS
-        table = self.bq_client.get_table(table_id) 
-        schema = table.schema
-
-        new_schema = []
-        
-        for field in schema:
-            
-            field_match = False
-            
-            for column, policy_tag_name in policy_tag_requests:
-                
-                if field.name == column:
-                    print('applying policy tag on', field.name)
-                    policy = bigquery.schema.PolicyTagList(names=[policy_tag_name,])
-                    new_schema.append(bigquery.schema.SchemaField(field.name, field.field_type, field.mode, policy_tags=policy)) 
-                    field_match = True
-                    break
-        
-            if field_match == False:    
-                new_schema.append(field)
-                
-        table.schema = new_schema
-        
-        try:
-            table = self.bq_client.update_table(table, ["schema"])  
-        
-        except Exception as e:
-            msg = 'Error occurred while updating the schema of {}'.format(table_id)
-            log_error(msg, e, job_uuid)
-            op_status = constants.ERROR
-        
-        return op_status
-        
-            
-    def apply_export_config(self, config_uuid, target_project, target_dataset, target_region, uri):
-        
-        column_tag_records = []
-        table_tag_records = []
-        dataset_tag_records = []
-        
-        export_status = constants.SUCCESS
-        bqu = bq.BigQueryUtils(self.credentials, target_region)
-        
-        if isinstance(uri, str) == False:
-            msg = 'Error: url ' + str(url) + ' is not of type string.'
-            log_error(msg)
-            export_status = constants.ERROR
-            return export_status
-        
-        tagged_project = uri.split('/')[0]
-        tagged_dataset = uri.split('/')[2]
-        
-        if '/tables/' in uri:
-            target_table_id = 'catalog_report_table_tags'
-            tagged_table = uri.split('/')[4]
-        else:
-            target_table_id = 'catalog_report_dataset_tags'
-            tagged_table = None
-            
-        bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
-        #print("bigquery_resource: ", bigquery_resource)
-        
-        request = datacatalog.LookupEntryRequest()
-        request.linked_resource=bigquery_resource
-        
-        try:
-            entry = self.client.lookup_entry(request)
-        except Exception as e:
-            msg = 'Error looking up entry {} in catalog'.format(bigquery_resource)
-            log_error(msg, e, job_uuid)
-            export_status = constants.ERROR
-            return export_status
-
-        tag_list = self.client.list_tags(parent=entry.name, timeout=120)
-    
-        for tag in tag_list:
-            print('tag.template:', tag.template)
-            print('tag.column:', tag.column)
-            
-            # get tag template fields
-            self.template_id = tag.template.split('/')[5]
-            self.template_project = tag.template.split('/')[1]
-            self.template_region = tag.template.split('/')[3]
-            self.template_path = tag.template
-            template_fields = self.get_template()
-            
-            if tag.column and len(tag.column) > 1:
-                tagged_column = tag.column
-                target_table_id = 'catalog_report_column_tags'
-            else:
-                tagged_column = None
-                target_table_id = 'catalog_report_table_tags'
-            
-            for template_field in template_fields:
-    
-                #print('template_field:', template_field)
-                field_id = template_field['field_id']
-                
-                if field_id not in tag.fields:
-                    continue
-                    
-                tagged_field = tag.fields[field_id]
-                tagged_field_str = str(tagged_field)
-                tagged_field_split = tagged_field_str.split('\n')
-                #print('tagged_field_split:', tagged_field_split)
-                
-                split_index = 0
-                
-                for split in tagged_field_split:
-                    if '_value:' in split:
-                        start_index = split.index(':', 0) + 1
-                        #print('start_index:', start_index)
-                        field_value = split[start_index:].strip().replace('"', '').replace('<br>', ',')
-                        print('extracted field_value:', field_value)
-                        break
-                    elif 'enum_value' in split:
-                        field_value = tagged_field_split[split_index+1].replace('display_name:', '').replace('"', '').strip()
-                        print('extracted field_value:', field_value)
-                        break
-                    
-                    split_index += 1                    
-                    
-                # format record to be written
-                current_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
-                
-                if target_table_id in 'catalog_report_column_tags':
-                    column_tag_records.append({"project": tagged_project, "dataset": tagged_dataset, "table": tagged_table, "column": tagged_column, "tag_template": self.template_id, "tag_field": field_id, "tag_value": field_value, "export_time": current_ts})
-                
-                elif target_table_id in 'catalog_report_table_tags':
-                    table_tag_records.append({"project": tagged_project, "dataset": tagged_dataset, "table": tagged_table, "tag_template": self.template_id, "tag_field": field_id, "tag_value": field_value, "export_time": current_ts})
-                
-                elif target_table_id in 'catalog_report_dataset_tags':
-                    dataset_tag_records.append({"project": tagged_project, "dataset": tagged_dataset, "tag_template": self.template_id, "tag_field": field_id, "tag_value": field_value, "export_time": current_ts})
-                      
-        # write exported records to BQ
-        if len(dataset_tag_records) > 0:
-            target_table_id = target_project + '.' + target_dataset + '.catalog_report_dataset_tags'
-            success = bqu.insert_exported_records(target_table_id, dataset_tag_records)
-        
-        if len(table_tag_records) > 0:
-            target_table_id = target_project + '.' + target_dataset + '.catalog_report_table_tags'
-            success = bqu.insert_exported_records(target_table_id, table_tag_records)
-                    
-        if len(column_tag_records) > 0:
-            target_table_id = target_project + '.' + target_dataset + '.catalog_report_column_tags'
-            success = bqu.insert_exported_records(target_table_id, column_tag_records)
-                     
-        return export_status
-        
-            
     def apply_import_config(self, job_uuid, config_uuid, data_asset_type, data_asset_region, tag_dict, tag_history, overwrite=False):
     
         print("*** DataCatalogController.apply_import_config ***")
@@ -1385,6 +602,122 @@ class DataCatalogController:
         return op_status
     
 
+    def apply_export_config(self, config_uuid, target_project, target_dataset, target_region, uri):
+        
+        column_tag_records = []
+        table_tag_records = []
+        dataset_tag_records = []
+        
+        export_status = constants.SUCCESS
+        bqu = bq.BigQueryUtils(self.credentials, target_region)
+        
+        if isinstance(uri, str) == False:
+            msg = 'Error: url ' + str(url) + ' is not of type string.'
+            log_error(msg)
+            export_status = constants.ERROR
+            return export_status
+        
+        tagged_project = uri.split('/')[0]
+        tagged_dataset = uri.split('/')[2]
+        
+        if '/tables/' in uri:
+            target_table_id = 'catalog_report_table_tags'
+            tagged_table = uri.split('/')[4]
+        else:
+            target_table_id = 'catalog_report_dataset_tags'
+            tagged_table = None
+            
+        bigquery_resource = '//bigquery.googleapis.com/projects/' + uri
+        #print("bigquery_resource: ", bigquery_resource)
+        
+        request = datacatalog.LookupEntryRequest()
+        request.linked_resource=bigquery_resource
+        
+        try:
+            entry = self.client.lookup_entry(request)
+        except Exception as e:
+            msg = 'Error looking up entry {} in catalog'.format(bigquery_resource)
+            log_error(msg, e, job_uuid)
+            export_status = constants.ERROR
+            return export_status
+
+        tag_list = self.client.list_tags(parent=entry.name, timeout=120)
+    
+        for tag in tag_list:
+            print('tag.template:', tag.template)
+            print('tag.column:', tag.column)
+            
+            # get tag template fields
+            self.template_id = tag.template.split('/')[5]
+            self.template_project = tag.template.split('/')[1]
+            self.template_region = tag.template.split('/')[3]
+            self.template_path = tag.template
+            template_fields = self.get_template()
+            
+            if tag.column and len(tag.column) > 1:
+                tagged_column = tag.column
+                target_table_id = 'catalog_report_column_tags'
+            else:
+                tagged_column = None
+                target_table_id = 'catalog_report_table_tags'
+            
+            for template_field in template_fields:
+    
+                #print('template_field:', template_field)
+                field_id = template_field['field_id']
+                
+                if field_id not in tag.fields:
+                    continue
+                    
+                tagged_field = tag.fields[field_id]
+                tagged_field_str = str(tagged_field)
+                tagged_field_split = tagged_field_str.split('\n')
+                #print('tagged_field_split:', tagged_field_split)
+                
+                split_index = 0
+                
+                for split in tagged_field_split:
+                    if '_value:' in split:
+                        start_index = split.index(':', 0) + 1
+                        #print('start_index:', start_index)
+                        field_value = split[start_index:].strip().replace('"', '').replace('<br>', ',')
+                        print('extracted field_value:', field_value)
+                        break
+                    elif 'enum_value' in split:
+                        field_value = tagged_field_split[split_index+1].replace('display_name:', '').replace('"', '').strip()
+                        print('extracted field_value:', field_value)
+                        break
+                    
+                    split_index += 1                    
+                    
+                # format record to be written
+                current_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
+                
+                if target_table_id in 'catalog_report_column_tags':
+                    column_tag_records.append({"project": tagged_project, "dataset": tagged_dataset, "table": tagged_table, "column": tagged_column, "tag_template": self.template_id, "tag_field": field_id, "tag_value": field_value, "export_time": current_ts})
+                
+                elif target_table_id in 'catalog_report_table_tags':
+                    table_tag_records.append({"project": tagged_project, "dataset": tagged_dataset, "table": tagged_table, "tag_template": self.template_id, "tag_field": field_id, "tag_value": field_value, "export_time": current_ts})
+                
+                elif target_table_id in 'catalog_report_dataset_tags':
+                    dataset_tag_records.append({"project": tagged_project, "dataset": tagged_dataset, "tag_template": self.template_id, "tag_field": field_id, "tag_value": field_value, "export_time": current_ts})
+                      
+        # write exported records to BQ
+        if len(dataset_tag_records) > 0:
+            target_table_id = target_project + '.' + target_dataset + '.catalog_report_dataset_tags'
+            success = bqu.insert_exported_records(target_table_id, dataset_tag_records)
+        
+        if len(table_tag_records) > 0:
+            target_table_id = target_project + '.' + target_dataset + '.catalog_report_table_tags'
+            success = bqu.insert_exported_records(target_table_id, table_tag_records)
+                    
+        if len(column_tag_records) > 0:
+            target_table_id = target_project + '.' + target_dataset + '.catalog_report_column_tags'
+            success = bqu.insert_exported_records(target_table_id, column_tag_records)
+                     
+        return export_status
+    
+    
     def apply_restore_config(self, job_uuid, config_uuid, tag_extract, tag_history, overwrite=False):
              
         op_status = constants.SUCCESS
@@ -1662,36 +995,6 @@ class DataCatalogController:
          
        return op_status
        
-            
-    def search_catalog(self, bigquery_project, bigquery_dataset):
-        
-        linked_resources = {}
-        
-        scope = datacatalog.SearchCatalogRequest.Scope()
-        scope.include_project_ids.append(bigquery_project)
-        
-        request = datacatalog.SearchCatalogRequest()
-        request.scope = scope
-    
-        query = 'parent:' + bigquery_project + '.' + bigquery_dataset
-        print('query string: ' + query)
-    
-        request.query = query
-        request.page_size = 1
-    
-        for result in self.client.search_catalog(request):
-            print('result: ' + str(result))
-            
-            resp = self.client.list_tags(parent=result.relative_resource_name)
-            tags = list(resp.tags)
-            tag_count = len(tags)
-            
-            index = result.linked_resource.rfind('/')
-            table_name = result.linked_resource[index+1:]
-            linked_resources[table_name] = tag_count
-            
-        return linked_resources
-
   
     def parse_query_expression(self, uri, query_expression, column=None):
         
@@ -2065,37 +1368,7 @@ class DataCatalogController:
         
         return success
 
-    
-    def copy_policy_tags(self, source_project, source_dataset, source_table, target_project, target_dataset, target_table):
-    
-        success = True
-        source_table_id = source_project + '.' + source_dataset + '.' + source_table
-        target_table_id = target_project + '.' + target_dataset + '.' + target_table
-    
-        try:
-            source_schema = self.bq_client.get_table(source_table_id).schema
-        except Exception as e:
-            success = False
-            msg = 'Error occurred while retrieving the schema of {}'.format(source_table_id)
-            log_error(msg, e)
-            return success 
-    
-        policy_tag_list = []
-    
-        for field in source_schema:
-            if field.policy_tags != None:
-                policy_tag = field.policy_tags.names[0]
-                pt_tuple = (field.name, policy_tag)
-                policy_tag_list.append(pt_tuple)
-	
-        if len(policy_tag_list) == 0:
-            return success
-    
-        print('policy_tag_list:', policy_tag_list)
-        success = self.apply_policy_tags(target_table_id, policy_tag_list)
-    
-        return success
-    
+        
     # used to update the status of a data product tag as part of the product_registration_pipeline
     # https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/tree/main/examples/product_registration_pipeline    
     def update_tag_subset(self, template_id, template_project, template_region, entry_name, changed_fields):

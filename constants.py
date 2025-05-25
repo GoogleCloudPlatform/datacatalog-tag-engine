@@ -36,5 +36,4 @@ BQ_RES = 'BQ'
 GCS_RES = 'GCS'
 SPAN_RES = 'SPAN' # future, not yet implemented
 PUBSUB_RES = 'PUBSUB' # future, not yet implemented
-STATIC_TAG = 1
 DYNAMIC_TAG = 2

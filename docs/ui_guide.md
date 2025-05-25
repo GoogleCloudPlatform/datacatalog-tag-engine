@@ -5,12 +5,8 @@ This is a user guide for the Tag Engine UI.
 #### Table of Contents
 *  Getting started: [link](#get_started)
 *  General navigation [link](#navigation)
-*  Static tag asset [link](#static_asset)
 *  Dynamic tag table [link](#dynamic_table)
 *  Dynamic tag column [link](#dynamic_column)
-*  Sensitive tag column [link](#sensitive_column) 
-*  Glossary tag asset [link](#glossary_asset) 
-*  Entry [link](#entry)
 *  Import tag [link](#import_tags) 
 *  Export tag [link](#export_tags) 
 *  Restore tag [link](#restore_tags) 
@@ -34,21 +30,6 @@ On the next page, you'll see the field details of your tag template. Below, you'
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/configuration-types.png" alt="static" width="650"/>
 
 Each action type will be covered below. 
-
-
-#### <a name="static_asset"></a> Static Tag Asset
-
-This config type creates Data Catalog tags on BigQuery assets (datasets, tables, views) or Google Cloud Storage assets (buckets, folders, files) that match a URI. 
-
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/static-asset-config-1.png" alt="static" width="400"/>
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/static-asset-config-2.png" alt="static" width="600"/>
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/static-asset-config-3.png" alt="static" width="600"/>
-
-The `included_assets_URIs` field can be set to either one or more BQ paths or one or more GCS path. If you want to tag assets in BQ and GCS, you need to create a separate configuration for each. 
-
-The `refresh_mode` field is either `AUTO` or `ON-DEMAND`. `AUTO` means that any new assets that match the `included_assets_URIs` field will be auto-tagged on a schedule. `ON-DEMAND` means that Tag Engine does not schedule any tag updates, you will need to call the `ondemand_updates` method to trigger an update of the tags.  
-
-Upon clicking the submit button, you will be directed to a confirmation page. You can click on the `here` link to see status of your request. 
 
 
 #### <a name="dynamic_table"></a> Dynamic Tag Table
@@ -88,57 +69,6 @@ Upon clicking the submit button, you will be directed to a confirmation page. Yo
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/dynamic-column-config-1.png" alt="static" width="800"/>
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/dynamic-column-config-2.png" alt="static" width="800"/>
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/dynamic-column-config-3.png" alt="static" width="500"/>
-
-
-#### <a name="sensitive_column"></a> Sensitive Tag Column
-
-This configuration type creates Data Catalog tags on columns in BQ tables. This configuration classifies the sensitivity of the data in those columns and tags the classification results. The classification requires the [sensitive data template](https://github.com/GoogleCloudPlatform/datacatalog-templates/blob/master/data_sensitivity.yaml) and Data Loss Prevention. It uses as input the info types found in the DLP inspection jobs. It then maps the info types to a custom data classification defined in a mapping table in BQ. It can optionally create policy tags on the sensitive columns so that access to the sensitive data is restricted. 
-
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/sensitive-column-config-1.png" alt="static" width="850"/>
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/sensitive-column-config-2.png" alt="static" width="850"/>
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/sensitive-column-config-3.png" alt="static" width="700"/>
-
-##### Mapping tables (input to the sensitive column configuration)
-
-This config requires two mapping tables, _infotype_selection_ and _infotype_classification_. The first maps the set of infotypes associated with a field from a table to a notable infotype. The second maps a set of notable infotypes to a data classification. <a href="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/examples/sensitive_column_configs/dlp/create_classification_tables.sql">Here</a> are some sample mappings for both tables. 
-
-##### Sample policy tag taxonomy in Data Catalog (input to the sensitive column configuration)
-
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/policy-tag-taxonomy.png" alt="static" width="500"/>
-
-###### Sample sensitive column tag created by Tag Engine
-
-Below are sensitive tags (metadata and policy) produced by a sensitive tag configuration in Tag Engine: 
-
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/sensitive-column-tags.png" alt="static" width="500"/>
-
-#### <a name="glossary_asset"></a> Glossary Tag Asset
-
-This configuration type creates Data Catalog tags on either tables and views in BQ or files in GCS. The fields in the tag contain canonical field names which are mapped from the schema columns of the asset. This configuration type requires a mapping table in BQ, specified below. It also requires every canonical element name to be present in the tag template as a boolean field. When Tag Engine finds a mapping, it sets the tag template field to true, thus enabling users to search the catalog by canonical name. 
-
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/glossary-asset-config-1.png" alt="static" width="500"/>
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/glossary-asset-config-2.png" alt="static" width="750"/>
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/glossary-asset-config-3.png" alt="static" width="600"/>
-
-##### Sample mapping table in BQ (input to the glossary asset configuration)
-
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/glossary-asset-mapping-table.png" alt="static" width="400"/>
-
-
-#### <a name="entry"></a> Entry Create
-
-This config type creates Data Catalog entries that represents parquet files stored in GCS. Each entry represents a different file and is tagged with the [file metadata template](https://github.com/GoogleCloudPlatform/datacatalog-templates/blob/master/file_template.yaml). This template includes various file metadata attributes such as file size, creation time, and number of rows. The majority of these attributes are harvested from the Cloud Storage API.  
-
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/entry-config-1.png" alt="static" width="400"/>
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/entry-config-2.png" alt="static" width="700"/>
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/entry-config-3.png" alt="static" width="400"/>
-
-
-###### Sample entry and file metadata tag in Data Catalog
-
-Below is a sample entry and tag produced by an entry configuration in Tag Engine. 
-
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/entry-and-tag.png" alt="static" width="750"/>
 
 
 #### <a name="import_tags"></a> Import Tag

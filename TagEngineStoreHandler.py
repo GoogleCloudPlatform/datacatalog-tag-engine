@@ -164,96 +164,6 @@ class TagEngineStoreHandler:
         
         return exists, settings
 
-    
-    def write_coverage_report_settings(self, included_bigquery_projects, excluded_bigquery_datasets, excluded_bigquery_tables):
-        
-        report_settings = self.db.collection('settings')
-        doc_ref = report_settings.document('coverage_report')
-        doc_ref.set({
-            'included_bigquery_projects': included_bigquery_projects,
-            'excluded_bigquery_datasets':  excluded_bigquery_datasets,
-            'excluded_bigquery_tables': excluded_bigquery_tables
-        })
-        
-        print('Saved coverage report settings.')
-        
-        
-    def generate_coverage_report(self, credentials):    
-    
-        summary_report = []
-        detailed_report = []
-        
-        exists, settings = self.read_coverage_report_settings()
-        included_bigquery_projects = settings['included_bigquery_projects']
-        excluded_bigquery_datasets = settings['excluded_bigquery_datasets']
-        excluded_bigquery_tables = settings['excluded_bigquery_tables']
-        
-        print('included_bigquery_projects: ' + included_bigquery_projects)
-        print('excluded_bigquery_datasets: ' + excluded_bigquery_datasets)
-        print('excluded_bigquery_tables: ' + excluded_bigquery_tables)
-        
-        log_ref = self.db.collection('logs')
-        
-        # list datasets and tables for chosen projects
-        for project in included_bigquery_projects.split(','):
-            project_id = project.strip()
-            bq_client = bigquery.Client(project=project_id)
-            datasets = list(bq_client.list_datasets())
-            
-            total_tags = 0
-            
-            for dataset in datasets:
-                
-                dataset_id = dataset.dataset_id
-
-                if project_id + "." + dataset_id in excluded_bigquery_datasets:
-                    #print('skipping ' + project_id + "." + dataset_id)
-                    continue
-               
-                print("dataset: " + dataset_id)
-                
-                qualified_dataset = project_id + "." + dataset_id
-                overall_sum = 0    
-                table_list = []
-                tables = list(bq_client.list_tables(dataset_id))
-                
-                dcc = controller.DataCatalogController(credentials)
-                linked_resources = dcc.search_catalog(project_id, dataset_id)
-                
-                print('linked_resources: ' + str(linked_resources))
-            
-                for table in tables:
-                    print("full_table_id: " + str(table.full_table_id))
-                
-                    table_path_full = table.full_table_id.replace(':', '/datasets/').replace('.', '/tables/')
-                    table_path_short = table.full_table_id.replace(':', '.')
-                    table_name = table_path_full.split('/')[4]
-                
-                    print('table_path_full: ' + table_path_full)
-                    print('table_path_short: ' + table_path_short)
-                    print('table_name: ' + table_name)
-                
-                    if table_path_short in project_id + '.' + excluded_bigquery_tables:
-                        print('skipping ' + table_path_short)
-                        continue
-                    
-                    if table_name in linked_resources:
-                        tag_count = linked_resources[table_name]
-                        overall_sum = overall_sum + tag_count
-                        print("tag_count = " + str(tag_count))
-                        print("overall_sum = " + str(overall_sum))
-                
-                        # add the table name and tag count to a list 
-                        table_list.append((table_name, tag_count))
-
-                # add record to summary report
-                summary_record = (qualified_dataset, overall_sum)
-                summary_report.append(summary_record)
-                detailed_record = {qualified_dataset: table_list}
-                detailed_report.append(detailed_record)
-        
-        return summary_report, detailed_report
-      
       
     def check_active_config(self, config_uuid, config_type):
         
@@ -405,96 +315,7 @@ class TagEngineStoreHandler:
             })
                                    
         return aspect_type_uuid
-        
-        
-    def write_static_asset_config(self, service_account, fields, included_assets_uris, excluded_assets_uris, template_uuid, \
-                                  template_id, template_project, template_region, refresh_mode, refresh_frequency, refresh_unit, \
-                                  tag_history, overwrite=False):
-        
-        # hash the included_assets_uris string
-        included_assets_uris_hash = hashlib.md5(included_assets_uris.encode()).hexdigest()
-        
-        # check to see if a static config already exists
-        configs_ref = self.db.collection('static_asset_configs')
-        query = configs_ref.where(filter=FieldFilter('template_uuid', '==', template_uuid))
-        query = query.where(filter=FieldFilter('included_assets_uris_hash', '==', included_assets_uris_hash))
-        query = query.where(filter=FieldFilter('config_type', '==', 'STATIC_TAG_ASSET'))
-        query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
-       
-        matches = query.get()
-       
-        for match in matches:
-            if match.exists:
-                config_uuid_match = match.id
-                print('Static config already exists. Config_uuid: ' + str(config_uuid_match))
-                
-                # update status to INACTIVE 
-                self.db.collection('static_asset_configs').document(config_uuid_match).update({
-                    'config_status' : "INACTIVE"
-                })
-                print('Updated config status to INACTIVE.')
-        
-        config_uuid = uuid.uuid1().hex
-        
-        if refresh_mode == 'AUTO':
             
-            delta, next_run = self.validate_auto_refresh(refresh_frequency, refresh_unit)
-       
-            config = self.db.collection('static_asset_configs')
-            doc_ref = config.document(config_uuid)
-            doc_ref.set({
-                'config_uuid': config_uuid,
-                'config_type': 'STATIC_TAG_ASSET',
-                'config_status': 'ACTIVE', 
-                'creation_time': datetime.utcnow(), 
-                'fields': fields,
-                'included_assets_uris': included_assets_uris,
-                'included_assets_uris_hash': included_assets_uris_hash,
-                'excluded_assets_uris': excluded_assets_uris,
-                'template_uuid': template_uuid,
-                'template_id': template_id,
-                'template_project': template_project,
-                'template_region': template_region,
-                'refresh_mode': refresh_mode, # AUTO refresh mode
-                'refresh_frequency': delta,
-                'refresh_unit': refresh_unit,
-                'tag_history': tag_history,
-                'scheduling_status': 'READY',
-                'next_run': next_run,
-                'version': 1,
-                'overwrite': overwrite,
-                'service_account': service_account
-            })
-            
-        else:
-            
-            config = self.db.collection('static_asset_configs')
-            doc_ref = config.document(config_uuid)
-            doc_ref.set({
-                'config_uuid': config_uuid,
-                'config_type': 'STATIC_TAG_ASSET',
-                'config_status': 'ACTIVE', 
-                'creation_time': datetime.utcnow(), 
-                'fields': fields,
-                'included_assets_uris': included_assets_uris,
-                'included_assets_uris_hash': included_assets_uris_hash,
-                'excluded_assets_uris': excluded_assets_uris,
-                'template_uuid': template_uuid,
-                'template_id': template_id,
-                'template_project': template_project,
-                'template_region': template_region,
-                'refresh_mode': refresh_mode, # ON_DEMAND refresh mode
-                'refresh_frequency': 0, # N/A
-                'tag_history': tag_history,
-                'version': 1,
-                'overwrite': overwrite,
-                'service_account': service_account
-            })
-        
-        print('Created static asset config.')
-        
-        return config_uuid
-    
     
     def write_dynamic_table_config(self, service_account, fields, included_tables_uris, excluded_tables_uris, template_uuid, \
                                    template_id, template_project, template_region, refresh_mode, refresh_frequency, \
@@ -858,323 +679,6 @@ class TagEngineStoreHandler:
         return delta, next_run
     
     
-    def write_entry_config(self, service_account, fields, included_assets_uris, excluded_assets_uris, template_uuid, \
-                            template_id, template_project, template_region, refresh_mode, refresh_frequency, \
-                            refresh_unit, tag_history):
-        
-        included_assets_uris_hash = hashlib.md5(included_assets_uris.encode()).hexdigest()
-        
-        # check to see if this config already exists
-        configs_ref = self.db.collection('entry_configs')
-        query = configs_ref.where(filter=FieldFilter('template_uuid', '==', template_uuid))
-        query = query.where(filter=FieldFilter('included_assets_uris_hash', '==', included_assets_uris_hash))
-        query = query.where(filter=FieldFilter('config_type', '==', 'ENTRY_CREATE'))
-        query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
-       
-        matches = query.get()
-       
-        for match in matches:
-            if match.exists:
-                config_uuid_match = match.id
-                #print('Tag config already exists. Tag_uuid: ' + str(config_uuid_match))
-                
-                # update status to INACTIVE 
-                self.db.collection('entry_configs').document(config_uuid_match).update({
-                    'config_status' : "INACTIVE"
-                })
-                print('Updated status to INACTIVE.')
-       
-        config_uuid = uuid.uuid1().hex
-        config = self.db.collection('entry_configs')
-        doc_ref = config.document(config_uuid)
-        
-        if refresh_mode == 'AUTO':
-            
-            delta, next_run = self.validate_auto_refresh(refresh_frequency, refresh_unit)
-            
-            doc_ref.set({
-                'config_uuid': config_uuid,
-                'config_type': 'ENTRY_CREATE',
-                'config_status': 'ACTIVE', 
-                'creation_time': datetime.utcnow(), 
-                'fields': fields,
-                'included_assets_uris': included_assets_uris,
-                'included_assets_uris_hash': included_assets_uris_hash,
-                'excluded_assets_uris': excluded_assets_uris,
-                'template_uuid': template_uuid,
-                'template_id': template_id,
-                'template_project': template_project,
-                'template_region': template_region,
-                'refresh_mode': refresh_mode, # AUTO refresh mode
-                'refresh_frequency': delta,
-                'refresh_unit': refresh_unit,
-                'tag_history': tag_history,
-                'scheduling_status': 'READY',
-                'next_run': next_run,
-                'version': 1,
-                'service_account': service_account
-            })
-            
-        else:
-            doc_ref.set({
-                'config_uuid': config_uuid,
-                'config_type': 'ENTRY_CREATE',
-                'config_status': 'ACTIVE', 
-                'creation_time': datetime.utcnow(), 
-                'fields': fields,
-                'included_assets_uris': included_assets_uris,
-                'included_assets_uris_hash': included_assets_uris_hash,
-                'excluded_assets_uris': excluded_assets_uris,
-                'template_uuid': template_uuid,
-                'template_id': template_id,
-                'template_project': template_project,
-                'template_region': template_region,
-                'refresh_mode': refresh_mode, # ON_DEMAND refresh mode
-                'refresh_frequency': 0,
-                'tag_history': tag_history,
-                'version': 1,
-                'service_account': service_account
-            })
-        
-        print('Created entry config.')
-        
-        return config_uuid
-
-    
-    def write_glossary_asset_config(self, service_account, fields, mapping_table, included_assets_uris, excluded_assets_uris, \
-                                    template_uuid, refresh_mode, refresh_frequency, refresh_unit, tag_history, \
-                                    overwrite=False):
-        
-        included_assets_uris_hash = hashlib.md5(included_assets_uris.encode()).hexdigest()
-        
-        # check to see if this config already exists
-        configs_ref = self.db.collection('glossary_asset_configs')
-        query = configs_ref.where(filter=FieldFilter('template_uuid', '==', template_uuid))
-        query = query.where(filter=FieldFilter('included_assets_uris_hash', '==', included_assets_uris_hash))
-        query = query.where(filter=FieldFilter('config_type', '==', 'GLOSSARY_TAG_ASSET'))
-        query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
-       
-        matches = query.get()
-       
-        for match in matches:
-            if match.exists:
-                config_uuid_match = match.id
-                #print('config already exists. Found config_uuid: ' + str(config_uuid_match))
-                
-                # update status to INACTIVE 
-                self.db.collection('glossary_asset_configs').document(config_uuid_match).update({
-                    'config_status' : "INACTIVE"
-                })
-                print('Updated status to INACTIVE.')
-       
-        config_uuid = uuid.uuid1().hex
-        config = self.db.collection('glossary_asset_configs')
-        doc_ref = config.document(config_uuid)
-        
-        if refresh_mode == 'AUTO':
-            
-            delta, next_run = self.validate_auto_refresh(refresh_frequency, refresh_unit)
-            
-            doc_ref.set({
-                'config_uuid': config_uuid,
-                'config_type': 'GLOSSARY_TAG_ASSET',
-                'config_status': 'ACTIVE', 
-                'creation_time': datetime.utcnow(), 
-                'fields': fields,
-                'mapping_table': mapping_table,
-                'included_assets_uris': included_assets_uris,
-                'included_assets_uris_hash': included_assets_uris_hash,
-                'excluded_assets_uris': excluded_assets_uris,
-                'template_uuid': template_uuid,
-                'template_id': template_id,
-                'template_project': template_project,
-                'template_region': template_region,
-                'refresh_mode': refresh_mode, # AUTO refresh mode
-                'refresh_frequency': delta,
-                'refresh_unit': refresh_unit,
-                'tag_history': tag_history,
-                'scheduling_status': 'READY',
-                'next_run': next_run,
-                'version': 1,
-                'overwrite': overwrite,
-                'service_account': service_account
-            })
-            
-        else:
-            doc_ref.set({
-                'config_uuid': config_uuid,
-                'config_type': 'GLOSSARY_TAG_ASSET',
-                'config_status': 'ACTIVE', 
-                'creation_time': datetime.utcnow(), 
-                'fields': fields,
-                'mapping_table': mapping_table,
-                'included_assets_uris': included_assets_uris,
-                'included_assets_uris_hash': included_assets_uris_hash,
-                'excluded_assets_uris': excluded_assets_uris,
-                'template_uuid': template_uuid,
-                'template_id': template_id,
-                'template_project': template_project,
-                'template_region': template_region,
-                'refresh_mode': refresh_mode, # ON_DEMAND refresh mode
-                'refresh_frequency': 0,
-                'tag_history': tag_history,
-                'version': 1,
-                'overwrite': overwrite,
-                'service_account': service_account
-            })
-        
-        print('Created glossary asset config.')
-        
-        return config_uuid
-
-
-    def write_sensitive_column_config(self, service_account, fields, dlp_dataset, infotype_selection_table, infotype_classification_table, \
-                                        included_tables_uris, excluded_tables_uris, create_policy_tags, taxonomy_id, template_uuid, \
-                                        template_id, template_project, template_region, refresh_mode, refresh_frequency, refresh_unit, \
-                                        tag_history, overwrite=False):
-        
-        included_tables_uris_hash = hashlib.md5(included_tables_uris.encode()).hexdigest()
-        
-        # check to see if this config already exists
-        configs_ref = self.db.collection('sensitive_column_configs')
-        query = configs_ref.where(filter=FieldFilter('template_uuid', '==', template_uuid))
-        query = query.where(filter=FieldFilter('included_tables_uris_hash', '==', included_tables_uris_hash))
-        query = query.where(filter=FieldFilter('config_type', '==', 'SENSITIVE_TAG_COLUMN'))
-        query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
-       
-        matches = query.get()
-       
-        for match in matches:
-            if match.exists:
-                config_uuid_match = match.id
-                #print('config already exists. Found config_uuid: ' + str(config_uuid_match))
-                
-                # update status to INACTIVE 
-                self.db.collection('sensitive_column_configs').document(config_uuid_match).update({
-                    'config_status' : "INACTIVE"
-                })
-                print('Updated status to INACTIVE.')
-       
-        config_uuid = uuid.uuid1().hex
-        configs = self.db.collection('sensitive_column_configs')
-        doc_ref = configs.document(config_uuid)
-        
-        if refresh_mode == 'AUTO':
-            
-            delta, next_run = self.validate_auto_refresh(refresh_frequency, refresh_unit)
-            
-            doc_ref.set({
-                'config_uuid': config_uuid,
-                'config_type': 'SENSITIVE_TAG_COLUMN',
-                'config_status': 'ACTIVE', 
-                'creation_time': datetime.utcnow(), 
-                'fields': fields,
-                'dlp_dataset': dlp_dataset,
-                'infotype_selection_table': infotype_selection_table,
-                'infotype_classification_table': infotype_classification_table,
-                'included_tables_uris': included_tables_uris,
-                'included_tables_uris_hash': included_tables_uris_hash,
-                'excluded_tables_uris': excluded_tables_uris,
-                'create_policy_tags': create_policy_tags, 
-                'taxonomy_id': taxonomy_id,
-                'template_uuid': template_uuid,
-                'template_id': template_id,
-                'template_project': template_project,
-                'template_region': template_region,
-                'refresh_mode': refresh_mode, # AUTO refresh mode
-                'refresh_frequency': delta,
-                'refresh_unit': refresh_unit,
-                'tag_history': tag_history,
-                'scheduling_status': 'READY',
-                'next_run': next_run,
-                'version': 1,
-                'overwrite': overwrite,
-                'service_account': service_account
-            })
-            
-        else:
-            doc_ref.set({
-                'config_uuid': config_uuid,
-                'config_type': 'SENSITIVE_TAG_COLUMN',
-                'config_status': 'ACTIVE', 
-                'creation_time': datetime.utcnow(), 
-                'fields': fields,
-                'dlp_dataset': dlp_dataset,
-                'infotype_selection_table': infotype_selection_table,
-                'infotype_classification_table': infotype_classification_table,
-                'included_tables_uris': included_tables_uris,
-                'included_tables_uris_hash': included_tables_uris_hash,
-                'excluded_tables_uris': excluded_tables_uris,
-                'create_policy_tags': create_policy_tags, 
-                'taxonomy_id': taxonomy_id,
-                'template_uuid': template_uuid,
-                'template_id': template_id,
-                'template_project': template_project,
-                'template_region': template_region,
-                'refresh_mode': refresh_mode, # ON_DEMAND refresh mode
-                'refresh_frequency': 0,
-                'tag_history': tag_history,
-                'version': 1,
-                'overwrite': overwrite,
-                'service_account': service_account
-            })
-        
-        print('Created sensitive column config.')
-        
-        return config_uuid
-
-    
-    def write_tag_restore_config(self, service_account, source_template_uuid, source_template_id, source_template_project, source_template_region, \
-                                 target_template_uuid, target_template_id, target_template_project, target_template_region, \
-                                 metadata_export_location, tag_history, overwrite=True):
-                                    
-        print('** write_tag_restore_config **')
-        
-        # check to see if this config already exists
-        configs_ref = self.db.collection('restore_configs')
-        query = configs_ref.where(filter=FieldFilter('source_template_uuid', '==', source_template_uuid))
-        query = query.where(filter=FieldFilter('target_template_uuid', '==', target_template_uuid))
-        query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
-       
-        matches = query.get()
-       
-        for match in matches:
-            if match.exists:
-                config_uuid_match = match.id
-                print('config already exists. Found config_uuid: ' + str(config_uuid_match))
-                
-                # update status to INACTIVE 
-                self.db.collection('restore_configs').document(config_uuid_match).update({
-                    'config_status' : "INACTIVE"
-                })
-                print('Updated status to INACTIVE.')
-       
-        config_uuid = uuid.uuid1().hex
-        configs = self.db.collection('restore_configs')
-        doc_ref = configs.document(config_uuid)
-        
-        doc_ref.set({
-            'config_uuid': config_uuid,
-            'config_type': 'TAG_RESTORE',
-            'config_status': 'ACTIVE', 
-            'creation_time': datetime.utcnow(), 
-            'source_template_uuid': source_template_uuid,
-            'source_template_id': source_template_id, 
-            'source_template_project': source_template_project,
-            'source_template_region': source_template_region,
-            'target_template_uuid': target_template_uuid,
-            'target_template_id': target_template_id,
-            'target_template_project': target_template_project,
-            'target_template_region': target_template_region,
-            'metadata_export_location': metadata_export_location,
-            'tag_history': tag_history,
-            'overwrite': overwrite,
-            'service_account': service_account
-        })
-        
-        return config_uuid
-        
-
     def write_tag_import_config(self, service_account, template_uuid, template_id, template_project, template_region, \
                                 data_asset_type, data_asset_region, metadata_import_location, tag_history, \
                                 clone_tags, retire_tags, overwrite=True):
@@ -1406,6 +910,58 @@ class TagEngineStoreHandler:
         
         return config_uuid
                     
+    
+    def write_tag_restore_config(self, service_account, source_template_uuid, source_template_id, source_template_project, source_template_region, \
+                                 target_template_uuid, target_template_id, target_template_project, target_template_region, \
+                                 metadata_export_location, tag_history, overwrite=True):
+                                    
+        print('** write_tag_restore_config **')
+        
+        # check to see if this config already exists
+        configs_ref = self.db.collection('restore_configs')
+        query = configs_ref.where(filter=FieldFilter('source_template_uuid', '==', source_template_uuid))
+        query = query.where(filter=FieldFilter('target_template_uuid', '==', target_template_uuid))
+        query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
+       
+        matches = query.get()
+       
+        for match in matches:
+            if match.exists:
+                config_uuid_match = match.id
+                print('config already exists. Found config_uuid: ' + str(config_uuid_match))
+                
+                # update status to INACTIVE 
+                self.db.collection('restore_configs').document(config_uuid_match).update({
+                    'config_status' : "INACTIVE"
+                })
+                print('Updated status to INACTIVE.')
+       
+        config_uuid = uuid.uuid1().hex
+        configs = self.db.collection('restore_configs')
+        doc_ref = configs.document(config_uuid)
+        
+        doc_ref.set({
+            'config_uuid': config_uuid,
+            'config_type': 'TAG_RESTORE',
+            'config_status': 'ACTIVE', 
+            'creation_time': datetime.utcnow(), 
+            'source_template_uuid': source_template_uuid,
+            'source_template_id': source_template_id, 
+            'source_template_project': source_template_project,
+            'source_template_region': source_template_region,
+            'target_template_uuid': target_template_uuid,
+            'target_template_id': target_template_id,
+            'target_template_project': target_template_project,
+            'target_template_region': target_template_region,
+            'metadata_export_location': metadata_export_location,
+            'tag_history': tag_history,
+            'overwrite': overwrite,
+            'service_account': service_account
+        })
+        
+        return config_uuid
+    
+    
     def lookup_config_collection(self, requested_ct):
         
         coll = None
@@ -1417,6 +973,7 @@ class TagEngineStoreHandler:
         
         return coll
     
+    
     def get_config_collections(self):
         
         colls = []
@@ -1425,6 +982,7 @@ class TagEngineStoreHandler:
         
         return colls
         
+    
     def read_configs(self, service_account, config_type='ALL', template_id=None, template_project=None, template_region=None):
         
         print('* enter read_configs *')
@@ -1632,21 +1190,7 @@ class TagEngineStoreHandler:
 
         return configs
       
-      
-    def format_source_projects(self, config):
-        
-        if config['source_projects'] != '':
             
-            source_projects = config['source_projects']
-            source_projects_str = ''
-            for project in source_projects:
-                source_projects_str += project + ','
-            
-            config['source_projects'] = source_projects_str[0:-1]
-        
-        return config
-        
-      
     def read_ready_configs(self):
         
         ready_configs = []
@@ -1756,134 +1300,33 @@ class TagEngineStoreHandler:
                   
         return mapping
     
-    
 
-    def update_config(self, old_config_uuid, config_type, config_status, fields, included_uris, excluded_uris, template_uuid, \
-                      template_id, template_project, template_region, refresh_mode, refresh_frequency, \
-                      refresh_unit, tag_history, overwrite=False, mapping_table=None):
-        
-        #print('enter update_config')
-        #print('old_config_uuid: ', old_config_uuid)
-        #print('config_type: ', config_type)
-        
-        coll_name = self.lookup_config_collection(config_type)
-        print('coll_name: ', coll_name)
-        
-        self.db.collection(coll_name).document(old_config_uuid).update({
-            'config_status' : "INACTIVE"
-        })
-        
-        if config_type == 'STATIC_TAG_ASSET':
-            new_config_uuid = self.write_static_asset_config(config_status, fields, included_uris, excluded_uris, template_uuid, \
-                                                             template_id, template_project, template_region, \
-                                                             refresh_mode, refresh_frequency, refresh_unit, \
-                                                             tag_history, overwrite)
-        
-        if config_type == 'DYNAMIC_TAG_TABLE':
-            new_config_uuid = self.write_dynamic_table_config(config_status, fields, included_uris, excluded_uris, \
-                                                            template_uuid, template_id, template_project, template_region, \
-                                                            refresh_mode, refresh_frequency, refresh_unit, tag_history)
-                
-        if config_type == 'ENTRY_CREATE':
-            new_config_uuid = self.write_entry_config(config_status, fields, included_uris, excluded_uris, \
-                                                      template_uuid, template_id, template_project, template_region, 
-                                                      refresh_mode, refresh_frequency, refresh_unit, tag_history)
-                                                                     
-        if config_type == 'GLOSSARY_TAG_ASSET':
-            new_config_uuid = self.write_glossary_asset_config(config_status, fields, mapping_table, included_uris, excluded_uris, \
-                                                               template_uuid, template_id, template_project, template_region, \
-                                                               refresh_mode, refresh_frequency, refresh_unit, tag_history, overwrite)
-        # note: no need to return the included_uris_hash
-            
-        return new_config_uuid
-    
-
-    def update_dynamic_column_config(self, old_config_uuid, config_type, config_status, fields, included_columns_query, included_tables_uris,\
-                                     excluded_tables_uris, template_uuid, template_id, template_project, template_region, \
-                                     refresh_mode, refresh_frequency, refresh_unit, tag_history):
-        
-        self.db.collection('dynamic_column_configs').document(old_config_uuid).update({
-            'config_status' : "INACTIVE"
-        })
-        
-        
-        new_config_uuid, included_tables_uris_hash = self.write_dynamic_column_config(config_status, fields, included_columns_query, \
-                                                              included_tables_uris, excluded_tables_uris, \
-                                                              template_uuid, template_id, template_project, template_region, \
-                                                              refresh_mode, refresh_frequency, refresh_unit, tag_history)
-        
-        return new_config_uuid
-        
-
-    def update_sensitive_column_config(self, old_config_uuid, config_status, dlp_dataset, infotype_selection_table, \
-                                       infotype_classification_table, included_tables_uris, excluded_tables_uris, \
-                                       create_policy_tags, taxonomy_id, template_uuid, template_id, template_project, template_region, \
-                                       refresh_mode, refresh_frequency, refresh_unit, tag_history, overwrite):
-        
-        self.db.collection('sensitive_column_configs').document(old_config_uuid).update({
-            'config_status' : "INACTIVE"
-        })
-        
-        config = self.read_config(old_config_uuid, 'SENSITIVE_TAG_COLUMN')
-        
-        new_config_uuid, included_tables_uris_hash = self.write_sensitive_column_config(config_status, config['fields'], dlp_dataset, \
-                                                                          infotype_selection_table, infotype_classification_table, \
-                                                                          included_tables_uris, excluded_tables_uris, \
-                                                                          create_policy_tags, taxonomy_id, template_uuid, \
-                                                                          template_id, template_project, template_region, \
-                                                                          refresh_mode, refresh_frequency, refresh_unit, \
-                                                                          tag_history, overwrite)
-        
-        
-        return new_config_uuid
-                     
-
-    def update_tag_restore_config(self, old_config_uuid, config_status, source_template_uuid, source_template_id, source_template_project, 
-                              source_template_region, target_template_uuid, target_template_id, target_template_project, \
-                              target_template_region, metadata_export_location, tag_history, overwrite=False):
-        
-        self.db.collection('restore_configs').document(old_config_uuid).update({
-            'config_status' : "INACTIVE"
-        })
-        
-        new_config_uuid = self.write_tag_restore_config(config_status, source_template_uuid, source_template_id, source_template_project, \
-                                                        source_template_region, target_template_uuid, target_template_id, \
-                                                        target_template_project, target_template_region, \
-                                                        metadata_export_location, tag_history, overwrite)
-                    
-        return new_config_uuid
-
-
-    def create_update_mapping(self, template_uuid, mapping_dict):
+    def write_mapping(self, template_uuid, mapping_dict):
     
         success = True
         
         mapping_ref = self.db.collection('mapping_registry').document(template_uuid)
         
-        doc = mapping_ref.get()
-        
-        if doc.exists:
+        try:
+            mapping_ref.set(mapping_dict)
             
-            mapping = doc.to_dict()
-                
-            try:
-                mapping_ref.update(mapping_dict)
-            
-            except Exception as e:
-                msg = 'Error updating mapping in Firestore for template_uuid {}'.format(template_uuid)
-                log_error(msg, e) 
-                success = False
-            
-        else:
-
-            try:
-                mapping_ref.set(mapping_dict)
-                
-            except Exception as e:
-                msg = 'Error writing mapping to Firestore for template_uuid {}'.format(template_uuid)
-                log_error(msg, e) 
-                success = False
+        except Exception as e:
+            msg = 'Error writing mapping to Firestore for template_uuid {}'.format(template_uuid)
+            log_error(msg, e) 
+            success = False
         
         return success
 
     
+    def clear_mappings(self):
+        
+        try:
+            docs = self.db.collection('mapping_registry').list_documents()
+
+            for doc in docs:
+                print(f'Deleting mapping {doc.id} => {doc.get().to_dict()}')
+                doc.delete()
+        
+        except Exception as e:
+            msg = 'Error in clear_mappings' 
+            log_error(msg, e) 
