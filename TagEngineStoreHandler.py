@@ -922,58 +922,7 @@ class TagEngineStoreHandler:
         
         return config_uuid
                     
-    
-    def write_tag_restore_config(self, service_account, source_template_uuid, source_template_id, source_template_project, source_template_region, \
-                                 target_template_uuid, target_template_id, target_template_project, target_template_region, \
-                                 metadata_export_location, tag_history, overwrite=True):
-                                    
-        print('** write_tag_restore_config **')
         
-        # check to see if this config already exists
-        configs_ref = self.db.collection('restore_configs')
-        query = configs_ref.where(filter=FieldFilter('source_template_uuid', '==', source_template_uuid))
-        query = query.where(filter=FieldFilter('target_template_uuid', '==', target_template_uuid))
-        query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
-       
-        matches = query.get()
-       
-        for match in matches:
-            if match.exists:
-                config_uuid_match = match.id
-                print('config already exists. Found config_uuid: ' + str(config_uuid_match))
-                
-                # update status to INACTIVE 
-                self.db.collection('restore_configs').document(config_uuid_match).update({
-                    'config_status' : "INACTIVE"
-                })
-                print('Updated status to INACTIVE.')
-       
-        config_uuid = uuid.uuid1().hex
-        configs = self.db.collection('restore_configs')
-        doc_ref = configs.document(config_uuid)
-        
-        doc_ref.set({
-            'config_uuid': config_uuid,
-            'config_type': 'TAG_RESTORE',
-            'config_status': 'ACTIVE', 
-            'creation_time': datetime.utcnow(), 
-            'source_template_uuid': source_template_uuid,
-            'source_template_id': source_template_id, 
-            'source_template_project': source_template_project,
-            'source_template_region': source_template_region,
-            'target_template_uuid': target_template_uuid,
-            'target_template_id': target_template_id,
-            'target_template_project': target_template_project,
-            'target_template_region': target_template_region,
-            'metadata_export_location': metadata_export_location,
-            'tag_history': tag_history,
-            'overwrite': overwrite,
-            'service_account': service_account
-        })
-        
-        return config_uuid
-    
-    
     def lookup_config_collection(self, requested_ct):
         
         coll = None
@@ -1025,14 +974,8 @@ class TagEngineStoreHandler:
             
             config_ref = self.db.collection(coll_name)
             
-            if coll_name == 'restore_configs':
-            
-                if template_exists == True:
-                    config_ref = config_ref.where(filter=FieldFilter('target_template_uuid', '==', template_uuid))
-            else:
-                
-                if template_exists == True:
-                    config_ref = config_ref.where(filter=FieldFilter('template_uuid', '==', template_uuid))
+            if template_exists == True:
+                config_ref = config_ref.where(filter=FieldFilter('template_uuid', '==', template_uuid))
                 
             docs = config_ref.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
             docs = docs.where(filter=FieldFilter('service_account', '==', service_account)).stream()

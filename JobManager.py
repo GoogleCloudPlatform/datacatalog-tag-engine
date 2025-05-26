@@ -73,12 +73,19 @@ class JobManager:
         print('Set job running.')
 
     
-    def record_num_tasks(self, job_uuid, num_tasks):
+    def record_num_tasks(self, job_uuid, num_tasks, config):
+        
+        clone_tags = False
+        
+        if 'clone_tags' in config and config['clone_tags'] == True:
+           clone_tags = True
+           num_tasks = num_tasks * 2
+            
+        if clone_tags == True and 'retire_tags' in config and config['retire_tags'] == True:
+           num_tasks = num_tasks / 2
         
         job_ref = self.db.collection('jobs').document(job_uuid)
         job_ref.update({'task_count': num_tasks})
-        
-        print('record_num_tasks')
         
 
     def calculate_job_completion(self, job_uuid):

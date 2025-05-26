@@ -145,36 +145,6 @@ curl -X POST $TAG_ENGINE_URL/get_job_status -d '{"job_uuid":"f106ae4aef4911edb86
 	-H "Authorization: Bearer $IAM_TOKEN"
 
 
-####### Restore tags from metadata export #######
-
-# export the metadata
-curl --request POST 'https://datacatalog.googleapis.com/v1/projects/tag-engine-run/locations/us-central1:exportMetadata' \
-	--header "X-Goog-User-Project: tag-engine-run" \
-	--header "Authorization: Bearer $(gcloud auth print-access-token)" \
-	--header 'Accept: application/json' \
-	--header 'Content-Type: application/json' \
-	--data '{"bucket":"catalog_metadata_exports","notifyTopic":"projects/tag-engine-run/topics/catalog_metadata_exports"}' \
-	--compressed
-
-# create the config
-curl -X POST $TAG_ENGINE_URL/create_restore_config -d @examples/configs/restore/restore_table_tags.json \
-	-H "Authorization: Bearer $IAM_TOKEN"
-
-# trigger job
-curl -i -X POST $TAG_ENGINE_URL/trigger_job \
-  -d '{"config_type":"RESTORE_TAG","config_uuid":"13bea024d56811ed95362762b95fd865"}' \
-  -H "Authorization: Bearer $IAM_TOKEN"
-
-# create the config
-curl -X POST $TAG_ENGINE_URL/create_restore_config -d @examples/configs/restore/restore_column_tags.json \
-	-H "Authorization: Bearer $IAM_TOKEN"
-
-# trigger job 
-curl -i -X POST $TAG_ENGINE_URL/trigger_job \
-  -d '{"config_type":"RESTORE_TAG","config_uuid":"13bea024d56811ed95362762b95fd865"}' \
-  -H "Authorization: Bearer $IAM_TOKEN"
-
-
 ####### Trigger job by uris #######
 
 curl -i -X POST $TAG_ENGINE_URL/trigger_job \

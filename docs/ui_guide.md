@@ -9,7 +9,6 @@ This is a user guide for the Tag Engine UI.
 *  Dynamic tag column [link](#dynamic_column)
 *  Import tag [link](#import_tags) 
 *  Export tag [link](#export_tags) 
-*  Restore tag [link](#restore_tags) 
 
 #### <a name="get_started"></a> Getting started
 
@@ -87,11 +86,3 @@ These tables can be used to source curation boards and other business intelligen
 
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/export-config-1.png" alt="static" width="600"/>
 <img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/export-config-2.png" alt="static" width="400"/>
-
-
-#### <a name="restore_tags"></a> Restore tags configuration
-
-This config type re-creates Data Catalog tags from metadata export files. It takes as input a metadata export file stored on GCS. The export file must be generated from the Data Catalog export API. 
-
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/restore-config-1.png" alt="static" width="700"/>
-<img src="https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/blob/cloud-run/static/restore-config-2.png" alt="static" width="400"/>

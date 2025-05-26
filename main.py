@@ -47,7 +47,6 @@ import DataCatalogController as dc_controller
 import DataplexController as dp_controller
 import TagEngineStoreHandler as tesh
 import Resources as res
-import BackupFileParser as bfp
 import CsvParser as cp
 import constants
 
@@ -628,17 +627,7 @@ def view_config_options():
             service_account=service_account,
             fields=template_fields,
             tag_history_option=history_enabled)
-    
-    elif action == "Restore Tags":
-        return render_template(
-            'restore_config.html',
-            template_id=template_id,
-            template_project=template_project,
-            template_region=template_region,
-            service_account=service_account,
-            fields=template_fields,
-            tag_history_option=history_enabled)
-            
+                
     elif action == "Switch Template / Return Home" or action == 'Return Home':
         return render_template(
             'home.html',
@@ -928,15 +917,6 @@ def choose_config_action():
             template_region=template_region,
             service_account=service_account,
             config=config)
-            
-    if config_type == "TAG_RESTORE":
-        return render_template(
-            'update_restore_config.html',
-            template_id=template_id,
-            template_project=template_project,
-            template_region=template_region,
-            service_account=service_account,
-            config=config)
     # [END render_template]
     
 
@@ -1205,76 +1185,6 @@ def process_dynamic_column_config():
         tag_history=tag_history_display)
     # [END render_template]
 
-
-@app.route('/process_restore_config', methods=['POST'])
-def process_restore_config():
-    
-    template_id = request.form['template_id']
-    template_project = request.form['template_project']
-    template_region = request.form['template_region']
-    service_account = request.form['service_account']
-    action = request.form['action']
-    
-    credentials, success = get_target_credentials(service_account)
-    
-    if success == False:
-        print('Error acquiring credentials from', service_account)
-    
-    dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
-    template = dcc.get_template()
-    
-    if action == "Cancel Changes":
-        
-        return render_template(
-            'tag_template.html',
-            template_id=template_id,
-            template_project=template_project,
-            template_region=template_region, 
-            service_account=service_account, 
-            fields=template)
-            
-    source_template_id = request.form['source_template_id']
-    source_template_project = request.form['source_template_project']
-    source_template_region = request.form['source_template_region']
-    
-    target_template_id = request.form['target_template_id']
-    target_template_project = request.form['target_template_project']
-    target_template_region = request.form['target_template_region']
-    
-    metadata_export_location = request.form['metadata_export_location']
-    
-    action = request.form['action']
-      
-    tag_history_option, _ = store.read_tag_history_settings()
-    
-    if tag_history_option == True:
-        tag_history_display = "ON"
-    else:
-        tag_history_display = "OFF"
-        
-    source_template_uuid = store.write_tag_template(source_template_id, source_template_project, source_template_region)
-    target_template_uuid = store.write_tag_template(target_template_id, target_template_project, target_template_region)
-    
-    config_uuid = store.write_tag_restore_config(service_account, source_template_uuid, source_template_id, source_template_project, \
-                                                 source_template_region, target_template_uuid, target_template_id, target_template_project, \
-                                                 target_template_region, metadata_export_location, tag_history_option)                                                      
-
-    # [END process_restore_config]
-    # [START render_template]
-    return render_template(
-        'created_restore_config.html',
-        config_uuid=config_uuid,
-        config_type='RESTORE_TAG',
-        source_template_id=source_template_id,
-        source_template_project=source_template_project,
-        source_template_region=source_template_region,
-        target_template_id=target_template_id,
-        target_template_project=target_template_project,
-        target_template_region=target_template_region,
-        service_account = service_account,
-        metadata_export_location=metadata_export_location,
-        tag_history=tag_history_display)
-    # [END render_template]
 
 # there are two actions that result in this route, when creating new configs and when updating existing ones
 # when updating existing configs, you need to make changes to the current one (as opposed to creating a new one)
@@ -1914,96 +1824,6 @@ def create_export_config():
     return jsonify(config_uuid=config_uuid, config_type='TAG_EXPORT')
 
 
-"""
-Args:
-    source_template_id: The tag template id whose tags are to be restored
-    source_template_project: The source tag template's project id 
-    source_template_region: The source tag template's region 
-    target_template_id: The tag template id whose tags are to be restored
-    target_template_project: The source tag template's project id 
-    target_template_region: The source tag template's region
-    metadata_export_location: The path to the export files on GCS (Cloud Storage)
-Returns:
-    {config_type, config_uuid} 
-"""
-@app.route("/create_restore_config", methods=['POST'])
-def create_restore_config():
-    
-    json_request = request.get_json(force=True) 
-    print('json request: ', json_request)
-    
-    status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
-    
-    if status == False:
-        return jsonify(response), 400
-    
-    if 'source_template_id' in json_request:
-        source_template_id = json_request['source_template_id']
-    else:
-        print("The restore_tags request requires a source_template_id parameter.")
-        resp = jsonify(success=False)
-        return resp
-
-    if 'source_template_project' in json_request:
-        source_template_project = json_request['source_template_project']
-    else:
-        print("The restore_tags request requires a source_template_project parameter.")
-        resp = jsonify(success=False)
-        return resp
-    
-    if 'source_template_region' in json_request:
-        source_template_region = json_request['source_template_region']
-    else:
-        print("The restore_tags request requires a source_template_region parameter.")
-        resp = jsonify(success=False)
-        return resp
-       
-    if 'target_template_id' in json_request:
-        target_template_id = json_request['target_template_id']
-    else:
-        print("The restore_tags request requires a target_template_id parameter.")
-        resp = jsonify(success=False)
-        return resp
-
-    if 'target_template_project' in json_request:
-        target_template_project = json_request['target_template_project']
-    else:
-        print("The restore_tags request requires a target_template_project parameter.")
-        resp = jsonify(success=False)
-        return resp
-    
-    if 'target_template_region' in json_request:
-        target_template_region = json_request['target_template_region']
-    else:
-        print("The restore_tags request requires a target_template_region parameter.")
-        resp = jsonify(success=False)
-        return resp
-
-    if 'metadata_export_location' in json_request:
-        metadata_export_location = json_request['metadata_export_location']
-    else:
-        print("The restore_tags request requires the metadata_export_location parameter.")
-        resp = jsonify(success=False)
-        return resp
-
-    source_template_uuid = store.write_tag_template(source_template_id, source_template_project, source_template_region)
-    target_template_uuid = store.write_tag_template(target_template_id, target_template_project, target_template_region)
-    
-    tag_history_option, _ = store.read_tag_history_settings()
-
-    if 'overwrite' in json_request:  
-        overwrite = json_request['overwrite']
-    else:
-        overwrite = True
-        
-    config_uuid = store.write_tag_restore_config(tag_creator_sa, source_template_uuid, source_template_id, \
-                                                source_template_project, source_template_region, \
-                                                target_template_uuid, target_template_id, \
-                                                target_template_project, target_template_region, \
-                                                metadata_export_location, tag_history_option, overwrite)                                                      
-    
-    return jsonify(config_uuid=config_uuid, config_type='TAG_RESTORE')
-
 
 @app.route("/copy_tags", methods=['POST'])
 def copy_tags():
@@ -2556,20 +2376,16 @@ def _split_work():
        
     re = res.Resources(credentials) 
     
-    # dynamic table and column 
     if config_type in ('TAG_DYNAMIC_TABLE', 'TAG_DYNAMIC_TABLE'):
         uris = list(re.get_resources(config.get('included_tables_uris'), config.get('excluded_tables_uris', None)))
         
         print('inside _split_work() uris: ', uris)
         
-        config = store.read_config(tag_creator_sa, config_uuid, config_type)
-        num_tasks = tm.calculate_num_tasks(len(uris), config)
-        
-        jm.record_num_tasks(job_uuid, num_tasks)
+        config = store.read_config(tag_creator_sa, config_uuid, config_type)        
+        jm.record_num_tasks(job_uuid, len(uris), config)
         jm.update_job_running(job_uuid) 
         tm.create_config_uuid_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, config_uuid, config_type, uris)
            
-    # import or restore config type
     if config_type == 'TAG_IMPORT':
                     
         try:
@@ -2643,33 +2459,10 @@ def _split_work():
             store.update_tag_import_config(config_uuid, None, config.get('data_asset_region'), None)
             
         config = store.read_config(tag_creator_sa, config_uuid, config_type)
-        num_tasks = tm.calculate_num_tasks(len(extracted_tags), config)
-        
-        jm.record_num_tasks(job_uuid, num_tasks)
+        jm.record_num_tasks(job_uuid, len(extracted_tags), config)
         jm.update_job_running(job_uuid) 
         tm.create_tag_extract_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, config_uuid, config_type, extracted_tags)
 
-
-    if config_type == 'TAG_RESTORE':
-        bkp_files = list(re.get_resources(config.get('metadata_export_location'), None))
-    
-        #print('bkp_files: ', bkp_files)
-        extracted_tags = []
-    
-        for bkp_file in bkp_files:
-            extracted_tags.append(bfp.BackupFileParser.extract_tags(credentials, \
-                                                                    config.get('source_template_id'), \
-                                                                    config.get('source_template_project'), \
-                                                                    bkp_file))
-         
-        # no tags were extracted from the CSV files
-        if extracted_tags == [[]]:
-           resp = jsonify(success=False)
-           return resp
-        
-        jm.record_num_tasks(job_uuid, len(extracted_tags))
-        jm.update_job_running(job_uuid) 
-        tm.create_tag_extract_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, config_uuid, config_type, extracted_tags)
     
     # export tag config
     if config_type == 'TAG_EXPORT':
@@ -2744,25 +2537,6 @@ def _run_task():
            
     if config_type == 'TAG_EXPORT':
         dcc = dc_controller.DataCatalogController(credentials)
-    
-    elif config_type == 'TAG_RESTORE':
-        
-        if 'target_template_id' not in config or 'target_template_project' not in config or 'target_template_region' not in config:
-            response = {
-                    "status": "error",
-                    "message": "Request JSON is missing some required target tag template parameters",
-            }
-            return jsonify(response), 400
-        if 'source_template_id' not in config or 'source_template_project' not in config or 'source_template_region' not in config:
-            response = {
-                    "status": "error",
-                    "message": "Request JSON is missing some required source tag template parameters",
-            }
-            return jsonify(response), 400
-        
-        dcc = dc_controller.DataCatalogController(credentials, tag_creator_sa, tag_invoker_sa, \
-                                                    config['target_template_id'], config['target_template_project'], 
-                                                    config['target_template_region'])
     
     else:
         # handles most config types
@@ -2962,12 +2736,7 @@ def _run_task():
                                     
     if config_type == 'TAG_EXPORT':
         creation_status = dcc.apply_export_config(config['config_uuid'], config['target_project'], config['target_dataset'], config['target_region'], uri)
-    
-    
-    if config_type == 'TAG_RESTORE':
-        creation_status = dcc.apply_restore_config(job_uuid, config_uuid, tag_extract, \
-                                                   config['tag_history'], config['overwrite'])
-                                              
+                                                  
     if creation_status == constants.SUCCESS:
         tm.update_task_status(shard_uuid, task_uuid, 'SUCCESS')
     else:

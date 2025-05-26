@@ -8,7 +8,6 @@ This page lists the API methods for Tag Engine.
 * `dynamic_column_tags`: creates dynamic tags on BigQuery columns
 * `import_tags`: imports tags from a CSV file to either BigQuery tables, views and datasets or columns
 * `export_tags`: exports tags from Data Catalog to BigQuery
-* `restore_tags`: restores tags from a Data Catalog metadata export file
 * `get_job_status`: gets the status of a job
 * `scheduled_auto_updates`: updates all the tags whose configurations set to refresh_mode = 'AUTO'
 
@@ -55,15 +54,6 @@ POST [TAG_ENGINE_URL]/export_tags -d datacatalog-tag-engine/examples/export_conf
 Example 2:
 ```
 POST [TAG_ENGINE_URL]/export_tags -d datacatalog-tag-engine/examples/export_configs/export_tags_by_folder.json
-``` 
-
-
-#### restore_tags
-
-restores tags from a Data Catalog metadata export file. Requires the Data Catalog export metadata feature. 
-
-```
-POST [TAG_ENGINE_URL]/restore_tags -d datacatalog-tag-engine/examples/restore_configs/restore_table_tags.json
 ``` 
 
 #### get_job_status
