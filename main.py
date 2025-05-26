@@ -2376,7 +2376,7 @@ def _split_work():
        
     re = res.Resources(credentials) 
     
-    if config_type in ('TAG_DYNAMIC_TABLE', 'TAG_DYNAMIC_TABLE'):
+    if config_type in ('DYNAMIC_TAG_TABLE', 'DYNAMIC_TAG_COLUMN'):
         uris = list(re.get_resources(config.get('included_tables_uris'), config.get('excluded_tables_uris', None)))
         
         print('inside _split_work() uris: ', uris)

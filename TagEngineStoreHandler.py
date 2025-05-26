@@ -330,26 +330,22 @@ class TagEngineStoreHandler:
         query = query.where(filter=FieldFilter('config_type', '==', 'DYNAMIC_TAG_TABLE'))
         query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
        
-        matches = query.get()
+        config_matches = query.get()
        
-        for matching_config in config_results:
-            
-            if matching_config.exists:
-                matching_config_uuid = matching_config.id
-                matching_config_dict = matching_config.to_dict()
+        for config_match in config_matches:
+            if config_match.exists:
+                config_match_dict = config_match.to_dict()
                 
-                if all(key in matching_config_dict for key in ('clone_tags', 'retire_tags')):  
-                    if matching_config_dict['clone_tags'] == clone_tags and matching_config_dict['retire_tags'] == retire_tags:
-                        print('Config already exists. Returning existing config_uuid:', matching_config.id)
-                        return matched_config.id
+                if all(key in config_match_dict for key in ('clone_tags', 'retire_tags')):  
+                    if config_match_dict['clone_tags'] == clone_tags and config_match_dict['retire_tags'] == retire_tags:
+                        print('config already exists. Returning existing config_uuid:', config_match.id)
                     else:
-                        # existing config doesn't have matching clone_tags and retire_tags fields
                         break
                 else:    
-                    # clone_tags and retire_tags fields don't exist in the config
-                    print('Config already exists. Returning existing config_uuid:', matching_config.id)
-                    return matched_config.id
-       
+                    # clone_tags and retire_tags don't exist in the config
+                    print('config already exists. Returning existing config_uuid:', config_match.id)
+                return config_match.id
+
         config_uuid = uuid.uuid1().hex
         config = self.db.collection('dynamic_table_configs')
         doc_ref = config.document(config_uuid)
@@ -503,27 +499,22 @@ class TagEngineStoreHandler:
         query = query.where(filter=FieldFilter('config_type', '==', 'DYNAMIC_TAG_COLUMN'))
         query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
        
-        config_results = query.get()
+        config_matches = query.get()
        
-        for matching_config in config_results:
-            
-            if matching_config.exists:
-                matching_config_uuid = matching_config.id
-                matching_config_dict = matching_config.to_dict()
+        for config_match in config_matches:
+            if config_match.exists:
+                config_match_dict = config_match.to_dict()
                 
-                if all(key in matching_config_dict for key in ('clone_tags', 'retire_tags')):  
-                    if matching_config_dict['clone_tags'] == clone_tags and matching_config_dict['retire_tags'] == retire_tags:
-                        print('Config already exists. Returning existing config_uuid:', matching_config.id)
-                        return matched_config.id
+                if all(key in config_match_dict for key in ('clone_tags', 'retire_tags')):  
+                    if config_match_dict['clone_tags'] == clone_tags and config_match_dict['retire_tags'] == retire_tags:
+                        print('config already exists. Returning existing config_uuid:', config_match.id)
                     else:
-                        # existing config doesn't have matching clone_tags and retire_tags fields
                         break
                 else:    
-                    # clone_tags and retire_tags fields don't exist in the config
-                    print('Config already exists. Returning existing config_uuid:', matching_config.id)
-                    return matched_config.id
-                
-                       
+                    # clone_tags and retire_tags don't exist in the config
+                    print('config already exists. Returning existing config_uuid:', config_match.id)
+                return config_match.id
+          
         config_uuid = uuid.uuid1().hex
         config = self.db.collection('dynamic_column_configs')
         doc_ref = config.document(config_uuid)
@@ -706,21 +697,21 @@ class TagEngineStoreHandler:
         query = query.where(filter=FieldFilter('metadata_import_location', '==', metadata_import_location))
         query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
         
-        matches = query.get()
+        config_matches = query.get()
        
-        for matched_config in matches:
-            if matched_config.exists:
-                matched_config_dict = matched_config.to_dict()
+        for config_match in config_matches:
+            if config_match.exists:
+                config_match_dict = config_match.to_dict()
                 
-                if all(key in matched_config_dict for key in ('clone_tags', 'retire_tags')):  
-                    if matched_config_dict['clone_tags'] == clone_tags and matched_config_dict['retire_tags'] == retire_tags:
-                        print('config already exists. Returning existing config_uuid:', matched_config.id)
+                if all(key in config_match_dict for key in ('clone_tags', 'retire_tags')):  
+                    if config_match_dict['clone_tags'] == clone_tags and config_match_dict['retire_tags'] == retire_tags:
+                        print('config already exists. Returning existing config_uuid:', config_match.id)
                     else:
                         break
                 else:    
                     # clone_tags and retire_tags don't exist in the config
-                    print('config already exists. Returning existing config_uuid:', matched_config.id)
-                return matched_config.id
+                    print('config already exists. Returning existing config_uuid:', config_match.id)
+                return config_match.id
        
         # create a new config because we did not find a matching one
         config_uuid = uuid.uuid1().hex
