@@ -37,3 +37,5 @@ GCS_RES = 'GCS'
 SPAN_RES = 'SPAN' # future, not yet implemented
 PUBSUB_RES = 'PUBSUB' # future, not yet implemented
 DYNAMIC_TAG = 2
+DATACATALOG = "datacatalog"
+DATAPLEX = "dataplex"

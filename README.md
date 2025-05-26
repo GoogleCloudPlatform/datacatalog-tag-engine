@@ -91,16 +91,18 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	TAG_HISTORY_DATASET
 	ENABLE_JOB_METADATA
 	JOB_METADATA_PROJECT
-	JOB_METADATA_DATASET  
+	JOB_METADATA_DATASET
+	CLONE_TAGS
+	RETIRE_TAGS  
 	```
 
    A couple of notes: <br>
 
    - The variable `ENABLE_AUTH` is a boolean. When set to `True`, Tag Engine verifies that the end user is authorized to use `TAG_CREATOR_SA` prior to processing their tag requests. This is the recommended value. <br>
 
-   - The `tagengine.ini` file also has two additional variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. These determine the names of the cloud task queues. You do not need to change them. If you change their name, you need to also change them in the `deploy/variables.tf`.<br><br> 
-
-
+   - The `tagengine.ini` file also has two additional variables, `INJECTOR_QUEUE` and `WORK_QUEUE`. These determine the names of the cloud task queues. You do not need to change them. If you change their name, you need to also change them in the `deploy/variables.tf`.<br>
+   
+   - The `CLONE_TAGS` and `RETIRE_TAGS` are new variables. When set to True, `CLONE_TAGS` copies the tags to aspects at job execution time without the need for a separate Tag Engine configuration to create the aspects. When `CLONE_TAGS` and `RETIRE_TAGS` are both set to True, the tags don't get created, only the aspects do. <br><br>
 
 
 ### <a name="test-dataplex-api"></a> Part 2: Testing your Tag Engine API setup with Dataplex

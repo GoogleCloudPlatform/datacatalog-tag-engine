@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import uuid, hashlib, datetime, json, configparser, math
+import uuid, hashlib, datetime, time, json, configparser, math
 import constants
 from google.cloud import firestore
 from google.cloud import tasks_v2
@@ -51,7 +51,7 @@ class TaskManager:
 
 ##################### API METHODS #################
         
-    def create_config_uuid_tasks(self, tag_creator_account, tag_invoker_account, job_uuid, config_uuid, config_type, uris):
+    def create_config_uuid_tasks(self, tag_creator_account, tag_invoker_account, job_uuid, config_uuid, config_type, uris, mode):
         
         # create shards of 1000 tasks
         if len(uris) > self.tasks_per_shard:
@@ -64,7 +64,7 @@ class TaskManager:
         
         for shard_index in range(0, shards):
             
-            shard_id_raw = job_uuid + str(shard_index)
+            shard_id_raw = job_uuid + str(time.time())
             shard_uuid = hashlib.md5(shard_id_raw.encode()).hexdigest()
             self._create_shard(job_uuid, shard_uuid)
 
@@ -79,23 +79,23 @@ class TaskManager:
                 
                 task_id = hashlib.md5(task_id_raw.encode()).hexdigest()
             
-                task_uuid = self._record_config_uuid_task(job_uuid, shard_uuid, task_id, config_uuid, config_type, uri_val)
-                self._create_config_uuid_task(tag_creator_account, tag_invoker_account, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, uri_val)
+                task_uuid = self._record_config_uuid_task(job_uuid, shard_uuid, task_id, config_uuid, config_type, uri_val, mode)
+                self._create_config_uuid_task(tag_creator_account, tag_invoker_account, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, uri_val, mode)
                 
                 task_counter += 1
                 task_running_total += 1
                 
                 if task_counter == self.tasks_per_shard:
-                    self._update_shard_tasks(job_uuid, shard_uuid, task_counter)
+                    self._update_shard_tasks(shard_uuid, task_counter)
                     task_counter = 0
                     break
         
         # update shard with last task_counter
         if task_counter > 0:    
-            self._update_shard_tasks(job_uuid, shard_uuid, task_counter)
+            self._update_shard_tasks(shard_uuid, task_counter)
 
     
-    def create_tag_extract_tasks(self, tag_creator_account, tag_invoker_account, job_uuid, config_uuid, config_type, tag_extract_list):
+    def create_tag_extract_tasks(self, tag_creator_account, tag_invoker_account, job_uuid, config_uuid, config_type, tag_extract_list, mode):
         
         # create shards of 5000 records
         if len(tag_extract_list) > self.tasks_per_shard:
@@ -108,7 +108,7 @@ class TaskManager:
         
         for shard_index in range(0, shards):
             
-            shard_id_raw = job_uuid + str(shard_index)
+            shard_id_raw = job_uuid + str(time.time())
             shard_uuid = hashlib.md5(shard_id_raw.encode()).hexdigest()
             self._create_shard(job_uuid, shard_uuid)
 
@@ -124,20 +124,20 @@ class TaskManager:
                 
                 #print('task_id: ', task_id)
 
-                task_uuid = self._record_tag_extract_task(job_uuid, shard_uuid, task_id, config_uuid, config_type, extract_val)
-                self._create_tag_extract_task(tag_creator_account, tag_invoker_account, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, extract_val)
+                task_uuid = self._record_tag_extract_task(job_uuid, shard_uuid, task_id, config_uuid, config_type, extract_val, mode)
+                self._create_tag_extract_task(tag_creator_account, tag_invoker_account, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, extract_val, mode)
                 
                 task_counter += 1
                 task_running_total += 1
                 
                 if task_counter == self.tasks_per_shard:
-                    self._update_shard_tasks(job_uuid, shard_uuid, task_counter)
+                    self._update_shard_tasks(shard_uuid, task_counter)
                     task_counter = 0
                     break
         
         # update shard with last task_counter
         if task_counter > 0:    
-            self._update_shard_tasks(job_uuid, shard_uuid, task_counter)
+            self._update_shard_tasks(shard_uuid, task_counter)
 
          
     def update_task_status(self, shard_uuid, task_uuid, status):     
@@ -167,21 +167,21 @@ class TaskManager:
         shard_ref.set({
             'shard_uuid': shard_uuid,   
             'job_uuid': job_uuid,
-            'tasks_ran': 0,
+            'task_count': 0,
             'tasks_success': 0,
             'tasks_failed': 0,
             'creation_time': datetime.datetime.utcnow()
         })
         
     
-    def _update_shard_tasks(self, job_uuid, shard_uuid, task_counter):
+    def _update_shard_tasks(self, shard_uuid, task_counter):
         
         #print('*** _update_shard ***')
 
-        self.db.collection('shards').document(shard_uuid).update({'task_count': task_counter});
+        self.db.collection('shards').document(shard_uuid).update({'task_count': firestore.Increment(task_counter)});
         
 
-    def _record_config_uuid_task(self, job_uuid, shard_uuid, task_id, config_uuid, config_type, uri):
+    def _record_config_uuid_task(self, job_uuid, shard_uuid, task_id, config_uuid, config_type, uri, mode):
         
         #print('*** _record_config_uuid_task ***')
         
@@ -198,6 +198,7 @@ class TaskManager:
             'config_type': config_type,
             'uri': uri,
             'status':  'PENDING',
+            'mode': mode,
             'creation_time': datetime.datetime.utcnow()
         })
         
@@ -206,7 +207,7 @@ class TaskManager:
         return task_uuid    
     
     
-    def _record_tag_extract_task(self, job_uuid, shard_uuid, task_id, config_uuid, config_type, extract):
+    def _record_tag_extract_task(self, job_uuid, shard_uuid, task_id, config_uuid, config_type, extract, mode):
         
         print('*** _record_task ***')
         
@@ -223,6 +224,7 @@ class TaskManager:
             'config_type': config_type,
             'tag_extract': extract,
             'status':  'PENDING',
+            'mode': mode,
             'creation_time': datetime.datetime.utcnow()
         })
         
@@ -232,13 +234,13 @@ class TaskManager:
     
     
     def _create_config_uuid_task(self, tag_creator_account, tag_invoker_account, job_uuid, shard_uuid, task_uuid, task_id, \
-                                 config_uuid, config_type, uri):
+                                 config_uuid, config_type, uri, mode):
         
         success = True
         
         payload = {'job_uuid': job_uuid, 'shard_uuid': shard_uuid, 'task_uuid': task_uuid, 'config_uuid': config_uuid, \
                    'config_type': config_type, 'uri': uri, 'tag_creator_account': tag_creator_account, \
-                   'tag_invoker_account': tag_invoker_account}
+                   'tag_invoker_account': tag_invoker_account, 'mode': mode}
         
         client = tasks_v2.CloudTasksClient()
         parent = client.queue_path(self.tag_engine_project, self.tag_engine_region, self.tag_engine_queue)
@@ -254,7 +256,7 @@ class TaskManager:
                 'oidc_token': {'service_account_email': self.tag_engine_sa, 'audience': self.task_handler_uri}
             }
         }
-        print('task request:', task)
+        #print('task request:', task)
 
         try:
             task = client.create_task(parent=parent, task=task)
@@ -268,13 +270,13 @@ class TaskManager:
         return success
                   
         
-    def _create_tag_extract_task(self, tag_creator_account, tag_invoker_account, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, extract):
+    def _create_tag_extract_task(self, tag_creator_account, tag_invoker_account, job_uuid, shard_uuid, task_uuid, task_id, config_uuid, config_type, extract, mode):
         
         success = True
     
         payload = {'job_uuid': job_uuid, 'shard_uuid': shard_uuid, 'task_uuid': task_uuid, 'config_uuid': config_uuid, \
                    'config_type': config_type, 'tag_extract': extract, 'tag_creator_account': tag_creator_account, \
-                   'tag_invoker_account': tag_invoker_account}
+                   'tag_invoker_account': tag_invoker_account, 'mode': mode}
         
         client = tasks_v2.CloudTasksClient()
         parent = client.queue_path(self.tag_engine_project, self.tag_engine_region, self.tag_engine_queue)
@@ -291,11 +293,11 @@ class TaskManager:
             }
         }
         
-        print('task request:', task)
+        #print('task request:', task)
 
         try:
             task = client.create_task(parent=parent, task=task)
-            print('task response:', task)
+            #print('task response:', task)
         
         except Exception as e:
             print('Error: could not create task for uri', self.task_handler_uri, '. Error: ', e)
@@ -321,6 +323,8 @@ class TaskManager:
     
     def _set_rollup_tasks_running(self, shard_uuid):
         
+        print('*** _set_rollup_tasks_running ***')
+        
         shard_ref = self.db.collection('shards').document(shard_uuid)
         shard_ref.update({'tasks_running': firestore.Increment(1)})
     
@@ -340,6 +344,8 @@ class TaskManager:
 
 
     def _set_rollup_tasks_success(self, shard_uuid):
+        
+        print('*** _set_rollup_tasks_success ***')
         
         shard_ref = self.db.collection('shards').document(shard_uuid)
         shard_ref.update({'tasks_success': firestore.Increment(1), 'tasks_running': firestore.Increment(-1)})
