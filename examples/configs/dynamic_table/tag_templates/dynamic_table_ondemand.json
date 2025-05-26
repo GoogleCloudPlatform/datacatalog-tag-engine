@@ -14,5 +14,7 @@
     ],
     "included_tables_uris": "bigquery/project/tag-engine-develop/dataset/crm/*",
     "excluded_tables_uris": "",
-    "refresh_mode": "ON_DEMAND"
+    "refresh_mode": "ON_DEMAND",
+    "clone_tags": true,
+    "retire_tags": false   
 }

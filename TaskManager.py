@@ -155,6 +155,21 @@ class TaskManager:
             self._set_rollup_tasks_failed(shard_uuid)
 
 
+    def calculate_num_tasks(self, base_tasks, config):
+        
+        sum_tasks = base_tasks
+        clone_tags = False
+        
+        if 'clone_tags' in config and config['clone_tags'] == True:
+           clone_tags = True
+           sum_tasks = sum_tasks * 2
+            
+        if clone_tags == True and 'retire_tags' in config and config['retire_tags'] == True:
+           sum_tasks = sum_tasks / 2
+           
+        return sum_tasks
+
+
 ################ INTERNAL PROCESSING METHODS #################
 
     def _create_shard(self, job_uuid, shard_uuid):

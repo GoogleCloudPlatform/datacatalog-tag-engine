@@ -954,7 +954,7 @@ class DataCatalogController:
        op_status = constants.SUCCESS
        
        try:
-           print('do {}, tag: {}'.format(action, tag))
+           # print('do {}, tag: {}'.format(action, tag))
            
            if action == 'delete':
                response = self.client.delete_tag(name=tag.name)

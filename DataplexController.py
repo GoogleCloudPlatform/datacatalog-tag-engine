@@ -737,7 +737,7 @@ class DataplexController:
             # Note: field_values is of type list
             fields, error_exists = self.run_combined_query(combined_query, target_column, fields, job_uuid)
             
-            print('fields:', fields)
+            # print('fields:', fields)
 
             if error_exists:
                 op_status = constants.ERROR

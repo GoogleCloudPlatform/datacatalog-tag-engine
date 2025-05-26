@@ -440,8 +440,8 @@ class BigQueryUtils:
             print('Error while writing to tag history table:', e)
             if '404' in str(e):
                 # table isn't quite ready to be written to
-                print('Tag history table not ready to be written to. Sleeping for 5 seconds.')
-                time.sleep(5)
+                print('Tag history table not ready to be written to. Sleeping for 30 seconds.')
+                time.sleep(30)
                 try:
                     status = self.client.insert_rows_json(table_id, row_to_insert) 
                     print('Retrying insert row into tag history table. Return status: ', status) 

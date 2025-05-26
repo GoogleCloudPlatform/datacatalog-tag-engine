@@ -1525,6 +1525,8 @@ Args:
     refresh_mode: AUTO or ON_DEMAND
     refresh_frequency: positive integer
     refresh_unit: minutes or hours
+    clone_tags: Create tags and their equivalent aspects when set to True (optional param)
+    retire_tags: Create only the equivalent aspects without creating the tags when set to True (optional param) 
 Returns:
     config_uuid 
 """
@@ -1590,6 +1592,16 @@ def create_dynamic_table_config():
     
     tag_history_option, _ = store.read_tag_history_settings()
     
+    if 'clone_tags' in json_request:  
+        clone_tags = json_request['clone_tags']
+    else:
+        clone_tags = CLONE_TAGS
+    
+    if 'retire_tags' in json_request:  
+        retire_tags = json_request['retire_tags']
+    else:
+        retire_tags = RETIRE_TAGS
+    
     if is_dataplex:
         config_uuid = store.write_aspect_dynamic_table_config(tag_creator_sa, fields, included_tables_uris, excluded_tables_uris, \
                                                               aspect_type_uuid, aspect_type_id, aspect_type_project, aspect_type_region, \
@@ -1599,7 +1611,7 @@ def create_dynamic_table_config():
         config_uuid = store.write_dynamic_table_config(tag_creator_sa, fields, included_tables_uris, excluded_tables_uris, \
                                                        template_uuid, template_id, template_project, template_region, \
                                                        refresh_mode, refresh_frequency, refresh_unit, \
-                                                       tag_history_option)                                                      
+                                                       tag_history_option, clone_tags, retire_tags)                                                      
 
 
     return jsonify(config_uuid=config_uuid, config_type='DYNAMIC_TAG_TABLE')
@@ -1616,6 +1628,8 @@ Args:
     refresh_mode: AUTO or ON_DEMAND
     refresh_frequency: positive integer
     refresh_unit: minutes or hours
+    clone_tags: Create tags and their equivalent aspects when set to True (optional param)
+    retire_tags: Create only the equivalent aspects without creating the tags when set to True (optional param)
 Returns:
     job_uuid 
 """
@@ -1684,8 +1698,18 @@ def create_dynamic_column_config():
         excluded_tables_uris = ''
     
     refresh_mode, refresh_frequency, refresh_unit = get_refresh_parameters(json_request)
-    
+        
     tag_history_option, _ = store.read_tag_history_settings()
+    
+    if 'clone_tags' in json_request:  
+        clone_tags = json_request['clone_tags']
+    else:
+        clone_tags = CLONE_TAGS
+    
+    if 'retire_tags' in json_request:  
+        retire_tags = json_request['retire_tags']
+    else:
+        retire_tags = RETIRE_TAGS
     
     if is_dataplex:
         config_uuid = store.write_aspect_dynamic_column_config(tag_creator_sa, fields, included_columns_query, included_tables_uris, \
@@ -1694,7 +1718,7 @@ def create_dynamic_column_config():
     else:    
         config_uuid = store.write_dynamic_column_config(tag_creator_sa, fields, included_columns_query, included_tables_uris, \
                                                         excluded_tables_uris, template_uuid, template_id, template_project, template_region, \
-                                                        refresh_mode, refresh_frequency, refresh_unit, tag_history_option)                                                      
+                                                        refresh_mode, refresh_frequency, refresh_unit, tag_history_option, clone_tags, retire_tags)                                                      
 
 
     return jsonify(config_uuid=config_uuid, config_type='DYNAMIC_TAG_COLUMN')
@@ -1712,9 +1736,9 @@ Args:
 	data_asset_type: "bigquery" or "fileset" or "spanner"
 	data_asset_region: The region in which the data assets reside (e.g. us-central1)
     service_account: The email address of the Tag Creator SA (optional param)
-    overwrite: Whether to overwrite the existing tags, True or False, defaults to True (optional param)
     clone_tags: Create tags and their equivalent aspects when set to True (optional param)
     retire_tags: Create only the equivalent aspects without creating the tags when set to True (optional param) 
+    overwrite: Whether to overwrite the existing tags, True or False, defaults to True (optional param)
 Returns:
     {config_type, config_uuid} 
 """
@@ -2532,16 +2556,121 @@ def _split_work():
        
     re = res.Resources(credentials) 
     
-    # dynamic table and dynamic column 
-    if 'included_tables_uris' in config:
+    # dynamic table and column 
+    if config_type in ('TAG_DYNAMIC_TABLE', 'TAG_DYNAMIC_TABLE'):
         uris = list(re.get_resources(config.get('included_tables_uris'), config.get('excluded_tables_uris', None)))
         
         print('inside _split_work() uris: ', uris)
         
-        jm.record_num_tasks(job_uuid, len(uris))
+        config = store.read_config(tag_creator_sa, config_uuid, config_type)
+        num_tasks = tm.calculate_num_tasks(len(uris), config)
+        
+        jm.record_num_tasks(job_uuid, num_tasks)
         jm.update_job_running(job_uuid) 
         tm.create_config_uuid_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, config_uuid, config_type, uris)
-       
+           
+    # import or restore config type
+    if config_type == 'TAG_IMPORT':
+                    
+        try:
+            csv_files = list(re.get_resources(config.get('metadata_import_location'), None))
+            print('csv_files: ', csv_files)
+        except Exception as e:
+            msg = 'Error: unable to read CSV from {}'.format(config.get('metadata_import_location'))
+            log_error(msg, e, job_uuid)
+            
+            store.update_job_status(config_uuid, config_type, 'ERROR')
+            jm.set_job_status(job_uuid, 'ERROR')
+            resp = jsonify(success=False)
+            return resp
+        
+        if len(csv_files) == 0:
+            msg = 'Error: unable to read CSV from {}'.format(config.get('metadata_import_location'))
+            error = {'job_uuid': job_uuid, 'msg': msg}
+            print(json.dumps(error))
+            
+            store.update_job_status(config_uuid, config_type, 'ERROR')
+            jm.set_job_status(job_uuid, 'ERROR')
+            resp = jsonify(success=False)
+            return resp
+        
+        extracted_tags = []
+    
+        for csv_file in csv_files:
+            extracted_tags.extend(cp.CsvParser.extract_tags(credentials, csv_file))
+            
+        if len(extracted_tags) == 0:
+            print('Error: unable to extract tags from CSV. Please verify the format of the CSV.') 
+            store.update_job_status(config_uuid, config_type, 'ERROR')
+            jm.set_job_status(job_uuid, 'ERROR')
+            resp = jsonify(success=False)
+            return resp
+            
+        # infer the data_asset_type if not present in the config
+        if 'data_asset_type' not in config or config.get('data_asset_type') == None:
+            if (extracted_tags[0].keys() >= {'dataset'}):
+                config['data_asset_type'] = 'bigquery'
+            elif (extracted_tags[0].keys() >= {'entry_group', 'fileset'}):
+                config['data_asset_type'] = 'fileset'
+            else:
+                print('Error: unable to determine the data asset type of your config (bigquery, fileset, spanner or cloudsql). Please add data_asset_type to your config and verify the format of your CSV.') 
+                store.update_job_status(config_uuid, config_type, 'ERROR')
+                jm.set_job_status(job_uuid, 'ERROR')
+                resp = jsonify(success=False)
+                return resp
+            
+            # save the update to Firestore
+            store.update_tag_import_config(config_uuid, config.get('data_asset_type'), None, None)     
+         
+        # infer the data_asset_region if not present in the config 
+        if 'data_asset_region' not in config or config.get('data_asset_region') == None:
+            if config.get('data_asset_type') == 'bigquery':
+                config['data_asset_region'] = BIGQUERY_REGION
+            elif config.get('data_asset_type') == 'fileset':
+                config['data_asset_region'] = FILESET_REGION
+            elif config.get('data_asset_type') == 'spanner':
+                config['data_asset_region'] = SPANNER_REGION
+            elif config.get('data_asset_type') == 'cloudsql':
+                config['data_asset_region'] = CLOUDSQL_REGION    
+            else:
+                print('Error: unable to determine the data asset region of your config (us-central1, etc.). Please add data_asset_region to your config or add the appropriate default region variable to tagengine.ini.') 
+                store.update_job_status(config_uuid, config_type, 'ERROR')
+                jm.set_job_status(job_uuid, 'ERROR')
+                resp = jsonify(success=False)
+                return resp    
+            
+            # save the update to Firestore
+            store.update_tag_import_config(config_uuid, None, config.get('data_asset_region'), None)
+            
+        config = store.read_config(tag_creator_sa, config_uuid, config_type)
+        num_tasks = tm.calculate_num_tasks(len(extracted_tags), config)
+        
+        jm.record_num_tasks(job_uuid, num_tasks)
+        jm.update_job_running(job_uuid) 
+        tm.create_tag_extract_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, config_uuid, config_type, extracted_tags)
+
+
+    if config_type == 'TAG_RESTORE':
+        bkp_files = list(re.get_resources(config.get('metadata_export_location'), None))
+    
+        #print('bkp_files: ', bkp_files)
+        extracted_tags = []
+    
+        for bkp_file in bkp_files:
+            extracted_tags.append(bfp.BackupFileParser.extract_tags(credentials, \
+                                                                    config.get('source_template_id'), \
+                                                                    config.get('source_template_project'), \
+                                                                    bkp_file))
+         
+        # no tags were extracted from the CSV files
+        if extracted_tags == [[]]:
+           resp = jsonify(success=False)
+           return resp
+        
+        jm.record_num_tasks(job_uuid, len(extracted_tags))
+        jm.update_job_running(job_uuid) 
+        tm.create_tag_extract_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, config_uuid, config_type, extracted_tags)
+    
     # export tag config
     if config_type == 'TAG_EXPORT':
         
@@ -2566,104 +2695,6 @@ def _split_work():
         jm.record_num_tasks(job_uuid, len(uris))
         jm.update_job_running(job_uuid) 
         tm.create_config_uuid_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, config_uuid, config_type, uris)
-    
-    # import or restore tag config
-    if config_type == 'TAG_IMPORT' or config_type == 'TAG_RESTORE':
-                    
-        if config_type == 'TAG_IMPORT':
-            
-            try:
-                csv_files = list(re.get_resources(config.get('metadata_import_location'), None))
-                print('csv_files: ', csv_files)
-            except Exception as e:
-                msg = 'Error: unable to read CSV from {}'.format(config.get('metadata_import_location'))
-                log_error(msg, e, job_uuid)
-                
-                store.update_job_status(config_uuid, config_type, 'ERROR')
-                jm.set_job_status(job_uuid, 'ERROR')
-                resp = jsonify(success=False)
-                return resp
-            
-            if len(csv_files) == 0:
-                msg = 'Error: unable to read CSV from {}'.format(config.get('metadata_import_location'))
-                error = {'job_uuid': job_uuid, 'msg': msg}
-                print(json.dumps(error))
-                
-                store.update_job_status(config_uuid, config_type, 'ERROR')
-                jm.set_job_status(job_uuid, 'ERROR')
-                resp = jsonify(success=False)
-                return resp
-            
-            extracted_tags = []
-        
-            for csv_file in csv_files:
-                extracted_tags.extend(cp.CsvParser.extract_tags(credentials, csv_file))
-                
-            if len(extracted_tags) == 0:
-                print('Error: unable to extract tags from CSV. Please verify the format of the CSV.') 
-                store.update_job_status(config_uuid, config_type, 'ERROR')
-                jm.set_job_status(job_uuid, 'ERROR')
-                resp = jsonify(success=False)
-                return resp
-                
-            # infer the data_asset_type if not present in the config
-            if 'data_asset_type' not in config or config.get('data_asset_type') == None:
-                if (extracted_tags[0].keys() >= {'dataset'}):
-                    config['data_asset_type'] = 'bigquery'
-                elif (extracted_tags[0].keys() >= {'entry_group', 'fileset'}):
-                    config['data_asset_type'] = 'fileset'
-                else:
-                    print('Error: unable to determine the data asset type of your config (bigquery, fileset, spanner or cloudsql). Please add data_asset_type to your config and verify the format of your CSV.') 
-                    store.update_job_status(config_uuid, config_type, 'ERROR')
-                    jm.set_job_status(job_uuid, 'ERROR')
-                    resp = jsonify(success=False)
-                    return resp
-                
-                # save the update to Firestore
-                store.update_tag_import_config(config_uuid, config.get('data_asset_type'), None, None)     
-             
-            # infer the data_asset_region if not present in the config 
-            if 'data_asset_region' not in config or config.get('data_asset_region') == None:
-                if config.get('data_asset_type') == 'bigquery':
-                    config['data_asset_region'] = BIGQUERY_REGION
-                elif config.get('data_asset_type') == 'fileset':
-                    config['data_asset_region'] = FILESET_REGION
-                elif config.get('data_asset_type') == 'spanner':
-                    config['data_asset_region'] = SPANNER_REGION
-                elif config.get('data_asset_type') == 'cloudsql':
-                    config['data_asset_region'] = CLOUDSQL_REGION    
-                else:
-                    print('Error: unable to determine the data asset region of your config (us-central1, etc.). Please add data_asset_region to your config or add the appropriate default region variable to tagengine.ini.') 
-                    store.update_job_status(config_uuid, config_type, 'ERROR')
-                    jm.set_job_status(job_uuid, 'ERROR')
-                    resp = jsonify(success=False)
-                    return resp    
-                
-                # save the update to Firestore
-                store.update_tag_import_config(config_uuid, None, config.get('data_asset_region'), None)
-
-
-        if config_type == 'TAG_RESTORE':
-            bkp_files = list(re.get_resources(config.get('metadata_export_location'), None))
-        
-            #print('bkp_files: ', bkp_files)
-            extracted_tags = []
-        
-            for bkp_file in bkp_files:
-                extracted_tags.append(bfp.BackupFileParser.extract_tags(credentials, \
-                                                                        config.get('source_template_id'), \
-                                                                        config.get('source_template_project'), \
-                                                                        bkp_file))
-             
-        # no tags were extracted from the CSV files
-        if extracted_tags == [[]]:
-           resp = jsonify(success=False)
-           return resp
-        
-        jm.record_num_tasks(job_uuid, len(extracted_tags))
-        jm.update_job_running(job_uuid) 
-        tm.create_tag_extract_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, config_uuid, config_type, extracted_tags)
-    
 
     # update the status of the config, no matter which config type is running
     store.update_job_status(config_uuid, config_type, 'RUNNING')
@@ -2758,7 +2789,63 @@ def _run_task():
         
         if is_dataplex:
             creation_status = dpc.apply_dynamic_table_config(config['fields'], uri, job_uuid, config_uuid, \
-                                                             config['aspect_type_uuid'], config['tag_history']) 
+                                                             config['aspect_type_uuid'], config['tag_history'])
+                                                             
+                                                             
+            if ('clone_tags' in config and config['clone_tags']) or ('retire_tags' in config and config['retire_tags']):
+                
+                # look up the aspect type details
+                mapping = store.lookup_template_aspect_mapping(config['template_uuid'])
+                
+                if mapping == None:
+                
+                    # fail fast, instead of running the job without a proper mapping
+                    response = {
+                            "status": "error",
+                            "message": "Fatal Error: mapping for template_uuid doesn't exist in Firestore",
+                    }
+                    return jsonify(response), 400
+                
+                
+                aspect_type_id = mapping['aspect_type_id']
+                aspect_type_project = mapping['aspect_type_project']
+                aspect_type_region = mapping['aspect_type_region']
+                                
+                # create the tags because the retire_tags flag is unset
+                if config['retire_tags'] != True:
+                    creation_status = dcc.apply_dynamic_table_config(config['fields'], uri, job_uuid, config_uuid, \
+                                                                     config['template_uuid'], config['tag_history'])   
+                
+                # look up the aspect type's uuid
+                aspect_type_exists, aspect_type_uuid = store.read_aspect_type(aspect_type_id, aspect_type_project, aspect_type_region)
+                
+                if aspect_type_exists != True:
+                    
+                    # fail fast, instead of running the job without a proper mapping
+                    response = {
+                            "status": "error",
+                            "message": f"Fatal Error: aspect_type_uuid not found in Firestore for {aspect_type_id}",
+                    }
+                    return jsonify(response), 400
+                
+                
+                # write the aspect config if it doesn't already exist
+                aspect_config_uuid = store.write_aspect_dynamic_table_config(config['service_account'], config['fields'], \
+                                                                            config['included_tables_uris'], config['excluded_tables_uris'], \
+                                                                            aspect_type_uuid, aspect_type_id, aspect_type_project, aspect_type_region, \
+                                                                            config['refresh_mode'], config['refresh_frequency'], \
+                                                                            config['refresh_unit'], config['tag_history'])
+                
+                # init the dataplex controller
+                dpc = dp_controller.DataplexController(credentials, tag_creator_sa, tag_invoker_sa, \
+                                                       aspect_type_id, aspect_type_project, aspect_type_region)
+                                                       
+                                
+                # create the aspects 
+                creation_status = dpc.apply_dynamic_table_config(config['fields'], uri, job_uuid, aspect_config_uuid, \
+                                                                 aspect_type_uuid, config['tag_history'])
+            
+                                                              
         else:                                              
             creation_status = dcc.apply_dynamic_table_config(config['fields'], uri, job_uuid, config_uuid, \
                                                              config['template_uuid'], config['tag_history'])                                               
@@ -2769,9 +2856,62 @@ def _run_task():
             creation_status = dpc.apply_dynamic_column_config(config['fields'], config['included_columns_query'], uri, \
                                                               job_uuid, config_uuid, config['aspect_type_uuid'], config['tag_history'])
         else:
-            creation_status = dcc.apply_dynamic_column_config(config['fields'], config['included_columns_query'], uri, \
-                                                              job_uuid, config_uuid, config['template_uuid'], config['tag_history'])  
-                                                              
+            
+            if ('clone_tags' in config and config['clone_tags']) or ('retire_tags' in config and config['retire_tags']):
+                
+                # look up the aspect type details
+                mapping = store.lookup_template_aspect_mapping(config['template_uuid'])
+                
+                if mapping == None:
+                
+                    # fail fast, instead of running the job without a proper mapping
+                    response = {
+                            "status": "error",
+                            "message": "Fatal Error: mapping for template_uuid doesn't exist in Firestore",
+                    }
+                    return jsonify(response), 400
+                
+                
+                aspect_type_id = mapping['aspect_type_id']
+                aspect_type_project = mapping['aspect_type_project']
+                aspect_type_region = mapping['aspect_type_region']
+                                
+                # create the tags because retire flag not set
+                if config['retire_tags'] != True:
+                    creation_status = dcc.apply_dynamic_column_config(config['fields'], config['included_columns_query'], uri, \
+                                                                      job_uuid, config_uuid, config['template_uuid'], config['tag_history'])  
+                
+                # look up the aspect type's uuid
+                aspect_type_exists, aspect_type_uuid = store.read_aspect_type(aspect_type_id, aspect_type_project, aspect_type_region)
+                
+                if aspect_type_exists != True:
+                    
+                    # fail fast, instead of running the job without a proper mapping
+                    response = {
+                            "status": "error",
+                            "message": f"Fatal Error: aspect_type_uuid not found in Firestore for {aspect_type_id}",
+                    }
+                    return jsonify(response), 400
+                
+                
+                # write the aspect config if it doesn't already exist
+                aspect_config_uuid = store.write_aspect_dynamic_column_config(config['service_account'], config['fields'], \
+                                                                            config['included_columns_query'], \
+                                                                            config['included_tables_uris'], config['excluded_tables_uris'], \
+                                                                            aspect_type_uuid, aspect_type_id, aspect_type_project, aspect_type_region, \
+                                                                            config['refresh_mode'], config['refresh_frequency'], \
+                                                                            config['refresh_unit'], config['tag_history'])
+                
+                # init the dataplex controller
+                dpc = dp_controller.DataplexController(credentials, tag_creator_sa, tag_invoker_sa, \
+                                                       aspect_type_id, aspect_type_project, aspect_type_region)
+                                                       
+                                
+                # create the aspects 
+                creation_status = dpc.apply_dynamic_column_config(config['fields'], config['included_columns_query'], uri, \
+                                                                  job_uuid, aspect_config_uuid, aspect_type_uuid, config['tag_history'])
+            
+                                                        
     if config_type == 'TAG_IMPORT':
         
         if is_dataplex:

@@ -319,7 +319,7 @@ class TagEngineStoreHandler:
     
     def write_dynamic_table_config(self, service_account, fields, included_tables_uris, excluded_tables_uris, template_uuid, \
                                    template_id, template_project, template_region, refresh_mode, refresh_frequency, \
-                                   refresh_unit, tag_history):
+                                   refresh_unit, tag_history, clone_tags, retire_tags):
         
         included_tables_uris_hash = hashlib.md5(included_tables_uris.encode()).hexdigest()
         
@@ -332,16 +332,23 @@ class TagEngineStoreHandler:
        
         matches = query.get()
        
-        for match in matches:
-            if match.exists:
-                config_uuid_match = match.id
-                #print('Config already exists. Config_uuid: ' + str(config_uuid_match))
+        for matching_config in config_results:
+            
+            if matching_config.exists:
+                matching_config_uuid = matching_config.id
+                matching_config_dict = matching_config.to_dict()
                 
-                # update status to INACTIVE 
-                self.db.collection('dynamic_table_configs').document(config_uuid_match).update({
-                    'config_status' : "INACTIVE"
-                })
-                print('Updated status to INACTIVE.')
+                if all(key in matching_config_dict for key in ('clone_tags', 'retire_tags')):  
+                    if matching_config_dict['clone_tags'] == clone_tags and matching_config_dict['retire_tags'] == retire_tags:
+                        print('Config already exists. Returning existing config_uuid:', matching_config.id)
+                        return matched_config.id
+                    else:
+                        # existing config doesn't have matching clone_tags and retire_tags fields
+                        break
+                else:    
+                    # clone_tags and retire_tags fields don't exist in the config
+                    print('Config already exists. Returning existing config_uuid:', matching_config.id)
+                    return matched_config.id
        
         config_uuid = uuid.uuid1().hex
         config = self.db.collection('dynamic_table_configs')
@@ -368,6 +375,8 @@ class TagEngineStoreHandler:
                 'refresh_frequency': delta,
                 'refresh_unit': refresh_unit,
                 'tag_history': tag_history,
+                'clone_tags': clone_tags,
+                'retire_tags': retire_tags,
                 'scheduling_status': 'READY',
                 'next_run': next_run,
                 'version': 1,
@@ -391,6 +400,8 @@ class TagEngineStoreHandler:
                 'refresh_mode': refresh_mode, # ON_DEMAND refresh mode
                 'refresh_frequency': 0,
                 'tag_history': tag_history,
+                'clone_tags': clone_tags,
+                'retire_tags': retire_tags,
                 'version': 1,
                 'service_account': service_account
             })
@@ -418,13 +429,9 @@ class TagEngineStoreHandler:
         for match in matches:
             if match.exists:
                 config_uuid_match = match.id
-                #print('Config already exists. Config_uuid: ' + str(config_uuid_match))
+                print(f'Info: config already exists {config_uuid_match} returning existing config')
+                return config_uuid_match
                 
-                # update status to INACTIVE 
-                self.db.collection('dynamic_table_configs').document(config_uuid_match).update({
-                    'config_status' : "INACTIVE"
-                })
-                print('Updated status to INACTIVE.')
        
         config_uuid = uuid.uuid1().hex
         config = self.db.collection('dynamic_table_configs')
@@ -485,7 +492,7 @@ class TagEngineStoreHandler:
     
     def write_dynamic_column_config(self, service_account, fields, included_columns_query, included_tables_uris, excluded_tables_uris, \
                                     template_uuid, template_id, template_project, template_region, \
-                                    refresh_mode, refresh_frequency, refresh_unit, tag_history):
+                                    refresh_mode, refresh_frequency, refresh_unit, tag_history, clone_tags, retire_tags):
         
         included_tables_uris_hash = hashlib.md5(included_tables_uris.encode()).hexdigest()
         
@@ -496,19 +503,27 @@ class TagEngineStoreHandler:
         query = query.where(filter=FieldFilter('config_type', '==', 'DYNAMIC_TAG_COLUMN'))
         query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
        
-        matches = query.get()
+        config_results = query.get()
        
-        for match in matches:
-            if match.exists:
-                config_uuid_match = match.id
-                #print('Config already exists. Config_uuid: ' + str(config_uuid_match))
+        for matching_config in config_results:
+            
+            if matching_config.exists:
+                matching_config_uuid = matching_config.id
+                matching_config_dict = matching_config.to_dict()
                 
-                # update status to INACTIVE 
-                self.db.collection('dynamic_column_configs').document(config_uuid_match).update({
-                    'config_status' : "INACTIVE"
-                })
-                print('Updated status to INACTIVE.')
-       
+                if all(key in matching_config_dict for key in ('clone_tags', 'retire_tags')):  
+                    if matching_config_dict['clone_tags'] == clone_tags and matching_config_dict['retire_tags'] == retire_tags:
+                        print('Config already exists. Returning existing config_uuid:', matching_config.id)
+                        return matched_config.id
+                    else:
+                        # existing config doesn't have matching clone_tags and retire_tags fields
+                        break
+                else:    
+                    # clone_tags and retire_tags fields don't exist in the config
+                    print('Config already exists. Returning existing config_uuid:', matching_config.id)
+                    return matched_config.id
+                
+                       
         config_uuid = uuid.uuid1().hex
         config = self.db.collection('dynamic_column_configs')
         doc_ref = config.document(config_uuid)
@@ -535,6 +550,8 @@ class TagEngineStoreHandler:
                 'refresh_frequency': delta,
                 'refresh_unit': refresh_unit,
                 'tag_history': tag_history,
+                'clone_tags': clone_tags,
+                'retire_tags': retire_tags,
                 'scheduling_status': 'READY',
                 'next_run': next_run,
                 'version': 1,
@@ -559,6 +576,8 @@ class TagEngineStoreHandler:
                 'refresh_mode': refresh_mode, # ON_DEMAND refresh mode
                 'refresh_frequency': 0,
                 'tag_history': tag_history,
+                'clone_tags': clone_tags,
+                'retire_tags': retire_tags,
                 'version': 1,
                 'service_account': service_account
             })
@@ -582,17 +601,10 @@ class TagEngineStoreHandler:
         query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
        
         matches = query.get()
-       
-        for match in matches:
-            if match.exists:
-                config_uuid_match = match.id
-                #print('Config already exists. Config_uuid: ' + str(config_uuid_match))
-                
-                # update status to INACTIVE 
-                self.db.collection('dynamic_column_configs').document(config_uuid_match).update({
-                    'config_status' : "INACTIVE"
-                })
-                print('Updated status to INACTIVE.')
+
+        for matched_config in matches:
+            if matched_config.exists:
+                return matched_config.id
        
         config_uuid = uuid.uuid1().hex
         config = self.db.collection('dynamic_column_configs')
