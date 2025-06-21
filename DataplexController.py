@@ -15,6 +15,7 @@
 import requests, configparser
 from operator import itemgetter
 import json
+import time
 import os
 
 from google.protobuf import struct_pb2
@@ -69,8 +70,21 @@ class DataplexController:
             #print('aspect_type:', aspect_type)
         
         except Exception as e:
-            msg = f'Error retrieving aspect type {self.aspect_type_path}'
+            msg = f'Error retrieving aspect type'
             log_error(msg, e)
+            
+            # sleep and retry if it's a quota issue
+            if '429' in str(e) or '503' in str(e):
+                msg = 'Info: sleep for 2 minutes due to {}'.format(e)
+                log_info(msg)
+                time.sleep(120)
+ 
+                try:
+                    aspect_type = self.client.get_aspect_type(name=self.aspect_type_path)
+                except Exception as e:
+                    msg = f'Error occurred while retrieving aspect type {self.aspect_type_path} after sleeping for 120 seconds'
+                    log_error(msg, e)
+            
             return aspect_fields
         
         record_fields = aspect_type.metadata_template.record_fields
