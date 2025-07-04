@@ -58,7 +58,8 @@ class DataplexController:
         
     # note: included_fields can be populated or null
     # null = we want to return all the fields from the template
-    def get_aspect_type(self, included_fields=None):
+    # job_uuid and tag_dict used only for error logging
+    def get_aspect_type(self, included_fields=None, job_uuid=None, tag_dict=None):
         
         print('enter get_aspect_type()')
         #print('included_fields:', included_fields)
@@ -70,7 +71,7 @@ class DataplexController:
             #print('aspect_type:', aspect_type)
         
         except Exception as e:
-            msg = f'Error retrieving aspect type'
+            msg = f'Error retrieving aspect type {self.aspect_type_path}. Additional details provided for debugging purposes: job_uuid: {job_uuid}, tag_dict: {tag_dict}'
             log_error(msg, e)
             
             # sleep and retry if it's a quota issue
@@ -82,7 +83,7 @@ class DataplexController:
                 try:
                     aspect_type = self.client.get_aspect_type(name=self.aspect_type_path)
                 except Exception as e:
-                    msg = f'Error occurred while retrieving aspect type {self.aspect_type_path} after sleeping for 120 seconds'
+                    msg = f'Error occurred while retrieving aspect type {self.aspect_type_path} after sleeping for 120 seconds. Additional details provided for debugging purposes: job_uuid: {job_uuid}, tag_dict: {tag_dict}'
                     log_error(msg, e)
             
             return aspect_fields
@@ -418,7 +419,7 @@ class DataplexController:
             return op_status
         
         aspect_fields = []
-        aspect_type_fields = self.get_aspect_type()
+        aspect_type_fields = self.get_aspect_type(included_fields=None, job_uuid=job_uuid, tag_dict=tag_dict)
         #print("aspect_type_fields:", aspect_type_fields)
         
         for field_name in tag_dict:
@@ -859,7 +860,7 @@ class DataplexController:
         
         if tag_history and op_status == constants.SUCCESS:
             bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
-            aspect_type_fields = self.get_aspect_type()
+            aspect_type_fields = self.get_aspect_type(included_fields=None, job_uuid=job_uuid, tag_dict=None)
             success = bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, job_uuid, self.aspect_type_id, aspect_type_fields, uri, target_column, aspect_fields)
             
             if success == False:

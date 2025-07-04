@@ -2390,9 +2390,9 @@ def _split_work():
             jm.update_job_running(job_uuid) 
             tm.create_config_uuid_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, config_uuid, config_type, uris, constants.DATAPLEX)
         else:
-            # datacatalog mode            
-            if ('clone_tags' in config and config['clone_tags']) or ('retire_tags' in config and config['retire_tags']):
-            
+            # clone_tags or retire_tags is set            
+            if ('clone_tags' in config and config['clone_tags']) or ('retire_tags' in config and config['retire_tags']):            
+                
                 # look up the aspect type details
                 mapping = store.lookup_template_aspect_mapping(config['template_uuid'])
             
@@ -2451,6 +2451,13 @@ def _split_work():
                     jm.record_num_tasks(job_uuid, len(uris))
                     jm.update_job_running(job_uuid)
                     tm.create_config_uuid_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, aspect_config_uuid, config_type, uris, constants.DATAPLEX)
+
+            else:
+                # clone_tags and retire_tags not set
+                jm.record_num_tasks(job_uuid, len(uris))
+                jm.update_job_running(job_uuid)
+                tm.create_config_uuid_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, config_uuid, config_type, uris, constants.DATACATALOG)
+                
                
     if config_type == 'TAG_IMPORT':
                     
