@@ -6,7 +6,7 @@ Follow the steps below to put this into effect in your Tag Engine deployment.
 
 1. Create an aspect type in Dataplex for each tag template that you want to clone. Make sure that the fields in your aspect type match the ones in your tag template. 
 
-2. Open the existing `mappings.yaml` and edit the contents of this file based on your mappings. The default `mappings.yaml` is meant for you to modify and shows you how to specify the mappings. Here are the contents of the default file
+2. Open the existing `mappings.yaml` and edit the contents of this file based on your mappings. The default `mappings.yaml`, which is located in the `migrate` directory, is meant for you to modify. The contents of the file show you how to specify the mappings. For convenience, they are copied below:
 
 ```
 mappings:
@@ -24,7 +24,7 @@ mappings:
     aspect_type_region: us-central1
 ```
 
-This shows you two samples mapping entries. It says that for the `data_governance` tag template, Tag Engine should use the `data-governance` aspect type when cloning the tags (and similarly for `data_sensitivity`, use `data-sensitivity`). The `project_id` refers to the GCP project id of the tag template and aspect type while the `region` refers to the GCP location of the tag template and aspect type. 
+This examples shows you two samples mapping entries. It says that for the `data_governance` tag template, Tag Engine should use the `data-governance` aspect type when cloning the tags (and similarly for `data_sensitivity`, use `data-sensitivity`). The `project_id` in each entry refers to the GCP project id of the tag template and aspect type, while the `region` refers to the GCP location of the tag template and aspect type. 
 
 3. If you would like to enable cloning at the system level, add the parameter `CLONE_TAGS` to your `tagengine.ini`. This parameter turns on cloning on all of your jobs by default. When you run a Tag Engine job against a Data Catalog config and `CLONE_TAGS` is one, Tag Engine creates an equivalent config for aspects from the existing tag config (as long as you have the mappings defined in `mappings.yaml`). Tag Engine will then create the tags and aspects as part of the same job execution.  
 
