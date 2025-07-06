@@ -2438,7 +2438,7 @@ def _split_work():
                                                                             refresh_unit, config['tag_history'])
                 
                 
-                if (CLONE_TAGS == True and RETIRE_TAGS == False) or (config['clone_tags'] == True and config['retire_tags'] == False):
+                if (CLONE_TAGS == True and RETIRE_TAGS == False) or (('clone_tags' in config and config['clone_tags'] == True) and ('retire_tags' in config and config['retire_tags'] == False)):
                     
                     # double the number of tasks as we are creating tags and aspects
                     jm.record_num_tasks(job_uuid, (len(uris)*2))
@@ -2447,7 +2447,7 @@ def _split_work():
                     tm.create_config_uuid_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, aspect_config_uuid, config_type, uris, constants.DATAPLEX)
                     
                 # create only the aspects because retire_tags is set
-                if (CLONE_TAGS == True and RETIRE_TAGS == True) or (config['clone_tags'] == True and config['retire_tags'] == True):
+                if (CLONE_TAGS == True and RETIRE_TAGS == True) or (('clone_tags' in config and config['clone_tags'] == True) and ('retire_tags' in config and config['retire_tags'] == True)):
                     jm.record_num_tasks(job_uuid, len(uris))
                     jm.update_job_running(job_uuid)
                     tm.create_config_uuid_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, aspect_config_uuid, config_type, uris, constants.DATAPLEX)

@@ -8,8 +8,8 @@
             "query_expression": "select 'LOGISTICS'"
         },
         {
-            "field_id": "broad_data_category",
-            "query_expression": "select 'CONTENT'"
+            "field_id": "data_creation",
+            "query_expression": "select current_datetime()"
         }
     ],
     "included_columns_query": "select 'c_id'",

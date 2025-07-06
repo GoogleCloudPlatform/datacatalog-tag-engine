@@ -8,13 +8,13 @@
             "query_expression": "select 'LOGISTICS'"
         },
         {
-            "field_id": "broad_data_category",
-            "query_expression": "select 'CONTENT'"
+            "field_id": "data_creation",
+            "query_expression": "select current_datetime()"
         }
     ],
     "included_tables_uris": "bigquery/project/tag-engine-develop/dataset/crm/*",
     "excluded_tables_uris": "",
     "refresh_mode": "ON_DEMAND",
-    "clone_tags": true,
-    "retire_tags": false   
+	"clone_tags": true,
+	"retire_tags": false
 }

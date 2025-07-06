@@ -58,8 +58,8 @@ def register_mappings():
                 print('Error occurred while registering mapping in Firestore. Error:', e)
                 log_error('Error occurred while registering mapping in Firestore. Error:', e)
             
-    print('Wrote', num_mappings, ' template-to-aspect mappings.')
-    log_info(f'Wrote {num_mappings} template-to-aspect mappings.')
+    #print('Wrote', num_mappings, ' template-to-aspect mappings')
+    log_info(f'Wrote {num_mappings} template-to-aspect mappings')
     
  
 if __name__ == '__main__':

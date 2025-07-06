@@ -155,7 +155,6 @@ class DataplexController:
         
         print('*** enter check_column_exists ***')
         print('target_column:', target_column)
-        print('aspects:', aspects)
         
         # figure out if the target column is nested
         if len(target_column.split('.')) > 1:
@@ -534,6 +533,8 @@ class DataplexController:
             
             if field_type == 'richtext':
                 formatted_value = ', '.join(str(v) for v in field_values)
+            elif field_type == 'datetime':
+                formatted_value = field_values[0].strftime("%Y-%m-%dT%H:%M:%S") + ".000Z"
             else:
                 formatted_value = field_values[0]
                
@@ -666,13 +667,6 @@ class DataplexController:
     def apply_dynamic_column_config(self, fields, columns_query, uri, job_uuid, config_uuid, aspect_type_uuid, tag_history):
         
         print('*** apply_dynamic_column_config ***')
-        #print('fields:', fields)
-        #print('columns_query:', columns_query)
-        #print('uri:', uri)
-        #print('job_uuid:', job_uuid)
-        #print('config_uuid:', config_uuid)
-        #print('aspect_type_uuid:', aspect_type_uuid)
-        #print('tag_history:', tag_history)
         
         op_status = constants.SUCCESS
         error_exists = False
@@ -783,6 +777,7 @@ class DataplexController:
      
     def run_combined_query(self, combined_query, column, fields, job_uuid):
         
+        #print(f'run_combined_query(), combined_query: {combined_query}, fields: {fields}')
         error_exists = False
             
         try:
@@ -791,10 +786,17 @@ class DataplexController:
 
             for row in rows:
                 for i, field in enumerate(fields):
-                    field['field_value'] = row[i]
+                    
+                    if field['field_type'] == 'datetime':
+                        formatted_value = row[i].strftime("%Y-%m-%dT%H:%M:%S") + ".000Z"
+                        field['field_value'] = formatted_value
+                    else:
+                        field['field_value'] = row[i]
             
                 row_count += 1    
         
+            #print(f'fields after field_value assignment: {fields}')
+            
             if row_count == 0:
                 error_exists = True
                 print('sql query returned empty set:', combined_query)
@@ -809,16 +811,7 @@ class DataplexController:
            
     def create_update_delete_aspect(self, aspect_fields, aspect_type_path, entry_path, job_uuid, config_uuid, config_type, tag_history, uri, target_column):
         
-        #print("*** DataplexController.create_update_delete_aspect ***")
-        #print("aspect_fields:", aspect_fields)
-        #print("aspect_type_path:", aspect_type_path)
-        #print("entry_path:", entry_path)
-        #print("job_uuid:", job_uuid)
-        #print("config_uuid:", config_uuid)
-        #print("config_type:", config_type)
-        #print("tag_history:", tag_history)
-        #print("uri:", uri)
-        #print("target_column:", target_column)
+        print("*** DataplexController.create_update_delete_aspect ***")
         
         op_status = constants.SUCCESS
         valid_field = False
@@ -832,9 +825,9 @@ class DataplexController:
         
         for field in aspect_fields:
             aspect_data_dict[field['field_id']] = field['field_value']
-                
+               
         aspect_data_struct = struct_pb2.Struct()
-        json_format.ParseDict(aspect_data_dict, aspect_data_struct, ignore_unknown_fields=False)
+        json_format.ParseDict(aspect_data_dict, aspect_data_struct, ignore_unknown_fields=True)
         aspect.data = aspect_data_struct
         
         entry = dataplex.Entry()
