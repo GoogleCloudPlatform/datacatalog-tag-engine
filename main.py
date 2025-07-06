@@ -2359,7 +2359,7 @@ def _split_work():
     tag_invoker_sa = json_request['tag_invoker_account']
 
     config = store.read_config(tag_creator_sa, config_uuid, config_type)    
-    print('config: ', config)
+    #print('config: ', config)
     
     if config == {}:
        resp = jsonify(success=False)
@@ -2391,7 +2391,7 @@ def _split_work():
             tm.create_config_uuid_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, config_uuid, config_type, uris, constants.DATAPLEX)
         else:
             # clone_tags or retire_tags is set            
-            if ('clone_tags' in config and config['clone_tags']) or ('retire_tags' in config and config['retire_tags']):            
+            if (CLONE_TAGS == True or ('clone_tags' in config and config['clone_tags'])) or (RETIRE_TAGS == True or ('retire_tags' in config and config['retire_tags'])):            
                 
                 # look up the aspect type details
                 mapping = store.lookup_template_aspect_mapping(config['template_uuid'])
@@ -2413,7 +2413,7 @@ def _split_work():
                 aspect_type_region = mapping['aspect_type_region']
                     
                 # write the equivalent aspect config based on the tag config
-                if config['clone_tags'] == True:
+                if CLONE_TAGS == True or config['clone_tags'] == True:
         
                     # check if refresh_unit is set (this happens only when the config mode == AUTO)           
                     if 'refresh_unit' in config:
@@ -2438,7 +2438,7 @@ def _split_work():
                                                                             refresh_unit, config['tag_history'])
                 
                 
-                if config['clone_tags'] == True and config['retire_tags'] == False:
+                if (CLONE_TAGS == True and RETIRE_TAGS == False) or (config['clone_tags'] == True and config['retire_tags'] == False):
                     
                     # double the number of tasks as we are creating tags and aspects
                     jm.record_num_tasks(job_uuid, (len(uris)*2))
@@ -2447,7 +2447,7 @@ def _split_work():
                     tm.create_config_uuid_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, aspect_config_uuid, config_type, uris, constants.DATAPLEX)
                     
                 # create only the aspects because retire_tags is set
-                if config['clone_tags'] == True and config['retire_tags'] == True:
+                if (CLONE_TAGS == True and RETIRE_TAGS == True) or (config['clone_tags'] == True and config['retire_tags'] == True):
                     jm.record_num_tasks(job_uuid, len(uris))
                     jm.update_job_running(job_uuid)
                     tm.create_config_uuid_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, aspect_config_uuid, config_type, uris, constants.DATAPLEX)
@@ -2539,7 +2539,7 @@ def _split_work():
             tm.create_tag_extract_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, config_uuid, config_type, extracted_tags, constants.DATAPLEX)
         else:
             # datacatalog mode            
-            if ('clone_tags' in config and config['clone_tags']) or ('retire_tags' in config and config['retire_tags']):
+            if (CLONE_TAGS == True or ('clone_tags' in config and config['clone_tags'])) or (RETIRE_TAGS == True or ('retire_tags' in config and config['retire_tags'])):
             
                 # look up the aspect type details
                 mapping = store.lookup_template_aspect_mapping(config['template_uuid'])
@@ -2559,13 +2559,13 @@ def _split_work():
                 aspect_type_region = mapping['aspect_type_region']
                     
                 # write the equivalent aspect config (based on the tag config)
-                if config['clone_tags'] == True:
+                if CLONE_TAGS == True or config['clone_tags'] == True:
                     
                     aspect_config_uuid = store.write_aspect_import_config(tag_creator_sa, aspect_type_uuid, aspect_type_id, aspect_type_project, \
                                                                      aspect_type_region, config['data_asset_type'], config['data_asset_region'], \
                                                                      config['metadata_import_location'], config['tag_history'], config['overwrite'])
             
-                if config['clone_tags'] == True and config['retire_tags'] == False:
+                if (CLONE_TAGS == True and RETIRE_TAGS == False) or (config['clone_tags'] == True and config['retire_tags'] == False):
                     # double the number of tasks as we are creating tags and aspects
                     jm.record_num_tasks(job_uuid, (len(extracted_tags)*2))
                     jm.update_job_running(job_uuid)
@@ -2573,10 +2573,17 @@ def _split_work():
                     tm.create_tag_extract_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, aspect_config_uuid, config_type, extracted_tags, constants.DATAPLEX)
                     
                 # create only the aspects because retire_tags is set
-                elif config['retire_tags'] == True:
+                elif RETIRE_TAGS == True or config['retire_tags'] == True:
                     jm.record_num_tasks(job_uuid, len(extracted_tags))
                     jm.update_job_running(job_uuid)
                     tm.create_tag_extract_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, aspect_config_uuid, config_type, extracted_tags, constants.DATAPLEX)
+
+            else:
+                # clone_tags and retire_tags not set
+                jm.record_num_tasks(job_uuid, len(extracted_tags))
+                jm.update_job_running(job_uuid)
+                tm.create_tag_extract_tasks(tag_creator_sa, tag_invoker_sa, job_uuid, config_uuid, config_type, extracted_tags, constants.DATAPLEX)
+                
 
     # export tag config
     if config_type == 'TAG_EXPORT':
