@@ -1,12 +1,20 @@
 #### Migrating to Dataplex Aspects
 
-Tag Engine simplifies your migration from Data Catalog tags to Dataplex aspects. Through Tag Engine v3, you can clone your existing tags into aspects without the need to make changes to your tag configurations. You can also retire your tags once you no longer have a need for them. This is done by preparing a `mappings.yaml` and setting parameters the `clone_tags` and `retire_tags`. 
+Through Tag Engine v3, you can clone your existing tags into aspects without the need to make changes to your tag configurations in Tag Engine. You can also retire your tags once you no longer have a need for them. This is done by preparing a `mappings.yaml` and setting the parameters `clone_tags` and `retire_tags` in your `tagengine.ini`. 
 
-Follow the steps below to put this into effect in your Tag Engine deployment. 
+What does `cloning` mean?
 
-1. Create an aspect type in Dataplex for each tag template that you want to clone. Make sure that the fields in your aspect type match the ones in your tag template. 
+When you run a Tag Engine job against a Data Catalog config and `clone_tags` is on, Tag Engine creates an equivalent config for aspects from the existing tag config. This works for dynamic table, dynamic column, and import configs.
 
-2. Open the existing `mappings.yaml` and edit the contents of this file based on your mappings. The default `mappings.yaml`, which is located in the `migrate` directory, is meant for you to modify. The contents of the file show you how to specify the mappings. For convenience, they are copied below:
+What does `retiring` mean?
+
+In addition to cloning, there is a second parameter `retire_tags` that lets you stop creating Data Catalog tags when running a Tag Engine job. When set to True, this parameter creates only the aspects, not the tags in Data Catalog. This means that you can migrate to using aspects without changing your Tag Engine scripts.   
+
+Follow the steps below to put this into effect in your Tag Engine v3 deployment. 
+
+1. Create an aspect type in Dataplex for each tag template that you wish to clone. Make sure that the fields in your aspect type match the ones in your tag template. They don't need to be called the same, but they should of the same type. For example, a string field in a tag template should map to a string field in an aspect type. 
+
+2. Open the default `mappings.yaml` in the current folder (`migrate`) and edit the contents of this file based on your own tag template mappings. The examples that came with the repo are only meant to serve as a template so that you will know the desired structure of the mappings. For convenience, I have copied the sample mappings below:
 
 ```
 mappings:
@@ -16,6 +24,7 @@ mappings:
     aspect_type_id: data-governance
     aspect_type_project: tag-engine-develop
     aspect_type_region: us-central1
+
   - template_id: data_sensitivity
     template_project: tag-engine-develop
     template_region: us-central1
@@ -24,18 +33,41 @@ mappings:
     aspect_type_region: us-central1
 ```
 
-This examples shows you two samples mapping entries. It says that for the `data_governance` tag template, Tag Engine should use the `data-governance` aspect type when cloning the tags (and similarly for `data_sensitivity`, use `data-sensitivity`). The `project_id` in each entry refers to the GCP project id of the tag template and aspect type, while the `region` refers to the GCP location of the tag template and aspect type. 
+You can see that we have two samples mapping entries defined. The `data_governance` tag template should be mapped to the `data-governance` aspect type. The `data_sentivity` tag template should be mapped to the `data-sensitivity` aspect type. 
 
-3. If you would like to enable cloning at the system level, add the parameter `CLONE_TAGS` to your `tagengine.ini`. This parameter turns on cloning on all of your jobs by default. When you run a Tag Engine job against a Data Catalog config and `CLONE_TAGS` is one, Tag Engine creates an equivalent config for aspects from the existing tag config (as long as you have the mappings defined in `mappings.yaml`). Tag Engine will then create the tags and aspects as part of the same job execution.  
+3. If you want to enable cloning at the system level, please add the parameter `CLONE_TAGS` to your `tagengine.ini`. This will turn on cloning on all of your jobs by default. Similarly, if you want to turn on retiring at the system level, add `RETIRE_TAGS` to the same file. 
+  
+For example:
 
-`CLONE_TAGS = True` 
+<pre><code>
+[DEFAULT]
+TAG_ENGINE_SA = tag-engine@tag-engine-develop.iam.gserviceaccount.com
+TAG_CREATOR_SA = tag-creator@tag-engine-develop.iam.gserviceaccount.com 
+TAG_ENGINE_PROJECT = tag-engine-develop
+TAG_ENGINE_REGION = us-central1
+FIRESTORE_PROJECT = tag-engine-develop
+FIRESTORE_DB = (default)
+INJECTOR_QUEUE = tag-engine-injector-queue
+WORK_QUEUE = tag-engine-work-queue
+BIGQUERY_REGION = us-central1
+FILESET_REGION = us-central1
+SPANNER_REGION = us-central1
+CLOUDSQL_REGION = us-central1
+ENABLE_AUTH = False
+OAUTH_CLIENT_CREDENTIALS = te_client_secret.json
+ENABLE_TAG_HISTORY = True
+TAG_HISTORY_PROJECT = tag-engine-develop
+TAG_HISTORY_DATASET = tag_history
+ENABLE_JOB_METADATA = True
+JOB_METADATA_PROJECT = tag-engine-develop
+JOB_METADATA_DATASET = job_metadata
+<b>CLONE_TAGS = True</b>
+<b>RETIRE_TAGS = False</b>
+</code></pre>
 
-4. In addition to cloning, there is a second parameter `RETIRE_TAGS` that lets you stop creating Data Catalog tags when running a Tag Engine job. When set to True, `RETIRE_TAGS` will create only the aspects not the tags from the existing Data Catalog config. 
+4. If you want to turn on cloning and retiring on a case-by-case basis, you don't add them to the `tagengine.ini`. You place them instead in your Tag Engine config files. Here is an example of what that looks like:
 
-
-5. If you don't want to turn on `CLONE_TAGS` or `RETIRE_TAGS` at the system level, you can turn them on on individual configs by adding the parameters to your config files. Here is an example of what that looks like:
-
-```
+<pre><code>
 {
     "template_id": "data_governance",
     "template_project": "tag-engine-develop",
@@ -53,12 +85,12 @@ This examples shows you two samples mapping entries. It says that for the `data_
     "included_tables_uris": "bigquery/project/tag-engine-develop/dataset/crm/*",
     "excluded_tables_uris": "",
     "refresh_mode": "ON_DEMAND",
-    "clone_tags": true,
-    "retire_tags": false   
+    <b>"clone_tags": true,</b>
+    <b>"retire_tags": false</b>   
 }
-```
+</code></pre>
 
-6. Once you have created the mappings and made the changes to `tagengine.ini` (if application), you need to redeploy the Tag Engine service for the changes to go into effect:
+5. Once you have created the mappings and made the changes to `tagengine.ini` (if application), you need to redeploy the Tag Engine service for the changes to go into effect:
 
 ```
 gcloud run deploy tag-engine-api \
@@ -73,6 +105,4 @@ gcloud run deploy tag-engine-api \
 --service-account=$TAG_ENGINE_SA
 ```
 
-7. If you enabled cloning at the system level, you now try to run one of your Tag Engine jobs as you normally would. The job should have 2x the number of tasks (if you are not retiring the tags) and you should see the equivalent aspects populated when the job finishes. 
-
-8. If you did not enable cloning at the system level, you should have added those parameters to one or more of your config files. You should then recreate the config as you normally would and run the job against the updated config. There are no changes to the create config and run job commands.  
+6. To test the cloning, re-run your Tag Engine job as you normally would. If only cloning is enabled, the job should create twice the number of tasks and you should see the same number of resulting aspects as tags. If retiring is enabled, you should see the normal number of tasks and aspects. 
