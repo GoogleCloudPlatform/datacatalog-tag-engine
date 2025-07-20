@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from flask import Flask, render_template, request, redirect, url_for, jsonify, json, session
+from flask import Flask, render_template, request, redirect, url_for, jsonify, json, session, abort
 from flask_session import Session
 
 import datetime, time, configparser, os, base64
@@ -1454,11 +1454,8 @@ def create_dynamic_table_config():
     valid_parameters, is_dataplex, _id, _project, _region = check_template_aspect_parameters('dynamic_table_config', json_request)
     
     if valid_parameters != True:
-        response = {
-                "status": "error",
-                "message": "Request JSON is missing some required tag template or aspect type parameters",
-        }
-        return jsonify(response), 400
+        msg = "JSON request is missing some required tag template or aspect type parameters"
+        abort(400, description=msg)
      
     if is_dataplex:
         aspect_type_id = _id
@@ -1474,17 +1471,27 @@ def create_dynamic_table_config():
     credentials, success = get_target_credentials(tag_creator_sa)
     
     if success == False:
-        print('Error acquiring credentials from', tag_creator_sa)
-    
+        msg = f"Error acquiring credentials from {tag_creator_sa}"
+        abort(400, description=msg)
+            
     included_fields = json_request['fields']
     
     if is_dataplex:
         dpc = dp_controller.DataplexController(credentials, None, None, aspect_type_id, aspect_type_project, aspect_type_region)
         fields = dpc.get_aspect_type(included_fields=included_fields)
+        
+        if fields == []: 
+            msg = f"Error retrieving aspect type {aspect_type_id} from Dataplex"
+            abort(400, description=msg)
+        
     else:
         dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
         fields = dcc.get_template(included_fields=included_fields)
-        print('returned template fields:', fields)
+        #print('returned template fields:', fields)
+        
+        if fields == []: 
+            msg = f"Error retrieving tag template {template_id} from Data Catalog"
+            abort(400, description=msg)
     
     if 'included_tables_uris' in json_request:
         included_tables_uris = json_request['included_tables_uris']
@@ -1577,16 +1584,26 @@ def create_dynamic_column_config():
     credentials, success = get_target_credentials(tag_creator_sa)
     
     if success == False:
-        print('Error acquiring credentials from', tag_creator_sa)
+        msg = f"Error acquiring credentials from {tag_creator_sa}"
+        abort(400, description=msg)
     
     included_fields = json_request['fields']
     
     if is_dataplex:
         dpc = dp_controller.DataplexController(credentials, None, None, aspect_type_id, aspect_type_project, aspect_type_region)
         fields = dpc.get_aspect_type(included_fields=included_fields)
+        
+        if fields == []: 
+            msg = f"Error retrieving aspect type {aspect_type_id} from Dataplex"
+            abort(400, description=msg)
+        
     else:
         dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
         fields = dcc.get_template(included_fields=included_fields)
+        
+        if fields == []: 
+            msg = f"Error retrieving tag template {template_id} from Data Catalog"
+            abort(400, description=msg)
 
     if 'included_columns_query' in json_request:
         included_columns_query = json_request['included_columns_query']
@@ -1661,17 +1678,21 @@ def create_import_config():
     status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
     
     if status == False:
-        return jsonify(response), 400
+        abort(400, description="Authentication error")
        
     valid_parameters, is_dataplex, _id, _project, _region = check_template_aspect_parameters('import_config', json_request)
     
     if valid_parameters != True:
-        response = {
-                "status": "error",
-                "message": "Request JSON is missing some required tag template or aspect type parameters",
-        }
-        return jsonify(response), 400
+        msg = "JSON request is missing some required tag template or aspect type parameters"
+        abort(400, description=msg)
     
+    
+    credentials, success = get_target_credentials(tag_creator_sa)
+    
+    if success == False:
+        msg = f"Error acquiring credentials from {tag_creator_sa}"
+        abort(400, description=msg)
+        
     if is_dataplex:
         aspect_type_id = _id
         aspect_type_project = _project
@@ -1683,12 +1704,27 @@ def create_import_config():
         template_region = _region
         template_uuid = store.write_tag_template(template_id, template_project, template_region)
 
+    if is_dataplex:
+        dpc = dp_controller.DataplexController(credentials, None, None, aspect_type_id, aspect_type_project, aspect_type_region)
+        fields = dpc.get_aspect_type()
+
+        if fields == []: 
+            msg = f"Error retrieving aspect type {aspect_type_id} from Dataplex"
+            abort(400, description=msg)
+        
+    else:
+        dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
+        fields = dcc.get_template()
+        
+        if fields == []: 
+            msg = f"Error retrieving tag template {template_id} from Data Catalog"
+            abort(400, description=msg)
+    
     if 'metadata_import_location' in json_request:
         metadata_import_location = json_request['metadata_import_location']
     else:
-        print("The import config type requires a metadata_import_location field. Please add this field to the json object.")
-        resp = jsonify(success=False)
-        return resp
+        msg = "The import config type requires a metadata_import_location field. Please add this field to the json object."
+        abort(400, description=msg)
               
     if 'overwrite' in json_request:  
         overwrite = json_request['overwrite']
@@ -1839,61 +1875,44 @@ def copy_tags():
     if 'source_project' in json_request:
         source_project = json_request['source_project']
     else:
-        response = {
-                "status": "error",
-                "message": "Request JSON is missing a source_project parameter",
-        }
-        return jsonify(response), 400
-    
+        msg = "JSON request is missing a source_project parameter"
+        abort(400, description=msg)
+        
     if 'source_dataset' in json_request:
         source_dataset = json_request['source_dataset']
     else:
-        response = {
-                "status": "error",
-                "message": "Request JSON is missing a source_dataset parameter",
-        }
-        return jsonify(response), 400
+        msg = "JSON request is missing a source_dataset parameter"
+        abort(400, description=msg)
     
     if 'source_table' in json_request:
          source_table = json_request['source_table']
     else:
-         response = {
-             "status": "error",
-             "message": "Request JSON is missing a source_table parameter",
-     }
-         return jsonify(response), 400
+        msg = "JSON request is missing a source_table parameter"
+        abort(400, description=msg)
  
     if 'target_project' in json_request:
         target_project = json_request['target_project']
     else:
-        response = {
-                "status": "error",
-                "message": "Request JSON is missing a target_project parameter",
-        }
-        return jsonify(response), 400
-    
+        msg = "JSON request is missing a target_project parameter"
+        abort(400, description=msg)
+        
     if 'target_dataset' in json_request:
         target_dataset = json_request['target_dataset']
     else:
-        response = {
-                "status": "error",
-                "message": "Request JSON is missing a target_dataset parameter",
-        }
-        return jsonify(response), 400
+        msg = "JSON request is missing a target_dataset parameter"
+        abort(400, description=msg)
     
     if 'target_table' in json_request:
          target_table = json_request['target_table']
     else:
-         response = {
-             "status": "error",
-             "message": "Request JSON is missing a target_table parameter",
-     }
-         return jsonify(response), 400
+        msg = "JSON request is missing a target_table parameter"
+        abort(400, description=msg)
 
     credentials, success = get_target_credentials(tag_creator_sa)
     
     if success == False:
-        print('Error acquiring credentials from', tag_creator_sa)
+        msg = f"Error acquiring credentials from {tag_creator_sa}"
+        abort(400, description=msg)
     
     dcc = dc_controller.DataCatalogController(credentials)
     success = dcc.copy_tags(source_project, source_dataset, source_table, target_project, target_dataset, target_table)                                                      
@@ -1915,39 +1934,32 @@ def update_tag_subset():
     status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
     
     if status == False:
-        return jsonify(response), 400
+        msg = "Authentication error"
+        abort(400, description=msg)
     
     valid_parameters, is_dataplex, template_id, template_project, template_region = check_template_aspect_parameters('update_tag_subset', json_request)
     
     if valid_parameters != True:
-        response = {
-                "status": "error",
-                "message": "Request JSON is missing some required tag template parameters",
-        }
-        return jsonify(response), 400   
+        msg = "JSON request is missing some required tag template parameters"
+        abort(400, description=msg)  
         
     if 'entry_name' in json_request:
         entry_name = json_request['entry_name']
     else:
-        response = {
-                "status": "error",
-                "message": "Request JSON is missing a entry_name parameter",
-        }
-        return jsonify(response), 400
+        msg = "JSON request is missing a entry_name parameter"
+        abort(400, description=msg)  
     
     if 'changed_fields' in json_request:
          changed_fields = json_request['changed_fields']
     else:
-         response = {
-             "status": "error",
-             "message": "Request JSON is missing a changed_fields parameter",
-     }
-         return jsonify(response), 400
+        msg = "JSON is missing a changed_fields parameter"
+        abort(400, description=msg)
 
     credentials, success = get_target_credentials(tag_creator_sa)
     
     if success == False:
-        print('Error acquiring credentials from', tag_creator_sa)
+        msg = f"Error acquiring credentials from {tag_creator_sa}"
+        abort(400, description=msg)
         
     dcc = dc_controller.DataCatalogController(credentials, None, None, template_id, template_project, template_region)
     success = dcc.update_tag_subset(template_id, template_project, template_region, entry_name, changed_fields)
@@ -1980,7 +1992,8 @@ def trigger_job():
     print('status:', status, ', response:', response, ', tag_creator_sa:', tag_creator_sa)
     
     if status == False:
-        return jsonify(response), 400
+        msg = "Authentication error"
+        abort(400, description=msg)
     
     tag_invoker_sa = get_tag_invoker_account(request.headers.get('Authorization'))
     print('tag_invoker_sa:', tag_invoker_sa)
@@ -1989,14 +2002,12 @@ def trigger_job():
         config_type = json_request['config_type']
         is_valid = check_config_type(json_request['config_type'])
     else:
-        print("trigger_job request is missing the required parameter config_type. Please add this parameter to the json object.")
-        resp = jsonify(success=False)
-        return resp
+        msg = "trigger_job request is missing the required parameter config_type. Please add this parameter to the json object."
+        abort(400, description=msg)
         
     if is_valid == False:
-        print("Invalid config_type field. Please choose a config_type from this list: " + get_available_config_types())
-        resp = jsonify(success=False)
-        return resp
+        msg = "Invalid config_type field. Please choose a config type from this list: " + get_available_config_types()
+        abort(400, description=msg)
     
     if 'config_uuid' in json_request:
         
@@ -2006,13 +2017,11 @@ def trigger_job():
             is_active = store.check_active_config(config_uuid, config_type)
             
             if is_active != True:
-                print('Error: The config_uuid', config_uuid, 'is not active and cannot be used to run a job.')
-                resp = jsonify(success=False)
-                return resp
+                msg = f"Error: config_uuid {config_uuid} is not active and cannot be used to run a job."
+                abort(400, description=msg)
     else:
-        print("trigger_job request is missing a required . Please add the config_uuid to the json object.")
-        resp = jsonify(success=False)
-        return resp
+        msg = "trigger_job request is missing a required parameter. Please add the config_uuid to your json object."
+        abort(400, description=msg)
         
     if 'job_metadata' in json_request:
         
@@ -2060,14 +2069,14 @@ def get_job_status():
     status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
     
     if status == False:
-        return jsonify(response), 400
+        msg = "Authentication error"
+        abort(400, description=msg)
     
     if 'job_uuid' in json_request:
         job_uuid = json_request['job_uuid']
     else:
-        print("get_job_status request is missing the required parameter job_uuid. Please add this parameter to the json object.")
-        resp = jsonify(success=False)
-        return resp
+        msg = "JSON request is missing the required parameter job_uuid. Please add this parameter to the json object."
+        abort(400, description=msg)
         
     job = jm.get_job_status(job_uuid)
     print('job: ', job)
@@ -2099,7 +2108,8 @@ def scheduled_auto_updates():
         status, response, tag_creator_sa = do_authentication(request.headers, None, ENABLE_AUTH)
         
         if status == False:
-            return jsonify(response), 400
+            msg = "Authentication error"
+            abort(400, description=msg)
         
         jobs = []
         
@@ -2121,10 +2131,10 @@ def scheduled_auto_updates():
         resp = jsonify(success=True, job_ids=json.dumps(jobs))
     
     except Exception as e:
-        msg = 'failed scheduled_auto_updates'
+        msg = 'Failed scheduled_auto_updates'
         log_error(msg, e)
-        resp = jsonify(success=False, message='failed scheduled_auto_updates ' + str(e))
-    
+        abort(400, description=msg)
+        
     return resp
 
 
@@ -2145,7 +2155,8 @@ def list_configs():
     status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
         
     if status == False:
-        return jsonify(response), 400
+        msg = "Authentication error"
+        abort(400, description=msg)
        
     if 'config_type' in json_request:
         config_type = json_request['config_type']
@@ -2155,14 +2166,12 @@ def list_configs():
         else:
             is_valid = check_config_type(config_type)
     else:
-        print("list_configs request is missing the required parameter config_type. Please add this parameter to the json object.")
-        resp = jsonify(success=False)
-        return resp
-        
+        msg = "JSON request is missing the required parameter config_type. Please add this parameter to the json object."
+        abort(400, description=msg)
+                
     if is_valid == False:
-        print("Invalid config_type parameter. Please choose a config_type from this list: " + get_available_config_types() + " or use ALL.")
-        resp = jsonify(success=False)
-        return resp
+        msg = "Invalid config_type parameter. Choose a config_type from this list: " + get_available_config_types() + " or use ALL."
+        abort(400, description=msg)
                       
     configs = store.read_configs(tag_creator_sa, config_type) 
     
@@ -2193,51 +2202,32 @@ def get_config():
     status, resp, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
         
     if status == False:
-        return jsonify(resp), 400
+        msg = "Authentication error"
+        abort(400, description=msg)
        
     if 'config_type' in json_request:
         config_type = json_request['config_type']
         is_valid = check_config_type(config_type)
     else:
-        print("get_config request is missing the required parameter config_type. Please add this parameter to the json object.")
-        
-        resp = {
-            "status": "error",
-            "message": "json request is missing the required parameter config_type. Please add this parameter to the json object."
-        }
-        return jsonify(resp), 400
-        
-        
+        msg = "JSON request is missing the required parameter config_type. Please add this parameter to the json object"
+        abort(400, description=msg)
+           
     if is_valid == False:
-        print("Invalid config_type parameter. Please choose a config_type from this list: " + get_available_config_types() + " or use ALL.")
-        
-        resp = {
-            "status": "error",
-            "message": "Invalid config_type parameter. Please choose a config_type from this list: " + get_available_config_types() + " or use ALL."
-        }
-        return jsonify(resp), 400
+        msg = "Invalid config_type parameter. Please choose a config_type from this list: " + get_available_config_types() + " or use ALL."
+        abort(400, description=msg)
     
     if 'config_uuid' in json_request:
         config_uuid = json_request['config_uuid']
     else:
         print("get_config request is missing the required parameter config_uuid. Please add this parameter to the json object.")
-        
-        resp = {
-            "status": "error",
-            "message": "json request is missing the required parameter config_uuid. Please add this parameter to the json object"
-        }
-        return jsonify(resp), 400
+        msg = "JSON request is missing the required parameter config_uuid. Please add this parameter to the json object"
+        abort(400, description=msg)
                      
     config = store.read_config(tag_creator_sa, config_uuid, config_type)
     
     if config == {}:
-        print("get_config request contains invalid config_uuid, config_type combination:", config_uuid, "not found in collection", config_type)
-        
-        resp = {
-            "status": "error",
-            "message": "json request contains invalid config_uuid, config_type combination: " + config_uuid + " not found in collection " + config_type
-        }
-        return jsonify(resp), 400
+        msg = "JSON request contains invalid config_uuid, config_type combination: " + config_uuid + " not found in collection " + config_type
+        abort(400, description=msg)
         
     return jsonify(configs=config)
 
@@ -2259,46 +2249,31 @@ def delete_config():
     status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
      
     if status == False:
-        return jsonify(response), 400
+        msg = "Authentication error"
+        abort(400, description=msg)
        
     if 'config_type' in json_request:
         config_type = json_request['config_type']
         is_valid = check_config_type(config_type)
     else:
-        print("delete_config request is missing the required parameter config_type. Please add this parameter to the json object.")
-        resp = {
-            "status": "error",
-            "message": "json request is missing the required parameter config_type. Please add this parameter to the json object."
-        }
-        return jsonify(resp), 400
+        msg = "JSON request is missing the required parameter config_type. Please add this parameter to the json object"
+        abort(400, description=msg)
         
     if is_valid == False:
-        print("Invalid config_type parameter. Please choose a config_type from this list: " + get_available_config_types() + " or use ALL.")
-        resp = {
-            "status": "error",
-            "message": "json request contains invalid config_type parameter. Please choose a config_type from this list: " + get_available_config_types() + " or use ALL."
-        }
-        return jsonify(resp), 400
+        msg = "json request contains invalid config_type parameter. Please choose a config_type from this list: " + get_available_config_types() + " or use ALL."
+        abort(400, description=msg)
     
     if 'config_uuid' in json_request:
         config_uuid = json_request['config_uuid']
     else:
-        print("delete_config request is missing the required parameter config_uuid. Please add this parameter to the json object.")
-        resp = {
-            "status": "error",
-            "message": "json request missing the required parameter config_uuid. Please add this parameter to the json object."
-        }
-        return jsonify(resp), 400
+        msg = "JSON request missing the required parameter config_uuid. Please add this parameter to the json object."
+        abort(400, description=msg)
                      
     status = store.delete_config(tag_creator_sa, config_uuid, config_type)
     
     if status == False:
-        print("delete_config request contains a config_uuid and config_type combination which do not exist.")
-        resp = {
-            "status": "error",
-            "message": "json request contains a config_uuid and config_type combination which do not exist."
-        }
-        return jsonify(resp), 400
+        msg = "JSON request contains a config_uuid and config_type combination which do not exist."
+        abort(400, description=msg)
     
     return jsonify(status=status)
 
@@ -2320,7 +2295,8 @@ def purge_inactive_configs():
     status, response, tag_creator_sa = do_authentication(request.headers, json_request, ENABLE_AUTH)
         
     if status == False:
-        return jsonify(response), 400
+        msg = "Authentication error"
+        abort(400, description=msg)
        
     if 'config_type' in json_request:
         config_type = json_request['config_type']
@@ -2330,14 +2306,12 @@ def purge_inactive_configs():
         else:
             is_valid = check_config_type(config_type)
     else:
-        print("purge_inactive_configs request is missing the required parameter config_type. Please add this parameter to the json object.")
-        resp = jsonify(success=False)
-        return resp
-        
+        msg = "JSON request is missing the required parameter config_type. Please add this parameter to your json object."
+        abort(400, description=msg)
+                
     if is_valid == False:
-        print("Invalid config_type parameter. Please choose a config_type from this list: " + get_available_config_types() + " or use ALL.")
-        resp = jsonify(success=False)
-        return resp
+        msg = "Invalid config_type parameter. Please choose a config_type from this list: " + get_available_config_types() + " or use ALL."
+        abort(400, description=msg)
                       
     deleted_count = store.purge_inactive_configs(tag_creator_sa, config_type) 
     
@@ -2362,17 +2336,16 @@ def _split_work():
     #print('config: ', config)
     
     if config == {}:
-       resp = jsonify(success=False)
-       return resp 
+        msg = "Fatal error: an empty config was passed to the _split_work method"
+        abort(400, description=msg)
     
     # get the credentials for the SA that is associated with this config
     credentials, success = get_target_credentials(tag_creator_sa)
     
     if success == False:
-        print('Error acquiring credentials from', tag_creator_sa)
+        msg = f"Error acquiring credentials from {tag_creator_sa}"
         update_job_status(self, config_uuid, config_type, 'ERROR')
-        resp = jsonify(success=False)
-        return resp
+        abort(400, description=msg)
        
     re = res.Resources(credentials) 
     
@@ -2397,14 +2370,8 @@ def _split_work():
                 mapping = store.lookup_template_aspect_mapping(config['template_uuid'])
             
                 if mapping == None:
-            
-                    # fail fast, instead of running the job without a proper mapping
-                    response = {
-                            "status": "error",
-                            "message": "Fatal Error: mapping for template_uuid doesn't exist in Firestore",
-                    }
-                    return jsonify(response), 400
-                
+                    msg = "Fatal Error: mapping for template_uuid doesn't exist in Firestore"
+                    abort(400, description=msg)
                 
                 print('retrieved the mapping for', config['template_uuid'])
                 aspect_type_uuid = mapping['aspect_type_uuid']
@@ -2465,13 +2432,12 @@ def _split_work():
             csv_files = list(re.get_resources(config.get('metadata_import_location'), None))
             print('csv_files: ', csv_files)
         except Exception as e:
-            msg = 'Error: unable to read CSV from {}'.format(config.get('metadata_import_location'))
+            msg = 'Fatal Error: unable to read CSV from {}'.format(config.get('metadata_import_location'))
             log_error(msg, e, job_uuid)
             
             store.update_job_status(config_uuid, config_type, 'ERROR')
             jm.set_job_status(job_uuid, 'ERROR')
-            resp = jsonify(success=False)
-            return resp
+            abort(400, description=msg)
         
         if len(csv_files) == 0:
             msg = 'Error: unable to read CSV from {}'.format(config.get('metadata_import_location'))
@@ -2480,8 +2446,7 @@ def _split_work():
             
             store.update_job_status(config_uuid, config_type, 'ERROR')
             jm.set_job_status(job_uuid, 'ERROR')
-            resp = jsonify(success=False)
-            return resp
+            abort(400, description=msg)
         
         extracted_tags = []
     
@@ -2489,11 +2454,10 @@ def _split_work():
             extracted_tags.extend(cp.CsvParser.extract_tags(credentials, csv_file))
             
         if len(extracted_tags) == 0:
-            print('Error: unable to extract tags from CSV. Please verify the format of the CSV.') 
+            msg = 'Error: unable to extract tags from CSV. Please verify the format of the CSV.' 
             store.update_job_status(config_uuid, config_type, 'ERROR')
             jm.set_job_status(job_uuid, 'ERROR')
-            resp = jsonify(success=False)
-            return resp
+            abort(400, description=msg)
             
         # infer the data_asset_type if not present in the config
         if 'data_asset_type' not in config or config.get('data_asset_type') == None:
@@ -2502,11 +2466,10 @@ def _split_work():
             elif (extracted_tags[0].keys() >= {'entry_group', 'fileset'}):
                 config['data_asset_type'] = 'fileset'
             else:
-                print('Error: unable to determine the data asset type of your config (bigquery, fileset, spanner or cloudsql). Please add data_asset_type to your config and verify the format of your CSV.') 
+                msg = 'Error: unable to determine the data asset type of your config (bigquery, fileset, spanner or cloudsql). Please add data_asset_type to your config and verify the format of your CSV.' 
                 store.update_job_status(config_uuid, config_type, 'ERROR')
                 jm.set_job_status(job_uuid, 'ERROR')
-                resp = jsonify(success=False)
-                return resp
+                abort(400, description=msg)
             
             # save the update to Firestore
             store.update_tag_import_config(config_uuid, config.get('data_asset_type'), None, None)     
@@ -2522,11 +2485,10 @@ def _split_work():
             elif config.get('data_asset_type') == 'cloudsql':
                 config['data_asset_region'] = CLOUDSQL_REGION    
             else:
-                print('Error: unable to determine the data asset region of your config (us-central1, etc.). Please add data_asset_region to your config or add the appropriate default region variable to tagengine.ini.') 
+                msg = 'Error: unable to determine the data asset region of your config (us-central1, etc.). Please add data_asset_region to your config or add the appropriate default region variable to tagengine.ini.' 
                 store.update_job_status(config_uuid, config_type, 'ERROR')
                 jm.set_job_status(job_uuid, 'ERROR')
-                resp = jsonify(success=False)
-                return resp    
+                abort(400, description=msg)
             
             # save the update to Firestore
             store.update_tag_import_config(config_uuid, None, config.get('data_asset_region'), None)
@@ -2545,13 +2507,9 @@ def _split_work():
                 mapping = store.lookup_template_aspect_mapping(config['template_uuid'])
             
                 if mapping == None:
-            
                     # fail fast, instead of running the job without a proper mapping
-                    response = {
-                            "status": "error",
-                            "message": "Fatal Error: mapping for template_uuid doesn't exist in Firestore",
-                    }
-                    return jsonify(response), 400
+                    msg = "Fatal Error: mapping for template_uuid doesn't exist in Firestore"
+                    abort(400, description=msg)
             
                 aspect_type_uuid = mapping['aspect_type_uuid']
                 aspect_type_id = mapping['aspect_type_id']
@@ -2603,7 +2561,6 @@ def _split_work():
         else:
             uris = re.get_resources_by_project(config['source_projects'])
         
-        print('Info: Number of uris:', uris)
         print('Info: uris:', uris)
         
         jm.record_num_tasks(job_uuid, len(uris))
@@ -2647,8 +2604,9 @@ def _run_task():
     credentials, success = get_target_credentials(tag_creator_sa)
     
     if success == False:
-        print('Error acquiring credentials from', tag_creator_sa)
-        tm.update_task_status(shard_uuid, task_uuid, 'ERROR')   
+        msg = f'Error acquiring credentials from {tag_creator_sa}'
+        tm.update_task_status(shard_uuid, task_uuid, 'ERROR')
+        abort(400, description=msg)   
     
     # retrieve the config 
     tm.update_task_status(shard_uuid, task_uuid, 'RUNNING')
@@ -2669,12 +2627,8 @@ def _run_task():
         
         if config.keys() < {'template_id', 'template_project', 'template_region'}: 
             if config.keys() < {'aspect_type_id', 'aspect_type_project', 'aspect_type_region'}:
-                response = {
-                    "status": "error",
-                    "message": "Request JSON is missing the required tag template or aspect type fields",
-                }
-                return jsonify(response), 400
-        
+                msg = "JSON request is missing the required tag template or aspect type fields"
+                abort(400, description=msg)
         
         dataplex_config = False
         datacatalog_config = False
@@ -2752,11 +2706,11 @@ def _run_task():
             store.update_job_status(config_uuid, config_type, 'ERROR')
             jm.set_job_status(job_uuid, 'ERROR')
             store.update_scheduling_status(config_uuid, config_type, 'READY')
-            resp = jsonify(success=True)
+            resp = jsonify(success=False)
         else:
             store.update_job_status(config_uuid, config_type, 'SUCCESS')
             jm.set_job_status(job_uuid, 'SUCCESS')
-            resp = jsonify(success=False)
+            resp = jsonify(success=True)
     else:
         store.update_job_status(config_uuid, config_type, 'RUNNING: {}% complete'.format(pct_complete))
         jm.set_job_status(job_uuid, 'RUNNING: {}% complete'.format(pct_complete))
@@ -2769,7 +2723,7 @@ def _run_task():
     
 @app.route("/version", methods=['GET'])
 def version():
-    return "Welcome to Tag Engine version 3.1.0\n"
+    return "Welcome to Tag Engine version 3.1.1\n"
     
 ####################### TEST METHOD ####################################  
     

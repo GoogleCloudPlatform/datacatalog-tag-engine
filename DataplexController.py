@@ -65,27 +65,29 @@ class DataplexController:
         #print('included_fields:', included_fields)
               
         aspect_fields = []
+        aspect_type = None
         
         try:
             aspect_type = self.client.get_aspect_type(name=self.aspect_type_path)
             #print('aspect_type:', aspect_type)
         
         except Exception as e:
-            msg = f'Error retrieving aspect type {self.aspect_type_path}. Additional details provided for debugging purposes: job_uuid: {job_uuid}, tag_dict: {tag_dict}'
-            log_error(msg, e)
+            msg = f'Error retrieving aspect type {self.aspect_type_path}'
+            log_error_tag_dict(msg, e, job_uuid, tag_dict)
             
             # sleep and retry if it's a quota issue
             if '429' in str(e) or '503' in str(e):
                 msg = 'Info: sleep for 2 minutes due to {}'.format(e)
-                log_info(msg)
+                log_info_tag_dict(msg, job_uuid, tag_dict)
                 time.sleep(120)
  
                 try:
                     aspect_type = self.client.get_aspect_type(name=self.aspect_type_path)
                 except Exception as e:
-                    msg = f'Error occurred while retrieving aspect type {self.aspect_type_path} after sleeping for 120 seconds. Additional details provided for debugging purposes: job_uuid: {job_uuid}, tag_dict: {tag_dict}'
-                    log_error(msg, e)
+                    msg = f'Error occurred while retrieving aspect type {self.aspect_type_path} after sleeping for 120 seconds'
+                    log_error_tag_dict(msg, e, job_uuid, tag_dict)
             
+        if aspect_type is None:
             return aspect_fields
         
         record_fields = aspect_type.metadata_template.record_fields
@@ -421,6 +423,13 @@ class DataplexController:
         aspect_type_fields = self.get_aspect_type(included_fields=None, job_uuid=job_uuid, tag_dict=tag_dict)
         #print("aspect_type_fields:", aspect_type_fields)
         
+        if aspect_type_fields == []:
+            print(f'Error retrieving the aspect type {self.aspect_type_id}')
+            log_error_tag_dict(f'Error retrieving the aspect type {self.aspect_type_id}', job_uuid=job_uuid, tag_dict=tag_dict) 
+            op_status = constants.ERROR
+            return op_status
+        
+        # aspect type was retrieved
         for field_name in tag_dict:
            
             if field_name == 'project' or field_name == 'dataset' or field_name == 'table' or \
@@ -438,8 +447,8 @@ class DataplexController:
                     break
     
             if found_field != True:
-                print('Error preparing the aspect. {field_name} was not found in {self.aspect_type_id}')
-                log_error_tag_dict(f'Error preparing the aspect. {field_name} was not found in {self.aspect_type_id}', job_uuid=job_uuid, tag_dict=tag_dict) 
+                print(f'Error populating the aspect. The field {field_name} was not found in {self.aspect_type_id}')
+                log_error_tag_dict(f'Error populating the aspect. The {field_name} was not found in {self.aspect_type_id}', job_uuid=job_uuid, tag_dict=tag_dict) 
                 op_status = constants.ERROR
                 return op_status
     
@@ -846,14 +855,23 @@ class DataplexController:
             #print('update entry resp:', resp)
  
         except Exception as e:
-            msg = f"Error while updating the entry"
+            msg = f"Error updating the catalog entry with the aspect from {self.aspect_type_id}"
             log_error(msg, error=str(e), job_uuid=job_uuid)
             op_status = constants.ERROR
             return op_status
         
         if tag_history and op_status == constants.SUCCESS:
+            
             bqu = bq.BigQueryUtils(self.credentials, BIGQUERY_REGION)
+            
             aspect_type_fields = self.get_aspect_type(included_fields=None, job_uuid=job_uuid, tag_dict=None)
+            
+            if aspect_type_fields == []:
+                print(f'Error retrieving the aspect type {self.aspect_type_id}')
+                log_error_tag_dict(f'Error retrieving the aspect type {self.aspect_type_id}', job_uuid=job_uuid, tag_dict=None) 
+                op_status = constants.ERROR
+                return op_status
+            
             success = bqu.copy_tag(self.tag_creator_account, self.tag_invoker_account, job_uuid, self.aspect_type_id, aspect_type_fields, uri, target_column, aspect_fields)
             
             if success == False:
