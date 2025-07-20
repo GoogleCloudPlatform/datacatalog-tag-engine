@@ -9,9 +9,9 @@ If you're new to Tag Engine, it is an open-source extension to Dataplex. It runs
 
 This README file describes the deployment steps, testing procedures, and code samples. It is organized into 6 sections:  <br>
 - Part 1: [Deploying Tag Engine v3](#deploy) <br>
-- Part 2: [Testing your Tag Engine API Setup with Dataplex](#test-dataplex-api)
-- Part 3: [Testing your Tag Engine API Setup with Data Catalog](#test-datacatalog-api)  <br>
-- Part 4: [Testing your Tag Engine UI Setup with Data Catalog](#test-datacatalog-ui)  <br>
+- Part 2: [Testing your Tag Engine API Setup with Dataplex API](#test-dataplex-api)
+- Part 3: [Testing your Tag Engine API Setup with Data Catalog API](#test-datacatalog-api)  <br>
+- Part 4: [Testing your Tag Engine UI Setup with Data Catalog API](#test-datacatalog-ui)  <br>
 - Part 5: [Troubleshooting](#troubleshooting)  <br>
 - Part 6: [Code Samples](#code-samples)  <br>
 
@@ -105,7 +105,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
    - The `CLONE_TAGS` and `RETIRE_TAGS` are new variables. When set to True, `CLONE_TAGS` copies the tags to aspects at job execution time without the need for a separate Tag Engine configuration to create the aspects. When `CLONE_TAGS` and `RETIRE_TAGS` are both set to True, the tags don't get created, only the aspects do. For more details on these functions, please consult the [documentation](migrate/clone_retire_how_to.md). <br><br>
 
 
-### <a name="test-dataplex-api"></a> Part 2: Testing your Tag Engine API setup with Dataplex
+### <a name="test-dataplex-api"></a> Part 2: Testing your Tag Engine API setup with Dataplex API
 
 1. Create the sample `data-governance` aspect type:
 
@@ -218,8 +218,9 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 	
 	Please note that you need to replace the `config_uuid` and `job_uuid` with your own values!
 
+<br>
 
-### <a name="test-datacatalog-api"></a> Part 3: Testing your Tag Engine API setup with Data Catalog
+### <a name="test-datacatalog-api"></a> Part 3: Testing your Tag Engine API setup with Data Catalog API
 
 1. Create the sample `data_governance` tag template:
 
@@ -353,7 +354,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
 
 <br>
 
-### <a name="test-datacatalog-ui"></a> Part 4: Testing your Tag Engine UI Setup with Data Catalog
+### <a name="test-datacatalog-ui"></a> Part 4: Testing your Tag Engine UI Setup with Data Catalog API
 
 Tag Engine comes with a simple UI front-end that lets you create configurations and trigger jobs. The UI is currently compatible only with the Data Catalog API. If you would like to use a UI to create your aspects with Dataplex, please add a comment to [this](https://github.com/GoogleCloudPlatform/datacatalog-tag-engine/issues/134) feature request.
 
