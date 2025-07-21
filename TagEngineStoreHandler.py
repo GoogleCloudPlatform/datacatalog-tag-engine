@@ -1194,9 +1194,9 @@ class TagEngineStoreHandler:
         return success, config_uuid
 
 
-    def lookup_tag_history_table(self, config_type, config_uuid):
+    def lookup_tag_history_tables(self, config_type, config_uuid):
         
-        tag_history_table = None
+        tag_history_tables = []
 
         coll_name = self.lookup_config_collection(config_type)
         doc = self.db.collection(coll_name).document(config_uuid).get()
@@ -1205,15 +1205,19 @@ class TagEngineStoreHandler:
             config = doc.to_dict()
             
             if 'template_id' in config:
-                tag_history_table = config['template_id']
+                tag_history_tables.append(config['template_id'])
+                
+                if 'clone_tags' in config and config['clone_tags'] == True:
+                    mapping = self.lookup_template_aspect_mapping(config['template_uuid'])
+                    tag_history_tables.append(mapping['aspect_type_id'])
+                
             elif 'aspect_type_id' in config:
-                tag_history_table = config['aspect_type_id']
-            else:
-                tag_history_table = None
+                tag_history_tables.append(config['aspect_type_id'])
+
         else:
             print('Error: could not locate the config')
                   
-        return tag_history_table
+        return tag_history_tables
 
 
     def lookup_service_account(self, config_type, config_uuid):

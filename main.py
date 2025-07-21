@@ -2036,12 +2036,14 @@ def trigger_job():
                 job_uuid = jm.create_job(tag_creator_sa, tag_invoker_sa, config_uuid, json_request['config_type'])
             else:
                 job_uuid = jm.create_job(tag_creator_sa, tag_invoker_sa, config_uuid, config_type, job_metadata)
-                tag_history_table = store.lookup_tag_history_table(config_type, config_uuid)
+                tag_history_tables = store.lookup_tag_history_tables(config_type, config_uuid)
                 
                 credentials, success = get_target_credentials(tag_creator_sa)
                 bqu = bq.BigQueryUtils(credentials, BIGQUERY_REGION)
-                success = bqu.write_job_metadata(job_uuid, tag_history_table, job_metadata, tag_creator_sa, tag_invoker_sa)
-                print('Wrote job metadata to BigQuery for job', job_uuid, '. Success =', success)
+                
+                for tag_history_table in tag_history_tables:
+                    success = bqu.write_job_metadata(job_uuid, tag_history_table, job_metadata, tag_creator_sa, tag_invoker_sa)
+                    print(f'Wrote job metadata for job {job_uuid} to BigQuery {tag_history_table}; return status = {success}')
                        
     else:    
         job_uuid = jm.create_job(tag_creator_sa, tag_invoker_sa, config_uuid, config_type)
