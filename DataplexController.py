@@ -455,6 +455,8 @@ class DataplexController:
             if field_type == 'bool':
                 if field_value in ('True', 'TRUE', 'true'):
                     field_value = True
+                elif field_value.lower() == 'false':
+                    field_value = False
                 else:
                     field_value = False
             
@@ -729,14 +731,14 @@ class DataplexController:
             
             #print('target_column:', target_column)
             
-            # fail quickly if a column is not found in the entry's schema
+            # don't fail if a column is not present in the entry's schema
             column_exists = self.check_column_exists(entry.aspects, target_column)
             
             if column_exists != True:
                 msg = f"Error could not find column {target_column} in {entry.name}"
                 log_error(msg, None, job_uuid)
-                op_status = constants.ERROR
-                return op_status
+                #op_status = constants.ERROR
+                continue
 
             verified_field_count = 0
             query_strings = []
