@@ -1,15 +1,15 @@
 {
     "aspect_type_id": "data-governance",
     "aspect_type_project": "tag-engine-develop",
-    "aspect_type_region": "us-central1",
+    "aspect_type_region": "global",
     "fields": [
         {
             "field_id": "data_domain",
             "query_expression": "select 'LOGISTICS'"
         },
         {
-            "field_id": "broad_data_category",
-            "query_expression": "select 'CONTENT'"
+            "field_id": "is_content",
+            "query_expression": "select FALSE"
         }
     ],
     "included_columns_query": "select 'c_id'",

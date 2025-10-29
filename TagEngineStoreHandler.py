@@ -416,6 +416,7 @@ class TagEngineStoreHandler:
         # check to see if this config already exists
         configs_ref = self.db.collection('dynamic_table_configs')
         query = configs_ref.where(filter=FieldFilter('aspect_type_uuid', '==', aspect_type_uuid))
+        query = query.where(filter=FieldFilter('fields', '==', fields))
         query = query.where(filter=FieldFilter('included_tables_uris_hash', '==', included_tables_uris_hash))
         query = query.where(filter=FieldFilter('config_type', '==', 'DYNAMIC_TAG_TABLE'))
         query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))
@@ -587,6 +588,7 @@ class TagEngineStoreHandler:
         # check to see if this config already exists
         configs_ref = self.db.collection('dynamic_column_configs')
         query = configs_ref.where(filter=FieldFilter('aspect_type_uuid', '==', aspect_type_uuid))
+        query = query.where(filter=FieldFilter('fields', '==', fields))
         query = query.where(filter=FieldFilter('included_tables_uris_hash', '==', included_tables_uris_hash))
         query = query.where(filter=FieldFilter('config_type', '==', 'DYNAMIC_TAG_COLUMN'))
         query = query.where(filter=FieldFilter('config_status', '!=', 'INACTIVE'))

@@ -42,6 +42,7 @@ indexes:
   - collection: dynamic_column_configs
     fields:
       - field: config_type
+      - field: fields
       - field: included_tables_uris_hash
       - field: template_uuid
       - field: config_status
@@ -60,6 +61,7 @@ indexes:
   - collection: dynamic_table_configs
     fields:
       - field: config_type
+      - field: fields
       - field: included_tables_uris_hash
       - field: aspect_type_uuid
       - field: config_status
