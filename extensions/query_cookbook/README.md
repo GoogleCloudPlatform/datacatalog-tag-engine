@@ -106,8 +106,8 @@ Review the prompts located at `summarize_sql/*_prompt.txt and customize them to 
 Make a bucket in Google Cloud Storage and copy the files into it: 
 
 ```
-gsutil mb -c standard -l REGION gs://BUCKET
-gsutil cp summarize_sql/*_prompt.txt BUCKET
+gcloud storage buckets create --default-storage-class=standard --location=REGION gs://BUCKET
+gcloud storage cp summarize_sql/*_prompt.txt BUCKET
 ```
 
 Replace REGION and BUCKET in the above commands with their actual values. 
@@ -320,5 +320,4 @@ Once the job completes, the output changes to:
 ```
 
 Open the Data Catalog UI to see the resulting tags. If the job errors out, consult the Cloud Run log for details<br>
-
 
