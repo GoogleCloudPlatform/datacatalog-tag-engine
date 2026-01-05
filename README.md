@@ -48,7 +48,7 @@ Alternatively, you may choose to deploy Tag Engine with [gcloud commands](https:
    Note: The client secret file is required for establishing the authorization flow from the UI.  
 
 3. Create a new GCS bucket for CSV imports. Remember GCS bucket names are globally unique. 
-	For example: `gsutil mb gs://$(gcloud config get-value project)-csv-import`
+	For example: `gcloud storage buckets create gs://$(gcloud config get-value project)-csv-import`
 
 4. Set the Terraform variables:
 
