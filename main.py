@@ -299,6 +299,22 @@ app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
+def user_authorized_for_service_account(service_account):
+    """Returns True if the signed-in UI user may impersonate service_account.
+
+    When ENABLE_AUTH is on, Tag Engine must only impersonate a service account that the
+    requesting user is authorized to act as (iam.serviceAccounts.actAs), mirroring the
+    check already performed by /search_tag_template. A missing session is treated as
+    unauthorized. When ENABLE_AUTH is off (single-user/local deployments) behavior is
+    unchanged.
+    """
+    if ENABLE_AUTH != True:
+        return True
+    if 'credentials' not in session:
+        return False
+    return check_user_credentials_from_ui(session['credentials'], service_account) == True
+
+
 @app.route("/")
 def authorize():
     
@@ -567,6 +583,8 @@ def view_config_options():
     template_project = request.form['template_project']
     template_region = request.form['template_region']
     service_account = request.form['service_account']
+    if not user_authorized_for_service_account(service_account):
+        return render_template('home.html', missing_permissions=True)
     action = request.form['action']
 
     print("template_id: " + str(template_id))
@@ -672,6 +690,8 @@ def process_created_config_action():
         target_dataset = 'N/A'
     
     service_account = request.form['service_account']
+    if not user_authorized_for_service_account(service_account):
+        return render_template('home.html', missing_permissions=True)
     
     action = request.form['action']
     
@@ -749,6 +769,8 @@ def refresh_job_status():
         target_dataset = 'N/A'
     
     service_account = request.form['service_account']
+    if not user_authorized_for_service_account(service_account):
+        return render_template('home.html', missing_permissions=True)
     action = request.form['action']
     
     if action == "Refresh":
@@ -825,6 +847,8 @@ def choose_config_action():
     template_project = request.form['template_project']
     template_region = request.form['template_region']
     service_account = request.form['service_account']
+    if not user_authorized_for_service_account(service_account):
+        return render_template('home.html', missing_permissions=True)
     
     config_uuid = request.form['config_uuid']
     config_type = request.form['config_type']
@@ -933,6 +957,8 @@ def choose_job_history_action():
     template_project = request.form['template_project']
     template_region = request.form['template_region']
     service_account = request.form['service_account']
+    if not user_authorized_for_service_account(service_account):
+        return render_template('home.html', missing_permissions=True)
     
     action = request.form['action']
 
@@ -1008,6 +1034,8 @@ def process_dynamic_table_config():
     template_project = request.form['template_project']
     template_region = request.form['template_region']
     service_account = request.form['service_account']
+    if not user_authorized_for_service_account(service_account):
+        return render_template('home.html', missing_permissions=True)
     included_tables_uris = request.form['included_tables_uris'].rstrip()
     excluded_tables_uris = request.form['excluded_tables_uris'].rstrip()
     refresh_mode = request.form['refresh_mode']
@@ -1098,6 +1126,8 @@ def process_dynamic_column_config():
     template_project = request.form['template_project']
     template_region = request.form['template_region']
     service_account = request.form['service_account']
+    if not user_authorized_for_service_account(service_account):
+        return render_template('home.html', missing_permissions=True)
     included_columns_query = request.form['included_columns_query']
     included_tables_uris = request.form['included_tables_uris'].rstrip()
     excluded_tables_uris = request.form['excluded_tables_uris'].rstrip()
@@ -1198,6 +1228,8 @@ def process_import_config():
     data_asset_region = request.form['data_asset_region']
     metadata_import_location = request.form['metadata_import_location']
     service_account = request.form['service_account']
+    if not user_authorized_for_service_account(service_account):
+        return render_template('home.html', missing_permissions=True)
     action = request.form['action']
     
     if 'config_uuid' in request.form:
@@ -1291,6 +1323,8 @@ def process_export_config():
     write_option = request.form['write_option']
     
     service_account = request.form['service_account']
+    if not user_authorized_for_service_account(service_account):
+        return render_template('home.html', missing_permissions=True)
     
     refresh_mode = request.form['refresh_mode']
     refresh_frequency = request.form['refresh_frequency']
